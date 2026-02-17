@@ -1,0 +1,14 @@
+# misc
+.DS_Store
+.next/
+node_modules/
+
+# Worktrees directory
+.worktrees/
+
+# Worktree local config
+.worktree/port.json
+CLAUDE.local.md
+start.sh
+.vercel
+.playwright-mcp

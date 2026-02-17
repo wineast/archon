@@ -1,0 +1,69 @@
+[
+  {
+    "key": "product_routes",
+    "name": "Product Routes",
+    "description": "贷款产品路由配置，object 类型，按产品 key 索引",
+    "data": {
+      "universe": {
+        "label": "GMCC Universe",
+        "wikiId": "wiki-uw-universe",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.no_ratio}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.nqm_1099}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.dscr}}", "{{income_type_enum.asset_depletion}}", "{{income_type_enum.atr}}", "{{income_type_enum.vvoe}}", "{{income_type_enum.personal_bank_3mo}}", "{{income_type_enum.business_bank_6mo}}"],
+        "states": ["CA", "GA", "MA", "NV", "TX", "WA", "NY"]
+      },
+      "ocean": {
+        "label": "GMCC Ocean",
+        "wikiId": "wiki-uw-ocean",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.nqm_1099}}"],
+        "states": ["CA", "TX", "NV"]
+      },
+      "hermes_ca": {
+        "label": "GMCC Hermes (CA)",
+        "wikiId": "wiki-uw-hermes-ca",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.vvoe}}", "{{income_type_enum.personal_bank_3mo}}"],
+        "states": ["CA"]
+      },
+      "hermes_non_ca": {
+        "label": "GMCC Hermes (Non-CA)",
+        "wikiId": "wiki-uw-hermes-non-ca",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.vvoe}}", "{{income_type_enum.personal_bank_3mo}}"],
+        "states": ["AZ", "CO", "DC", "GA", "IL", "NJ", "NY", "NV", "TX", "VA", "WA"]
+      },
+      "thunder": {
+        "label": "GMCC Thunder",
+        "wikiId": "wiki-uw-thunder",
+        "incomes": ["{{income_type_enum.w2}}"],
+        "states": ["CA", "TX", "ID"]
+      },
+      "fabulous": {
+        "label": "GMCC Fabulous",
+        "wikiId": "wiki-uw-fabulous",
+        "incomes": ["{{income_type_enum.w2}}"],
+        "states": ["FL"]
+      },
+      "celebrity": {
+        "label": "GMCC Celebrity",
+        "wikiId": "wiki-uw-celebrity",
+        "incomes": ["{{income_type_enum.w2}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.nqm_1099}}"],
+        "states": ["CA"]
+      },
+      "radiant_cra": {
+        "label": "GMCC Radiant CRA",
+        "wikiId": "wiki-uw-radiant-cra",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.nqm_1099}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.dscr}}", "{{income_type_enum.atr}}", "{{income_type_enum.vvoe}}", "{{income_type_enum.personal_bank_3mo}}", "{{income_type_enum.business_bank_6mo}}"],
+        "states": ["CA", "NY", "NJ", "IL", "NV"]
+      },
+      "radiant_portfolio": {
+        "label": "GMCC Radiant Portfolio",
+        "wikiId": "wiki-uw-radiant-portfolio",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.nqm_1099}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.dscr}}", "{{income_type_enum.atr}}", "{{income_type_enum.vvoe}}"],
+        "states": ["CA", "HI", "IL", "NJ", "NY", "NV"]
+      },
+      "radiant_au": {
+        "label": "GMCC Radiant AU",
+        "wikiId": "wiki-uw-radiant-au",
+        "incomes": ["{{income_type_enum.no_ratio}}", "{{income_type_enum.asset_depletion}}"],
+        "states": ["CA", "HI", "IL", "NJ", "NY", "NV"]
+      }
+    }
+  }
+]
