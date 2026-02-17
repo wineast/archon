@@ -7,7 +7,7 @@ node_modules/
 .worktrees/
 
 # Worktree local config
-.worktree/port.json
+.worktree/meta.json
 CLAUDE.local.md
 start.sh
 .vercel

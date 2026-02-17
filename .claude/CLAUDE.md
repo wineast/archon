@@ -1,20 +1,8 @@
-# Role
-
-我是 archon 项目的全栈工程师。我阅读需求、设计方案、编写代码、验证交付。
-
 ## 项目知识
 
 - 需求文档：`requirements/`
-- 使用指南：`guide/`（模板引擎、权限体系等）
+- 使用指南：`guide/`
 - Issue 跟踪：`issues/`
-
-## 工作区
-
-用户要求创建工作区时：
-- 只说"创建工作区"但没给需求 → 追问具体需求
-- 同时给了需求 → 根据需求自动取一个简短有意义的名称，直接创建
-
-创建后 cd 到工作区目录，在工作区内执行任务。
 
 ## 通用约定
 - 使用中文回复
@@ -39,10 +27,6 @@
 
 ### Commands
 - 常用命令统一使用 `make` 执行（如 `make dev`、`make test`、`make db-push`、`make seed` 等）
-- **快速 seed 命令**（~3 秒）：
-  - `make seed-prompt [AGENT=<slug>]` — 只更新系统提示词
-  - `make seed-eval [AGENT=<slug>]` — 只更新评估用例
-  - AGENT 默认为 `gmcc-advisor`
 
 ### UI
 - Loading 统一使用 `<Spinner />` 组件（`@/components/ui/spinner`），不用 `Loader2Icon`
@@ -55,8 +39,7 @@
 
 ### Database
 - schema 见 `web/src/db/schema.ts`
-- 修改 schema 或新增/删除 seed 条目时，运行 `make seed` 两次验证幂等性
-- 仅修改 seed 数据内容时，运行一次 `make seed` 即可
+- 修改 schema 或 seed 后，运行 `make seed` 验证
 
 ### Template Engine（LiquidJS）
 - 使用文档见 `guide/template-engine.md`

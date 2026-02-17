@@ -1,6 +1,6 @@
 ---
 name: worktree
-description: 管理 git worktree（创建、列出、删除、合并工作区）。当用户说"创建工作区"、"合并到 main"、"merge 到 main"等类似表述时，应调用此技能。
+description: 管理 git worktree（创建、列出、合并、删除工作区）。当用户说"创建工作区"、"合并工作区"、"删除工作区"等类似表述时，应调用此技能。
 allowed-tools: Bash, Write, AskUserQuestion
 ---
 
@@ -12,8 +12,7 @@ allowed-tools: Bash, Write, AskUserQuestion
 - "创建工作区"、"帮我创建工作区"、"新建工作区"
 - "列出工作区"、"查看工作区"
 - "删除工作区"
-- "合并到 main"、"合并回 main"
-- "同步上游"、"sync 工作区"
+- "合并工作区"、"合并到上游"、"merge 工作区"
 
 ## 调用方式
 
@@ -21,9 +20,8 @@ allowed-tools: Bash, Write, AskUserQuestion
 /worktree                    # 列出所有 worktree
 /worktree create <name>      # 创建 worktree（基于当前分支）
 /worktree create <name> main # 创建 worktree（基于指定分支）
-/worktree sync <name>        # 同步上游分支到工作区
+/worktree merge <name>       # 合并工作区分支回 base 分支
 /worktree delete <name>      # 删除 worktree
-/worktree merge <name>       # 合并指定 worktree 到 main
 /worktree clean              # 清空所有 worktree（强制清理）
 ```
 
@@ -49,12 +47,12 @@ make wt-create NAME=<name> BASE=<base>
 - worktree 路径：`.worktrees/<name>`
 - 如何进入：`cd .worktrees/<name>`
 
-### 同步上游分支（`sync`）
+### 合并工作区（`merge`）
 
-将基础分支的最新变更合并到工作区分支。基础分支记录在 `.worktree/port.json` 的 `base` 字段。
+将工作区分支合并回其 base 分支（记录在 `.worktree/meta.json` 中）。从主仓库执行。
 
 ```bash
-make wt-sync NAME=<name>
+make wt-merge NAME=<name>
 ```
 
 ### 删除 worktree（`delete`）
@@ -68,14 +66,6 @@ make wt-delete NAME=<name>
 
 # 3. 确认删除成功
 make wt-list
-```
-
-### 合并 worktree 到 main（`merge`）
-
-将指定工作区的分支合并回 main。从 main 目录执行。
-
-```bash
-make wt-merge NAME=<name>
 ```
 
 ### 清空所有 worktree（`clean`）
