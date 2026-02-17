@@ -27,6 +27,7 @@
 
 ### Commands
 - 常用命令统一使用 `make` 执行（如 `make dev`、`make test`、`make db-push`、`make seed` 等）
+- 如果需要的 make target 不存在，先在 Makefile 中补充，再执行
 
 ### UI
 - Loading 统一使用 `<Spinner />` 组件（`@/components/ui/spinner`），不用 `Loader2Icon`
@@ -39,7 +40,6 @@
 
 ### Database
 - schema 见 `web/src/db/schema.ts`
-- 修改 schema 或 seed 后，运行 `make seed` 验证
 
 ### Template Engine（LiquidJS）
 - 使用文档见 `guide/template-engine.md`
