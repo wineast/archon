@@ -8,26 +8,13 @@
 - 使用指南：`guide/`（模板引擎、权限体系等）
 - Issue 跟踪：`issues/`
 
-## 工作流
+## 工作区
 
-### 直接实现
-简单任务在 main 分支直接编写代码。
+用户要求创建工作区时：
+- 只说"创建工作区"但没给需求 → 追问具体需求
+- 同时给了需求 → 根据需求自动取一个简短有意义的名称，直接创建
 
-### 委派到 worktree
-复杂或可并行的任务委派给独立 Claude Code 实例在工作区执行：
-
-1. **创建工作区**：`/worktree create <name>`（可并行创建多个）
-2. **编写 `CLAUDE.local.md`**：写入持久上下文（约束、背景、注意事项），作为系统提示词全程生效
-3. **启动实例**：在工作区目录执行 `claude -p "具体任务指令" --dangerously-skip-permissions`
-4. **监控进度**：通过 diff 或 `status.md` 检查产出
-5. **合并成果**：review diff → commit → `/worktree merge <name>`
-
-`CLAUDE.local.md` vs `-p`：
-- `CLAUDE.local.md` = 系统提示词，持久上下文（"你在做 X 功能，注意 Y 约束，参考 Z 文件"）
-- `-p` = 首条消息，具体任务（"实现 A 功能，要求 B"）
-
-工作区实例只写代码、不提交，最终由 main 分支 review diff 后统一提交合并。
-始终在 main 目录操作，不 cd 到工作区。
+创建后 cd 到工作区目录，在工作区内执行任务。
 
 ## 通用约定
 - 使用中文回复
@@ -73,18 +60,11 @@
 
 ### Template Engine（LiquidJS）
 - 使用文档见 `guide/template-engine.md`
-- 四种数据源：模板变量 → 码表 / 数据对象 → 工具定义
-- 保留字：`data`、`lookup`、`tool`、`tool_names`、`tool_entries`
+- 数据源：数据集（2 层 JSON）+ 工具定义
+- 保留字：`tool`、`tool_names`、`tool_entries`
 
 ### Chat Persistence
 - 非阻塞原则：用 Next.js `after()` 异步保存，绝不阻塞流式响应
 - 正确：`Request → streamText → return → after() { save }`
 - 错误：`Request → await save → streamText`（❌）
 
-### Worktree
-- main 改代码后必须先 commit 再创建工作区
-- 工作区实例只写代码、不提交（main 通过 diff review 后统一提交）
-- 交付前：`make test` → `make typecheck`
-- worktree 中禁止 `make seed`、`make seed-prompt`、`make seed-eval`（共享数据库，避免竞态）
-- worktree 中不生成迁移，用 `db:push` 推送；卡住用 `make db-push-force`
-- 迁移统一在 main 分支生成
