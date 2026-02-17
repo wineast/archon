@@ -186,18 +186,21 @@ cmd_create() {
     # 生成随机端口写入 port.json
     local dev_port=$(( RANDOM % 5000 + 4000 ))  # 4000-8999
     local storybook_port=$(( dev_port + 1 ))
-    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port}" > "$wt_config_dir/port.json"
-    info "端口分配: dev=$dev_port, storybook=$storybook_port (写入 .worktree/port.json)"
+    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"base\":\"$base_branch\"}" > "$wt_config_dir/port.json"
+    info "端口分配: dev=$dev_port, storybook=$storybook_port, base=$base_branch (写入 .worktree/port.json)"
 
     # 生成 CLAUDE.local.md（提醒 Claude 使用正确的端口）
     cat > "$worktree_path/CLAUDE.local.md" <<CLAUDE_EOF
 # Worktree Local
 
+## 工作区
+- 路径: \`$worktree_path\`
+- **始终在此目录下工作，不要 cd 到其他位置**
+
 ## Dev Server
-- 本工作区的 dev 端口: **$dev_port**（Storybook: $storybook_port）
-- 启动命令: \`make dev\`
-- 浏览器访问地址: \`http://localhost:$dev_port\`
-- **当用户让你查看浏览器页面时，务必使用 http://localhost:$dev_port**
+- 端口: **$dev_port**（Storybook: $storybook_port）
+- 启动: \`make dev\`
+- 访问: \`http://localhost:$dev_port\`
 CLAUDE_EOF
     info "已生成 CLAUDE.local.md (dev=$dev_port)"
 
@@ -411,6 +414,55 @@ cmd_select_delete() {
 }
 
 # ============================================================
+# 命令: sync（同步上游分支）
+# ============================================================
+
+cmd_sync() {
+    local target="$1"
+
+    if [ -z "$target" ]; then
+        error "用法: $0 sync <worktree-name>"
+        exit 1
+    fi
+
+    local worktree_path="$WORKTREES_DIR/$target"
+
+    if [ ! -d "$worktree_path" ]; then
+        error "Worktree 不存在: $worktree_path"
+        exit 1
+    fi
+
+    local port_json="$worktree_path/.worktree/port.json"
+    if [ ! -f "$port_json" ]; then
+        error "找不到 .worktree/port.json，无法确定基础分支"
+        exit 1
+    fi
+
+    # 读取基础分支
+    local base_branch
+    base_branch=$(grep -o '"base":"[^"]*"' "$port_json" | cut -d'"' -f4)
+
+    if [ -z "$base_branch" ]; then
+        error "port.json 中没有 base 字段，无法确定基础分支"
+        exit 1
+    fi
+
+    info "同步上游分支: $base_branch → $target"
+
+    cd "$worktree_path"
+    git merge "$base_branch" --no-edit
+    local status=$?
+    cd "$PROJECT_ROOT"
+
+    if [ $status -eq 0 ]; then
+        success "同步完成"
+    else
+        error "合并冲突，请在工作区内手动解决: $worktree_path"
+        exit 1
+    fi
+}
+
+# ============================================================
 # 主入口
 # ============================================================
 
@@ -424,6 +476,7 @@ cmd_help() {
     echo "命令:"
     echo "  list                       列出所有 worktree"
     echo "  create <name> [base]       创建新 worktree（可指定基础分支）"
+    echo "  sync <name>                同步上游分支到工作区"
     echo "  delete <name>              删除 worktree"
     echo "  select-delete              交互式选择删除 worktree"
     echo "  help                       显示帮助"
@@ -442,6 +495,9 @@ case "${1:-help}" in
         ;;
     create|new|add)
         cmd_create "$2" "$3"
+        ;;
+    sync)
+        cmd_sync "$2"
         ;;
     delete|remove|rm)
         cmd_delete "$2"

@@ -13,6 +13,7 @@ allowed-tools: Bash, Write, AskUserQuestion
 - "列出工作区"、"查看工作区"
 - "删除工作区"
 - "合并到 main"、"合并回 main"
+- "同步上游"、"sync 工作区"
 
 ## 调用方式
 
@@ -20,6 +21,7 @@ allowed-tools: Bash, Write, AskUserQuestion
 /worktree                    # 列出所有 worktree
 /worktree create <name>      # 创建 worktree（基于当前分支）
 /worktree create <name> main # 创建 worktree（基于指定分支）
+/worktree sync <name>        # 同步上游分支到工作区
 /worktree delete <name>      # 删除 worktree
 /worktree merge <name>       # 合并指定 worktree 到 main
 /worktree clean              # 清空所有 worktree（强制清理）
@@ -46,6 +48,14 @@ make wt-create NAME=<name> BASE=<base>
 创建后提示用户：
 - worktree 路径：`.worktrees/<name>`
 - 如何进入：`cd .worktrees/<name>`
+
+### 同步上游分支（`sync`）
+
+将基础分支的最新变更合并到工作区分支。基础分支记录在 `.worktree/port.json` 的 `base` 字段。
+
+```bash
+make wt-sync NAME=<name>
+```
 
 ### 删除 worktree（`delete`）
 
