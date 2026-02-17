@@ -41,9 +41,16 @@ make wt-list
 
 流程：
 
-1. **确认启动命令**：用 `AskUserQuestion` 向用户确认 `start.sh` 中的初始 prompt，例如：
-   - 根据用户描述的任务自动生成一个建议 prompt
-   - 让用户选择：使用建议 prompt / 自定义
+1. **采访式需求澄清**：通过 `AskUserQuestion` 以 interview 形式向开发者提问，逐步明确需求。根据用户初始描述，提出 1-3 个关键问题（每次一轮），例如：
+   - 具体要解决什么问题？现有方案的痛点是什么？
+   - 期望的技术方案或参考实现？
+   - 涉及哪些模块？有无约束条件？
+
+   采访可以进行**多轮**（通常 1-2 轮即可），直到需求足够清晰。每轮用 `AskUserQuestion` 提问，根据回答决定是否继续追问或生成最终 prompt。
+
+   最后将采访结果整合为一个清晰、具体的 prompt，向用户确认：
+   - 展示生成的 prompt
+   - 让用户选择：使用此 prompt / 自定义修改
 2. **创建 worktree**：
    ```bash
    make wt-create NAME=<name> BASE=<base>
