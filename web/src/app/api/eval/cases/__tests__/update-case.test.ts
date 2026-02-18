@@ -31,6 +31,10 @@ vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, val: unknown) => ({ col, val }),
 }));
 
+vi.mock("@/lib/auth/require-agent-role", () => ({
+  requireAgentRole: vi.fn().mockResolvedValue({ agentId: "agent-1" }),
+}));
+
 // ── Import handler after mocks are set up ──
 
 const { PUT } = await import("../[id]/route");
@@ -49,7 +53,7 @@ describe("PUT /api/eval/cases/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setPayload = {};
-    selectResult = [{ id: "case-1" }];
+    selectResult = [{ id: "case-1", agentId: "agent-1" }];
   });
 
   it("includes tags in the update payload", async () => {

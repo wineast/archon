@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mock DB ──
 
-let selectResults: Record<string, unknown>[] = [];
+let selectRunResult: Record<string, unknown>[] = [{ id: "run-1", agentId: "agent-1" }];
+let selectResultsData: Record<string, unknown>[] = [];
 let updatedValues: Record<string, unknown> = {};
 
 const whereUpdateMock = vi.fn();
@@ -12,7 +13,12 @@ const setMock = vi.fn((v: Record<string, unknown>) => {
 });
 const updateMock = vi.fn(() => ({ set: setMock }));
 
-const whereSelectMock = vi.fn(() => selectResults);
+let fromCallIndex = 0;
+const whereSelectMock = vi.fn(() => {
+  const idx = fromCallIndex++;
+  if (idx === 0) return selectRunResult;
+  return selectResultsData;
+});
 const fromMock = vi.fn(() => ({ where: whereSelectMock }));
 const selectMock = vi.fn(() => ({ from: fromMock }));
 
@@ -32,6 +38,10 @@ vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, val: unknown) => ({ col, val }),
 }));
 
+vi.mock("@/lib/auth/require-agent-role", () => ({
+  requireAgentRole: vi.fn().mockResolvedValue({ agentId: "agent-1" }),
+}));
+
 const { PATCH } = await import("../route");
 
 const params = Promise.resolve({ runId: "run-1" });
@@ -46,11 +56,13 @@ describe("PATCH /api/eval/run/[runId] (finalize)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     updatedValues = {};
-    selectResults = [];
+    fromCallIndex = 0;
+    selectRunResult = [{ id: "run-1", agentId: "agent-1" }];
+    selectResultsData = [];
   });
 
   it("aggregates stats from results — all passed", async () => {
-    selectResults = [
+    selectResultsData = [
       { allAssertionsPassed: true, judgeResult: { overallScore: 8 } },
       { allAssertionsPassed: true, judgeResult: { overallScore: 6 } },
     ];
@@ -71,7 +83,7 @@ describe("PATCH /api/eval/run/[runId] (finalize)", () => {
   });
 
   it("handles mixed pass/fail results", async () => {
-    selectResults = [
+    selectResultsData = [
       { allAssertionsPassed: true, judgeResult: { overallScore: 9 } },
       { allAssertionsPassed: false, judgeResult: null },
       { allAssertionsPassed: true, judgeResult: { overallScore: 7 } },
@@ -88,7 +100,7 @@ describe("PATCH /api/eval/run/[runId] (finalize)", () => {
   });
 
   it("returns null averageScore when no judge results", async () => {
-    selectResults = [
+    selectResultsData = [
       { allAssertionsPassed: false, judgeResult: null },
       { allAssertionsPassed: false, judgeResult: null },
     ];
@@ -104,7 +116,7 @@ describe("PATCH /api/eval/run/[runId] (finalize)", () => {
   });
 
   it("handles empty results (0 cases)", async () => {
-    selectResults = [];
+    selectResultsData = [];
 
     const res = await PATCH(makeRequest(), { params });
     const json = await res.json();
@@ -117,7 +129,7 @@ describe("PATCH /api/eval/run/[runId] (finalize)", () => {
   });
 
   it("rounds averageScore to 1 decimal place", async () => {
-    selectResults = [
+    selectResultsData = [
       { allAssertionsPassed: true, judgeResult: { overallScore: 7 } },
       { allAssertionsPassed: true, judgeResult: { overallScore: 8 } },
       { allAssertionsPassed: true, judgeResult: { overallScore: 9 } },

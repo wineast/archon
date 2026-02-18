@@ -33,6 +33,10 @@ vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, val: unknown) => ({ col, val }),
 }));
 
+vi.mock("@/lib/auth/require-agent-role", () => ({
+  requireAgentRole: vi.fn().mockResolvedValue({ agentId: "agent-1" }),
+}));
+
 const { POST } = await import("../route");
 
 function makeRequest(body: Record<string, unknown>) {
@@ -55,6 +59,7 @@ describe("POST /api/eval/run (create run)", () => {
   it("creates a run record and returns runId", async () => {
     const res = await POST(
       makeRequest({
+        agentId: "agent-1",
         modelConfigId: "mc-1",
         judgeConfigId: "jc-1",
         judgeConfigName: "gpt-4-judge",
@@ -71,6 +76,7 @@ describe("POST /api/eval/run (create run)", () => {
   it("initializes passedAssertions=0 and averageScore=null", async () => {
     await POST(
       makeRequest({
+        agentId: "agent-1",
         modelConfigId: "mc-1",
         judgeConfigName: "gpt-4-judge",
         totalCases: 3,
@@ -88,6 +94,7 @@ describe("POST /api/eval/run (create run)", () => {
     selectResult = [];
     const res = await POST(
       makeRequest({
+        agentId: "agent-1",
         modelConfigId: "nonexistent",
         judgeConfigName: "judge",
         totalCases: 1,
@@ -100,6 +107,7 @@ describe("POST /api/eval/run (create run)", () => {
   it("stores chatModel and chatSystemPrompt from model config", async () => {
     await POST(
       makeRequest({
+        agentId: "agent-1",
         modelConfigId: "mc-1",
         judgeConfigName: "gpt-4-judge",
         totalCases: 2,
@@ -115,6 +123,7 @@ describe("POST /api/eval/run (create run)", () => {
   it("defaults filterTags to empty array when not provided", async () => {
     await POST(
       makeRequest({
+        agentId: "agent-1",
         modelConfigId: "mc-1",
         judgeConfigName: "judge",
         totalCases: 1,
