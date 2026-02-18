@@ -12,7 +12,6 @@ vi.mock("@/db", () => ({
 vi.mock("@/db/schema", () => ({
   datasets: {
     key: "key",
-    layer: "layer",
     data: "data",
     agentId: "agent_id",
   },
@@ -66,8 +65,8 @@ describe("ToolContext.dataset", () => {
     expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 
-  it("get() returns string value for layer 0 string dataset", async () => {
-    mockDbRows([{ key: "company", layer: 0, data: "Acme Corp" }]);
+  it("get() returns string value for string dataset", async () => {
+    mockDbRows([{ key: "company",data: "Acme Corp" }]);
 
     const { createToolContext } = await import("../tool-context");
     const ctx = createToolContext("agent-1");
@@ -75,11 +74,10 @@ describe("ToolContext.dataset", () => {
     expect(result).toBe("Acme Corp");
   });
 
-  it("get() returns object for layer 0 object dataset", async () => {
+  it("get() returns object for object dataset", async () => {
     mockDbRows([
       {
         key: "states",
-        layer: 0,
         data: { CA: "California", TX: "Texas" },
       },
     ]);
@@ -90,12 +88,12 @@ describe("ToolContext.dataset", () => {
     expect(result).toEqual({ CA: "California", TX: "Texas" });
   });
 
-  it("get() resolves layer 1 data with layer 0 references", async () => {
+  it("get() resolves derived data with base dataset references", async () => {
     mockDbRows([
-      { key: "name", layer: 0, data: "Universe" },
+      { key: "name",data: "Universe" },
       {
         key: "routes",
-        layer: 1,
+       
         data: { product: { label: "{{name}}" } },
       },
     ]);
@@ -110,7 +108,6 @@ describe("ToolContext.dataset", () => {
     mockDbRows([
       {
         key: "products",
-        layer: 0,
         data: {
           universe: {
             label: "GMCC Universe",
@@ -135,7 +132,7 @@ describe("ToolContext.dataset", () => {
   });
 
   it("getEntries() returns empty array for non-object datasets", async () => {
-    mockDbRows([{ key: "name", layer: 0, data: "simple string" }]);
+    mockDbRows([{ key: "name",data: "simple string" }]);
 
     const { createToolContext } = await import("../tool-context");
     const ctx = createToolContext("agent-1");
@@ -153,8 +150,8 @@ describe("ToolContext.dataset", () => {
 
   it("caches resolved data across multiple get() calls", async () => {
     mockDbRows([
-      { key: "a", layer: 0, data: "value_a" },
-      { key: "b", layer: 0, data: "value_b" },
+      { key: "a",data: "value_a" },
+      { key: "b",data: "value_b" },
     ]);
 
     const { createToolContext } = await import("../tool-context");

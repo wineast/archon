@@ -226,7 +226,6 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
       key: string;
       name: string;
       description?: string;
-      layer: number;
       data: unknown;
     }>
   >(join(agentDir, "datasets.json"));
@@ -240,7 +239,6 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
         key: ds.key,
         name: ds.name,
         description: ds.description ?? "",
-        layer: ds.layer,
         data: ds.data,
       })
       .onConflictDoUpdate({
@@ -248,13 +246,12 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
         set: {
           name: ds.name,
           description: ds.description ?? "",
-          layer: ds.layer,
           data: ds.data,
         },
       })
       .returning();
     datasetIds.push(row.id);
-    console.log(`  - ${row.key} [layer ${row.layer}] (${row.id})`);
+    console.log(`  - ${row.key} (${row.id})`);
   }
   // Seed pricing config datasets from JSON files
   const pricingConfigsDir = join(agentDir, "pricing-configs");
@@ -274,12 +271,11 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
           key,
           name,
           description: `Pricing configuration for ${name}`,
-          layer: 0,
           data,
         })
         .onConflictDoUpdate({
           target: [datasets.agentId, datasets.key],
-          set: { name, description: `Pricing configuration for ${name}`, layer: 0, data },
+          set: { name, description: `Pricing configuration for ${name}`, data },
         })
         .returning();
       datasetIds.push(row.id);

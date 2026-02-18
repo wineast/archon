@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { datasets } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { validateNoCycle } from "@/lib/datasets/queries";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -31,16 +32,33 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  const newRow = {
+    agentId: body.agentId ?? null,
+    key: body.key,
+    name: body.name,
+    description: body.description ?? "",
+    data: body.data,
+  };
+
+  // Validate no circular dependency
+  if (newRow.agentId) {
+    const existing = await db
+      .select({ key: datasets.key, data: datasets.data })
+      .from(datasets)
+      .where(eq(datasets.agentId, newRow.agentId));
+    try {
+      validateNoCycle([...existing, { key: newRow.key, data: newRow.data }]);
+    } catch (e) {
+      return NextResponse.json(
+        { error: (e as Error).message },
+        { status: 400 }
+      );
+    }
+  }
+
   const [row] = await db
     .insert(datasets)
-    .values({
-      agentId,
-      key: body.key,
-      name: body.name,
-      description: body.description ?? "",
-      layer: body.layer ?? 0,
-      data: body.data,
-    })
+    .values(newRow)
     .returning();
 
   return NextResponse.json(row, { status: 201 });

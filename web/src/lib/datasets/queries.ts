@@ -36,6 +36,122 @@ export function renderObjectField(
   }
 }
 
+// ── Liquid built-in / reserved variable names (never treated as dataset deps) ──
+
+const LIQUID_BUILTINS = new Set([
+  "forloop", "tablerowloop",
+  "nil", "null", "true", "false", "blank", "empty",
+  "now", "today",
+]);
+
+/**
+ * Extract dataset keys that a given data value depends on via Liquid templates.
+ * Scans JSON.stringify(data) for `{{ var }}`, `{{ var.prop }}`,
+ * `{% for x in var %}`, `{% if var %}`, etc.
+ * Only returns root keys present in `knownKeys`, excluding Liquid built-ins
+ * and loop iteration variables.
+ */
+export function extractDeps(data: unknown, knownKeys: Set<string>): string[] {
+  const text = typeof data === "string" ? data : JSON.stringify(data);
+
+  // Collect iteration variable names (e.g. `{% for item in list %}` → "item")
+  const iterVars = new Set<string>();
+  const forRe = /\{%-?\s*for\s+(\w+)\s+in\s+/g;
+  let m: RegExpExecArray | null;
+  while ((m = forRe.exec(text)) !== null) {
+    iterVars.add(m[1]);
+  }
+
+  const deps = new Set<string>();
+
+  // Match {{ var }}, {{ var.prop }}, {{ var | filter }}
+  const outputRe = /\{\{-?\s*(\w+)/g;
+  while ((m = outputRe.exec(text)) !== null) {
+    deps.add(m[1]);
+  }
+
+  // Match {% tag var %} — for, if, unless, elsif, assign, etc.
+  const tagRe = /\{%-?\s*(?:for\s+\w+\s+in|if|unless|elsif|assign\s+\w+\s*=)\s+(\w+)/g;
+  while ((m = tagRe.exec(text)) !== null) {
+    deps.add(m[1]);
+  }
+
+  // Filter: only known dataset keys, excluding built-ins and iteration vars
+  return [...deps].filter(
+    (k) => knownKeys.has(k) && !LIQUID_BUILTINS.has(k) && !iterVars.has(k)
+  );
+}
+
+/**
+ * Topological sort of dataset records using Kahn's algorithm.
+ * Returns records in dependency order (dependencies first).
+ * Throws if a circular dependency is detected.
+ */
+export function topoSortDatasets(
+  records: Array<{ key: string; data: unknown }>
+): Array<{ key: string; data: unknown }> {
+  const byKey = new Map(records.map((r) => [r.key, r]));
+  const knownKeys = new Set(records.map((r) => r.key));
+
+  // Build dependency graph
+  const depsMap = new Map<string, string[]>();
+  for (const r of records) {
+    depsMap.set(r.key, extractDeps(r.data, knownKeys));
+  }
+
+  const inDegree = new Map<string, number>();
+  const dependents = new Map<string, string[]>();
+
+  for (const r of records) {
+    inDegree.set(r.key, 0);
+    dependents.set(r.key, []);
+  }
+
+  for (const [key, deps] of depsMap) {
+    inDegree.set(key, deps.length);
+    for (const d of deps) {
+      dependents.get(d)!.push(key);
+    }
+  }
+
+  const queue: string[] = [];
+  for (const [key, deg] of inDegree) {
+    if (deg === 0) queue.push(key);
+  }
+
+  const sorted: Array<{ key: string; data: unknown }> = [];
+  while (queue.length > 0) {
+    const key = queue.shift()!;
+    sorted.push(byKey.get(key)!);
+    for (const dep of dependents.get(key)!) {
+      const newDeg = inDegree.get(dep)! - 1;
+      inDegree.set(dep, newDeg);
+      if (newDeg === 0) queue.push(dep);
+    }
+  }
+
+  if (sorted.length !== records.length) {
+    const remaining = records
+      .filter((r) => !sorted.some((s) => s.key === r.key))
+      .map((r) => r.key);
+    throw new Error(
+      `Circular dependency detected among datasets: ${remaining.join(", ")}`
+    );
+  }
+
+  return sorted;
+}
+
+/**
+ * Validate that a set of dataset rows has no circular dependencies.
+ * Throws if a cycle is detected.
+ */
+export function validateNoCycle(
+  allRows: Array<{ key: string; data: unknown }>
+): void {
+  topoSortDatasets(allRows);
+}
+
 /**
  * Fetch all datasets for an agent.
  */
@@ -44,7 +160,6 @@ export async function getDatasets(agentId: string) {
     .select({
       key: datasets.key,
       name: datasets.name,
-      layer: datasets.layer,
       data: datasets.data,
     })
     .from(datasets)
@@ -52,29 +167,20 @@ export async function getDatasets(agentId: string) {
 }
 
 /**
- * Resolve datasets: layer 0 provides base values, layer 1 can reference layer 0.
- * Returns resolved variables and dataset entries (for enumRef resolution).
+ * Resolve datasets using dependency-graph-driven rendering.
+ * Topologically sorts datasets and renders each with all previously resolved
+ * datasets as context, supporting N-level deep references.
  */
 export function resolveDatasets(
-  rows: Array<{ key: string; layer: number; data: unknown }>
+  rows: Array<{ key: string; data: unknown }>
 ): {
   resolvedVars: Record<string, unknown>;
   datasetEntries: Record<string, Array<{ value: string }>>;
 } {
-  const layer0: Record<string, unknown> = {};
-  const layer1: Array<{ key: string; data: unknown }> = [];
+  const sorted = topoSortDatasets(rows);
+  const resolved: Record<string, unknown> = {};
 
-  for (const row of rows) {
-    if (row.layer === 0) {
-      layer0[row.key] = row.data;
-    } else {
-      layer1.push({ key: row.key, data: row.data });
-    }
-  }
-
-  // Resolve layer 1 with layer 0 as context
-  const resolved: Record<string, unknown> = { ...layer0 };
-  for (const item of layer1) {
+  for (const item of sorted) {
     if (
       typeof item.data === "object" &&
       item.data !== null &&
@@ -82,10 +188,10 @@ export function resolveDatasets(
     ) {
       resolved[item.key] = renderObjectField(
         item.data as Record<string, unknown>,
-        layer0
+        resolved
       );
     } else if (typeof item.data === "string") {
-      resolved[item.key] = renderField(item.data, layer0);
+      resolved[item.key] = renderField(item.data, resolved);
     } else {
       resolved[item.key] = item.data;
     }

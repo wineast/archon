@@ -65,7 +65,7 @@ export function DatasetsSheet({
   const handleSave = useCallback(
     async (
       id: string,
-      data: { name: string; description: string; layer: number; data: unknown }
+      data: { name: string; description: string; data: unknown }
     ) => {
       await updateDataset(id, data, () => {
         mutateList();

@@ -6,13 +6,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JsonEditor } from "@/components/ui/editors/json-editor";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
 
@@ -20,7 +13,6 @@ export interface DatasetFormHandle {
   getDraft: () => {
     name: string;
     description: string;
-    layer: number;
     data: unknown;
   };
   isDirty: () => boolean;
@@ -31,7 +23,6 @@ interface DatasetFormProps {
   datasetKey: string;
   name: string;
   description: string;
-  layer: number;
   data: unknown;
   agentId: string | null;
   onDraftRef: (ref: DatasetFormHandle) => void;
@@ -42,7 +33,6 @@ export function DatasetForm({
   datasetKey,
   name: initialName,
   description: initialDescription,
-  layer: initialLayer,
   data: initialData,
   agentId,
   onDraftRef,
@@ -50,7 +40,6 @@ export function DatasetForm({
 }: DatasetFormProps) {
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
-  const [layer, setLayer] = useState(initialLayer);
   const [dataText, setDataText] = useState(() =>
     typeof initialData === "string"
       ? JSON.stringify(initialData)
@@ -66,7 +55,6 @@ export function DatasetForm({
     JSON.stringify({
       name: initialName,
       description: initialDescription,
-      layer: initialLayer,
       data: typeof initialData === "string"
         ? JSON.stringify(initialData)
         : JSON.stringify(initialData, null, 2),
@@ -77,17 +65,15 @@ export function DatasetForm({
   nameRef.current = name;
   const descRef = useRef(description);
   descRef.current = description;
-  const layerRef = useRef(layer);
-  layerRef.current = layer;
   const dataTextRef = useRef(dataText);
   dataTextRef.current = dataText;
 
-  const parseData = useCallback((text: string, forLayer: number): unknown => {
+  const parseData = useCallback((text: string): unknown => {
     try {
       return JSON.parse(text);
     } catch {
-      // Layer 1: template text that isn't valid JSON → store as string
-      return forLayer === 1 ? text : {};
+      // Template text that isn't valid JSON → store as string
+      return text;
     }
   }, []);
 
@@ -96,21 +82,18 @@ export function DatasetForm({
       getDraft: () => ({
         name: nameRef.current,
         description: descRef.current,
-        layer: layerRef.current,
-        data: parseData(dataTextRef.current, layerRef.current),
+        data: parseData(dataTextRef.current),
       }),
       isDirty: () =>
         JSON.stringify({
           name: nameRef.current,
           description: descRef.current,
-          layer: layerRef.current,
           data: dataTextRef.current,
         }) !== originalRef.current,
       reset: () => {
         const original = JSON.parse(originalRef.current);
         setName(original.name);
         setDescription(original.description);
-        setLayer(original.layer);
         setDataText(original.data);
         setJsonError(null);
       },
@@ -121,17 +104,16 @@ export function DatasetForm({
     const current = JSON.stringify({
       name,
       description,
-      layer,
       data: dataText,
     });
     onDirtyChange?.(current !== originalRef.current);
-  }, [name, description, layer, dataText, onDirtyChange]);
+  }, [name, description, dataText, onDirtyChange]);
 
   const handleDataChange = useCallback(
     (val: string) => {
       setDataText(val);
-      // Layer 1 is a Liquid template — skip JSON validation
-      if (layerRef.current === 1) {
+      // Contains Liquid template syntax → skip JSON validation
+      if (/\{\{.*?\}\}|\{%.*?%\}/.test(val)) {
         setJsonError(null);
         return;
       }
@@ -145,8 +127,8 @@ export function DatasetForm({
     []
   );
 
-  // Template editor completions for Layer 1
-  const { datasetVars } = useDatasetVarsMap(agentId ?? undefined);
+  // Template editor completions
+  const { datasetVars } = useDatasetVarsMap();
   const templateVariables = useMemo(() => {
     const datasetKeys = Object.keys(datasetVars);
     return [...BUILTIN_VAR_NAMES, ...datasetKeys];
@@ -225,28 +207,7 @@ export function DatasetForm({
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground">
-          Layer
-        </label>
-        <Select
-          value={String(layer)}
-          onValueChange={(v) => {
-            setLayer(Number(v));
-            // Switching to Layer 1 clears JSON validation error
-            if (Number(v) === 1) setJsonError(null);
-          }}
-        >
-          <SelectTrigger className="mt-1 h-8 w-40 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0">0 — Base</SelectItem>
-            <SelectItem value="1">1 — Derived</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">
-          Data {layer === 1 ? "(Template)" : "(JSON)"}
+          Data (JSON / Template)
         </label>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
           <TabsList className="h-7">
@@ -258,7 +219,7 @@ export function DatasetForm({
               value={dataText}
               onChange={handleDataChange}
               height="300px"
-              templateVariables={layer === 1 ? templateVariables : undefined}
+              templateVariables={templateVariables}
             />
             {jsonError && (
               <p className="mt-1 text-xs text-destructive">{jsonError}</p>

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { datasets } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { validateNoCycle } from "@/lib/datasets/queries";
 
 export async function GET(
   _req: Request,
@@ -51,13 +52,41 @@ export async function PATCH(
 
   const body = await req.json();
 
+  // Validate no circular dependency when data or key changes
+  if (body.data !== undefined || body.key !== undefined) {
+    const agentId = existing.agentId;
+    if (agentId) {
+      const allRows = await db
+        .select({ id: datasets.id, key: datasets.key, data: datasets.data })
+        .from(datasets)
+        .where(eq(datasets.agentId, agentId));
+
+      const updatedRows = allRows.map((r) =>
+        r.id === id
+          ? {
+              key: body.key ?? r.key,
+              data: body.data ?? r.data,
+            }
+          : { key: r.key, data: r.data }
+      );
+
+      try {
+        validateNoCycle(updatedRows);
+      } catch (e) {
+        return NextResponse.json(
+          { error: (e as Error).message },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
   const [updated] = await db
     .update(datasets)
     .set({
       ...(body.key !== undefined && { key: body.key }),
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
-      ...(body.layer !== undefined && { layer: body.layer }),
       ...(body.data !== undefined && { data: body.data }),
     })
     .where(eq(datasets.id, id))
