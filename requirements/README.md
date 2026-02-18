@@ -9,6 +9,8 @@
 
 - [ ] **统一 JSON 数据模型** — 将码表、对象、模板变量统一为分层 JSON：底层原子值无模板语法，上层可引用底层并使用模板
   - 工作区: `simplify-json-model` | 分支: `dev-simplify-json-model-20260217`
+- [ ] **数据集自动依赖解析** — 去掉 layer 分层，扫描 Liquid 模板变量自动构建依赖图，Kahn 拓扑排序渲染，保存时检测循环
+  - 工作区: `dataset-auto-deps` | 分支: `dev-dataset-auto-deps-20260218`
 
 ## Agent 配置
 
