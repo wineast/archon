@@ -1,21 +1,19 @@
 "use client";
 
 import {
-  TemplateEditor,
+  MdEditor,
   type CompletionDocument,
-  type CompletionLookup,
-} from "./template-editor";
+} from "./editors/md-editor";
 
 /**
  * Backward-compatible alias – older code imports TemplateTextarea.
- * It wraps TemplateEditor with the same props.
+ * It wraps MdEditor with the same props.
  */
 export function TemplateTextarea({
   value,
   onChange,
   variables,
   documents,
-  lookups,
   placeholder,
   className,
 }: {
@@ -23,17 +21,15 @@ export function TemplateTextarea({
   onChange: (value: string) => void;
   variables?: string[];
   documents?: CompletionDocument[];
-  lookups?: CompletionLookup[];
   placeholder?: string;
   className?: string;
 }) {
   return (
-    <TemplateEditor
+    <MdEditor
       value={value}
       onChange={onChange}
       variables={variables}
       documents={documents}
-      lookups={lookups}
       placeholder={placeholder}
       className={className}
     />

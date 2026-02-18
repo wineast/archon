@@ -7,16 +7,13 @@ import {
   agents,
   chatConfigs,
   modelConfigs,
-  templateVars,
+  datasets,
   tools,
   wikiDocuments,
   evalCases,
   evalJudgeConfigs,
   evalRunResults,
   evalRuns,
-  lookupTables,
-  lookupEntries,
-  dataObjects,
 } from "./schema";
 import type { ToolParameter } from "@/lib/tools/types";
 import type { Assertion, Dimension } from "@/lib/eval/types";
@@ -34,11 +31,9 @@ export interface SeedResult {
   toolIds: string[];
   modelConfigIds: string[];
   chatConfigId: string;
-  templateVarIds: string[];
+  datasetIds: string[];
   evalJudgeConfigId: string;
   evalCaseIds: string[];
-  lookupTableIds: string[];
-  dataObjectIds: string[];
 }
 
 // ── seed ──
@@ -199,39 +194,45 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     .returning();
   console.log(`  - chat config (${chatConfig.id})`);
 
-  // Seed template vars
-  console.log("Seeding template vars...");
+  // Seed datasets (unified JSON store)
+  console.log("Seeding datasets...");
 
-  const templateVarsSeed = readJson<
-    Array<{ key: string; value: string; type?: string; isArray?: boolean; description?: string }>
-  >(join(agentDir, "template-vars.json"));
+  const datasetsSeed = readJson<
+    Array<{
+      key: string;
+      name: string;
+      description?: string;
+      layer: number;
+      data: unknown;
+    }>
+  >(join(agentDir, "datasets.json"));
 
-  const templateVarIds: string[] = [];
-  for (const tv of templateVarsSeed) {
+  const datasetIds: string[] = [];
+  for (const ds of datasetsSeed) {
     const [row] = await db
-      .insert(templateVars)
+      .insert(datasets)
       .values({
         agentId,
-        key: tv.key,
-        description: tv.description ?? null,
-        value: tv.value,
-        type: (tv.type as "text" | "number" | "boolean" | "json") ?? "text",
-        isArray: tv.isArray ?? false,
+        key: ds.key,
+        name: ds.name,
+        description: ds.description ?? "",
+        layer: ds.layer,
+        data: ds.data,
       })
       .onConflictDoUpdate({
-        target: [templateVars.agentId, templateVars.key],
+        target: [datasets.agentId, datasets.key],
         set: {
-          description: tv.description ?? null,
-          value: tv.value,
-          type: (tv.type as "text" | "number" | "boolean" | "json") ?? "text",
-          isArray: tv.isArray ?? false,
+          name: ds.name,
+          description: ds.description ?? "",
+          layer: ds.layer,
+          data: ds.data,
         },
       })
       .returning();
-    templateVarIds.push(row.id);
-    console.log(`  - ${row.key} (${row.id})`);
+    datasetIds.push(row.id);
+    console.log(`  - ${row.key} [layer ${row.layer}] (${row.id})`);
   }
-  console.log(`Seeded ${templateVarsSeed.length} template vars`);
+  console.log(`Seeded ${datasetsSeed.length} datasets`);
 
   // Seed eval judge configs
   console.log("Seeding eval judge configs...");
@@ -307,115 +308,14 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   }
   console.log(`Seeded ${evalCasesSeed.length} eval cases`);
 
-  // Seed lookup tables
-  console.log("Seeding lookup tables...");
-
-  const lookupTablesSeed = readJson<
-    Array<{
-      key: string;
-      name: string;
-      description: string;
-      entries?: Array<{
-        value: string;
-        label?: string;
-        metadata?: Record<string, unknown>;
-      }>;
-    }>
-  >(join(agentDir, "lookup-tables.json"));
-
-  const lookupTableIds: string[] = [];
-  for (const lt of lookupTablesSeed) {
-    const [row] = await db
-      .insert(lookupTables)
-      .values({
-        agentId,
-        key: lt.key,
-        name: lt.name,
-        description: lt.description,
-      })
-      .onConflictDoUpdate({
-        target: [lookupTables.agentId, lookupTables.key],
-        set: {
-          name: lt.name,
-          description: lt.description,
-        },
-      })
-      .returning();
-    lookupTableIds.push(row.id);
-    console.log(`  - ${row.key} (${row.id})`);
-
-    if (lt.entries) {
-      for (let i = 0; i < lt.entries.length; i++) {
-        const entry = lt.entries[i];
-        await db
-          .insert(lookupEntries)
-          .values({
-            tableId: row.id,
-            value: entry.value,
-            label: entry.label ?? null,
-            metadata: entry.metadata ?? null,
-            order: i,
-          })
-          .onConflictDoUpdate({
-            target: [lookupEntries.tableId, lookupEntries.value],
-            set: {
-              label: entry.label ?? null,
-              metadata: entry.metadata ?? null,
-              order: i,
-            },
-          });
-      }
-    }
-  }
-  console.log(`Seeded ${lookupTablesSeed.length} lookup tables`);
-
-  // Seed data objects
-  console.log("Seeding data objects...");
-
-  const dataObjectsSeed = readJson<
-    Array<{
-      key: string;
-      name: string;
-      description: string;
-      data: Record<string, unknown>;
-    }>
-  >(join(agentDir, "data-objects.json"));
-
-  const dataObjectIds: string[] = [];
-  for (const lo of dataObjectsSeed) {
-    const [row] = await db
-      .insert(dataObjects)
-      .values({
-        agentId,
-        key: lo.key,
-        name: lo.name,
-        description: lo.description,
-        data: lo.data,
-      })
-      .onConflictDoUpdate({
-        target: [dataObjects.agentId, dataObjects.key],
-        set: {
-          name: lo.name,
-          description: lo.description,
-          data: lo.data,
-        },
-      })
-      .returning();
-    dataObjectIds.push(row.id);
-    console.log(`  - ${row.key} (${row.id})`);
-  }
-  console.log(`Seeded ${dataObjectsSeed.length} data objects`);
-
   return {
     agentId,
     toolIds,
     modelConfigIds,
     chatConfigId: chatConfig.id,
-    templateVarIds,
+    datasetIds,
     evalJudgeConfigId: judgeConfig.id,
     evalCaseIds,
-    lookupTableIds,
-    dataObjectIds,
   };
 }
 

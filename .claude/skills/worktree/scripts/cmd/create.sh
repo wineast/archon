@@ -77,6 +77,21 @@ cmd_create() {
         info "已链接 web/.env.local -> .vercel/.env.development.local"
     fi
 
+    # 创建独立的本地数据库（如果源工作区使用本地 Docker DB）
+    if [ -f "$PROJECT_ROOT/web/.env.development.local" ]; then
+        local db_name="archon_$(echo "$branch_name" | tr '-' '_')"
+        local db_url="postgresql://archon:archon@localhost:5432/$db_name"
+        info "创建独立数据库: $db_name"
+        # 通过 docker exec 在容器内创建数据库（避免依赖本地 psql）
+        docker exec archon-postgres psql -U archon -d archon -tc \
+            "SELECT 1 FROM pg_database WHERE datname = '$db_name'" | grep -q 1 \
+            || docker exec archon-postgres createdb -U archon "$db_name"
+        # 写入独立的 .env.development.local
+        printf 'DATABASE_URL=%s\nDATABASE_URL_UNPOOLED=%s\n' "$db_url" "$db_url" \
+            > "$worktree_path/web/.env.development.local"
+        info "已配置本地数据库: $db_name"
+    fi
+
     # 创建 .worktree 目录（如果不存在）
     local wt_config_dir="$worktree_path/.worktree"
     if [ ! -d "$wt_config_dir" ]; then
@@ -88,8 +103,8 @@ cmd_create() {
     local dev_port=$(( RANDOM % 5000 + 4000 ))  # 4000-8999
     local storybook_port=$(( dev_port + 1 ))
     local studio_port=$(( dev_port + 2 ))
-    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"studio\":$studio_port,\"base\":\"$base_branch\"}" > "$wt_config_dir/meta.json"
-    info "端口分配: dev=$dev_port, storybook=$storybook_port, studio=$studio_port, base=$base_branch (写入 .worktree/meta.json)"
+    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"studio\":$studio_port,\"baseBranch\":\"$base_branch\"}" > "$wt_config_dir/meta.json"
+    info "端口分配: dev=$dev_port, storybook=$storybook_port, studio=$studio_port, baseBranch=$base_branch (写入 .worktree/meta.json)"
 
     # 生成 CLAUDE.local.md（提醒 Claude 使用正确的端口）
     sed -e "s|{{WORKTREE_PATH}}|$worktree_path|g" \

@@ -68,10 +68,10 @@ vi.mock("@/lib/eval/assertions", () => ({
 // Mock template rendering
 vi.mock("@/lib/template/render", () => ({
   gatherTemplateData: vi.fn().mockResolvedValue({
-    activeVars: {},
+    resolvedVars: {},
     docs: [],
-    lookupVars: {},
     toolRows: [],
+    datasetEntries: {},
   }),
   renderTemplate: vi.fn().mockImplementation((text: string) =>
     Promise.resolve(text)
@@ -80,10 +80,6 @@ vi.mock("@/lib/template/render", () => ({
 
 // Mock tool-related modules
 vi.mock("@/tool-impls", () => ({}));
-
-vi.mock("@/lib/tools/resolve-enum-refs", () => ({
-  resolveEnumRefs: vi.fn().mockResolvedValue(undefined),
-}));
 
 const mockBuildDynamicTools = vi.fn().mockReturnValue({});
 vi.mock("@/app/api/chat/tools/build-dynamic-tools", () => ({

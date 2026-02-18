@@ -103,24 +103,11 @@ export function buildDynamicTools(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tools: Record<string, Tool<any, any>> = {};
 
-  // Extract entries from lookupVars + dataObjectVars for schema builder (needs flat entry arrays)
-  const lookupEntries = templateData
-    ? Object.fromEntries([
-        ...Object.entries(templateData.lookupVars ?? {}).map(([key, info]) => [
-          key,
-          info.entries,
-        ]),
-        ...Object.entries(templateData.dataObjectVars ?? {}).map(
-          ([key, info]) => [
-            key,
-            Object.entries(info.data).map(([k]) => ({ value: k })),
-          ]
-        ),
-      ])
-    : undefined;
-
   for (const def of definitions) {
-    const inputSchema = buildInputSchema(def.parameters, lookupEntries, templateData?.activeVars);
+    const inputSchema = buildInputSchema(
+      def.parameters,
+      templateData?.resolvedVars
+    );
 
     tools[def.name] = tool({
       description: def.description,

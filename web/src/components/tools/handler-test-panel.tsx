@@ -9,7 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { CodeEditor } from "@/components/ui/code-editor";
+import { JsonEditor } from "@/components/ui/editors/json-editor";
 import { Spinner } from "@/components/ui/spinner";
 import type { ToolParameter } from "@/lib/tools/types";
 
@@ -109,10 +109,9 @@ export function HandlerTestPanel({
             <label className="text-xs font-medium text-muted-foreground">
               参数 (JSON)
             </label>
-            <CodeEditor
+            <JsonEditor
               value={argsInput}
               onChange={setArgsInput}
-              language="json"
               height="100px"
               className="mt-1"
             />
@@ -123,9 +122,8 @@ export function HandlerTestPanel({
               <label className="text-xs font-medium text-muted-foreground">
                 输出
               </label>
-              <CodeEditor
+              <JsonEditor
                 value={output}
-                language="json"
                 readOnly
                 height="120px"
                 className="mt-1"

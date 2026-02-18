@@ -57,6 +57,18 @@ cmd_delete() {
         cd "$PROJECT_ROOT"
     fi
 
+    # 删除对应的本地数据库（如果存在）
+    local wt_name=$(basename "$worktree_path")
+    local db_name="archon_$(echo "$wt_name" | tr '-' '_')"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q archon-postgres; then
+        if docker exec archon-postgres psql -U archon -d archon -tc \
+            "SELECT 1 FROM pg_database WHERE datname = '$db_name'" 2>/dev/null | grep -q 1; then
+            info "删除本地数据库: $db_name"
+            docker exec archon-postgres dropdb -U archon "$db_name" 2>/dev/null || true
+            success "数据库 $db_name 已删除"
+        fi
+    fi
+
     # 删除 worktree
     info "删除 worktree: $worktree_path"
     git worktree remove "$worktree_path" --force
