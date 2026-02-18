@@ -105,13 +105,23 @@ make wt-sync
 
 ### 合并工作区（`merge`）
 
-将工作区分支合并回其 base 分支（记录在 `.worktree/meta.json` 中）。从主仓库执行。
+将工作区分支合并回其 base 分支（记录在 `.worktree/meta.json` 中）。**必须从主仓库执行**。
 
-- 合并后自动检测 `package.json` / `package-lock.json` 是否有变更，有则自动执行 `npm install`
+流程：
 
-```bash
-make wt-merge NAME=<name>
-```
+1. **路径检查**：确认当前工作目录是主仓库（不在 `.worktrees/` 内）。如果当前在 worktree 内，**先 cd 回主仓库**再执行合并命令。
+2. **检查未提交变更**：工作区有未提交修改时，先帮其提交（或提醒用户）。
+3. **执行合并**：
+   ```bash
+   make wt-merge NAME=<name>
+   ```
+4. **冲突处理**：如果合并有冲突，分析冲突内容，解决后提交合并。
+5. **验证**：合并完成后运行 typecheck 和测试，确保合并没有引入问题：
+   ```bash
+   make typecheck
+   make test
+   ```
+6. **依赖检测**：合并后自动检测 `package.json` / `package-lock.json` 是否有变更，有则自动执行 `make deps`
 
 ### 删除 worktree（`delete`）
 
