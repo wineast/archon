@@ -1,15 +1,24 @@
-.PHONY: setup wt-init env deps vercel-check dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-neon-env db-drop db-init wt-list wt-create wt-sync wt-merge wt-delete
+.PHONY: setup wt-init wt-meta env deps vercel-check dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-neon-env db-drop db-init wt-list wt-create wt-sync wt-merge wt-delete
 
 # ============================================================
 # Setup
 # ============================================================
 
 ## 项目初始化（clone 后执行一次）
-## 检查 vercel → 启动 Docker → 环境配置 → 安装依赖 → 推 schema → 灌数据
-setup: vercel-check db-up env deps db-init
+## 检查 vercel → 启动 Docker → 创建主仓库 meta → wt-init
+setup: vercel-check db-up wt-meta wt-init
 
-## 工作区初始化（wt-create 内部调用，Docker 已在跑）
+## 工作区初始化（setup 和 wt-create 共用）
+## env (link-env + db-local-env) → deps (npm install) → db-init (push + seed)
 wt-init: env deps db-init
+
+## 创建主仓库的 .worktree/meta.json（把主仓库也视为工作区）
+wt-meta:
+	@mkdir -p .worktree
+	@if [ ! -f .worktree/meta.json ]; then \
+		echo '{"dev":3000,"storybook":6006,"baseBranch":"main"}' > .worktree/meta.json; \
+		echo "Created .worktree/meta.json (main workspace)"; \
+	fi
 
 ## 环境配置：创建 .env.local symlink + .env.development.local（指向正确数据库）
 env:
