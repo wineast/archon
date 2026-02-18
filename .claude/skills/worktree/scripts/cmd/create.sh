@@ -72,10 +72,7 @@ cmd_create() {
     fi
 
     # 创建 web/.env.local -> .vercel/.env.development.local 的符号链接
-    if [ -f "$worktree_path/web/.vercel/.env.development.local" ]; then
-        ln -sf .vercel/.env.development.local "$worktree_path/web/.env.local"
-        info "已链接 web/.env.local -> .vercel/.env.development.local"
-    fi
+    "$PROJECT_ROOT/scripts/link-env.sh" "$worktree_path"
 
     # 创建独立本地数据库 + 初始化 schema/seed
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -q archon-postgres; then

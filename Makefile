@@ -21,10 +21,7 @@ vercel-check:
 		echo ""; \
 		exit 1; \
 	fi
-	@if [ -f web/.vercel/.env.development.local ] && [ ! -L web/.env.local ]; then \
-		ln -sf .vercel/.env.development.local web/.env.local && \
-		echo "Linked web/.env.local → .vercel/.env.development.local"; \
-	fi
+	@./scripts/link-env.sh
 
 # ============================================================
 # Development
