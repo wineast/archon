@@ -15,7 +15,7 @@ interface DatasetDetailProps {
   dataset: DatasetRow;
   onSave: (
     id: string,
-    data: { name: string; description: string; layer: number; data: unknown }
+    data: { name: string; description: string; data: unknown }
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
@@ -39,7 +39,6 @@ export function DatasetDetail({
       await onSave(dataset.id, {
         name: draft.name,
         description: draft.description,
-        layer: draft.layer,
         data: draft.data,
       });
     } finally {
@@ -69,7 +68,6 @@ export function DatasetDetail({
             datasetKey={dataset.key}
             name={dataset.name}
             description={dataset.description}
-            layer={dataset.layer}
             data={dataset.data}
             agentId={dataset.agentId}
             onDraftRef={setDraftRef}

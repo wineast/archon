@@ -2,20 +2,20 @@
   {
     "key": "company_name",
     "name": "公司名称",
-    "layer": 0,
+
     "data": "GMCC"
   },
   {
     "key": "reply_language",
     "name": "AI 回复语言",
-    "layer": 0,
+
     "data": "中文"
   },
   {
     "key": "income_type_enum",
     "name": "Income Type",
     "description": "Income type 枚举（短key→全称）",
-    "layer": 0,
+
     "data": {
       "w2": "Full Doc - W2 Wage Earner",
       "self_employed": "NQM - 1year of 2-years Full Doc-Self-employed",
@@ -37,7 +37,7 @@
     "key": "state_enum",
     "name": "美国州枚举",
     "description": "美国州缩写枚举（缩写→缩写）",
-    "layer": 0,
+
     "data": {
       "AL": "AL", "AK": "AK", "AZ": "AZ", "AR": "AR", "CA": "CA",
       "CO": "CO", "CT": "CT", "DE": "DE", "DC": "DC", "FL": "FL",
@@ -56,7 +56,7 @@
     "key": "product_name_enum",
     "name": "贷款产品名称枚举",
     "description": "贷款产品名称枚举（短key→全称）",
-    "layer": 0,
+
     "data": {
       "universe": "GMCC Universe",
       "ocean": "GMCC Ocean",
@@ -74,7 +74,7 @@
     "key": "transaction_type_enum",
     "name": "交易类型枚举",
     "description": "交易类型枚举（短key→全称）",
-    "layer": 0,
+
     "data": {
       "purchase": "Purchase",
       "rate_term_refi": "Rate/Term Refinance",
@@ -86,7 +86,7 @@
     "key": "occupancy_type_enum",
     "name": "居住类型枚举",
     "description": "居住类型枚举（短key→全称）",
-    "layer": 0,
+
     "data": {
       "primary": "Primary",
       "second_home": "2nd Home",
@@ -97,7 +97,7 @@
     "key": "property_type_enum",
     "name": "房产类型枚举",
     "description": "房产类型枚举（短key→全称）",
-    "layer": 0,
+
     "data": {
       "sfr": "SFR",
       "pud": "PUD",
@@ -110,7 +110,7 @@
     "key": "citizenship_status_enum",
     "name": "身份/签证状态枚举",
     "description": "身份/签证状态枚举（短key→全称）",
-    "layer": 0,
+
     "data": {
       "us_citizen": "US Citizen",
       "green_card": "Green Card",
@@ -125,7 +125,7 @@
     "key": "lien_position_enum",
     "name": "抵押权顺位枚举",
     "description": "抵押权顺位枚举（短key→全称）",
-    "layer": 0,
+
     "data": {
       "first": "1st Mortgage",
       "second": "2nd Mortgage"
@@ -135,7 +135,7 @@
     "key": "product_routes",
     "name": "Product Routes",
     "description": "贷款产品路由配置，object 类型，按产品 key 索引",
-    "layer": 1,
+
     "data": {
       "universe": {
         "label": "GMCC Universe",

@@ -122,7 +122,6 @@ export const datasets = pgTable(
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
-    layer: integer("layer").notNull().default(0),
     data: jsonb("data").$type<unknown>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

@@ -9,13 +9,13 @@ const seedDir = path.resolve(__dirname, "../../../db/seed-data/gmcc-advisor");
 
 const allDatasets = JSON.parse(
   fs.readFileSync(path.join(seedDir, "datasets.json"), "utf8")
-) as Array<{ key: string; layer: number; data: unknown }>;
+) as Array<{ key: string; data: unknown }>;
 
 const tools = JSON.parse(
   fs.readFileSync(path.join(seedDir, "tools.json"), "utf8")
 ) as Array<{ name: string; handler: string }>;
 
-// ── Resolve datasets (layer 0 + layer 1) ──
+// ── Resolve datasets (dependency-graph driven) ──
 const { resolvedVars } = resolveDatasets(allDatasets);
 const productRoutes = resolvedVars.product_routes as Record<
   string,
@@ -68,6 +68,9 @@ const mockContext = {
         metadata: v as Record<string, unknown>,
       }));
     },
+  },
+  async fn(key: string) {
+    throw new Error(`Function "${key}" not found`);
   },
 } satisfies ToolContext;
 

@@ -16,7 +16,7 @@ vi.mock("@/db/schema", () => ({
   datasets: {
     key: "key",
     name: "name",
-    layer: "layer",
+
     data: "data",
     agentId: "agent_id",
   },
@@ -113,7 +113,7 @@ describe("renderSystemPrompt", () => {
 
   it("replaces dataset variables", async () => {
     setupDbChain([
-      [{ key: "company", layer: 0, data: "Acme Corp" }],
+      [{ key: "company",data: "Acme Corp" }],
       [],
       [],
     ]);
@@ -181,7 +181,6 @@ describe("renderSystemPrompt", () => {
       [
         {
           key: "state_enum",
-          layer: 0,
           data: { CA: "California", TX: "Texas" },
         },
       ],
@@ -199,7 +198,7 @@ describe("renderSystemPrompt", () => {
 
   it("extraVars override dataset vars", async () => {
     setupDbChain([
-      [{ key: "name", layer: 0, data: "Default" }],
+      [{ key: "name",data: "Default" }],
       [],
       [],
     ]);
@@ -244,7 +243,7 @@ describe("renderSystemPrompt", () => {
 
   it("renders numeric dataset value", async () => {
     setupDbChain([
-      [{ key: "rate", layer: 0, data: 0.75 }],
+      [{ key: "rate",data: 0.75 }],
       [],
       [],
     ]);
@@ -259,7 +258,7 @@ describe("renderSystemPrompt", () => {
 
   it("renders boolean dataset with {% if %}", async () => {
     setupDbChain([
-      [{ key: "enabled", layer: 0, data: true }],
+      [{ key: "enabled",data: true }],
       [],
       [],
     ]);
@@ -274,7 +273,7 @@ describe("renderSystemPrompt", () => {
 
   it("renders boolean false with {% if %}", async () => {
     setupDbChain([
-      [{ key: "enabled", layer: 0, data: false }],
+      [{ key: "enabled",data: false }],
       [],
       [],
     ]);
@@ -289,7 +288,7 @@ describe("renderSystemPrompt", () => {
 
   it("renders array dataset with {% for %}", async () => {
     setupDbChain([
-      [{ key: "langs", layer: 0, data: ["en", "zh", "es"] }],
+      [{ key: "langs",data: ["en", "zh", "es"] }],
       [],
       [],
     ]);
@@ -304,7 +303,7 @@ describe("renderSystemPrompt", () => {
 
   it("renders array of numbers with {% for %}", async () => {
     setupDbChain([
-      [{ key: "scores", layer: 0, data: [1, 2, 3] }],
+      [{ key: "scores",data: [1, 2, 3] }],
       [],
       [],
     ]);
@@ -319,7 +318,7 @@ describe("renderSystemPrompt", () => {
 
   it("renders object dataset with field access", async () => {
     setupDbChain([
-      [{ key: "office", layer: 0, data: { city: "LA", state: "CA" } }],
+      [{ key: "office",data: { city: "LA", state: "CA" } }],
       [],
       [],
     ]);
@@ -343,13 +342,13 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("Before  after");
   });
 
-  it("resolves layer 1 dataset with layer 0 references", async () => {
+  it("resolves derived dataset with base dataset references", async () => {
     setupDbChain([
       [
-        { key: "product_name", layer: 0, data: "GMCC Universe" },
+        { key: "product_name",data: "GMCC Universe" },
         {
           key: "routes",
-          layer: 1,
+         
           data: { universe: { label: "{{product_name}}", states: ["CA"] } },
         },
       ],
@@ -365,12 +364,11 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("GMCC Universe");
   });
 
-  it("resolves layer 1 states via join filter", async () => {
+  it("resolves dataset states via join filter", async () => {
     setupDbChain([
       [
         {
           key: "routes",
-          layer: 0,
           data: { universe: { label: "Universe", states: ["CA", "TX", "NY"] } },
         },
       ],
@@ -405,7 +403,7 @@ describe("renderWikiContent", () => {
   it("renders wiki content with variables and includes", async () => {
     const now = new Date();
     setupDbChain([
-      [{ key: "org", layer: 0, data: "TestOrg" }],
+      [{ key: "org",data: "TestOrg" }],
       [
         {
           id: "doc-1",
@@ -452,9 +450,9 @@ describe("renderWikiContent", () => {
     const now = new Date();
     setupDbChain([
       [
-        { key: "ocean_incomes", layer: 0, data: "Full Doc - W2 Wage Earner、NQM-WVOE" },
-        { key: "ocean_incomes_excluded", layer: 0, data: "NQM-DSCR" },
-        { key: "ocean_states", layer: 0, data: "CA, TX, NV" },
+        { key: "ocean_incomes",data: "Full Doc - W2 Wage Earner、NQM-WVOE" },
+        { key: "ocean_incomes_excluded",data: "NQM-DSCR" },
+        { key: "ocean_states",data: "CA, TX, NV" },
       ],
       [
         {
@@ -680,7 +678,7 @@ describe("tool namespace", () => {
 
   it("tool namespace does not conflict with dataset vars", async () => {
     setupDbChain([
-      [{ key: "search", layer: 0, data: "custom-search" }],
+      [{ key: "search",data: "custom-search" }],
       [],
       [makeTool("search", "Search tool description")],
     ]);

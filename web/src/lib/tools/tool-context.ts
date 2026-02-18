@@ -54,7 +54,6 @@ export function createToolContext(agentId?: string): ToolContext {
     const rows = await db
       .select({
         key: datasets.key,
-        layer: datasets.layer,
         data: datasets.data,
       })
       .from(datasets)

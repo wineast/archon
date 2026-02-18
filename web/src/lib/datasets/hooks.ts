@@ -55,7 +55,6 @@ export async function createDataset(
     key: string;
     name: string;
     description?: string;
-    layer?: number;
     data?: unknown;
     agentId?: string;
   },
@@ -67,12 +66,15 @@ export async function createDataset(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? "Failed to create dataset");
+    }
     mutate();
     return res.json();
   } catch (e) {
     console.error("createDataset failed:", e);
-    toast.error("Failed to create dataset");
+    toast.error((e as Error).message || "Failed to create dataset");
     return null;
   }
 }
@@ -88,12 +90,15 @@ export async function updateDataset(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? "Failed to save dataset");
+    }
     mutate();
     return res.json();
   } catch (e) {
     console.error("updateDataset failed:", e);
-    toast.error("Failed to save dataset");
+    toast.error((e as Error).message || "Failed to save dataset");
     return null;
   }
 }
