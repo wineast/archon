@@ -1,9 +1,7 @@
-import { config } from "dotenv";
-config({ path: ".env.local" });
-import { neon } from "@neondatabase/serverless";
+import { createClient } from "./client";
 
 async function main() {
-  const sql = neon(process.env.DATABASE_URL_UNPOOLED!);
+  const sql = createClient();
 
   console.log("Dropping all tables...");
 
@@ -18,6 +16,7 @@ async function main() {
   `;
 
   console.log("All tables dropped.");
+  await sql.end();
 }
 
 main().catch((err) => {

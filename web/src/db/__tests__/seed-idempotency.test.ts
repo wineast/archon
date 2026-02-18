@@ -1,22 +1,29 @@
 import { config } from "dotenv";
+config({ path: ".env.development.local" });
 config({ path: ".env.local" });
-import { describe, it, expect } from "vitest";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { describe, it, expect, afterAll } from "vitest";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
 import { seed } from "../seed";
 import {
-  agents,
   chatConfigs,
   templateVars,
   evalJudgeConfigs,
   evalCases,
 } from "../schema";
 
+const pgClient = postgres(
+  (process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL)!
+);
+
 function createDb() {
-  const client = neon(process.env.DATABASE_URL_UNPOOLED!);
-  return drizzle({ client });
+  return drizzle({ client: pgClient });
 }
+
+afterAll(async () => {
+  await pgClient.end();
+});
 
 describe("seed idempotency", () => {
   it("should return identical IDs when run twice", async () => {

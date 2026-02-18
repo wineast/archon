@@ -4,7 +4,10 @@
 - 路径: `{{WORKTREE_PATH}}`
 - **始终在此目录下工作，不要 cd 到其他位置**
 
-## Dev Server
-- 端口: **{{DEV_PORT}}**（Storybook: {{STORYBOOK_PORT}}）
-- 启动: `make dev`
-- 访问: `http://localhost:{{DEV_PORT}}`
+## 端口
+
+| 服务 | 端口 | 启动 |
+|------|------|------|
+| Dev Server | {{DEV_PORT}} | `make dev` |
+| Storybook | {{STORYBOOK_PORT}} | `make storybook` |
+| Drizzle Studio | {{STUDIO_PORT}} | `make db-studio` |
