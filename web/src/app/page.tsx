@@ -7,7 +7,7 @@ import { PlusIcon, ShieldIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { AgentCard } from "@/components/agents/agent-card";
-import { AgentFormSheet } from "@/components/agents/agent-form-sheet";
+import { AgentFormDialog } from "@/components/agents/agent-form-dialog";
 import { useAgents, deleteAgent } from "@/lib/agents/hooks";
 import type { AgentWithRole } from "@/lib/agents/hooks";
 import type { AgentRow } from "@/db/schema";
@@ -86,8 +86,8 @@ export default function AgentsPage() {
         )}
       </main>
 
-      {/* Form Sheet */}
-      <AgentFormSheet
+      {/* Form Dialog */}
+      <AgentFormDialog
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         agent={editingAgent}

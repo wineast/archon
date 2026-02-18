@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,19 +28,19 @@ function nameToSlug(name: string): string {
   return ascii || "";
 }
 
-interface AgentFormSheetProps {
+interface AgentFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agent?: AgentRow | null;
   mutate: KeyedMutator<AgentWithRole[]>;
 }
 
-export function AgentFormSheet({
+export function AgentFormDialog({
   open,
   onOpenChange,
   agent,
   mutate,
-}: AgentFormSheetProps) {
+}: AgentFormDialogProps) {
   const isEdit = !!agent;
 
   const [name, setName] = useState("");
@@ -86,6 +87,22 @@ export function AgentFormSheet({
     []
   );
 
+  const handleReset = useCallback(() => {
+    if (agent) {
+      setName(agent.name);
+      setSlug(agent.slug);
+      setSlugManual(true);
+      setDescription(agent.description);
+      setIcon(agent.icon);
+    } else {
+      setName("");
+      setSlug("");
+      setSlugManual(false);
+      setDescription("");
+      setIcon("bot");
+    }
+  }, [agent]);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -110,15 +127,15 @@ export function AgentFormSheet({
   );
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "编辑 Agent" : "新建 Agent"}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "编辑 Agent" : "新建 Agent"}</DialogTitle>
+          <DialogDescription>
             {isEdit ? "修改 Agent 的配置信息" : "创建一个新的 Agent"}
-          </SheetDescription>
-        </SheetHeader>
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto px-4">
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="space-y-2">
             <Label htmlFor="agent-name">名称</Label>
             <Input
@@ -155,14 +172,22 @@ export function AgentFormSheet({
             <Label>图标</Label>
             <IconPicker value={icon} onChange={setIcon} />
           </div>
-          <div className="mt-auto pt-4">
-            <Button type="submit" className="w-full" disabled={!name.trim() || busy}>
+          <DialogFooter>
+            {isEdit && (
+              <Button type="button" variant="outline" onClick={handleReset} disabled={busy}>
+                重置
+              </Button>
+            )}
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+              取消
+            </Button>
+            <Button type="submit" disabled={!name.trim() || busy}>
               {busy && <Spinner className="mr-2" />}
               {isEdit ? "保存" : "创建"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

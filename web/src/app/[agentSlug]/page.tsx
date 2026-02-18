@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import useSWR from "swr";
 import { UserButton } from "@clerk/nextjs";
 import { DefaultChatTransport, isTextUIPart } from "ai";
@@ -37,15 +38,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
-import { EvalSheet } from "@/components/eval/eval-sheet";
-import { DatasetsSheet } from "@/components/datasets/datasets-sheet";
-import { FunctionsSheet } from "@/components/functions/functions-sheet";
 import { RequestInspectorModal } from "@/components/request-inspector-modal";
-import { ChatConfigSheet } from "@/components/chat-config/chat-config-sheet";
 import { UserSettingsModal } from "@/components/user/user-settings-modal";
-import { ToolsSheet } from "@/components/tools/tools-sheet";
-import { ModelConfigSheet } from "@/components/model-config/model-config-sheet";
-import { MembersSheet } from "@/components/members/members-sheet";
 import { useChatConfig } from "@/lib/chat-config/hooks";
 import { useActiveModelConfig } from "@/lib/model-config/hooks";
 import { useTools } from "@/lib/tools/hooks";
@@ -55,22 +49,14 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { Separator } from "@/components/ui/separator";
 import { useSessions, deleteSession } from "@/lib/session/hooks";
 import { useAgentRole } from "@/lib/auth/hooks";
-import { WikiSheet } from "@/components/wiki/wiki-sheet";
 import {
-  BookOpenIcon,
-  DatabaseIcon,
   DownloadIcon,
   EllipsisVerticalIcon,
-  FlaskConicalIcon,
-  FunctionSquareIcon,
   SearchCodeIcon,
   SettingsIcon,
-  SlidersHorizontalIcon,
   Trash2Icon,
   UploadIcon,
   UserCogIcon,
-  UsersIcon,
-  WrenchIcon,
 } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -100,17 +86,9 @@ function SuggestionItem({
 function AgentChatContent({ agent }: { agent: AgentRow }) {
   const [input, setInput] = useState("");
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [configOpen, setConfigOpen] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const [modelConfigOpen, setModelConfigOpen] = useState(false);
-  const [evalOpen, setEvalOpen] = useState(false);
-  const [datasetsOpen, setDatasetsOpen] = useState(false);
-  const [functionsOpen, setFunctionsOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
-  const [wikiOpen, setWikiOpen] = useState(false);
-  const [membersOpen, setMembersOpen] = useState(false);
 
-  const { canEdit, canManageMembers, canViewAllSessions } = useAgentRole(agent.id);
+  const { canEdit, canViewAllSessions } = useAgentRole(agent.id);
   const [showAllSessions, setShowAllSessions] = useState(false);
   const { activeConfig } = useActiveModelConfig(agent.id);
   const { tools: toolsList } = useTools(agent.id);
@@ -431,8 +409,6 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
           open={inspectorOpen}
           onOpenChange={setInspectorOpen}
         />
-        <ChatConfigSheet open={configOpen} onOpenChange={setConfigOpen} agentId={agent.id} />
-        <EvalSheet open={evalOpen} onOpenChange={setEvalOpen} agentId={agent.id} />
         <UserSettingsModal open={userSettingsOpen} onOpenChange={setUserSettingsOpen} />
 
         {/* ── Layout header ── */}
@@ -481,42 +457,11 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
                       <SearchCodeIcon className="size-4" />
                       Inspect
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setConfigOpen(true)}>
-                      <SlidersHorizontalIcon className="size-4" />
-                      Config
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setToolsOpen(true)}>
-                      <WrenchIcon className="size-4" />
-                      Tools
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setWikiOpen(true)}>
-                      <BookOpenIcon className="size-4" />
-                      Wiki
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDatasetsOpen(true)}>
-                      <DatabaseIcon className="size-4" />
-                      Datasets
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFunctionsOpen(true)}>
-                      <FunctionSquareIcon className="size-4" />
-                      Functions
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setEvalOpen(true)}>
-                      <FlaskConicalIcon className="size-4" />
-                      Evaluate
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setModelConfigOpen(true)}>
-                      <SettingsIcon className="size-4" />
-                      Model Config
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {canManageMembers && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setMembersOpen(true)}>
-                      <UsersIcon className="size-4" />
-                      Members
+                    <DropdownMenuItem asChild>
+                      <Link href={`/${agent.slug}/settings`}>
+                        <SettingsIcon className="size-4" />
+                        Agent Settings
+                      </Link>
                     </DropdownMenuItem>
                   </>
                 )}
@@ -621,17 +566,6 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
           </div>
         </div>
       </SidebarInset>
-      <WikiSheet open={wikiOpen} onOpenChange={setWikiOpen} agentId={agent.id} />
-      <ToolsSheet open={toolsOpen} onOpenChange={setToolsOpen} agentId={agent.id} />
-      <DatasetsSheet open={datasetsOpen} onOpenChange={setDatasetsOpen} agentId={agent.id} />
-      <FunctionsSheet open={functionsOpen} onOpenChange={setFunctionsOpen} agentId={agent.id} />
-      <ModelConfigSheet open={modelConfigOpen} onOpenChange={setModelConfigOpen} agentId={agent.id} />
-      <MembersSheet
-        open={membersOpen}
-        onOpenChange={setMembersOpen}
-        agentId={agent.id}
-        isPublic={agent.isPublic}
-      />
     </SidebarProvider>
   );
 }

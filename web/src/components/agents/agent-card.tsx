@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { EllipsisVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { EllipsisVerticalIcon, PencilIcon, SettingsIcon, Trash2Icon } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +65,12 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
                   >
                     <PencilIcon className="size-4" />
                     编辑
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/${agent.slug}/settings`} onClick={(e) => e.stopPropagation()}>
+                      <SettingsIcon className="size-4" />
+                      设置
+                    </Link>
                   </DropdownMenuItem>
                   {canDelete && (
                     <DropdownMenuItem
