@@ -41,22 +41,24 @@ import {
 } from "lucide-react";
 
 interface ResultsPanelProps {
+  agentId?: string;
   selectedTags: string[];
 }
 
 export function ResultsPanel({
+  agentId,
   selectedTags,
 }: ResultsPanelProps) {
-  const { cases: caseRows } = useEvalCases();
-  const { configs } = useEvalJudgeConfigs();
-  const { templateVars } = useTemplateVars();
-  const { tools: allDbTools } = useTools();
-  const { configs: modelConfigs } = useModelConfigs();
-  const { activeConfig: activeModelConfig } = useActiveModelConfig();
+  const { cases: caseRows } = useEvalCases(agentId);
+  const { configs } = useEvalJudgeConfigs(agentId);
+  const { templateVars } = useTemplateVars(agentId);
+  const { tools: allDbTools } = useTools(agentId);
+  const { configs: modelConfigs } = useModelConfigs(agentId);
+  const { activeConfig: activeModelConfig } = useActiveModelConfig(agentId);
   const getEnabledToolNames = () =>
     allDbTools.filter((t) => t.enabled).map((t) => t.name);
 
-  const { runs, mutate: mutateRuns } = useEvalRuns();
+  const { runs, mutate: mutateRuns } = useEvalRuns(agentId);
   const {
     isRunning,
     progress,

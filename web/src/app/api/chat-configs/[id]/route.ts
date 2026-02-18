@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { chatConfigs } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await req.json();
 
   const [existing] = await db
     .select()
@@ -18,6 +18,11 @@ export async function PUT(
   if (!existing) {
     return NextResponse.json({ error: "Config not found" }, { status: 404 });
   }
+
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
+  const body = await req.json();
 
   const [updated] = await db
     .update(chatConfigs)

@@ -116,6 +116,7 @@ export async function createSession(opts: {
   model: string;
   systemPrompt?: string;
   agentId?: string;
+  userId?: string;
 }) {
   const [session] = await db
     .insert(chatSessions)
@@ -125,6 +126,7 @@ export async function createSession(opts: {
       model: opts.model,
       systemPrompt: opts.systemPrompt,
       agentId: opts.agentId ?? null,
+      userId: opts.userId ?? null,
     })
     .onConflictDoNothing()
     .returning();
@@ -181,6 +183,15 @@ export async function listSessions(limit = 50, agentId?: string) {
   return query;
 }
 
+export async function listSessionsByUser(limit = 50, agentId: string, userId: string) {
+  return db
+    .select()
+    .from(chatSessions)
+    .where(and(eq(chatSessions.agentId, agentId), eq(chatSessions.userId, userId)))
+    .orderBy(desc(chatSessions.updatedAt))
+    .limit(limit);
+}
+
 export async function getSession(id: string) {
   const [session] = await db
     .select()
@@ -224,6 +235,7 @@ export async function disableSessionShare(sessionId: string) {
 
 export async function importSession(opts: {
   agentId: string;
+  userId?: string;
   title: string;
   model: string;
   createdAt?: string;
@@ -239,6 +251,7 @@ export async function importSession(opts: {
   await db.insert(chatSessions).values({
     id: sessionId,
     agentId: opts.agentId,
+    userId: opts.userId ?? null,
     title: opts.title,
     model: opts.model,
     messageCount: opts.messages.length,

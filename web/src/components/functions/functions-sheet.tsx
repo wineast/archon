@@ -43,11 +43,13 @@ function parseActiveId(id: string | null): {
 export function FunctionsSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
-  const { functions, mutate: mutateList } = useFunctions();
+  const { functions, mutate: mutateList } = useFunctions(agentId);
   const [activeFunctionId, setActiveFunctionId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -79,7 +81,7 @@ export function FunctionsSheet({
   const handleCreateWithKey = useCallback(
     async (key: string, name: string) => {
       const result = await createFunction(
-        { key, name, description: "", code: "// Write your function here\n" },
+        { key, name, description: "", code: "// Write your function here\n", agentId },
         mutateList
       );
       if (result?.id) {
@@ -87,7 +89,7 @@ export function FunctionsSheet({
         setCreateDialogOpen(false);
       }
     },
-    [mutateList]
+    [mutateList, agentId]
   );
 
   const handleSave = useCallback(

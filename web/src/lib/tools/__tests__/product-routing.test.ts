@@ -69,6 +69,7 @@ const mockContext = {
       }));
     },
   },
+  fn: async () => { throw new Error("not implemented"); },
 } satisfies ToolContext;
 
 // ── Helper: call real handler, return sorted product keys ──

@@ -24,11 +24,13 @@ import { DatasetCreateDialog } from "./dataset-create-dialog";
 export function DatasetsSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
-  const { datasets, mutate: mutateList } = useDatasets();
+  const { datasets, mutate: mutateList } = useDatasets(agentId);
   const [activeDatasetId, setActiveDatasetId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -49,7 +51,7 @@ export function DatasetsSheet({
   const handleCreateWithKey = useCallback(
     async (key: string, name: string) => {
       const result = await createDataset(
-        { key, name, description: "", data: {} },
+        { key, name, description: "", data: {}, agentId },
         mutateList
       );
       if (result?.id) {
@@ -57,7 +59,7 @@ export function DatasetsSheet({
         setCreateDialogOpen(false);
       }
     },
-    [mutateList]
+    [mutateList, agentId]
   );
 
   const handleSave = useCallback(

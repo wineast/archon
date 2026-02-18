@@ -4,13 +4,15 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import type { DatasetRow } from "@/db/schema";
 
-export const DATASETS_API_KEY = "/api/datasets";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useDatasets() {
+export function datasetsApiKey(agentId?: string) {
+  return agentId ? `/api/datasets?agentId=${agentId}` : null;
+}
+
+export function useDatasets(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<DatasetRow[]>(
-    DATASETS_API_KEY,
+    datasetsApiKey(agentId),
     fetcher
   );
 
@@ -24,7 +26,7 @@ export function useDatasets() {
 
 export function useDataset(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR<DatasetRow>(
-    id ? `${DATASETS_API_KEY}/${id}` : null,
+    id ? `/api/datasets/${id}` : null,
     fetcher
   );
 
@@ -37,8 +39,8 @@ export function useDataset(id: string | null) {
 }
 
 /** Returns all dataset keys → data as a flat map. */
-export function useDatasetVarsMap() {
-  const { data } = useSWR<DatasetRow[]>(DATASETS_API_KEY, fetcher);
+export function useDatasetVarsMap(agentId?: string) {
+  const { data } = useSWR<DatasetRow[]>(datasetsApiKey(agentId), fetcher);
 
   const datasetVars: Record<string, unknown> = {};
   if (data) {
@@ -57,12 +59,12 @@ export async function createDataset(
     description?: string;
     layer?: number;
     data?: unknown;
-    agentId?: string;
+    agentId: string;
   },
   mutate: () => void
 ) {
   try {
-    const res = await fetch(DATASETS_API_KEY, {
+    const res = await fetch("/api/datasets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -83,7 +85,7 @@ export async function updateDataset(
   mutate: () => void
 ) {
   try {
-    const res = await fetch(`${DATASETS_API_KEY}/${id}`, {
+    const res = await fetch(`/api/datasets/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -100,7 +102,7 @@ export async function updateDataset(
 
 export async function deleteDataset(id: string, mutate: () => void) {
   try {
-    const res = await fetch(`${DATASETS_API_KEY}/${id}`, {
+    const res = await fetch(`/api/datasets/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(await res.text());

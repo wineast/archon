@@ -5,11 +5,11 @@ import {
   convertToModelMessages,
   stepCountIs,
 } from "ai";
-import { after } from "next/server";
+import { after, NextResponse } from "next/server";
 import { buildDynamicTools } from "./tools/build-dynamic-tools";
 import { db } from "@/db";
 import { tools, modelConfigs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
   createSession,
@@ -18,6 +18,7 @@ import {
   responseMessagesToUIParts,
 } from "@/db/chat-persistence";
 import { renderTemplate, gatherTemplateData } from "@/lib/template/render";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 // Side-effect: all implementations self-register into the registry
 import "@/tool-impls";
@@ -35,11 +36,24 @@ export async function POST(req: Request) {
     agentId?: string;
   } = await req.json();
 
-  // Read active model config from DB
+  // Auth: require viewer access to the agent
+  if (!agentId) {
+    return new Response(
+      JSON.stringify({ error: "agentId is required" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  const ctx = await requireAgentRole(agentId, "viewer");
+  if (ctx instanceof NextResponse) return ctx;
+
+  const userId = ctx.user.id;
+
+  // Read active model config from DB (scoped to agent)
   const [activeConfig] = await db
     .select()
     .from(modelConfigs)
-    .where(eq(modelConfigs.isActive, true))
+    .where(and(eq(modelConfigs.agentId, agentId), eq(modelConfigs.isActive, true)))
     .limit(1);
 
   if (!activeConfig?.modelId) {
@@ -49,11 +63,11 @@ export async function POST(req: Request) {
     );
   }
 
-  // Read all enabled tools from DB
+  // Read all enabled tools from DB (scoped to agent)
   const enabledRows = await db
     .select()
     .from(tools)
-    .where(eq(tools.enabled, true));
+    .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true)));
 
   const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
     name: row.name,
@@ -101,6 +115,7 @@ export async function POST(req: Request) {
               model: activeConfig.modelId,
               systemPrompt: activeConfig.systemPrompt,
               agentId,
+              userId,
             });
           }
           // 2. Save user message first

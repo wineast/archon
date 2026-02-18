@@ -1,19 +1,29 @@
 import { db } from "@/db";
 import { evalRuns, modelConfigs } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import type { CreateEvalRunRequest, CreateEvalRunResponse } from "@/lib/eval/types";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
-  const body: CreateEvalRunRequest = await req.json();
+  const body: CreateEvalRunRequest & { agentId?: string } = await req.json();
   const {
+    agentId,
     modelConfigId,
     judgeConfigId,
     judgeConfigName,
     filterTags,
     totalCases,
   } = body;
+
+  if (!agentId) {
+    return NextResponse.json({ error: "agentId is required" }, { status: 400 });
+  }
+
+  const ctx = await requireAgentRole(agentId, "editor");
+  if (ctx instanceof NextResponse) return ctx;
 
   // Load model config from DB
   const [modelConfig] = await db
@@ -32,6 +42,7 @@ export async function POST(req: Request) {
   const [run] = await db
     .insert(evalRuns)
     .values({
+      agentId,
       chatModel: modelConfig.modelId,
       chatSystemPrompt: modelConfig.systemPrompt,
       judgeConfigId: judgeConfigId ?? null,

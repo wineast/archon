@@ -11,15 +11,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AGENT_ICON_MAP } from "./icon-picker";
-import type { AgentRow } from "@/db/schema";
+import type { AgentWithRole } from "@/lib/agents/hooks";
+import { AGENT_ROLE_LEVELS } from "@/db/schema";
 
 interface AgentCardProps {
-  agent: AgentRow;
-  onEdit: (agent: AgentRow) => void;
-  onDelete: (agent: AgentRow) => void;
+  agent: AgentWithRole;
+  onEdit: (agent: AgentWithRole) => void;
+  onDelete: (agent: AgentWithRole) => void;
 }
 
 export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
+  const level = agent.myRole ? AGENT_ROLE_LEVELS[agent.myRole] : -1;
+  const canEdit = level >= AGENT_ROLE_LEVELS.admin;
+  const canDelete = level >= AGENT_ROLE_LEVELS.owner;
   const Icon = AGENT_ICON_MAP[agent.icon] ?? AGENT_ICON_MAP["bot"];
 
   return (
@@ -39,41 +43,45 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
               )}
             </div>
           </div>
-          <CardAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <EllipsisVerticalIcon className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onEdit(agent);
-                  }}
-                >
-                  <PencilIcon className="size-4" />
-                  编辑
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onDelete(agent);
-                  }}
-                  className="text-destructive"
-                >
-                  <Trash2Icon className="size-4" />
-                  删除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </CardAction>
+          {canEdit && (
+            <CardAction>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <EllipsisVerticalIcon className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onEdit(agent);
+                    }}
+                  >
+                    <PencilIcon className="size-4" />
+                    编辑
+                  </DropdownMenuItem>
+                  {canDelete && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onDelete(agent);
+                      }}
+                      className="text-destructive"
+                    >
+                      <Trash2Icon className="size-4" />
+                      删除
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </CardAction>
+          )}
         </CardHeader>
       </Card>
     </Link>

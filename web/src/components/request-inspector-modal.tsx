@@ -109,7 +109,7 @@ export function RequestInspectorModal({
       ? systemPrompt
       : (renderedPrompt ?? systemPrompt);
 
-  const { tools: allTools } = useTools();
+  const { tools: allTools } = useTools(agentId);
   const tools = useMemo(
     () =>
       allTools

@@ -31,14 +31,16 @@ import { EvalEmptyState } from "./eval-empty-state";
 interface EvalSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }
 
 export function EvalSheet({
   open,
   onOpenChange,
+  agentId,
 }: EvalSheetProps) {
-  const { cases, mutate: mutateCases } = useEvalCases(open);
-  const { configs, mutate: mutateConfigs } = useEvalJudgeConfigs(open);
+  const { cases, mutate: mutateCases } = useEvalCases(agentId, open);
+  const { configs, mutate: mutateConfigs } = useEvalJudgeConfigs(agentId, open);
   const [activeView, setActiveView] = useState<ActiveView>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">(
     "sidebar"
@@ -78,6 +80,7 @@ export function EvalSheet({
   const handleCreateCase = useCallback(async () => {
     const result = await createEvalCase(
       {
+        agentId,
         name: "New Case",
         input: "",
         expectedOutput: "",
@@ -110,6 +113,7 @@ export function EvalSheet({
   const handleCreateConfig = useCallback(async () => {
     const result = await createJudgeConfig(
       {
+        agentId,
         name: "New Judge",
         model: DEFAULT_JUDGE_CONFIG.model,
         systemPrompt: DEFAULT_JUDGE_CONFIG.systemPrompt,
@@ -152,6 +156,7 @@ export function EvalSheet({
         <CaseDetail
           key={activeCase.id}
           evalCase={activeCase}
+          agentId={agentId}
           onSave={handleSaveCase}
           onDelete={handleDeleteCase}
         />
@@ -162,6 +167,7 @@ export function EvalSheet({
         <JudgeConfigDetail
           key={activeConfig.id}
           config={activeConfig}
+          agentId={agentId}
           onSave={handleSaveConfig}
           onDelete={handleDeleteConfig}
           onSetDefault={handleSetDefaultConfig}
@@ -171,6 +177,7 @@ export function EvalSheet({
     if (activeView?.type === "results") {
       return (
         <ResultsPanel
+          agentId={agentId}
           selectedTags={selectedTags}
         />
       );

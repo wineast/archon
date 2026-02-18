@@ -1,6 +1,8 @@
 import { db } from "@/db";
 import { evalRuns, evalRunResults } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function GET(
   _req: Request,
@@ -17,6 +19,9 @@ export async function GET(
     return Response.json({ error: "Run not found" }, { status: 404 });
   }
 
+  const ctx = await requireAgentRole(run.agentId!, "viewer");
+  if (ctx instanceof NextResponse) return ctx;
+
   const results = await db
     .select()
     .from(evalRunResults)
@@ -30,6 +35,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const [run] = await db
+    .select()
+    .from(evalRuns)
+    .where(eq(evalRuns.id, id));
+
+  if (!run) {
+    return Response.json({ error: "Run not found" }, { status: 404 });
+  }
+
+  const ctx = await requireAgentRole(run.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
 
   await db.delete(evalRuns).where(eq(evalRuns.id, id));
 

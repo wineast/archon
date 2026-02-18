@@ -1,7 +1,9 @@
 import { db } from "@/db";
 import { evalRuns, evalRunResults } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import type { FinalizeRunResponse } from "@/lib/eval/types";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 /** Finalize a run: aggregate results from evalRunResults into the evalRuns record */
 export async function PATCH(
@@ -9,6 +11,18 @@ export async function PATCH(
   { params }: { params: Promise<{ runId: string }> }
 ) {
   const { runId } = await params;
+
+  const [run] = await db
+    .select()
+    .from(evalRuns)
+    .where(eq(evalRuns.id, runId));
+
+  if (!run) {
+    return Response.json({ error: "Run not found" }, { status: 404 });
+  }
+
+  const ctx = await requireAgentRole(run.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
 
   // Load all results for this run
   const results = await db

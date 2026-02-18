@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { functions } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { clearFunctionCache } from "@/lib/functions/compile";
 
 export async function GET(
@@ -22,6 +23,9 @@ export async function GET(
     );
   }
 
+  const ctx = await requireAgentRole(row.agentId!, "viewer");
+  if (ctx instanceof NextResponse) return ctx;
+
   return NextResponse.json(row);
 }
 
@@ -30,7 +34,6 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await req.json();
 
   const [existing] = await db
     .select()
@@ -43,6 +46,11 @@ export async function PATCH(
       { status: 404 }
     );
   }
+
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
+  const body = await req.json();
 
   const [updated] = await db
     .update(functions)
@@ -57,7 +65,6 @@ export async function PATCH(
     .where(eq(functions.id, id))
     .returning();
 
-  // Invalidate cache for this agent's functions
   if (existing.agentId) {
     clearFunctionCache(existing.agentId);
   }
@@ -83,9 +90,11 @@ export async function DELETE(
     );
   }
 
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
   await db.delete(functions).where(eq(functions.id, id));
 
-  // Invalidate cache for this agent's functions
   if (existing.agentId) {
     clearFunctionCache(existing.agentId);
   }

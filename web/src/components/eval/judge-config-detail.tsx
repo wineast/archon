@@ -19,12 +19,13 @@ import { TemplateTextarea } from "@/components/ui/template-textarea";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
-import { WIKI_API_KEY, wikiFetcher } from "@/lib/wiki/api";
+import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
 import type { EvalJudgeConfigRow } from "@/db/schema";
 import type { Dimension } from "@/lib/eval/types";
 
 interface JudgeConfigDetailProps {
   config: EvalJudgeConfigRow;
+  agentId?: string;
   onSave: (id: string, data: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onSetDefault: (id: string) => Promise<void>;
@@ -32,6 +33,7 @@ interface JudgeConfigDetailProps {
 
 export function JudgeConfigDetail({
   config,
+  agentId,
   onSave,
   onDelete,
   onSetDefault,
@@ -46,9 +48,9 @@ export function JudgeConfigDetail({
   const [settingDefault, setSettingDefault] = useState(false);
   const busy = saving || deleting || settingDefault;
 
-  const { datasetVars } = useDatasetVarsMap();
-  const { tools: toolDefinitions } = useTools();
-  const { data: wikiDocs = [] } = useSWR(WIKI_API_KEY, wikiFetcher);
+  const { datasetVars } = useDatasetVarsMap(agentId);
+  const { tools: toolDefinitions } = useTools(agentId);
+  const { data: wikiDocs = [] } = useSWR(wikiApiKey(agentId), wikiFetcher);
 
   const allVariables = useMemo(() => {
     const toolNames = toolDefinitions

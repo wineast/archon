@@ -31,6 +31,7 @@ export interface ToolFormHandle {
 
 interface ToolFormProps {
   tool: ToolDefinition;
+  agentId?: string;
   onDraftRef: (ref: ToolFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
@@ -67,7 +68,7 @@ function ComponentPreviewPanelBridge() {
   );
 }
 
-export function ToolForm({ tool, onDraftRef, onDirtyChange }: ToolFormProps) {
+export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormProps) {
   const form = useForm<ToolDefinition>({ defaultValues: { ...tool } });
   const [handlerMode, setHandlerMode] = useState<HandlerMode>(() =>
     detectHandlerMode(tool.handler)
@@ -80,7 +81,7 @@ export function ToolForm({ tool, onDraftRef, onDirtyChange }: ToolFormProps) {
   const output = useWatch({ control: form.control, name: "output" });
 
   // Fetch datasets for enum ref options
-  const { datasets } = useDatasets();
+  const { datasets } = useDatasets(agentId);
 
   const enumRefOptions = useMemo<EnumRefOption[]>(() => {
     return datasets

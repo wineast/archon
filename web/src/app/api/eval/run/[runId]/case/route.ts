@@ -2,12 +2,14 @@ import { generateText, gateway, Output, stepCountIs } from "ai";
 import { db } from "@/db";
 import { evalRuns, evalRunResults, modelConfigs, tools } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
 import { gatherTemplateData, renderTemplate } from "@/lib/template/render";
 import { buildJudgeSchema, toJudgeResult } from "@/lib/eval/judge-dimensions";
 import type { RunCaseRequest, RunCaseResponse, EvalResult } from "@/lib/eval/types";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 // Side-effect: all implementations self-register into the registry
 import "@/tool-impls";
@@ -37,6 +39,9 @@ export async function POST(
   if (!run) {
     return Response.json({ error: "Run not found" }, { status: 404 });
   }
+
+  const ctx = await requireAgentRole(run.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
 
   // Load model config from DB
   const [modelConfig] = await db

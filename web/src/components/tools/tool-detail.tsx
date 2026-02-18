@@ -11,12 +11,13 @@ import type { ToolDefinition } from "@/lib/tools/types";
 
 interface ToolDetailProps {
   tool: ToolRow;
+  agentId?: string;
   onSave: (updated: ToolDefinition) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onToggle: (id: string, enabled: boolean) => Promise<void>;
 }
 
-export function ToolDetail({ tool, onSave, onDelete, onToggle }: ToolDetailProps) {
+export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDetailProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -77,6 +78,7 @@ export function ToolDetail({ tool, onSave, onDelete, onToggle }: ToolDetailProps
               componentMockData: tool.componentMockData ?? "",
               enabled: tool.enabled,
             }}
+            agentId={agentId}
             onDraftRef={handleDraftRef}
             onDirtyChange={setDirty}
           />

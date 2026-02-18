@@ -11,7 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  WIKI_API_KEY,
+  wikiApiKey,
   wikiFetcher,
   createDocument,
   updateDocument,
@@ -25,12 +25,14 @@ import { WikiSidebar } from "./wiki-sidebar";
 export function WikiSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
   const { data: documents = [], mutate } = useSWR(
-    open ? WIKI_API_KEY : null,
+    open ? wikiApiKey(agentId) : null,
     wikiFetcher
   );
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
@@ -48,9 +50,9 @@ export function WikiSheet({
   }, [activeDocId]);
 
   const handleCreate = useCallback(async () => {
-    const id = await createDocument(documents, mutate);
+    const id = await createDocument(documents, mutate, agentId);
     if (id) setActiveDocId(id);
-  }, [documents, mutate]);
+  }, [documents, mutate, agentId]);
 
   const handleUpdate = useCallback(
     async (id: string, updates: { content: string }) => {
@@ -70,9 +72,9 @@ export function WikiSheet({
 
   const handleReorder = useCallback(
     async (id: string, direction: "up" | "down") => {
-      await reorderDocument(id, direction, documents, mutate);
+      await reorderDocument(id, direction, documents, mutate, agentId);
     },
-    [documents, mutate]
+    [documents, mutate, agentId]
   );
 
   return (

@@ -41,11 +41,12 @@ interface RunResultEntry {
 
 interface CaseDetailProps {
   evalCase: EvalCaseRow;
+  agentId?: string;
   onSave: (id: string, data: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
-export function CaseDetail({ evalCase, onSave, onDelete }: CaseDetailProps) {
+export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailProps) {
   const [name, setName] = useState(evalCase.name);
   const [input, setInput] = useState(evalCase.input);
   const [expectedOutput, setExpectedOutput] = useState(
@@ -62,12 +63,12 @@ export function CaseDetail({ evalCase, onSave, onDelete }: CaseDetailProps) {
   const [runResults, setRunResults] = useState<RunResultEntry[]>([]);
 
   // Hooks for running
-  const { activeConfig: activeModelConfig } = useActiveModelConfig();
-  const { defaultConfig: defaultJudge } = useDefaultJudgeConfig();
-  const { templateVars } = useTemplateVars();
-  const { tools: allDbTools } = useTools();
+  const { activeConfig: activeModelConfig } = useActiveModelConfig(agentId);
+  const { defaultConfig: defaultJudge } = useDefaultJudgeConfig(agentId);
+  const { templateVars } = useTemplateVars(agentId);
+  const { tools: allDbTools } = useTools(agentId);
   const { isRunning: isGlobalRunning } = useEvalRun();
-  const { mutate: mutateRuns } = useEvalRuns();
+  const { mutate: mutateRuns } = useEvalRuns(agentId);
 
   const busy = saving || deleting || running;
 

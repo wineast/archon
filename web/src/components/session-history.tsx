@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { MessageSquareIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { MessageSquareIcon, PlusIcon, Trash2Icon, UsersIcon, UserIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +24,9 @@ interface SessionHistoryProps {
   onLoadSession: (sessionId: string) => void;
   onDeleteSession: (sessionId: string) => void;
   onNewChat: () => void;
+  canViewAllSessions?: boolean;
+  showAll?: boolean;
+  onToggleShowAll?: () => void;
 }
 
 export function SessionHistory({
@@ -31,6 +35,9 @@ export function SessionHistory({
   onLoadSession,
   onDeleteSession,
   onNewChat,
+  canViewAllSessions,
+  showAll,
+  onToggleShowAll,
 }: SessionHistoryProps) {
   const handleDelete = useCallback(
     (e: React.MouseEvent, id: string) => {
@@ -66,7 +73,20 @@ export function SessionHistory({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>历史会话</SidebarGroupLabel>
+          <SidebarGroupLabel className="flex items-center justify-between">
+            <span>{showAll ? "全部会话" : "我的会话"}</span>
+            {canViewAllSessions && onToggleShowAll && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-5"
+                onClick={onToggleShowAll}
+                title={showAll ? "仅看我的" : "查看全部"}
+              >
+                {showAll ? <UsersIcon className="size-3" /> : <UserIcon className="size-3" />}
+              </Button>
+            )}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {sessions.length === 0 && (

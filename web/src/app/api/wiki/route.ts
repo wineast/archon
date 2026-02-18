@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { resolveTitle } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import type { WikiDocumentRow } from "@/db/schema";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 function toWikiDocument(row: WikiDocumentRow): WikiDocument {
   return {
@@ -16,17 +18,37 @@ function toWikiDocument(row: WikiDocumentRow): WikiDocument {
   };
 }
 
-export async function GET() {
-  const rows = await db.select().from(wikiDocuments);
+export async function GET(req: Request) {
+  const agentId = new URL(req.url).searchParams.get("agentId");
+  if (!agentId) {
+    return NextResponse.json({ error: "agentId is required" }, { status: 400 });
+  }
+
+  const ctx = await requireAgentRole(agentId, "viewer");
+  if (ctx instanceof NextResponse) return ctx;
+
+  const rows = await db
+    .select()
+    .from(wikiDocuments)
+    .where(eq(wikiDocuments.agentId, agentId));
   return NextResponse.json(rows.map(toWikiDocument));
 }
 
 export async function POST(req: Request) {
   const body = await req.json();
+  const agentId = body.agentId;
+  if (!agentId) {
+    return NextResponse.json({ error: "agentId is required" }, { status: 400 });
+  }
+
+  const ctx = await requireAgentRole(agentId, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
   const [row] = await db
     .insert(wikiDocuments)
     .values({
       id: body.id,
+      agentId,
       content: body.content,
       order: body.order,
     })

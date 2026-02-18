@@ -5,13 +5,15 @@ import { toast } from "sonner";
 import type { FunctionRow } from "@/db/schema";
 import type { ToolParameter } from "@/lib/tools/types";
 
-export const FUNCTIONS_API_KEY = "/api/functions";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useFunctions() {
+export function functionsApiKey(agentId?: string) {
+  return agentId ? `/api/functions?agentId=${agentId}` : null;
+}
+
+export function useFunctions(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<FunctionRow[]>(
-    FUNCTIONS_API_KEY,
+    functionsApiKey(agentId),
     fetcher
   );
 
@@ -25,7 +27,7 @@ export function useFunctions() {
 
 export function useFunction(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR<FunctionRow>(
-    id ? `${FUNCTIONS_API_KEY}/${id}` : null,
+    id ? `/api/functions/${id}` : null,
     fetcher
   );
 
@@ -44,12 +46,12 @@ export async function createFunction(
     description?: string;
     code: string;
     parameters?: ToolParameter[];
-    agentId?: string;
+    agentId: string;
   },
   mutate: () => void
 ) {
   try {
-    const res = await fetch(FUNCTIONS_API_KEY, {
+    const res = await fetch("/api/functions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -70,7 +72,7 @@ export async function updateFunction(
   mutate: () => void
 ) {
   try {
-    const res = await fetch(`${FUNCTIONS_API_KEY}/${id}`, {
+    const res = await fetch(`/api/functions/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -87,7 +89,7 @@ export async function updateFunction(
 
 export async function deleteFunction(id: string, mutate: () => void) {
   try {
-    const res = await fetch(`${FUNCTIONS_API_KEY}/${id}`, {
+    const res = await fetch(`/api/functions/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(await res.text());

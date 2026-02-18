@@ -6,10 +6,15 @@ import {
   convertToModelMessages,
 } from "ai";
 import { z } from "zod";
+import { requireAuth } from "@/lib/auth/require-agent-role";
+import { NextResponse } from "next/server";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
   const {
     messages,
     currentPrompt,

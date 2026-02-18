@@ -23,11 +23,12 @@ import type { ModelConfigRow } from "@/db/schema";
 import { useDatasetVarsMap, useDatasets } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
-import { WIKI_API_KEY, wikiFetcher } from "@/lib/wiki/api";
+import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
 import { PromptAssistDialog } from "./prompt-assist-dialog";
 
 interface ModelConfigDetailProps {
   config: ModelConfigRow;
+  agentId?: string;
   onSave: (
     id: string,
     data: { name: string; modelId: string; systemPrompt: string; temperature: number }
@@ -41,6 +42,7 @@ const isDev = process.env.NODE_ENV === "development";
 
 export function ModelConfigDetail({
   config,
+  agentId,
   onSave,
   onDelete,
   onActivate,
@@ -61,9 +63,9 @@ export function ModelConfigDetail({
   const [promptAssistOpen, setPromptAssistOpen] = useState(false);
   const busy = saving || deleting || activating || pulling;
 
-  const { tools: allTools } = useTools();
-  const { datasetVars } = useDatasetVarsMap();
-  const { data: wikiDocs = [] } = useSWR(WIKI_API_KEY, wikiFetcher);
+  const { tools: allTools } = useTools(agentId);
+  const { datasetVars } = useDatasetVarsMap(agentId);
+  const { data: wikiDocs = [] } = useSWR(wikiApiKey(agentId), wikiFetcher);
 
   const allVariables = useMemo(() => {
     const datasetKeys = Object.keys(datasetVars);

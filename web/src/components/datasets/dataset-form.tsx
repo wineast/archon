@@ -146,7 +146,7 @@ export function DatasetForm({
   );
 
   // Template editor completions for Layer 1
-  const { datasetVars } = useDatasetVarsMap();
+  const { datasetVars } = useDatasetVarsMap(agentId ?? undefined);
   const templateVariables = useMemo(() => {
     const datasetKeys = Object.keys(datasetVars);
     return [...BUILTIN_VAR_NAMES, ...datasetKeys];

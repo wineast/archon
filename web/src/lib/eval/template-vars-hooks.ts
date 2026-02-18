@@ -2,7 +2,7 @@
 
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 
-export function useTemplateVars() {
-  const { datasetVars } = useDatasetVarsMap();
+export function useTemplateVars(agentId?: string) {
+  const { datasetVars } = useDatasetVarsMap(agentId);
   return { templateVars: datasetVars };
 }

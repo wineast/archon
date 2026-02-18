@@ -5,15 +5,23 @@ import { toast } from "sonner";
 import type { EvalCaseRow, EvalJudgeConfigRow, EvalRunRow } from "@/db/schema";
 import type { EvalRunDetail } from "./types";
 
-export const EVAL_CASES_KEY = "/api/eval/cases";
-export const EVAL_JUDGE_CONFIGS_KEY = "/api/eval/judge-configs";
-export const EVAL_RUNS_KEY = "/api/eval/runs";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useEvalCases(shouldFetch?: boolean) {
+export function evalCasesKey(agentId?: string) {
+  return agentId ? `/api/eval/cases?agentId=${agentId}` : null;
+}
+
+export function evalJudgeConfigsKey(agentId?: string) {
+  return agentId ? `/api/eval/judge-configs?agentId=${agentId}` : null;
+}
+
+export function evalRunsKey(agentId?: string) {
+  return agentId ? `/api/eval/runs?agentId=${agentId}` : null;
+}
+
+export function useEvalCases(agentId?: string, shouldFetch?: boolean) {
   const { data, error, isLoading, mutate } = useSWR<EvalCaseRow[]>(
-    shouldFetch !== false ? EVAL_CASES_KEY : null,
+    shouldFetch !== false ? evalCasesKey(agentId) : null,
     fetcher
   );
 
@@ -25,9 +33,9 @@ export function useEvalCases(shouldFetch?: boolean) {
   };
 }
 
-export function useEvalJudgeConfigs(shouldFetch?: boolean) {
+export function useEvalJudgeConfigs(agentId?: string, shouldFetch?: boolean) {
   const { data, error, isLoading, mutate } = useSWR<EvalJudgeConfigRow[]>(
-    shouldFetch !== false ? EVAL_JUDGE_CONFIGS_KEY : null,
+    shouldFetch !== false ? evalJudgeConfigsKey(agentId) : null,
     fetcher
   );
 
@@ -39,9 +47,9 @@ export function useEvalJudgeConfigs(shouldFetch?: boolean) {
   };
 }
 
-export function useDefaultJudgeConfig(shouldFetch?: boolean) {
+export function useDefaultJudgeConfig(agentId?: string, shouldFetch?: boolean) {
   const { configs, isLoading, error, mutate } =
-    useEvalJudgeConfigs(shouldFetch);
+    useEvalJudgeConfigs(agentId, shouldFetch);
   const defaultConfig = configs.find((c) => c.isDefault) ?? null;
 
   return {
@@ -57,6 +65,7 @@ export function useDefaultJudgeConfig(shouldFetch?: boolean) {
 
 export async function createEvalCase(
   data: {
+    agentId: string;
     name: string;
     input: string;
     expectedOutput?: string;
@@ -65,7 +74,7 @@ export async function createEvalCase(
   mutate: () => void
 ): Promise<EvalCaseRow | null> {
   try {
-    const res = await fetch(EVAL_CASES_KEY, {
+    const res = await fetch("/api/eval/cases", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -87,7 +96,7 @@ export async function updateEvalCase(
   mutate: () => void
 ): Promise<EvalCaseRow | null> {
   try {
-    const res = await fetch(`${EVAL_CASES_KEY}/${id}`, {
+    const res = await fetch(`/api/eval/cases/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -108,7 +117,7 @@ export async function deleteEvalCase(
   mutate: () => void
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${EVAL_CASES_KEY}/${id}`, {
+    const res = await fetch(`/api/eval/cases/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(await res.text());
@@ -123,6 +132,7 @@ export async function deleteEvalCase(
 
 export async function createJudgeConfig(
   data: {
+    agentId: string;
     name: string;
     model: string;
     systemPrompt: string;
@@ -132,7 +142,7 @@ export async function createJudgeConfig(
   mutate: () => void
 ): Promise<EvalJudgeConfigRow | null> {
   try {
-    const res = await fetch(EVAL_JUDGE_CONFIGS_KEY, {
+    const res = await fetch("/api/eval/judge-configs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -154,7 +164,7 @@ export async function updateJudgeConfig(
   mutate: () => void
 ): Promise<EvalJudgeConfigRow | null> {
   try {
-    const res = await fetch(`${EVAL_JUDGE_CONFIGS_KEY}/${id}`, {
+    const res = await fetch(`/api/eval/judge-configs/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -175,7 +185,7 @@ export async function deleteJudgeConfig(
   mutate: () => void
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${EVAL_JUDGE_CONFIGS_KEY}/${id}`, {
+    const res = await fetch(`/api/eval/judge-configs/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(await res.text());
@@ -193,7 +203,7 @@ export async function setDefaultJudgeConfig(
   mutate: () => void
 ): Promise<EvalJudgeConfigRow | null> {
   try {
-    const res = await fetch(`${EVAL_JUDGE_CONFIGS_KEY}/${id}/set-default`, {
+    const res = await fetch(`/api/eval/judge-configs/${id}/set-default`, {
       method: "PUT",
     });
     if (!res.ok) throw new Error(await res.text());
@@ -209,9 +219,9 @@ export async function setDefaultJudgeConfig(
 
 // ── Eval Runs ──
 
-export function useEvalRuns(shouldFetch?: boolean) {
+export function useEvalRuns(agentId?: string, shouldFetch?: boolean) {
   const { data, error, isLoading, mutate } = useSWR<EvalRunRow[]>(
-    shouldFetch !== false ? EVAL_RUNS_KEY : null,
+    shouldFetch !== false ? evalRunsKey(agentId) : null,
     fetcher
   );
 
@@ -227,7 +237,7 @@ export async function fetchEvalRunDetail(
   id: string
 ): Promise<EvalRunDetail | null> {
   try {
-    const res = await fetch(`${EVAL_RUNS_KEY}/${id}`);
+    const res = await fetch(`/api/eval/runs/${id}`);
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
   } catch (e) {
@@ -242,7 +252,7 @@ export async function deleteEvalRun(
   mutate: () => void
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${EVAL_RUNS_KEY}/${id}`, {
+    const res = await fetch(`/api/eval/runs/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(await res.text());

@@ -1,5 +1,6 @@
 import { importSession } from "@/db/chat-persistence";
 import { NextResponse } from "next/server";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function POST(req: Request) {
   try {
@@ -33,8 +34,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const ctx = await requireAgentRole(agentId, "viewer");
+    if (ctx instanceof NextResponse) return ctx;
+
     const result = await importSession({
       agentId,
+      userId: ctx.user.id,
       title: body.session.title,
       model: body.session.model,
       createdAt: body.session.createdAt,
