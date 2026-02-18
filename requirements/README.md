@@ -14,10 +14,20 @@
 
 ## Agent 配置
 
+### Tools
+
+- [ ] **Tools Playground & Test Cases** — 为 Tools 添加 Playground 和 Test Cases 功能，参考 Functions 实现，含数据库表、API、UI
+  - 工作区: `tools` | 分支: `dev-tools-20260219`
+
 ### Wiki
 
 - [ ] **Wiki 移除独立 title** — 标题从 meta.title 获取，若无则 fallback 到内容开头
   - 工作区: `wiki-no-title` | 分支: `dev-wiki-no-title-20260217`
+
+## 前端通用
+
+- [ ] **表单重置按钮** — 为工具、函数、数据集表单添加"重置"按钮，dirty 时可用，点击恢复初始值
+  - 工作区: `fix/form-reset-buttons` | 分支: `dev-fix/form-reset-buttons-20260218`
 
 ## 前端渲染
 
@@ -25,6 +35,10 @@
   - 工作区: `dynamic-components` | 分支: `dev-dynamic-components-20260217`
 - [ ] **Parameters 组件抽离** — 从 tool-form/function-form 中抽离 ParameterList 为独立复用组件，创建 Storybook 故事
   - 工作区: `parameter-components` | 分支: `dev-parameter-components-20260218`
+- [ ] **Tools 设置页溢出修复** — 修复工具详情区域内容水平溢出，flex 布局链补充 min-w-0 约束
+  - 工作区: `fix-tools-overflow` | 分支: `dev-fix-tools-overflow-20260218`
+- [ ] **JSX 编辑器 Storybook** — JsEditor、ComponentPreviewPanel 独立故事 + 组合 tab 切换预览组件故事
+  - 工作区: `jsx-editor-stories` | 分支: `dev-jsx-editor-stories-20260218`
 
 ## 用户与权限
 

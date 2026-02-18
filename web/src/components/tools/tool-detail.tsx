@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from "react";
 import { CheckIcon, PowerIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { ToolForm, type ToolFormHandle } from "./tool-form";
 import type { ToolRow } from "@/db/schema";
@@ -63,8 +62,8 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
   return (
     <div className="flex h-full flex-col">
       {/* Form body */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-4 min-w-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="p-4">
           <ToolForm
             tool={{
               id: tool.id,
@@ -84,7 +83,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
             onDirtyChange={setDirty}
           />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Bottom bar */}
       <div className="flex items-center gap-2 border-t px-4 py-2">
