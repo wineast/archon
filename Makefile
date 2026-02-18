@@ -1,4 +1,4 @@
-.PHONY: dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-local-setup wt-list wt-create wt-sync wt-merge wt-delete
+.PHONY: dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-setup db-init wt-list wt-create wt-sync wt-merge wt-delete
 
 # ============================================================
 # Development
@@ -111,8 +111,11 @@ db-neon-env:
 	@rm -f web/.env.development.local && \
 	echo "Removed web/.env.development.local → Neon DB"
 
-## 一键设置本地 DB（启动 → 切换环境 → 推送 schema → 播种数据）
-db-local-setup: db-up db-local-env db-push seed
+## 全局一次：启动 Docker + 主库初始化（push + seed）
+db-setup: db-up db-local-env db-push seed
+
+## 工作区初始化：push schema + seed（数据库已由 wt-create 创建好）
+db-init: db-push seed
 
 # ============================================================
 # Git Worktree
