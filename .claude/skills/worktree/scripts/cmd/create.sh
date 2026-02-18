@@ -71,10 +71,7 @@ cmd_create() {
         info "已复制 web/.vercel"
     fi
 
-    # 创建 web/.env.local -> .vercel/.env.development.local 的符号链接
-    "$PROJECT_ROOT/scripts/link-env.sh" "$worktree_path"
-
-    # 创建 .worktree 目录和 meta.json（必须在 db-local-env 之前，否则无法识别为 worktree）
+    # 创建 .worktree 目录和 meta.json（必须在 wt-init 之前，db-local-env 需要它识别 worktree）
     local wt_config_dir="$worktree_path/.worktree"
     if [ ! -d "$wt_config_dir" ]; then
         info "创建 .worktree/ 配置目录..."
@@ -88,12 +85,10 @@ cmd_create() {
     echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"studio\":$studio_port,\"baseBranch\":\"$base_branch\"}" > "$wt_config_dir/meta.json"
     info "端口分配: dev=$dev_port, storybook=$storybook_port, studio=$studio_port, baseBranch=$base_branch (写入 .worktree/meta.json)"
 
-    # 创建独立本地数据库 + 初始化 schema/seed
-    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q archon-postgres; then
-        info "初始化工作区数据库..."
-        (cd "$worktree_path" && make db-local-env && make db-init)
-        success "工作区数据库初始化完成"
-    fi
+    # 环境初始化：env (link-env + db-local-env) → deps (npm install) → db-init (push + seed)
+    info "初始化工作区环境..."
+    (cd "$worktree_path" && make wt-init)
+    success "工作区环境初始化完成"
 
     # 生成 CLAUDE.local.md（提醒 Claude 使用正确的端口）
     sed -e "s|{{WORKTREE_PATH}}|$worktree_path|g" \

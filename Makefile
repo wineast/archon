@@ -1,12 +1,24 @@
-.PHONY: setup vercel-check dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-drop db-setup db-init wt-list wt-create wt-sync wt-merge wt-delete
+.PHONY: setup wt-init env deps vercel-check dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-neon-env db-drop db-init wt-list wt-create wt-sync wt-merge wt-delete
 
 # ============================================================
-# Setup (clone 后执行一次)
+# Setup
 # ============================================================
 
 ## 项目初始化（clone 后执行一次）
-## 检查 vercel → install → 启动本地数据库 → push → seed
-setup: vercel-check install db-setup
+## 检查 vercel → 启动 Docker → 环境配置 → 安装依赖 → 推 schema → 灌数据
+setup: vercel-check db-up env deps db-init
+
+## 工作区初始化（wt-create 内部调用，Docker 已在跑）
+wt-init: env deps db-init
+
+## 环境配置：创建 .env.local symlink + .env.development.local（指向正确数据库）
+env:
+	@./scripts/link-env.sh
+	@./scripts/db-local-env.sh
+
+## 安装依赖
+deps:
+	cd web && npm install
 
 vercel-check:
 	@if [ ! -d web/.vercel ]; then \
@@ -21,7 +33,6 @@ vercel-check:
 		echo ""; \
 		exit 1; \
 	fi
-	@./scripts/link-env.sh
 
 # ============================================================
 # Development
@@ -59,9 +70,6 @@ storybook:
 
 clean:
 	rm -rf web/.next web/node_modules
-
-install:
-	cd web && npm install
 
 # ============================================================
 # Database
@@ -110,11 +118,6 @@ db-down:
 db-destroy:
 	docker compose down -v
 
-## 切换到本地 Docker DB（创建 .env.development.local 覆盖 .env.local）
-## 在 worktree 中自动使用独立数据库（archon_<worktree_name>）
-db-local-env:
-	@./scripts/db-local-env.sh
-
 ## 切回 Neon 云 DB（删除覆盖文件，.env.local 恢复生效）
 db-neon-env:
 	@rm -f web/.env.development.local && \
@@ -124,10 +127,7 @@ db-neon-env:
 db-drop:
 	@./scripts/db-drop.sh
 
-## 全局一次：启动 Docker + 主库初始化（push + seed）
-db-setup: db-up db-local-env db-push seed
-
-## 工作区初始化：push schema + seed（数据库已由 db-local-env 创建）
+## 推 schema + 灌数据
 db-init: db-push seed
 
 # ============================================================
