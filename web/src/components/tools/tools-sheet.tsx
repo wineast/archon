@@ -75,6 +75,9 @@ export function ToolsSheet({
           parameters: updated.parameters,
           output: updated.output,
           handler: updated.handler,
+          component: updated.component,
+          componentSource: updated.componentSource,
+          componentMockData: updated.componentMockData,
         },
         mutate
       );

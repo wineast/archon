@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { wikiDocuments, datasets } from "@/db/schema";
+import { wikiDocuments, datasets, functions } from "@/db/schema";
 import { eq, like, ilike } from "drizzle-orm";
 import { renderWikiContent } from "@/lib/template/render";
 import { parseWikiContent } from "@/lib/wiki/frontmatter";
@@ -8,6 +8,12 @@ import {
   renderObjectField,
   resolveDatasets,
 } from "@/lib/datasets/queries";
+import {
+  resolveAndCompileFunctions,
+  getCachedFunctions,
+  setCachedFunctions,
+  type FunctionRecord,
+} from "@/lib/functions/compile";
 
 export interface DataEntry {
   value: string;
@@ -34,10 +40,12 @@ export interface ToolContext {
     get(key: string): Promise<unknown>;
     getEntries(key: string): Promise<DataEntry[]>;
   };
+  fn: (key: string) => Promise<(...args: unknown[]) => unknown>;
 }
 
 export function createToolContext(agentId?: string): ToolContext {
   let resolvedCache: Record<string, unknown> | null = null;
+  let compiledFnsPromise: Promise<Map<string, unknown>> | null = null;
 
   async function getResolved(): Promise<Record<string, unknown>> {
     if (resolvedCache) return resolvedCache;
@@ -55,6 +63,28 @@ export function createToolContext(agentId?: string): ToolContext {
     const { resolvedVars } = resolveDatasets(rows);
     resolvedCache = resolvedVars;
     return resolvedVars;
+  }
+
+  async function getCompiledFunctions(): Promise<Map<string, unknown>> {
+    if (!agentId) return new Map();
+
+    // Check cache first
+    const cached = getCachedFunctions(agentId);
+    if (cached) return cached;
+
+    // Load from DB and compile
+    const rows = await db
+      .select({
+        key: functions.key,
+        code: functions.code,
+        parameters: functions.parameters,
+      })
+      .from(functions)
+      .where(eq(functions.agentId, agentId));
+
+    const compiled = resolveAndCompileFunctions(rows as FunctionRecord[]);
+    setCachedFunctions(agentId, compiled);
+    return compiled;
   }
 
   return {
@@ -127,6 +157,19 @@ export function createToolContext(agentId?: string): ToolContext {
           metadata: v as Record<string, unknown>,
         }));
       },
+    },
+
+    async fn(key: string) {
+      // Lazy-load and compile all functions once per context
+      if (!compiledFnsPromise) {
+        compiledFnsPromise = getCompiledFunctions();
+      }
+      const compiled = await compiledFnsPromise;
+      const result = compiled.get(key);
+      if (!result) {
+        throw new Error(`Function "${key}" not found`);
+      }
+      return result as (...args: unknown[]) => unknown;
     },
   };
 }

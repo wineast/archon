@@ -26,7 +26,7 @@
 ## 约束
 
 ### Commands
-- 常用命令统一使用 `make` 执行（如 `make dev`、`make test`、`make db-push`、`make seed` 等）
+- 常用命令统一使用 `make` 执行，所有可用 target 见 @Makefile
 - 如果需要的 make target 不存在，先在 Makefile 中补充，再执行
 
 ### UI

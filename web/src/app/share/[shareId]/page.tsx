@@ -17,6 +17,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon } from "lucide-react";
+import { registerDynamicToolSource } from "@/tool-ui";
 
 interface SharedSession {
   id: string;
@@ -28,7 +29,7 @@ interface SharedSession {
     role: "user" | "assistant" | "system";
     parts: unknown[];
   }>;
-  toolComponentMap: Record<string, string>;
+  toolComponentSourceMap?: Record<string, string>;
 }
 
 export default function SharePage({
@@ -50,6 +51,12 @@ export default function SharePage({
           return;
         }
         const data = await res.json();
+        // Register dynamic component sources
+        if (data.toolComponentSourceMap) {
+          for (const [name, source] of Object.entries(data.toolComponentSourceMap)) {
+            registerDynamicToolSource(name, source as string);
+          }
+        }
         setSession(data);
       } catch {
         setError("load_failed");
@@ -118,7 +125,7 @@ export default function SharePage({
                   </MessageResponse>
                 </MessageContent>
               ) : (
-                <MessageParts message={message} toolComponentMap={session.toolComponentMap} />
+                <MessageParts message={message} />
               )}
             </Message>
           ))}

@@ -17,15 +17,18 @@ export async function GET(
     );
   }
 
-  // Build toolComponentMap for the agent so share page can render custom tool UIs
-  const toolComponentMap: Record<string, string> = {};
+  // Build toolComponentSourceMap for dynamic tool UIs
+  const toolComponentSourceMap: Record<string, string> = {};
   if (session.agentId) {
     const rows = await db
-      .select({ name: tools.name, component: tools.component })
+      .select({
+        name: tools.name,
+        componentSource: tools.componentSource,
+      })
       .from(tools)
       .where(eq(tools.agentId, session.agentId));
     for (const r of rows) {
-      if (r.component) toolComponentMap[r.name] = r.component;
+      if (r.componentSource) toolComponentSourceMap[r.name] = r.componentSource;
     }
   }
 
@@ -35,6 +38,6 @@ export async function GET(
     sharedAt: session.sharedAt,
     agentSlug: session.agentSlug,
     messages: session.messages,
-    toolComponentMap,
+    toolComponentSourceMap,
   });
 }

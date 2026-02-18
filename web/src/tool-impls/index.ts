@@ -3,10 +3,11 @@
  *
  * Side-effect imports trigger self-registration of each tool.
  * Import this module once (e.g. in the chat route) to activate all implementations.
+ *
+ * Note: Pricing tools have been migrated to dynamic functions (context.fn).
+ * No static registrations remain, but the registry API is still exported
+ * for potential future use.
  */
-
-// Implementation files (each calls registerTool as a side-effect)
-import "./pricing";
 
 // Re-export registry API for external use
 export { registerTool, getToolExecutor } from "./_registry";

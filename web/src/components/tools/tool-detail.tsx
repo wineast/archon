@@ -72,6 +72,9 @@ export function ToolDetail({ tool, onSave, onDelete, onToggle }: ToolDetailProps
               parameters: tool.parameters,
               output: tool.output ?? "{}",
               handler: tool.handler ?? "",
+              component: tool.component ?? "",
+              componentSource: tool.componentSource ?? "",
+              componentMockData: tool.componentMockData ?? "",
               enabled: tool.enabled,
             }}
             onDraftRef={handleDraftRef}

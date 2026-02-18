@@ -10,6 +10,7 @@ import {
   index,
   unique,
 } from "drizzle-orm/pg-core";
+
 import type { ToolParameter } from "@/lib/tools/types";
 import type { Assertion, AssertionResult, Dimension, JudgeResult } from "@/lib/eval/types";
 
@@ -78,6 +79,37 @@ export const chatSessions = pgTable("chat_sessions", {
 export type ChatSession = typeof chatSessions.$inferSelect;
 export type NewChatSession = typeof chatSessions.$inferInsert;
 
+/* ─────────── Functions (server-side reusable functions) ─────────── */
+
+export const functions = pgTable(
+  "functions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    code: text("code").notNull(),
+    parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
+    returnParameters: jsonb("return_parameters").$type<ToolParameter[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    unique("functions_agent_id_key_idx").on(table.agentId, table.key),
+  ]
+);
+
+export type FunctionRow = typeof functions.$inferSelect;
+export type NewFunctionRow = typeof functions.$inferInsert;
+
 /* ─────────── Datasets (unified JSON store) ─────────── */
 
 export const datasets = pgTable(
@@ -140,6 +172,8 @@ export const tools = pgTable("tools", {
   output: text("output"),
   handler: text("handler"),
   component: text("component"),
+  componentSource: text("component_source"),
+  componentMockData: text("component_mock_data"),
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -318,4 +352,78 @@ export const evalRunResults = pgTable(
 
 export type EvalRunResultRow = typeof evalRunResults.$inferSelect;
 export type NewEvalRunResultRow = typeof evalRunResults.$inferInsert;
+
+/* ─────────── Function Test Cases ─────────── */
+
+export const functionTestCases = pgTable(
+  "function_test_cases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    functionId: uuid("function_id")
+      .notNull()
+      .references(() => functions.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
+    expectedOutput: jsonb("expected_output").$type<unknown>(),
+    tags: text("tags").array().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("function_test_cases_function_id_idx").on(table.functionId),
+  ]
+);
+
+export type FunctionTestCaseRow = typeof functionTestCases.$inferSelect;
+export type NewFunctionTestCaseRow = typeof functionTestCases.$inferInsert;
+
+/* ─────────── Function Test Runs ─────────── */
+
+export const functionTestRuns = pgTable("function_test_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  functionId: uuid("function_id")
+    .notNull()
+    .references(() => functions.id, { onDelete: "cascade" }),
+  filterTags: text("filter_tags").array().notNull().default([]),
+  totalCases: integer("total_cases").notNull(),
+  passedCases: integer("passed_cases").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type FunctionTestRunRow = typeof functionTestRuns.$inferSelect;
+export type NewFunctionTestRunRow = typeof functionTestRuns.$inferInsert;
+
+export const functionTestRunResults = pgTable(
+  "function_test_run_results",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => functionTestRuns.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id").notNull(),
+    caseName: text("case_name").notNull(),
+    input: jsonb("input").$type<Record<string, unknown>>().notNull(),
+    expectedOutput: jsonb("expected_output").$type<unknown>(),
+    output: jsonb("output").$type<unknown>(),
+    passed: boolean("passed").notNull(),
+    error: text("error"),
+    durationMs: integer("duration_ms").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("function_test_run_results_run_id_idx").on(table.runId),
+  ]
+);
+
+export type FunctionTestRunResultRow = typeof functionTestRunResults.$inferSelect;
+export type NewFunctionTestRunResultRow = typeof functionTestRunResults.$inferInsert;
 

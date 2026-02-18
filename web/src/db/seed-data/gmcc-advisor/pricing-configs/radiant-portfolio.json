@@ -1,0 +1,258 @@
+{
+  "productName": "Radiant Portfolio",
+  "baseRates": [
+    {
+      "category": "5/6 ARM",
+      "rate": 5.875,
+      "price": 99.75
+    },
+    {
+      "category": "5/6 ARM",
+      "rate": 5.75,
+      "price": 99.25
+    },
+    {
+      "category": "30 Year Fixed",
+      "rate": 6.125,
+      "price": 99.75
+    },
+    {
+      "category": "30 Year Fixed",
+      "rate": 6,
+      "price": 99.25
+    }
+  ],
+  "adjustments": [
+    {
+      "name": "Investment",
+      "when": "occupancy == \"investment\"",
+      "rateAdj": 0.25,
+      "citations": [
+        {
+          "quote": "| Investment | 0.25% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 45,
+            "end": 45
+          }
+        }
+      ]
+    },
+    {
+      "name": "Investment LTV > 60%",
+      "when": "occupancy == \"investment\" and ltv > 60",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Investment LTV > 60% | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 46,
+            "end": 46
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cash-Out",
+      "when": "loanPurpose == \"cashOut\"",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Cash-Out | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 47,
+            "end": 47
+          }
+        }
+      ]
+    },
+    {
+      "name": "2-4 Units",
+      "when": "units >= 2 and units <= 4",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| 2-4 Unit | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 48,
+            "end": 48
+          }
+        }
+      ]
+    },
+    {
+      "name": "Short Employment History",
+      "when": "hasShortEmploymentHistory",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Same line of work less than 2 year or extended employment gap*** | 0.125% to Rate or 0.50% to Fee |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 49,
+            "end": 49
+          }
+        }
+      ]
+    },
+    {
+      "name": "Condominium",
+      "when": "propertyType == \"condo\"",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Condominium | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 50,
+            "end": 50
+          }
+        }
+      ]
+    },
+    {
+      "name": "Condominium LTV > 65%",
+      "when": "propertyType == \"condo\" and ltv > 65",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Condominium LTV > 65% | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 51,
+            "end": 51
+          }
+        }
+      ]
+    },
+    {
+      "name": "FICO 680-699",
+      "when": "ficoScore >= 680 and ficoScore <= 699 and not isNoFico",
+      "rateAdj": 0.25,
+      "priceAdj": -0.125,
+      "citations": [
+        {
+          "quote": "| 680 to 699 FICO | 0.25% to Rate & 0.125% to Fee |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 52,
+            "end": 52
+          }
+        }
+      ]
+    },
+    {
+      "name": "FICO 700-719",
+      "when": "ficoScore >= 700 and ficoScore <= 719 and not isNoFico",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| 700 to 719 FICO | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 53,
+            "end": 53
+          }
+        }
+      ]
+    },
+    {
+      "name": "Loan Amount $2.5MM-$3.5MM",
+      "when": "loanAmount > 2500000 and loanAmount <= 3500000",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Loan Amount $2,500,001 to $3,500,000 | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 54,
+            "end": 54
+          }
+        }
+      ]
+    },
+    {
+      "name": "Loan Amount > $3.5MM",
+      "when": "loanAmount > 3500000",
+      "rateAdj": 0.25,
+      "citations": [
+        {
+          "quote": "| Loan Amount > $3,500,000 | 0.250% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 55,
+            "end": 55
+          }
+        }
+      ]
+    },
+    {
+      "name": "No FICO/No Credit History",
+      "when": "isNoFico",
+      "rateAdj": 0.5,
+      "citations": [
+        {
+          "quote": "| No FICO/No Credit History | 0.50% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 56,
+            "end": 56
+          }
+        }
+      ]
+    },
+    {
+      "name": "Non-Traditional Credit with Derogatories",
+      "when": "hasNonTraditionalCreditDerogatories",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Non-Traditional Credit with derogatories | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 57,
+            "end": 57
+          }
+        }
+      ]
+    },
+    {
+      "name": "Borrower Signed P&L",
+      "when": "hasBorrowerSignedPL",
+      "rateAdj": 0.25,
+      "citations": [
+        {
+          "quote": "| Borrower Signed P&L | 0.25% to Rate |",
+          "docPath": "radiant/rate-sheets/portfolio-matrix.md",
+          "lines": {
+            "start": 58,
+            "end": 58
+          }
+        }
+      ]
+    }
+  ],
+  "stackingRules": [],
+  "extensionCosts": [
+    {
+      "days": 7,
+      "cost": 0.125,
+      "category": "all"
+    },
+    {
+      "days": 15,
+      "cost": 0.25,
+      "category": "all"
+    }
+  ],
+  "rateSheets": [
+    {
+      "type": "pdf",
+      "url": "/products/radiant/rate-sheets/GMCC Radiant Rate Sheet 1.2.2026.pdf",
+      "title": "GMCC Radiant Rate Sheet 1.2.2026 - Page 2"
+    }
+  ]
+}
