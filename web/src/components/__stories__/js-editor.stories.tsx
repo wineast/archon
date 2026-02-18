@@ -18,6 +18,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Empty: Story = {
+  args: {
+    value: "",
+    onChange: () => {},
+    height: "200px",
+  },
+};
+
 export const Basic: Story = {
   args: {
     value: `function hello(name) {
@@ -45,6 +53,61 @@ export const ToolHandler: Story = {
     onChange: () => {},
     height: "250px",
   },
+};
+
+export const WithJsx: Story = {
+  args: {
+    value: `function Component({ output, isLoading }) {
+  if (isLoading) return <Spinner />;
+
+  return (
+    <div className="space-y-2">
+      <Badge variant="outline">{output.status}</Badge>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Value</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {output.items?.map((item, i) => (
+            <TableRow key={i}>
+              <TableCell>{item.name}</TableCell>
+              <TableCell>{item.value}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}`,
+    onChange: () => {},
+    height: "400px",
+  },
+};
+
+export const DifferentHeights: Story = {
+  args: {
+    value: "",
+    onChange: () => {},
+  },
+  render: () => (
+    <div className="space-y-4">
+      {(["100px", "200px", "400px"] as const).map((h) => (
+        <div key={h}>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">
+            height=&quot;{h}&quot;
+          </p>
+          <JsEditor
+            value={`// Editor at ${h}\nconst x = 1;`}
+            onChange={() => {}}
+            height={h}
+          />
+        </div>
+      ))}
+    </div>
+  ),
 };
 
 export const ReadOnly: Story = {
