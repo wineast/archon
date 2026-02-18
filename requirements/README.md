@@ -18,6 +18,8 @@
 
 - [ ] **Tools Playground & Test Cases** — 为 Tools 添加 Playground 和 Test Cases 功能，参考 Functions 实现，含数据库表、API、UI
   - 工作区: `tools` | 分支: `dev-tools-20260219`
+- [ ] **Tools Key 字段与创建对话框** — tools 表添加 key 字段（agentId+key 联合唯一），去掉 name 全局唯一约束，参考 functions 实现创建对话框
+  - 工作区: `tools-key-and-create-dialog` | 分支: `dev-tools-key-and-create-dialog-20260219`
 
 ### Wiki
 
@@ -26,6 +28,8 @@
 
 ## 前端通用
 
+- [ ] **编辑器组件整合** — 将所有编辑器（js/json/md/wiki）统一迁移到 `components/editors/`，co-locate Storybook 故事，更新全局 import
+  - 工作区: `editors-consolidation` | 分支: `dev-editors-consolidation-20260219`
 - [ ] **表单重置按钮** — 为工具、函数、数据集表单添加"重置"按钮，dirty 时可用，点击恢复初始值
   - 工作区: `fix/form-reset-buttons` | 分支: `dev-fix/form-reset-buttons-20260218`
 
