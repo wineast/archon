@@ -27,7 +27,7 @@ cmd_merge() {
     fi
 
     local base_branch
-    base_branch=$(node -p "require('$meta_json').base")
+    base_branch=$(node -p "require('$meta_json').baseBranch")
 
     if [ -z "$base_branch" ]; then
         error "meta.json 中没有 base 字段"
