@@ -77,23 +77,10 @@ cmd_create() {
         info "已链接 web/.env.local -> .vercel/.env.development.local"
     fi
 
-    # 创建独立的本地数据库
+    # 创建独立本地数据库 + 初始化 schema/seed
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -q archon-postgres; then
-        local db_name="archon_$(echo "$branch_name" | tr '-' '_')"
-        local db_url="postgresql://archon:archon@localhost:5432/$db_name"
-        info "创建独立数据库: $db_name"
-        # 通过 docker exec 在容器内创建数据库（避免依赖本地 psql）
-        docker exec archon-postgres psql -U archon -d archon -tc \
-            "SELECT 1 FROM pg_database WHERE datname = '$db_name'" | grep -q 1 \
-            || docker exec archon-postgres createdb -U archon "$db_name"
-        # 写入独立的 .env.development.local
-        printf 'DATABASE_URL=%s\nDATABASE_URL_UNPOOLED=%s\n' "$db_url" "$db_url" \
-            > "$worktree_path/web/.env.development.local"
-        info "已配置本地数据库: $db_name"
-
-        # 初始化数据库 schema + seed
         info "初始化工作区数据库..."
-        (cd "$worktree_path" && make db-init)
+        (cd "$worktree_path" && make db-local-env && make db-init)
         success "工作区数据库初始化完成"
     fi
 

@@ -1,12 +1,12 @@
-.PHONY: setup vercel-check dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-setup db-init wt-list wt-create wt-sync wt-merge wt-delete
+.PHONY: setup vercel-check dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-drop db-setup db-init wt-list wt-create wt-sync wt-merge wt-delete
 
 # ============================================================
 # Setup (clone 后执行一次)
 # ============================================================
 
 ## 项目初始化（clone 后执行一次）
-## install → 检查 vercel → 启动本地数据库 → push → seed
-setup: install vercel-check db-setup
+## 检查 vercel → install → 启动本地数据库 → push → seed
+setup: vercel-check install db-setup
 
 vercel-check:
 	@if [ ! -d web/.vercel ]; then \
@@ -20,6 +20,10 @@ vercel-check:
 		echo "========================================"; \
 		echo ""; \
 		exit 1; \
+	fi
+	@if [ -f web/.vercel/.env.development.local ] && [ ! -L web/.env.local ]; then \
+		ln -sf .vercel/.env.development.local web/.env.local && \
+		echo "Linked web/.env.local → .vercel/.env.development.local"; \
 	fi
 
 # ============================================================
@@ -97,8 +101,6 @@ db-studio:
 # Docker PostgreSQL
 # ============================================================
 
-LOCAL_DB_URL := postgresql://archon:archon@localhost:5432/archon
-
 ## 启动本地 Docker PostgreSQL
 db-up:
 	docker compose up -d --wait
@@ -114,29 +116,21 @@ db-destroy:
 ## 切换到本地 Docker DB（创建 .env.development.local 覆盖 .env.local）
 ## 在 worktree 中自动使用独立数据库（archon_<worktree_name>）
 db-local-env:
-	@if [ -f .worktree/meta.json ]; then \
-		wt_name=$$(basename "$$PWD") && \
-		db_name="archon_$$(echo "$$wt_name" | tr '-' '_')" && \
-		db_url="postgresql://archon:archon@localhost:5432/$$db_name" && \
-		docker exec archon-postgres psql -U archon -d archon -tc \
-			"SELECT 1 FROM pg_database WHERE datname = '$$db_name'" | grep -q 1 \
-			|| docker exec archon-postgres createdb -U archon "$$db_name" && \
-		printf 'DATABASE_URL=%s\nDATABASE_URL_UNPOOLED=%s\n' "$$db_url" "$$db_url" > web/.env.development.local && \
-		echo "Created web/.env.development.local → local DB ($$db_name)"; \
-	else \
-		printf 'DATABASE_URL=$(LOCAL_DB_URL)\nDATABASE_URL_UNPOOLED=$(LOCAL_DB_URL)\n' > web/.env.development.local && \
-		echo "Created web/.env.development.local → local DB (archon)"; \
-	fi
+	@./scripts/db-local-env.sh
 
 ## 切回 Neon 云 DB（删除覆盖文件，.env.local 恢复生效）
 db-neon-env:
 	@rm -f web/.env.development.local && \
 	echo "Removed web/.env.development.local → Neon DB"
 
+## 删除当前工作区的独立数据库
+db-drop:
+	@./scripts/db-drop.sh
+
 ## 全局一次：启动 Docker + 主库初始化（push + seed）
 db-setup: db-up db-local-env db-push seed
 
-## 工作区初始化：push schema + seed（数据库已由 wt-create 创建好）
+## 工作区初始化：push schema + seed（数据库已由 db-local-env 创建）
 db-init: db-push seed
 
 # ============================================================
