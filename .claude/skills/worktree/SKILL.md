@@ -63,8 +63,8 @@ make wt-list
    ```bash
    make wt-create NAME=<name> BASE=<base>
    ```
-3. **同步功能树**：读取 `requirements/backlog.md`，将新需求归入功能树的合适位置。
-   - 先用 `Read` 读取 `requirements/backlog.md` 现有功能树
+3. **同步功能树**：读取 `requirements/README.md`，将新需求归入功能树的合适位置。
+   - 先用 `Read` 读取 `requirements/README.md` 现有功能树
    - 判断新需求属于哪个模块分类（如基础设施、数据模型、Agent 配置、前端渲染、用户与权限等）
    - 如果对应分类已存在，在该分类下追加条目；如果不存在，创建新分类
    - 条目格式：
