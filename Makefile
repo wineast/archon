@@ -50,9 +50,11 @@ vercel-check:
 dev:
 	@if [ -f .worktree/meta.json ]; then \
 		export DEV_PORT=$$(node -p "require('./.worktree/meta.json').dev") && \
+		lsof -ti :$$DEV_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		echo "Port: dev=$$DEV_PORT" && \
 		cd web && npm run dev -- --port $$DEV_PORT; \
 	else \
+		lsof -ti :3000 2>/dev/null | xargs kill 2>/dev/null || true; \
 		cd web && npm run dev; \
 	fi
 
@@ -71,9 +73,11 @@ test:
 storybook:
 	@if [ -f .worktree/meta.json ]; then \
 		export SB_PORT=$$(node -p "require('./.worktree/meta.json').storybook") && \
+		lsof -ti :$$SB_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		echo "Port: storybook=$$SB_PORT" && \
 		cd web && npm run storybook -- -p $$SB_PORT; \
 	else \
+		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
 		cd web && npm run storybook; \
 	fi
 
@@ -105,9 +109,11 @@ db-seed seed:
 db-studio:
 	@if [ -f .worktree/meta.json ]; then \
 		export STUDIO_PORT=$$(node -p "require('./.worktree/meta.json').studio") && \
+		lsof -ti :$$STUDIO_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		echo "Port: studio=$$STUDIO_PORT" && \
 		cd web && npx drizzle-kit studio --port $$STUDIO_PORT; \
 	else \
+		lsof -ti :4983 2>/dev/null | xargs kill 2>/dev/null || true; \
 		cd web && npm run db:studio; \
 	fi
 
