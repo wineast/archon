@@ -55,3 +55,9 @@
 - 正确：`Request → streamText → return → after() { save }`
 - 错误：`Request → await save → streamText`（❌）
 
+### 测试账号
+
+| 邮箱 | 密码 |
+|------|------|
+| test@archon.com | test123456Aa. |
+

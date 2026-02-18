@@ -4,7 +4,7 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
-import { UserButton } from "@clerk/nextjs";
+import { UserMenu } from "@/components/auth/user-menu";
 import { DefaultChatTransport, isTextUIPart } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
@@ -465,14 +465,9 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setUserSettingsOpen(true)}>
-                  <UserCogIcon className="size-4" />
-                  Settings
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <UserButton />
+            <UserMenu />
           </div>
         </header>
 

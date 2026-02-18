@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
+import { UserMenu } from "@/components/auth/user-menu";
 import { PlusIcon, ShieldIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -54,7 +54,7 @@ export default function AgentsPage() {
             <PlusIcon className="size-4" />
             新建 Agent
           </Button>
-          <UserButton />
+          <UserMenu />
         </div>
       </header>
 
