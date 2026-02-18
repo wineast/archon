@@ -4,13 +4,15 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import type { DataObjectRow } from "@/db/schema";
 
-export const DATA_OBJECTS_API_KEY = "/api/data-objects";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useDataObjects() {
+export function dataObjectsApiKey(agentId?: string) {
+  return agentId ? `/api/data-objects?agentId=${agentId}` : null;
+}
+
+export function useDataObjects(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<DataObjectRow[]>(
-    DATA_OBJECTS_API_KEY,
+    dataObjectsApiKey(agentId),
     fetcher
   );
 
@@ -24,7 +26,7 @@ export function useDataObjects() {
 
 export function useDataObject(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR<DataObjectRow>(
-    id ? `${DATA_OBJECTS_API_KEY}/${id}` : null,
+    id ? `/api/data-objects/${id}` : null,
     fetcher
   );
 
@@ -42,12 +44,12 @@ export async function createDataObject(
     name: string;
     description?: string;
     data?: Record<string, unknown>;
-    agentId?: string;
+    agentId: string;
   },
   mutate: () => void
 ) {
   try {
-    const res = await fetch(DATA_OBJECTS_API_KEY, {
+    const res = await fetch("/api/data-objects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -68,7 +70,7 @@ export async function updateDataObject(
   mutate: () => void
 ) {
   try {
-    const res = await fetch(`${DATA_OBJECTS_API_KEY}/${id}`, {
+    const res = await fetch(`/api/data-objects/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -85,7 +87,7 @@ export async function updateDataObject(
 
 export async function deleteDataObject(id: string, mutate: () => void) {
   try {
-    const res = await fetch(`${DATA_OBJECTS_API_KEY}/${id}`, {
+    const res = await fetch(`/api/data-objects/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(await res.text());

@@ -5,13 +5,15 @@ import { toast } from "sonner";
 import type { TemplateVarRow } from "@/db/schema";
 import { parseTemplateVarValue } from "@/lib/template-vars/parse";
 
-export const TEMPLATE_VARS_API_KEY = "/api/template-vars";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useTemplateVarRows() {
+export function templateVarsApiKey(agentId?: string) {
+  return agentId ? `/api/template-vars?agentId=${agentId}` : null;
+}
+
+export function useTemplateVarRows(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<TemplateVarRow[]>(
-    TEMPLATE_VARS_API_KEY,
+    templateVarsApiKey(agentId),
     fetcher
   );
 
@@ -23,8 +25,8 @@ export function useTemplateVarRows() {
   };
 }
 
-export function useTemplateVarsMap() {
-  const { rows, isLoading, error, mutate } = useTemplateVarRows();
+export function useTemplateVarsMap(agentId?: string) {
+  const { rows, isLoading, error, mutate } = useTemplateVarRows(agentId);
 
   const templateVars: Record<string, unknown> = {};
   for (const row of rows) {
@@ -36,7 +38,7 @@ export function useTemplateVarsMap() {
 
 export async function createTemplateVar(
   data: {
-    agentId?: string;
+    agentId: string;
     key: string;
     value: string;
     type?: string;
@@ -45,7 +47,7 @@ export async function createTemplateVar(
   mutate: () => void
 ) {
   try {
-    const res = await fetch(TEMPLATE_VARS_API_KEY, {
+    const res = await fetch("/api/template-vars", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -66,7 +68,7 @@ export async function updateTemplateVar(
   mutate: () => void
 ) {
   try {
-    const res = await fetch(`${TEMPLATE_VARS_API_KEY}/${id}`, {
+    const res = await fetch(`/api/template-vars/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -83,7 +85,7 @@ export async function updateTemplateVar(
 
 export async function deleteTemplateVar(id: string, mutate: () => void) {
   try {
-    const res = await fetch(`${TEMPLATE_VARS_API_KEY}/${id}`, {
+    const res = await fetch(`/api/template-vars/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(await res.text());

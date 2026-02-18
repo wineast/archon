@@ -2,6 +2,25 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { lookupTables, lookupEntries } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
+
+async function getTableWithAuth(tableId: string, minRole: "viewer" | "editor") {
+  const [table] = await db
+    .select()
+    .from(lookupTables)
+    .where(eq(lookupTables.id, tableId));
+
+  if (!table) {
+    return { error: NextResponse.json({ error: "Lookup table not found" }, { status: 404 }) };
+  }
+
+  const ctx = await requireAgentRole(table.agentId!, minRole);
+  if (ctx instanceof NextResponse) {
+    return { error: ctx };
+  }
+
+  return { table, ctx };
+}
 
 export async function GET(
   _req: Request,
@@ -9,17 +28,8 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const [table] = await db
-    .select()
-    .from(lookupTables)
-    .where(eq(lookupTables.id, id));
-
-  if (!table) {
-    return NextResponse.json(
-      { error: "Lookup table not found" },
-      { status: 404 }
-    );
-  }
+  const result = await getTableWithAuth(id, "viewer");
+  if ("error" in result) return result.error;
 
   const entries = await db
     .select()
@@ -35,19 +45,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const result = await getTableWithAuth(id, "editor");
+  if ("error" in result) return result.error;
+
   const body = await req.json();
-
-  const [table] = await db
-    .select()
-    .from(lookupTables)
-    .where(eq(lookupTables.id, id));
-
-  if (!table) {
-    return NextResponse.json(
-      { error: "Lookup table not found" },
-      { status: 404 }
-    );
-  }
 
   const [row] = await db
     .insert(lookupEntries)
@@ -68,24 +70,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const result = await getTableWithAuth(id, "editor");
+  if ("error" in result) return result.error;
+
   const body: Array<{
     value: string;
     label?: string;
     metadata?: Record<string, unknown>;
     order?: number;
   }> = await req.json();
-
-  const [table] = await db
-    .select()
-    .from(lookupTables)
-    .where(eq(lookupTables.id, id));
-
-  if (!table) {
-    return NextResponse.json(
-      { error: "Lookup table not found" },
-      { status: 404 }
-    );
-  }
 
   // Delete existing entries and replace
   await db.delete(lookupEntries).where(eq(lookupEntries.tableId, id));

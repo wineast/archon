@@ -4,13 +4,18 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import type { LookupTableRow, LookupEntryRow } from "@/db/schema";
 
-export const LOOKUP_TABLES_API_KEY = "/api/lookup-tables";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useLookupTables() {
+export function lookupTablesApiKey(agentId?: string, include?: string) {
+  if (!agentId) return null;
+  const params = new URLSearchParams({ agentId });
+  if (include) params.set("include", include);
+  return `/api/lookup-tables?${params}`;
+}
+
+export function useLookupTables(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<LookupTableRow[]>(
-    LOOKUP_TABLES_API_KEY,
+    lookupTablesApiKey(agentId),
     fetcher
   );
 
@@ -26,9 +31,9 @@ export type LookupTableWithEntries = LookupTableRow & {
   entries: LookupEntryRow[];
 };
 
-export function useLookupTablesWithEntries() {
+export function useLookupTablesWithEntries(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<LookupTableWithEntries[]>(
-    `${LOOKUP_TABLES_API_KEY}?include=entries`,
+    lookupTablesApiKey(agentId, "entries"),
     fetcher
   );
 
@@ -42,7 +47,7 @@ export function useLookupTablesWithEntries() {
 
 export function useLookupTable(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR<LookupTableWithEntries>(
-    id ? `${LOOKUP_TABLES_API_KEY}/${id}` : null,
+    id ? `/api/lookup-tables/${id}` : null,
     fetcher
   );
 
@@ -55,11 +60,11 @@ export function useLookupTable(id: string | null) {
 }
 
 export async function createLookupTable(
-  data: { key: string; name: string; description?: string; agentId?: string },
+  data: { key: string; name: string; description?: string; agentId: string },
   mutate: () => void
 ) {
   try {
-    const res = await fetch(LOOKUP_TABLES_API_KEY, {
+    const res = await fetch("/api/lookup-tables", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -80,7 +85,7 @@ export async function updateLookupTable(
   mutate: () => void
 ) {
   try {
-    const res = await fetch(`${LOOKUP_TABLES_API_KEY}/${id}`, {
+    const res = await fetch(`/api/lookup-tables/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -97,7 +102,7 @@ export async function updateLookupTable(
 
 export async function deleteLookupTable(id: string, mutate: () => void) {
   try {
-    const res = await fetch(`${LOOKUP_TABLES_API_KEY}/${id}`, {
+    const res = await fetch(`/api/lookup-tables/${id}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(await res.text());
@@ -121,7 +126,7 @@ export async function saveEntries(
   mutate: () => void
 ) {
   try {
-    const res = await fetch(`${LOOKUP_TABLES_API_KEY}/${tableId}/entries`, {
+    const res = await fetch(`/api/lookup-tables/${tableId}/entries`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(entries),
@@ -147,7 +152,7 @@ export async function createEntry(
   mutate: () => void
 ) {
   try {
-    const res = await fetch(`${LOOKUP_TABLES_API_KEY}/${tableId}/entries`, {
+    const res = await fetch(`/api/lookup-tables/${tableId}/entries`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -170,7 +175,7 @@ export async function updateEntry(
 ) {
   try {
     const res = await fetch(
-      `${LOOKUP_TABLES_API_KEY}/${tableId}/entries/${entryId}`,
+      `/api/lookup-tables/${tableId}/entries/${entryId}`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -194,7 +199,7 @@ export async function deleteEntry(
 ) {
   try {
     const res = await fetch(
-      `${LOOKUP_TABLES_API_KEY}/${tableId}/entries/${entryId}`,
+      `/api/lookup-tables/${tableId}/entries/${entryId}`,
       {
         method: "DELETE",
       }

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { evalJudgeConfigs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function PUT(
   _req: Request,
@@ -21,10 +22,14 @@ export async function PUT(
     );
   }
 
-  // Clear all defaults, then set the target as default
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
+  // Clear all defaults for this agent, then set the target as default
   await db
     .update(evalJudgeConfigs)
-    .set({ isDefault: false });
+    .set({ isDefault: false })
+    .where(eq(evalJudgeConfigs.agentId, existing.agentId!));
 
   const [updated] = await db
     .update(evalJudgeConfigs)

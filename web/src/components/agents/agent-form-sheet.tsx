@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { IconPicker } from "./icon-picker";
 import { createAgent, updateAgent } from "@/lib/agents/hooks";
+import type { AgentWithRole } from "@/lib/agents/hooks";
 import type { AgentRow } from "@/db/schema";
 import type { KeyedMutator } from "swr";
 
@@ -30,7 +31,7 @@ interface AgentFormSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agent?: AgentRow | null;
-  mutate: KeyedMutator<AgentRow[]>;
+  mutate: KeyedMutator<AgentWithRole[]>;
 }
 
 export function AgentFormSheet({

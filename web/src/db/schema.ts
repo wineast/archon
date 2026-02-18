@@ -13,6 +13,11 @@ import {
 import type { ToolParameter } from "@/lib/tools/types";
 import type { Assertion, AssertionResult, Dimension, JudgeResult } from "@/lib/eval/types";
 
+/* ─────────── Agent Role Constants ─────────── */
+
+export const AGENT_ROLE_LEVELS = { viewer: 0, editor: 1, admin: 2, owner: 3 } as const;
+export type AgentRole = keyof typeof AGENT_ROLE_LEVELS;
+
 /* ─────────── Agents ─────────── */
 
 export const agents = pgTable("agents", {
@@ -21,6 +26,7 @@ export const agents = pgTable("agents", {
   description: text("description").notNull().default(""),
   icon: text("icon").notNull().default("bot"),
   slug: text("slug").notNull().unique(),
+  isPublic: boolean("is_public").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -42,6 +48,7 @@ export const users = pgTable("users", {
   nickname: text("nickname"),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
+  platformRole: text("platform_role").notNull().default("user").$type<"user" | "super_admin">(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -54,11 +61,42 @@ export const users = pgTable("users", {
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
+/* ─────────── Agent Members ─────────── */
+
+export const agentMembers = pgTable(
+  "agent_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").notNull().$type<AgentRole>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("agent_members_agent_user_idx").on(t.agentId, t.userId),
+    index("agent_members_user_id_idx").on(t.userId),
+  ]
+);
+
+export type AgentMemberRow = typeof agentMembers.$inferSelect;
+export type NewAgentMemberRow = typeof agentMembers.$inferInsert;
+
 export const chatSessions = pgTable("chat_sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
   agentId: uuid("agent_id").references(() => agents.id, {
     onDelete: "set null",
   }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   model: text("model").notNull(),
   systemPrompt: text("system_prompt"),

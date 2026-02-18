@@ -4,14 +4,19 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import type { ModelConfigRow } from "@/db/schema";
 
-export const MODEL_CONFIGS_API_KEY = "/api/model-configs";
-export const ACTIVE_MODEL_CONFIG_API_KEY = "/api/model-configs/active";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useModelConfigs() {
+export function modelConfigsApiKey(agentId?: string) {
+  return agentId ? `/api/model-configs?agentId=${agentId}` : null;
+}
+
+export function activeModelConfigApiKey(agentId?: string) {
+  return agentId ? `/api/model-configs/active?agentId=${agentId}` : null;
+}
+
+export function useModelConfigs(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<ModelConfigRow[]>(
-    MODEL_CONFIGS_API_KEY,
+    modelConfigsApiKey(agentId),
     fetcher
   );
 
@@ -23,9 +28,9 @@ export function useModelConfigs() {
   };
 }
 
-export function useActiveModelConfig() {
+export function useActiveModelConfig(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<ModelConfigRow | null>(
-    ACTIVE_MODEL_CONFIG_API_KEY,
+    activeModelConfigApiKey(agentId),
     fetcher
   );
 
@@ -39,6 +44,7 @@ export function useActiveModelConfig() {
 
 export async function createModelConfig(
   data: {
+    agentId: string;
     name: string;
     systemPrompt?: string;
     temperature?: number;

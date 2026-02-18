@@ -2,12 +2,26 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const [existing] = await db
+    .select()
+    .from(wikiDocuments)
+    .where(eq(wikiDocuments.id, id));
+
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
   const body = await req.json();
 
   const updates: Record<string, unknown> = {};
@@ -28,6 +42,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const [existing] = await db
+    .select()
+    .from(wikiDocuments)
+    .where(eq(wikiDocuments.id, id));
+
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
   await db.delete(wikiDocuments).where(eq(wikiDocuments.id, id));
   return NextResponse.json({ ok: true });
 }

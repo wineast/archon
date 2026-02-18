@@ -3,6 +3,11 @@ import { toast } from "sonner";
 import type { KeyedMutator } from "swr";
 import type { WikiDocument } from "./types";
 
+export function wikiApiKey(agentId?: string) {
+  return agentId ? `/api/wiki?agentId=${agentId}` : null;
+}
+
+/** @deprecated Use wikiApiKey(agentId) instead */
 export const WIKI_API_KEY = "/api/wiki";
 
 export const wikiFetcher = (url: string) =>
@@ -13,7 +18,8 @@ export const wikiFetcher = (url: string) =>
 
 export async function createDocument(
   docs: WikiDocument[],
-  mutate: KeyedMutator<WikiDocument[]>
+  mutate: KeyedMutator<WikiDocument[]>,
+  agentId?: string
 ): Promise<string | null> {
   const id = nanoid();
   const now = Date.now();
@@ -32,7 +38,7 @@ export async function createDocument(
     const res = await fetch("/api/wiki", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(doc),
+      body: JSON.stringify({ ...doc, agentId }),
     });
     if (!res.ok) throw new Error("Failed to create document");
     await mutate([...docs, doc], { revalidate: false });
@@ -95,7 +101,8 @@ export async function reorderDocument(
   id: string,
   direction: "up" | "down",
   docs: WikiDocument[],
-  mutate: KeyedMutator<WikiDocument[]>
+  mutate: KeyedMutator<WikiDocument[]>,
+  agentId?: string
 ): Promise<void> {
   const sorted = [...docs].sort((a, b) => a.order - b.order);
   const idx = sorted.findIndex((d) => d.id === id);
@@ -112,6 +119,7 @@ export async function reorderDocument(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        agentId,
         updates: [
           { id: doc.id, order: swapDoc.order },
           { id: swapDoc.id, order: doc.order },

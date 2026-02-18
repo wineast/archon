@@ -4,13 +4,15 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import type { ToolRow } from "@/db/schema";
 
-export const TOOLS_API_KEY = "/api/tools";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useTools() {
+export function toolsApiKey(agentId?: string) {
+  return agentId ? `/api/tools?agentId=${agentId}` : null;
+}
+
+export function useTools(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<ToolRow[]>(
-    TOOLS_API_KEY,
+    toolsApiKey(agentId),
     fetcher
   );
 
@@ -24,6 +26,7 @@ export function useTools() {
 
 export async function createTool(
   data: {
+    agentId: string;
     name: string;
     description: string;
     parameters?: unknown[];

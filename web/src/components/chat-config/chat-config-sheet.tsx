@@ -6,7 +6,7 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { CHAT_CONFIG_API_KEY, updateChatConfig } from "@/lib/chat-config/hooks";
+import { chatConfigApiKey, updateChatConfig } from "@/lib/chat-config/hooks";
 import type { ChatConfigRow } from "@/db/schema";
 import { ChatConfigDetail } from "./chat-config-detail";
 import useSWR from "swr";
@@ -17,12 +17,14 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export function ChatConfigSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
   const { data: config, mutate } = useSWR<ChatConfigRow>(
-    open ? CHAT_CONFIG_API_KEY : null,
+    open ? chatConfigApiKey(agentId) : null,
     fetcher
   );
 

@@ -10,8 +10,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  MODEL_CONFIGS_API_KEY,
-  ACTIVE_MODEL_CONFIG_API_KEY,
+  modelConfigsApiKey,
+  activeModelConfigApiKey,
   createModelConfig,
   updateModelConfig,
   deleteModelConfig,
@@ -28,16 +28,18 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export function ModelConfigSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
   const { data: configs = [], mutate: listMutate } = useSWR<ModelConfigRow[]>(
-    open ? MODEL_CONFIGS_API_KEY : null,
+    open ? modelConfigsApiKey(agentId) : null,
     fetcher
   );
   const { mutate: activeMutate } = useSWR<ModelConfigRow | null>(
-    ACTIVE_MODEL_CONFIG_API_KEY,
+    activeModelConfigApiKey(agentId),
     fetcher
   );
   const [activeConfigId, setActiveConfigId] = useState<string | null>(null);
@@ -59,6 +61,7 @@ export function ModelConfigSheet({
   const handleCreate = useCallback(async () => {
     const result = await createModelConfig(
       {
+        agentId,
         name: "New Config",
         systemPrompt: "",
         temperature: 0.7,

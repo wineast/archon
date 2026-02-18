@@ -1,26 +1,42 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { lookupEntries } from "@/db/schema";
+import { lookupEntries, lookupTables } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string; entryId: string }> }
-) {
-  const { entryId } = await params;
-  const body = await req.json();
-
+async function getEntryWithAuth(entryId: string) {
   const [existing] = await db
     .select()
     .from(lookupEntries)
     .where(eq(lookupEntries.id, entryId));
 
   if (!existing) {
-    return NextResponse.json(
-      { error: "Entry not found" },
-      { status: 404 }
-    );
+    return { error: NextResponse.json({ error: "Entry not found" }, { status: 404 }) };
   }
+
+  const [table] = await db
+    .select()
+    .from(lookupTables)
+    .where(eq(lookupTables.id, existing.tableId));
+
+  const ctx = await requireAgentRole(table!.agentId!, "editor");
+  if (ctx instanceof NextResponse) {
+    return { error: ctx };
+  }
+
+  return { existing, ctx };
+}
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string; entryId: string }> }
+) {
+  const { entryId } = await params;
+
+  const result = await getEntryWithAuth(entryId);
+  if ("error" in result) return result.error;
+
+  const body = await req.json();
 
   const [updated] = await db
     .update(lookupEntries)
@@ -42,17 +58,8 @@ export async function DELETE(
 ) {
   const { entryId } = await params;
 
-  const [existing] = await db
-    .select()
-    .from(lookupEntries)
-    .where(eq(lookupEntries.id, entryId));
-
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Entry not found" },
-      { status: 404 }
-    );
-  }
+  const result = await getEntryWithAuth(entryId);
+  if ("error" in result) return result.error;
 
   await db.delete(lookupEntries).where(eq(lookupEntries.id, entryId));
   return NextResponse.json({ ok: true });

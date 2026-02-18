@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { tools } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function PATCH(
   req: Request,
@@ -18,6 +19,9 @@ export async function PATCH(
   if (!existing) {
     return NextResponse.json({ error: "Tool not found" }, { status: 404 });
   }
+
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
 
   const [updated] = await db
     .update(tools)
@@ -49,6 +53,9 @@ export async function DELETE(
   if (!existing) {
     return NextResponse.json({ error: "Tool not found" }, { status: 404 });
   }
+
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
 
   await db.delete(tools).where(eq(tools.id, id));
   return NextResponse.json({ ok: true });

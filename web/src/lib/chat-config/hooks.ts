@@ -4,13 +4,15 @@ import useSWR, { type KeyedMutator } from "swr";
 import { toast } from "sonner";
 import type { ChatConfigRow } from "@/db/schema";
 
-export const CHAT_CONFIG_API_KEY = "/api/chat-configs";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useChatConfig() {
+export function chatConfigApiKey(agentId?: string) {
+  return agentId ? `/api/chat-configs?agentId=${agentId}` : null;
+}
+
+export function useChatConfig(agentId?: string) {
   const { data, error, isLoading, mutate } = useSWR<ChatConfigRow>(
-    CHAT_CONFIG_API_KEY,
+    chatConfigApiKey(agentId),
     fetcher
   );
 

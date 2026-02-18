@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { modelConfigs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function PUT(
   req: Request,
@@ -21,11 +22,14 @@ export async function PUT(
     );
   }
 
-  // Deactivate all, then activate target (no DB-level transaction needed for Neon HTTP)
+  const ctx = await requireAgentRole(target.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
+  // Deactivate all configs for this agent, then activate target
   await db
     .update(modelConfigs)
     .set({ isActive: false })
-    .where(eq(modelConfigs.isActive, true));
+    .where(and(eq(modelConfigs.agentId, target.agentId!), eq(modelConfigs.isActive, true)));
 
   const [activated] = await db
     .update(modelConfigs)

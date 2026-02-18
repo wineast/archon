@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { dataObjects } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function GET(
   _req: Request,
@@ -21,6 +22,9 @@ export async function GET(
     );
   }
 
+  const ctx = await requireAgentRole(obj.agentId!, "viewer");
+  if (ctx instanceof NextResponse) return ctx;
+
   return NextResponse.json(obj);
 }
 
@@ -29,7 +33,6 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await req.json();
 
   const [existing] = await db
     .select()
@@ -42,6 +45,11 @@ export async function PATCH(
       { status: 404 }
     );
   }
+
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
+
+  const body = await req.json();
 
   const [updated] = await db
     .update(dataObjects)
@@ -73,6 +81,9 @@ export async function DELETE(
       { status: 404 }
     );
   }
+
+  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  if (ctx instanceof NextResponse) return ctx;
 
   await db.delete(dataObjects).where(eq(dataObjects.id, id));
   return NextResponse.json({ ok: true });

@@ -25,11 +25,13 @@ import { LookupTableCreateDialog } from "./lookup-table-create-dialog";
 export function LookupTablesSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
-  const { tables, mutate: mutateList } = useLookupTables();
+  const { tables, mutate: mutateList } = useLookupTables(agentId);
   const [activeTableId, setActiveTableId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -50,7 +52,7 @@ export function LookupTablesSheet({
   const handleCreateWithKey = useCallback(
     async (key: string, name: string) => {
       const result = await createLookupTable(
-        { key, name, description: "" },
+        { key, name, description: "", agentId },
         mutateList
       );
       if (result?.id) {

@@ -11,7 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  TOOLS_API_KEY,
+  toolsApiKey,
   createTool,
   updateTool,
   deleteTool,
@@ -28,12 +28,14 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export function ToolsSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
   const { data: tools = [], mutate } = useSWR<ToolRow[]>(
-    open ? TOOLS_API_KEY : null,
+    open ? toolsApiKey(agentId) : null,
     fetcher
   );
   const [activeToolId, setActiveToolId] = useState<string | null>(null);
@@ -53,6 +55,7 @@ export function ToolsSheet({
   const handleCreate = useCallback(async () => {
     const result = await createTool(
       {
+        agentId,
         name: "newTool",
         description: "",
         parameters: [],

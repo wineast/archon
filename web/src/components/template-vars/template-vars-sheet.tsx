@@ -321,16 +321,18 @@ function VarRow({
 export function TemplateVarsSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
-  const { rows, mutate } = useTemplateVarRows();
+  const { rows, mutate } = useTemplateVarRows(agentId);
   const [busy, setBusy] = useState(false);
 
   const handleAdd = useCallback(async () => {
     setBusy(true);
-    await createTemplateVar({ key: "", value: "", type: "text" }, mutate);
+    await createTemplateVar({ agentId, key: "", value: "", type: "text" }, mutate);
     setBusy(false);
   }, [mutate]);
 

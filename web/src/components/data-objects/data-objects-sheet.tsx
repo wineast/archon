@@ -24,11 +24,13 @@ import { DataObjectCreateDialog } from "./data-object-create-dialog";
 export function DataObjectsSheet({
   open,
   onOpenChange,
+  agentId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  agentId: string;
 }) {
-  const { objects, mutate: mutateList } = useDataObjects();
+  const { objects, mutate: mutateList } = useDataObjects(agentId);
   const [activeObjectId, setActiveObjectId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -49,7 +51,7 @@ export function DataObjectsSheet({
   const handleCreateWithKey = useCallback(
     async (key: string, name: string) => {
       const result = await createDataObject(
-        { key, name, description: "", data: {} },
+        { key, name, description: "", data: {}, agentId },
         mutateList
       );
       if (result?.id) {
