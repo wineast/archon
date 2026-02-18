@@ -3,7 +3,6 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { JsEditor } from "@/components/editors/js-editor";
-import { JsonEditor } from "@/components/editors/json-editor";
 import type { ToolDefinition } from "@/lib/tools/types";
 import { useDatasets } from "@/lib/datasets/hooks";
 import type { EnumRefOption } from "@/components/parameters/parameter-row";
@@ -18,7 +17,7 @@ import {
   useFormContext,
   useWatch,
 } from "react-hook-form";
-import { CodeIcon, GlobeIcon, LinkIcon, TypeIcon } from "lucide-react";
+import { CodeIcon, GlobeIcon, TypeIcon } from "lucide-react";
 
 export interface ToolFormHandle {
   getDraft: () => ToolDefinition;
@@ -67,7 +66,6 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   // Watch only fields needed for validation / conditional rendering
   const name = useWatch({ control: form.control, name: "name" });
   const handler = useWatch({ control: form.control, name: "handler" });
-  const output = useWatch({ control: form.control, name: "output" });
 
   // Fetch datasets for enum ref options
   const { datasets } = useDatasets(agentId);
@@ -126,24 +124,12 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
     return null;
   }, [name]);
 
-  const hasHandler = !!handler?.trim();
-
   const handlerHint = useMemo(() => {
     const h = handler?.trim();
     if (!h) return null;
     if (h.startsWith("http://") || h.startsWith("https://")) return "remote";
-    return "local";
+    return null;
   }, [handler]);
-
-  const outputHint = useMemo(() => {
-    if (!output?.trim()) return null;
-    try {
-      JSON.parse(output);
-      return null;
-    } catch {
-      return "Invalid JSON \u2014 will be returned as { result: string }";
-    }
-  }, [output]);
 
   return (
     <FormProvider {...form}>
@@ -225,18 +211,12 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               <Input
                 className="mt-1 h-8 text-sm font-mono"
                 {...form.register("handler")}
-                placeholder="留空使用静态输出，或填写本地 key / URL"
+                placeholder="填写 URL"
               />
               {handlerHint === "remote" && (
                 <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
                   <GlobeIcon className="size-3" />
                   远程 API — 调用时将 POST 参数到此 URL
-                </p>
-              )}
-              {handlerHint === "local" && (
-                <p className="text-xs text-green-500 mt-1 flex items-center gap-1">
-                  <LinkIcon className="size-3" />
-                  本地实现 — 关联代码中注册的 handler
                 </p>
               )}
             </>
@@ -262,37 +242,6 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                 wiki.findByPrefix(prefix), wiki.search(query)
               </p>
             </>
-          )}
-        </div>
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            Output (JSON)
-          </label>
-          <Controller
-            name="output"
-            control={form.control}
-            render={({ field }) => (
-              <JsonEditor
-                value={field.value}
-                onChange={field.onChange}
-                height="150px"
-                readOnly={hasHandler}
-                className="mt-1"
-              />
-            )}
-          />
-          {hasHandler && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Handler 已接管，此字段不生效
-            </p>
-          )}
-          {!hasHandler && outputHint && (
-            <p className="text-xs text-amber-500 mt-1">{outputHint}</p>
-          )}
-          {!hasHandler && !outputHint && (
-            <p className="text-xs text-muted-foreground mt-1">
-              支持 Liquid 模板语法：{"{{变量名}}"}、{"{{码表key}}"}、{"{% include 'doc' %}"}
-            </p>
           )}
         </div>
         <ReturnParameterList

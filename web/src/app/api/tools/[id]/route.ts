@@ -30,7 +30,6 @@ export async function PATCH(
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.parameters !== undefined && { parameters: body.parameters }),
-      ...(body.output !== undefined && { output: body.output }),
       ...(body.handler !== undefined && { handler: body.handler }),
       ...(body.component !== undefined && { component: body.component }),
       ...(body.componentSource !== undefined && { componentSource: body.componentSource }),

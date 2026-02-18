@@ -52,7 +52,6 @@ const sampleToolRows: ToolRow[] = [
         required: true,
       },
     ],
-    output: '{"temp": 72}',
     handler: null,
     component: null,
     componentSource: null,
@@ -69,7 +68,6 @@ const sampleToolRows: ToolRow[] = [
     name: "search",
     description: "Search the web",
     parameters: [],
-    output: '{"results": []}',
     handler: null,
     component: null,
     componentSource: null,
@@ -419,11 +417,10 @@ describe("RequestInspectorModal", () => {
       const pre = tabPanel.querySelector("pre");
       expect(pre).not.toBeNull();
       // tools are filtered (enabled) and mapped to payload shape
-      const expected = sampleToolRows.map(({ name, description, parameters, output, handler }) => ({
+      const expected = sampleToolRows.map(({ name, description, parameters, handler }) => ({
         name,
         description,
         parameters,
-        output: output ?? "",
         handler: handler ?? "",
       }));
       expect(pre!.textContent).toBe(JSON.stringify(expected, null, 2));

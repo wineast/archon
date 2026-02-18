@@ -39,7 +39,6 @@ export async function POST(req: Request) {
       name: body.name,
       description: body.description,
       parameters: body.parameters ?? [],
-      output: body.output ?? null,
       handler: body.handler ?? null,
       component: body.component ?? null,
       componentSource: body.componentSource ?? null,

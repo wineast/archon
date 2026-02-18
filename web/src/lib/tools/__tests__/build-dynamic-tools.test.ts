@@ -1,14 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "../types";
-import type { TemplateData } from "@/lib/template/render";
-
-vi.mock("@/lib/template/render", () => ({
-  renderTemplate: vi.fn(async (text: string) => text),
-}));
-
-import { renderTemplate } from "@/lib/template/render";
-const mockRenderTemplate = vi.mocked(renderTemplate);
 
 const opts = {
   toolCallId: "tc",
@@ -35,16 +27,14 @@ const validPayload: ToolDefinitionPayload = {
       required: false,
     },
   ],
-  output: JSON.stringify({ results: [], total: 0 }),
-  handler: "",
+  handler: "(args) => ({ results: [], total: 0 })",
 };
 
 const noParamPayload: ToolDefinitionPayload = {
   name: "getCurrentTime",
   description: "Get current time",
   parameters: [],
-  output: JSON.stringify({ time: "12:00" }),
-  handler: "",
+  handler: "() => ({ time: '12:00' })",
 };
 
 describe("buildDynamicTools", () => {
@@ -65,66 +55,48 @@ describe("buildDynamicTools", () => {
     expect(tools.searchProducts.description).toBe("Search products by keyword");
   });
 
-  describe("static output (no handler)", () => {
-    it("returns parsed JSON object", async () => {
-      const tools = buildDynamicTools([validPayload]);
-      const result = await tools.searchProducts.execute!(
-        { query: "test" },
-        opts
-      );
-      expect(result).toEqual({ results: [], total: 0 });
-    });
-
-    it("works for no-param tool", async () => {
-      const tools = buildDynamicTools([noParamPayload]);
-      const result = await tools.getCurrentTime.execute!({}, opts);
-      expect(result).toEqual({ time: "12:00" });
-    });
-
-    it("falls back to { result: rawString } for invalid JSON", async () => {
+  describe("no handler", () => {
+    it("returns error when handler is empty", async () => {
       const payload: ToolDefinitionPayload = {
-        name: "broken",
-        description: "Tool with invalid JSON output",
+        name: "noHandler",
+        description: "Tool without handler",
         parameters: [],
-        output: "not valid json",
         handler: "",
       };
       const tools = buildDynamicTools([payload]);
-      const result = await tools.broken.execute!({}, opts);
-      expect(result).toEqual({ result: "not valid json" });
+      const result = await tools.noHandler.execute!({}, opts);
+      expect(result).toEqual({
+        error: 'Tool "noHandler" has no handler configured',
+      });
     });
 
-    it("falls back for empty string", async () => {
+    it("returns error when handler is whitespace only", async () => {
       const payload: ToolDefinitionPayload = {
-        name: "empty",
-        description: "Empty output",
+        name: "wsHandler",
+        description: "Tool with whitespace handler",
         parameters: [],
-        output: "",
-        handler: "",
+        handler: "   ",
       };
       const tools = buildDynamicTools([payload]);
-      const result = await tools.empty.execute!({}, opts);
-      expect(result).toEqual({ result: "" });
+      const result = await tools.wsHandler.execute!({}, opts);
+      expect(result).toEqual({
+        error: 'Tool "wsHandler" has no handler configured',
+      });
     });
   });
 
-  describe("local handler", () => {
-    beforeEach(() => {
-      vi.resetModules();
-    });
-
-    it("returns error when handler key not found in registry", async () => {
+  describe("invalid handler format", () => {
+    it("returns error for unrecognized handler string", async () => {
       const payload: ToolDefinitionPayload = {
         name: "myTool",
         description: "A tool",
         parameters: [],
-        output: "{}",
         handler: "nonexistent_handler",
       };
       const tools = buildDynamicTools([payload]);
       const result = await tools.myTool.execute!({}, opts);
       expect(result).toEqual({
-        error: 'Handler "nonexistent_handler" not found in registry',
+        error: "Invalid handler: must be a URL (http/https) or JS code (arrow function / function)",
       });
     });
   });
@@ -147,7 +119,6 @@ describe("buildDynamicTools", () => {
         name: "weather",
         description: "Get weather",
         parameters: [],
-        output: "",
         handler: "https://api.weather.io/v1",
       };
       const tools = buildDynamicTools([payload]);
@@ -173,7 +144,6 @@ describe("buildDynamicTools", () => {
         name: "broken_api",
         description: "Broken API",
         parameters: [],
-        output: "",
         handler: "https://api.example.com/broken",
       };
       const tools = buildDynamicTools([payload]);
@@ -191,15 +161,13 @@ describe("buildDynamicTools", () => {
         name: "tool1",
         description: "First",
         parameters: [],
-        output: '{"a":1}',
-        handler: "",
+        handler: "() => ({ a: 1 })",
       };
       const payload2: ToolDefinitionPayload = {
         name: "tool2",
         description: "Second",
         parameters: [],
-        output: '{"b":2}',
-        handler: "",
+        handler: "() => ({ b: 2 })",
       };
       const tools = buildDynamicTools([payload1, payload2]);
 
@@ -214,15 +182,13 @@ describe("buildDynamicTools", () => {
         name: "dup",
         description: "First",
         parameters: [],
-        output: "{}",
-        handler: "",
+        handler: "() => ({})",
       };
       const p2: ToolDefinitionPayload = {
         name: "dup",
         description: "Second",
         parameters: [],
-        output: "{}",
-        handler: "",
+        handler: "() => ({})",
       };
       const tools = buildDynamicTools([p1, p2]);
       expect(tools.dup.description).toBe("Second");
@@ -238,110 +204,6 @@ describe("buildDynamicTools", () => {
     it("no-param tool has inputSchema for empty object", () => {
       const tools = buildDynamicTools([noParamPayload]);
       expect(tools.getCurrentTime).toHaveProperty("inputSchema");
-    });
-  });
-
-  describe("static output with template rendering", () => {
-    const templateData: TemplateData = {
-      resolvedVars: { greeting: "hello" },
-      docs: [],
-      datasetEntries: {
-        colors: [{ value: "red" }, { value: "blue" }],
-      },
-      toolRows: [],
-    };
-
-    beforeEach(() => {
-      mockRenderTemplate.mockReset();
-    });
-
-    it("renders template variables in output JSON", async () => {
-      mockRenderTemplate.mockResolvedValue('{"msg": "hello world"}');
-
-      const payload: ToolDefinitionPayload = {
-        name: "greet",
-        description: "Greet",
-        parameters: [],
-        output: '{"msg": "{{greeting}} world"}',
-        handler: "",
-      };
-      const tools = buildDynamicTools([payload], templateData);
-      const result = await tools.greet.execute!({}, opts);
-
-      expect(mockRenderTemplate).toHaveBeenCalledWith(
-        '{"msg": "{{greeting}} world"}',
-        templateData
-      );
-      expect(result).toEqual({ msg: "hello world" });
-    });
-
-    it("renders lookup table references in output", async () => {
-      mockRenderTemplate.mockResolvedValue(
-        '{"colors": ["red", "blue"]}'
-      );
-
-      const payload: ToolDefinitionPayload = {
-        name: "getColors",
-        description: "Get colors",
-        parameters: [],
-        output: '{"colors": "{{colors}}"}',
-        handler: "",
-      };
-      const tools = buildDynamicTools([payload], templateData);
-      const result = await tools.getColors.execute!({}, opts);
-
-      expect(mockRenderTemplate).toHaveBeenCalledWith(
-        '{"colors": "{{colors}}"}',
-        templateData
-      );
-      expect(result).toEqual({ colors: ["red", "blue"] });
-    });
-
-    it("plain JSON without template vars works with templateData", async () => {
-      mockRenderTemplate.mockResolvedValue('{"status": "ok"}');
-
-      const payload: ToolDefinitionPayload = {
-        name: "status",
-        description: "Status",
-        parameters: [],
-        output: '{"status": "ok"}',
-        handler: "",
-      };
-      const tools = buildDynamicTools([payload], templateData);
-      const result = await tools.status.execute!({}, opts);
-
-      expect(result).toEqual({ status: "ok" });
-    });
-
-    it("falls back to { result: string } if rendered output is not valid JSON", async () => {
-      mockRenderTemplate.mockResolvedValue("hello world");
-
-      const payload: ToolDefinitionPayload = {
-        name: "text",
-        description: "Text output",
-        parameters: [],
-        output: "{{greeting}} world",
-        handler: "",
-      };
-      const tools = buildDynamicTools([payload], templateData);
-      const result = await tools.text.execute!({}, opts);
-
-      expect(result).toEqual({ result: "hello world" });
-    });
-
-    it("does not call renderTemplate when no templateData provided", async () => {
-      const payload: ToolDefinitionPayload = {
-        name: "noTemplate",
-        description: "No template",
-        parameters: [],
-        output: '{"a": 1}',
-        handler: "",
-      };
-      const tools = buildDynamicTools([payload]);
-      const result = await tools.noTemplate.execute!({}, opts);
-
-      expect(mockRenderTemplate).not.toHaveBeenCalled();
-      expect(result).toEqual({ a: 1 });
     });
   });
 });

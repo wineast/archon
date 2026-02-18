@@ -23,7 +23,6 @@ export interface ToolDefinition {
   description: string;
   parameters: ToolParameter[];
   returnParameters: ToolParameter[];
-  output: string;
   handler: string;
   component: string;
   componentSource: string;
@@ -37,6 +36,5 @@ export interface ToolDefinitionPayload {
   description: string;
   parameters: ToolParameter[];
   returnParameters?: ToolParameter[];
-  output: string;
   handler: string;
 }

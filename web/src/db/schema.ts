@@ -209,7 +209,6 @@ export const tools = pgTable(
     description: text("description").notNull(),
     parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
     returnParameters: jsonb("return_parameters").$type<ToolParameter[]>().notNull().default([]),
-    output: text("output"),
     handler: text("handler"),
     component: text("component"),
     componentSource: text("component_source"),

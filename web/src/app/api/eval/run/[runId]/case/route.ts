@@ -11,9 +11,6 @@ import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
-// Side-effect: all implementations self-register into the registry
-import "@/tool-impls";
-
 export const maxDuration = 120;
 
 export async function POST(
@@ -85,7 +82,6 @@ export async function POST(
       name: row.name,
       description: row.description,
       parameters: row.parameters,
-      output: row.output ?? "",
       handler: row.handler ?? "",
     }));
 
