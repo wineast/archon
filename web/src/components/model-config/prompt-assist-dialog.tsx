@@ -10,8 +10,8 @@ import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { unifiedMergeView, updateOriginalDoc, getOriginalDoc } from "@codemirror/merge";
 import { ChangeSet, Text } from "@codemirror/state";
-import { liquid } from "@/components/ui/editors/language";
-import { templateSyntaxHighlighting } from "@/components/ui/editors/theme";
+import { liquid } from "@/components/editors/language";
+import { templateSyntaxHighlighting } from "@/components/editors/theme";
 import {
   Dialog,
   DialogContent,

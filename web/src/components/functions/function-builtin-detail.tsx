@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { JsEditor } from "@/components/ui/editors/js-editor";
+import { JsEditor } from "@/components/editors/js-editor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { BuiltinFunction } from "@/lib/functions/builtin";
 import { BuiltinPlayground } from "./builtin-playground";

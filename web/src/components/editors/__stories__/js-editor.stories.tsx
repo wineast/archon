@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { JsEditor } from "../ui/editors/js-editor";
+import { JsEditor } from "../js-editor";
 
 const meta = {
-  title: "UI/JsEditor",
+  title: "Editors/JsEditor",
   component: JsEditor,
   parameters: { layout: "padded" },
   decorators: [

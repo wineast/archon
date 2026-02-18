@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
-import { JsonEditor } from "../ui/editors/json-editor";
+import { JsonEditor } from "../json-editor";
 
 const meta = {
-  title: "UI/JsonEditor",
+  title: "Editors/JsonEditor",
   component: JsonEditor,
   parameters: { layout: "padded" },
   decorators: [

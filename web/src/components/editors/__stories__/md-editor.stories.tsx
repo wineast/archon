@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { MdEditor } from "../ui/editors/md-editor";
+import { MdEditor } from "../md-editor";
 
 const meta = {
-  title: "UI/MdEditor",
+  title: "Editors/MdEditor",
   component: MdEditor,
   parameters: { layout: "padded" },
   decorators: [

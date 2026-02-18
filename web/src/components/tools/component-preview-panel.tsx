@@ -8,7 +8,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { JsonEditor } from "@/components/editors/json-editor";
 import { DynamicToolRenderer } from "@/tool-ui";
 import { DynamicComponentErrorBoundary } from "@/tool-ui";
 
@@ -16,12 +16,15 @@ interface ComponentPreviewPanelProps {
   componentSource: string;
   mockData: string;
   onMockDataChange: (value: string) => void;
+  /** When false, renders preview directly without collapsible wrapper. Default true. */
+  collapsible?: boolean;
 }
 
 export function ComponentPreviewPanel({
   componentSource,
   mockData,
   onMockDataChange,
+  collapsible = true,
 }: ComponentPreviewPanelProps) {
   const [open, setOpen] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
@@ -40,6 +43,49 @@ export function ComponentPreviewPanel({
 
   if (!componentSource.trim()) return null;
 
+  const content = (
+    <div className="space-y-2">
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">
+          Mock 数据 (JSON)
+        </label>
+        <JsonEditor
+          value={mockData}
+          onChange={onMockDataChange}
+          height="100px"
+          className="mt-1"
+        />
+      </div>
+
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={handleRefresh}
+        className="gap-1"
+      >
+        <EyeIcon className="size-3" />
+        刷新预览
+      </Button>
+
+      <div className="rounded-md border p-3">
+        <DynamicComponentErrorBoundary
+          key={previewKey}
+          fallbackToolName="preview"
+        >
+          <DynamicToolRenderer
+            toolName="preview"
+            state="output-available"
+            input={{}}
+            output={parsedMock}
+            source={componentSource}
+          />
+        </DynamicComponentErrorBoundary>
+      </div>
+    </div>
+  );
+
+  if (!collapsible) return content;
+
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
@@ -54,45 +100,8 @@ export function ComponentPreviewPanel({
           预览
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="mt-2 space-y-2">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">
-              Mock 数据 (JSON)
-            </label>
-            <JsonEditor
-              value={mockData}
-              onChange={onMockDataChange}
-              height="100px"
-              className="mt-1"
-            />
-          </div>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleRefresh}
-            className="gap-1"
-          >
-            <EyeIcon className="size-3" />
-            刷新预览
-          </Button>
-
-          <div className="rounded-md border p-3">
-            <DynamicComponentErrorBoundary
-              key={previewKey}
-              fallbackToolName="preview"
-            >
-              <DynamicToolRenderer
-                toolName="preview"
-                state="output-available"
-                input={{}}
-                output={parsedMock}
-                source={componentSource}
-              />
-            </DynamicComponentErrorBoundary>
-          </div>
-        </div>
+      <CollapsibleContent className="mt-2">
+        {content}
       </CollapsibleContent>
     </Collapsible>
   );

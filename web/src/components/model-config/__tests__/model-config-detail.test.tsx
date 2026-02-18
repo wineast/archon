@@ -32,7 +32,7 @@ vi.mock("swr", () => ({
   default: () => ({ data: [], error: undefined, isLoading: false }),
 }));
 
-vi.mock("@/components/ui/editors/md-editor", () => ({
+vi.mock("@/components/editors/md-editor", () => ({
   MdEditor: ({ value, onChange, placeholder, className }: {
     value: string;
     onChange: (v: string) => void;

@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { ChevronDownIcon, PlayIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { JsonEditor } from "@/components/editors/json-editor";
 import {
   DropdownMenu,
   DropdownMenuContent,

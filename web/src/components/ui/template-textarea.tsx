@@ -3,7 +3,7 @@
 import {
   MdEditor,
   type CompletionDocument,
-} from "./editors/md-editor";
+} from "@/components/editors/md-editor";
 
 /**
  * Backward-compatible alias – older code imports TemplateTextarea.
