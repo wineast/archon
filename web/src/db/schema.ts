@@ -464,3 +464,77 @@ export const functionTestRunResults = pgTable(
 export type FunctionTestRunResultRow = typeof functionTestRunResults.$inferSelect;
 export type NewFunctionTestRunResultRow = typeof functionTestRunResults.$inferInsert;
 
+/* ─────────── Tool Test Cases ─────────── */
+
+export const toolTestCases = pgTable(
+  "tool_test_cases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    toolId: uuid("tool_id")
+      .notNull()
+      .references(() => tools.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
+    expectedOutput: jsonb("expected_output").$type<unknown>(),
+    tags: text("tags").array().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("tool_test_cases_tool_id_idx").on(table.toolId),
+  ]
+);
+
+export type ToolTestCaseRow = typeof toolTestCases.$inferSelect;
+export type NewToolTestCaseRow = typeof toolTestCases.$inferInsert;
+
+/* ─────────── Tool Test Runs ─────────── */
+
+export const toolTestRuns = pgTable("tool_test_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  toolId: uuid("tool_id")
+    .notNull()
+    .references(() => tools.id, { onDelete: "cascade" }),
+  filterTags: text("filter_tags").array().notNull().default([]),
+  totalCases: integer("total_cases").notNull(),
+  passedCases: integer("passed_cases").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type ToolTestRunRow = typeof toolTestRuns.$inferSelect;
+export type NewToolTestRunRow = typeof toolTestRuns.$inferInsert;
+
+export const toolTestRunResults = pgTable(
+  "tool_test_run_results",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => toolTestRuns.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id").notNull(),
+    caseName: text("case_name").notNull(),
+    input: jsonb("input").$type<Record<string, unknown>>().notNull(),
+    expectedOutput: jsonb("expected_output").$type<unknown>(),
+    output: jsonb("output").$type<unknown>(),
+    passed: boolean("passed").notNull(),
+    error: text("error"),
+    durationMs: integer("duration_ms").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("tool_test_run_results_run_id_idx").on(table.runId),
+  ]
+);
+
+export type ToolTestRunResultRow = typeof toolTestRunResults.$inferSelect;
+export type NewToolTestRunResultRow = typeof toolTestRunResults.$inferInsert;
+

@@ -9,7 +9,6 @@ import { useDatasets } from "@/lib/datasets/hooks";
 import type { EnumRefOption } from "@/components/parameters/parameter-row";
 import { ParameterList } from "@/components/parameters/parameter-list";
 import { ReturnParameterList } from "@/components/parameters/return-parameter-list";
-import { HandlerTestPanel } from "./handler-test-panel";
 import { ComponentPreviewPanel } from "./component-preview-panel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -42,14 +41,6 @@ function detectHandlerMode(handler: string): HandlerMode {
   const h = handler.trim();
   if (h.includes("=>") || h.includes("function")) return "code";
   return "simple";
-}
-
-/** Bridge: isolates parameter/handler watching from the main form. */
-function HandlerTestPanelBridge() {
-  const { control } = useFormContext<ToolDefinition>();
-  const handler = useWatch({ control, name: "handler" });
-  const parameters = useWatch({ control, name: "parameters" });
-  return <HandlerTestPanel handler={handler} parameters={parameters} />;
 }
 
 /** Bridge: isolates component watching from the main form. */
@@ -260,7 +251,6 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                 可用 context API：wiki.get(id) → {"{meta, content}"},
                 wiki.findByPrefix(prefix), wiki.search(query)
               </p>
-              <HandlerTestPanelBridge />
             </>
           )}
         </div>
