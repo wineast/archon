@@ -243,17 +243,14 @@ describe("buildDynamicTools", () => {
 
   describe("static output with template rendering", () => {
     const templateData: TemplateData = {
-      activeVars: { greeting: "hello" },
+      resolvedVars: { greeting: "hello" },
       docs: [],
-      lookupVars: {
-        colors: {
-          entries: [
-            { value: "red", label: "Red", metadata: null },
-            { value: "blue", label: "Blue", metadata: null },
-          ],
-        },
+      datasetEntries: {
+        colors: [
+          { value: "red" },
+          { value: "blue" },
+        ],
       },
-      dataObjectVars: {},
       toolRows: [],
     };
 

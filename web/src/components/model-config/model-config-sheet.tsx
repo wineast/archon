@@ -129,6 +129,7 @@ export function ModelConfigSheet({
               <ModelConfigDetail
                 key={activeConfig.id}
                 config={activeConfig}
+                agentId={agentId}
                 onSave={handleSave}
                 onDelete={handleDelete}
                 onActivate={handleActivate}

@@ -9,7 +9,6 @@ import { buildJudgeSchema, toJudgeResult } from "@/lib/eval/judge-dimensions";
 import type { RunCaseRequest, RunCaseResponse, EvalResult } from "@/lib/eval/types";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
-import { resolveEnumRefs } from "@/lib/tools/resolve-enum-refs";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 // Side-effect: all implementations self-register into the registry
@@ -89,9 +88,6 @@ export async function POST(
       output: row.output ?? "",
       handler: row.handler ?? "",
     }));
-
-    const allParams = toolPayloads.flatMap((t) => t.parameters);
-    await resolveEnumRefs(allParams);
 
     const allTools = toolPayloads.length
       ? buildDynamicTools(toolPayloads, templateData, modelConfig.agentId ?? undefined)

@@ -72,9 +72,13 @@ cmd_create() {
     fi
 
     # 创建 web/.env.local -> .vercel/.env.development.local 的符号链接
-    if [ -f "$worktree_path/web/.vercel/.env.development.local" ]; then
-        ln -sf .vercel/.env.development.local "$worktree_path/web/.env.local"
-        info "已链接 web/.env.local -> .vercel/.env.development.local"
+    "$PROJECT_ROOT/scripts/link-env.sh" "$worktree_path"
+
+    # 创建独立本地数据库 + 初始化 schema/seed
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q archon-postgres; then
+        info "初始化工作区数据库..."
+        (cd "$worktree_path" && make db-local-env && make db-init)
+        success "工作区数据库初始化完成"
     fi
 
     # 创建 .worktree 目录（如果不存在）
@@ -87,13 +91,15 @@ cmd_create() {
     # 生成工作区元数据写入 meta.json
     local dev_port=$(( RANDOM % 5000 + 4000 ))  # 4000-8999
     local storybook_port=$(( dev_port + 1 ))
-    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"base\":\"$base_branch\"}" > "$wt_config_dir/meta.json"
-    info "端口分配: dev=$dev_port, storybook=$storybook_port, base=$base_branch (写入 .worktree/meta.json)"
+    local studio_port=$(( dev_port + 2 ))
+    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"studio\":$studio_port,\"baseBranch\":\"$base_branch\"}" > "$wt_config_dir/meta.json"
+    info "端口分配: dev=$dev_port, storybook=$storybook_port, studio=$studio_port, baseBranch=$base_branch (写入 .worktree/meta.json)"
 
     # 生成 CLAUDE.local.md（提醒 Claude 使用正确的端口）
     sed -e "s|{{WORKTREE_PATH}}|$worktree_path|g" \
         -e "s|{{DEV_PORT}}|$dev_port|g" \
         -e "s|{{STORYBOOK_PORT}}|$storybook_port|g" \
+        -e "s|{{STUDIO_PORT}}|$studio_port|g" \
         "$SCRIPT_DIR/claude-local.tpl" > "$worktree_path/CLAUDE.local.md"
     info "已生成 CLAUDE.local.md (dev=$dev_port)"
 

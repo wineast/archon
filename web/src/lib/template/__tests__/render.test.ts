@@ -13,6 +13,13 @@ vi.mock("@/db", () => ({
 }));
 
 vi.mock("@/db/schema", () => ({
+  datasets: {
+    key: "key",
+    name: "name",
+    layer: "layer",
+    data: "data",
+    agentId: "agent_id",
+  },
   wikiDocuments: {
     id: "id",
     agentId: "agent_id",
@@ -22,16 +29,6 @@ vi.mock("@/db/schema", () => ({
     createdAt: "created_at",
     updatedAt: "updated_at",
   },
-  lookupTables: { id: "id", key: "key", agentId: "agent_id" },
-  lookupEntries: {
-    tableId: "table_id",
-    value: "value",
-    label: "label",
-    metadata: "metadata",
-    order: "order",
-  },
-  dataObjects: { key: "key", agentId: "agent_id", data: "data" },
-  templateVars: { key: "key", value: "value", type: "type", isArray: "is_array", agentId: "agent_id" },
   tools: {
     id: "id",
     agentId: "agent_id",
@@ -52,53 +49,16 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
 }));
 
-vi.mock("@/lib/wiki/template", async () => {
-  const { Liquid } = await import("liquidjs");
-  const engine = new Liquid({ jsTruthy: true });
-  return {
-    processTemplate: vi.fn(
-      (text: string, opts: { variables: Record<string, unknown> }) => {
-        return engine.parseAndRenderSync(text, opts.variables);
-      }
-    ),
-  };
-});
-
-vi.mock("@/lib/template-vars/queries", () => {
-  function parseTemplateVarValue(value: string, type: string): unknown {
-    switch (type) {
-      case "number": return isNaN(parseFloat(value)) ? value : parseFloat(value);
-      case "boolean": return value === "true";
-      case "list":
-      case "json":
-        try { const p = JSON.parse(value); return type === "list" ? (Array.isArray(p) ? p : value) : p; } catch { return value; }
-      default: return value;
-    }
-  }
-  return {
-    getTemplateVars: vi.fn(async () => {
-      const { db } = await import("@/db");
-      const rows = await (db.select as any)()
-        .from()
-        .where()
-        .then((r: any[]) => r);
-      const result: Record<string, unknown> = {};
-      for (const row of rows) {
-        result[row.key] = parseTemplateVarValue(row.value, row.type);
-      }
-      return result;
-    }),
-    parseTemplateVarValue,
-  };
-});
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
  * Build a mock chain for db.select().from().where()...
- * Each "query" in the array corresponds to one db.select() call, in order.
+ * gatherTemplateData issues 3 queries in this order (via Promise.all):
+ *   [0] datasets rows   — getResolvedDatasets → getDatasets
+ *   [1] wiki doc rows    — getWikiDocs
+ *   [2] tool rows        — getEnabledTools
  */
 function setupDbChain(queries: unknown[][]) {
   let callIdx = 0;
@@ -108,8 +68,12 @@ function setupDbChain(queries: unknown[][]) {
     return {
       from: () => ({
         where: () => ({
-          limit: () => Promise.resolve(rows),
-          orderBy: () => Promise.resolve(rows),
+          limit: () => ({
+            then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(rows)),
+          }),
+          orderBy: () => ({
+            then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(rows)),
+          }),
           then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(rows)),
         }),
         then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(rows)),
@@ -118,8 +82,22 @@ function setupDbChain(queries: unknown[][]) {
   });
 }
 
+const makeTool = (name: string, description: string, parameters: unknown[] = []) => ({
+  id: `tool-${name}`,
+  agentId: "agent-1",
+  name,
+  description,
+  parameters,
+  output: null,
+  handler: null,
+  component: null,
+  enabled: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
 // ---------------------------------------------------------------------------
-// Tests
+// Tests — renderSystemPrompt
 // ---------------------------------------------------------------------------
 
 describe("renderSystemPrompt", () => {
@@ -133,12 +111,11 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("");
   });
 
-  it("replaces active template variables", async () => {
-    // Query order: getTemplateVars, getWikiDocs, getLookupVars
+  it("replaces dataset variables", async () => {
     setupDbChain([
-      [{ key: "company", value: "Acme Corp", type: "text" }], // templateVars
-      [],                                         // wikiDocuments (no docs)
-      [],                                         // lookupTables (no tables)
+      [{ key: "company", layer: 0, data: "Acme Corp" }],
+      [],
+      [],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -150,11 +127,7 @@ describe("renderSystemPrompt", () => {
   });
 
   it("replaces built-in variables (date, year, etc)", async () => {
-    setupDbChain([
-      [],
-      [],
-      [],
-    ]);
+    setupDbChain([[], [], []]);
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
@@ -168,18 +141,13 @@ describe("renderSystemPrompt", () => {
   });
 
   it("replaces wiki built-in variables (currentDate, currentTime)", async () => {
-    setupDbChain([
-      [],
-      [],
-      [],
-    ]);
+    setupDbChain([[], [], []]);
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "Today: {{currentDate}}",
       "agent-1"
     );
-    // currentDate is provided by processTemplate's buildContext
     expect(result).toMatch(/Today: \d{1,2}\/\d{1,2}\/\d{4}/);
   });
 
@@ -208,104 +176,30 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("Q: What? A: This.");
   });
 
-  it("resolves lookup table via lookup namespace", async () => {
+  it("accesses object dataset properties", async () => {
     setupDbChain([
-      [],
-      [],
-      // lookupTables
-      [{ id: "lt-1", key: "states", type: "table", data: null }],
-      // lookupEntries for "states"
       [
-        { value: "CA", label: "California", metadata: null },
-        { value: "TX", label: "Texas", metadata: null },
+        {
+          key: "state_enum",
+          layer: 0,
+          data: { CA: "California", TX: "Texas" },
+        },
       ],
+      [],
+      [],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
-      "States: {{lookup.states}}",
+      "State: {{state_enum.CA}}",
       "agent-1"
     );
-    expect(result).toBe("States: CA, TX");
+    expect(result).toBe("State: California");
   });
 
-  it("resolves lookup table label variant via namespace", async () => {
+  it("extraVars override dataset vars", async () => {
     setupDbChain([
-      [],
-      [],
-      [{ id: "lt-1", key: "products", type: "table", data: null }],
-      [
-        { value: "A", label: "Product A", metadata: null },
-        { value: "B", label: "Product B", metadata: null },
-      ],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{{lookup.products_label}}",
-      "agent-1"
-    );
-    expect(result).toBe("Product A, Product B");
-  });
-
-  it("resolves lookup json variant via namespace", async () => {
-    setupDbChain([
-      [],
-      [],
-      [{ id: "lt-1", key: "items", type: "table", data: null }],
-      [
-        { value: "X", label: "Item X", metadata: null },
-      ],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{{lookup.items_json}}",
-      "agent-1"
-    );
-    expect(result).toBe(JSON.stringify([{ value: "X", label: "Item X", metadata: null }]));
-  });
-
-  it("supports {% for %} over lookup entries", async () => {
-    setupDbChain([
-      [],
-      [],
-      [{ id: "lt-1", key: "colors", type: "table", data: null }],
-      [
-        { value: "red", label: "Red", metadata: null },
-        { value: "blue", label: "Blue", metadata: null },
-      ],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{% for entry in lookup.colors_entries %}{{entry.value}};{% endfor %}",
-      "agent-1"
-    );
-    expect(result).toBe("red;blue;");
-  });
-
-  it("lookup namespace does not conflict with template vars of the same name", async () => {
-    setupDbChain([
-      [{ key: "states", value: "custom-value", type: "text" }],
-      [],
-      [{ id: "lt-1", key: "states", type: "table", data: null }],
-      [
-        { value: "CA", label: "California", metadata: null },
-      ],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "var={{states}} lookup={{lookup.states}}",
-      "agent-1"
-    );
-    expect(result).toBe("var=custom-value lookup=CA");
-  });
-
-  it("extraVars override active vars", async () => {
-    setupDbChain([
-      [{ key: "name", value: "Default", type: "text" }],
+      [{ key: "name", layer: 0, data: "Default" }],
       [],
       [],
     ]);
@@ -320,11 +214,7 @@ describe("renderSystemPrompt", () => {
   });
 
   it("passes eval-specific extraVars (model, caseCount)", async () => {
-    setupDbChain([
-      [],
-      [],
-      [],
-    ]);
+    setupDbChain([[], [], []]);
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
@@ -336,7 +226,6 @@ describe("renderSystemPrompt", () => {
   });
 
   it("returns original text on rendering failure", async () => {
-    // Force an error by making getTemplateVars throw
     mockSelect.mockImplementation(() => {
       throw new Error("DB connection failed");
     });
@@ -347,16 +236,15 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe(original);
   });
 
-  it("works without agentId (no template vars / wiki docs / lookup)", async () => {
+  it("works without agentId (no dataset vars / wiki docs)", async () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt("{{greeting}} there!");
-    // No agentId means no DB calls for template vars, so greeting is empty
     expect(result).toBe(" there!");
   });
 
-  it("renders number type variable", async () => {
+  it("renders numeric dataset value", async () => {
     setupDbChain([
-      [{ key: "rate", value: "0.75", type: "number" }],
+      [{ key: "rate", layer: 0, data: 0.75 }],
       [],
       [],
     ]);
@@ -369,9 +257,9 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("Rate: 0.75");
   });
 
-  it("renders boolean type variable with {% if %}", async () => {
+  it("renders boolean dataset with {% if %}", async () => {
     setupDbChain([
-      [{ key: "enabled", value: "true", type: "boolean" }],
+      [{ key: "enabled", layer: 0, data: true }],
       [],
       [],
     ]);
@@ -386,7 +274,7 @@ describe("renderSystemPrompt", () => {
 
   it("renders boolean false with {% if %}", async () => {
     setupDbChain([
-      [{ key: "enabled", value: "false", type: "boolean" }],
+      [{ key: "enabled", layer: 0, data: false }],
       [],
       [],
     ]);
@@ -399,9 +287,9 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("OFF");
   });
 
-  it("renders isArray text variable with {% for %}", async () => {
+  it("renders array dataset with {% for %}", async () => {
     setupDbChain([
-      [{ key: "langs", value: '["en","zh","es"]', type: "text", isArray: true }],
+      [{ key: "langs", layer: 0, data: ["en", "zh", "es"] }],
       [],
       [],
     ]);
@@ -414,9 +302,9 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("en;zh;es;");
   });
 
-  it("renders isArray number variable", async () => {
+  it("renders array of numbers with {% for %}", async () => {
     setupDbChain([
-      [{ key: "scores", value: "[1,2,3]", type: "number", isArray: true }],
+      [{ key: "scores", layer: 0, data: [1, 2, 3] }],
       [],
       [],
     ]);
@@ -429,9 +317,9 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("1;2;3;");
   });
 
-  it("renders json type variable with field access", async () => {
+  it("renders object dataset with field access", async () => {
     setupDbChain([
-      [{ key: "office", value: '{"city":"LA","state":"CA"}', type: "json" }],
+      [{ key: "office", layer: 0, data: { city: "LA", state: "CA" } }],
       [],
       [],
     ]);
@@ -444,42 +332,8 @@ describe("renderSystemPrompt", () => {
     expect(result).toBe("LA, CA");
   });
 
-  it("falls back to raw string when isArray value is invalid JSON", async () => {
-    setupDbChain([
-      [{ key: "items", value: "not-json", type: "text", isArray: true }],
-      [],
-      [],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "Items: {{items}}",
-      "agent-1"
-    );
-    expect(result).toBe("Items: not-json");
-  });
-
-  it("falls back to raw string when json type is invalid", async () => {
-    setupDbChain([
-      [{ key: "config", value: "{bad", type: "json" }],
-      [],
-      [],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "Config: {{config}}",
-      "agent-1"
-    );
-    expect(result).toBe("Config: {bad");
-  });
-
-  it("returns empty string for missing lookup keys", async () => {
-    setupDbChain([
-      [],
-      [],
-      [], // no lookup tables
-    ]);
+  it("returns empty string for missing variables", async () => {
+    setupDbChain([[], [], []]);
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
@@ -488,7 +342,54 @@ describe("renderSystemPrompt", () => {
     );
     expect(result).toBe("Before  after");
   });
+
+  it("resolves layer 1 dataset with layer 0 references", async () => {
+    setupDbChain([
+      [
+        { key: "product_name", layer: 0, data: "GMCC Universe" },
+        {
+          key: "routes",
+          layer: 1,
+          data: { universe: { label: "{{product_name}}", states: ["CA"] } },
+        },
+      ],
+      [],
+      [],
+    ]);
+
+    const { renderSystemPrompt } = await import("../render");
+    const result = await renderSystemPrompt(
+      "{{routes.universe.label}}",
+      "agent-1"
+    );
+    expect(result).toBe("GMCC Universe");
+  });
+
+  it("resolves layer 1 states via join filter", async () => {
+    setupDbChain([
+      [
+        {
+          key: "routes",
+          layer: 0,
+          data: { universe: { label: "Universe", states: ["CA", "TX", "NY"] } },
+        },
+      ],
+      [],
+      [],
+    ]);
+
+    const { renderSystemPrompt } = await import("../render");
+    const result = await renderSystemPrompt(
+      '{{routes.universe.states | join: ", "}}',
+      "agent-1"
+    );
+    expect(result).toBe("CA, TX, NY");
+  });
 });
+
+// ---------------------------------------------------------------------------
+// Tests — renderWikiContent
+// ---------------------------------------------------------------------------
 
 describe("renderWikiContent", () => {
   beforeEach(() => {
@@ -504,7 +405,7 @@ describe("renderWikiContent", () => {
   it("renders wiki content with variables and includes", async () => {
     const now = new Date();
     setupDbChain([
-      [{ key: "org", value: "TestOrg", type: "text" }],
+      [{ key: "org", layer: 0, data: "TestOrg" }],
       [
         {
           id: "doc-1",
@@ -547,153 +448,13 @@ describe("renderWikiContent", () => {
     expect(result).toBe(original);
   });
 
-  it("renders lookup entry value referencing template vars", async () => {
-    setupDbChain([
-      [{ key: "company", value: "Acme", type: "text" }],
-      [],
-      [{ id: "lt-1", key: "plans", type: "table", data: null }],
-      [
-        { value: "{{company}}_standard", label: "Standard Plan", metadata: null },
-        { value: "{{company}}_premium", label: "Premium Plan", metadata: null },
-      ],
-    ]);
-
-    const { renderWikiContent } = await import("../render");
-    const result = await renderWikiContent(
-      "Plans: {{lookup.plans}}",
-      "agent-1",
-      "doc-1"
-    );
-    expect(result).toBe("Plans: Acme_standard, Acme_premium");
-  });
-
-  it("renders lookup entry label referencing template vars", async () => {
-    setupDbChain([
-      [{ key: "company", value: "Acme", type: "text" }],
-      [],
-      [{ id: "lt-1", key: "plans", type: "table", data: null }],
-      [
-        { value: "std", label: "{{company}} Standard", metadata: null },
-      ],
-    ]);
-
-    const { renderWikiContent } = await import("../render");
-    const result = await renderWikiContent(
-      "{{lookup.plans_label}}",
-      "agent-1",
-      "doc-1"
-    );
-    expect(result).toBe("Acme Standard");
-  });
-
-  it("renders lookup _json variant with resolved values", async () => {
-    setupDbChain([
-      [{ key: "company", value: "Acme", type: "text" }],
-      [],
-      [{ id: "lt-1", key: "plans", type: "table", data: null }],
-      [
-        { value: "{{company}}_plan", label: "{{company}} Plan", metadata: null },
-      ],
-    ]);
-
-    const { renderWikiContent } = await import("../render");
-    const result = await renderWikiContent(
-      "{{lookup.plans_json}}",
-      "agent-1",
-      "doc-1"
-    );
-    const parsed = JSON.parse(result);
-    expect(parsed).toEqual([
-      { value: "Acme_plan", label: "Acme Plan", metadata: null },
-    ]);
-  });
-
-  it("renders lookup _entries variant with resolved values", async () => {
-    setupDbChain([
-      [{ key: "company", value: "Acme", type: "text" }],
-      [],
-      [{ id: "lt-1", key: "items", type: "table", data: null }],
-      [
-        { value: "{{company}}_a", label: "{{company}} A", metadata: null },
-        { value: "{{company}}_b", label: "{{company}} B", metadata: null },
-      ],
-    ]);
-
-    const { renderWikiContent } = await import("../render");
-    const result = await renderWikiContent(
-      "{% for entry in lookup.items_entries %}{{entry.value}}-{{entry.label}};{% endfor %}",
-      "agent-1",
-      "doc-1"
-    );
-    expect(result).toBe("Acme_a-Acme A;Acme_b-Acme B;");
-  });
-
-  it("renders lookup entries referencing builtin vars like {{year}}", async () => {
-    setupDbChain([
-      [],
-      [],
-      [{ id: "lt-1", key: "editions", type: "table", data: null }],
-      [
-        { value: "edition_{{year}}", label: "Edition {{year}}", metadata: null },
-      ],
-    ]);
-
-    const { renderWikiContent } = await import("../render");
-    const result = await renderWikiContent(
-      "{{lookup.editions}}",
-      "agent-1",
-      "doc-1"
-    );
-    const year = String(new Date().getFullYear());
-    expect(result).toBe(`edition_${year}`);
-  });
-
-  it("falls back to empty string for missing var in lookup entry", async () => {
-    setupDbChain([
-      [],
-      [],
-      [{ id: "lt-1", key: "items", type: "table", data: null }],
-      [
-        { value: "{{novar}}_suffix", label: null, metadata: null },
-      ],
-    ]);
-
-    const { renderWikiContent } = await import("../render");
-    const result = await renderWikiContent(
-      "{{lookup.items}}",
-      "agent-1",
-      "doc-1"
-    );
-    expect(result).toBe("_suffix");
-  });
-
-  it("leaves plain lookup entries unchanged (backward compat)", async () => {
-    setupDbChain([
-      [{ key: "company", value: "Acme", type: "text" }],
-      [],
-      [{ id: "lt-1", key: "colors", type: "table", data: null }],
-      [
-        { value: "red", label: "Red", metadata: null },
-        { value: "blue", label: "Blue", metadata: null },
-      ],
-    ]);
-
-    const { renderWikiContent } = await import("../render");
-    const result = await renderWikiContent(
-      "{{lookup.colors}}",
-      "agent-1",
-      "doc-1"
-    );
-    expect(result).toBe("red, blue");
-  });
-
-  it("renders product-specific template variables from activeVars", async () => {
+  it("renders product-specific dataset variables", async () => {
     const now = new Date();
     setupDbChain([
       [
-        { key: "ocean_incomes", value: "Full Doc - W2 Wage Earner、NQM-WVOE", type: "text" },
-        { key: "ocean_incomes_excluded", value: "NQM-DSCR", type: "text" },
-        { key: "ocean_states", value: "CA, TX, NV", type: "text" },
+        { key: "ocean_incomes", layer: 0, data: "Full Doc - W2 Wage Earner、NQM-WVOE" },
+        { key: "ocean_incomes_excluded", layer: 0, data: "NQM-DSCR" },
+        { key: "ocean_states", layer: 0, data: "CA, TX, NV" },
       ],
       [
         {
@@ -721,7 +482,7 @@ describe("renderWikiContent", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tool namespace tests
+// Tests — tool namespace
 // ---------------------------------------------------------------------------
 
 describe("tool namespace", () => {
@@ -729,27 +490,10 @@ describe("tool namespace", () => {
     vi.clearAllMocks();
   });
 
-  const makeTool = (name: string, description: string, parameters: unknown[] = []) => ({
-    id: `tool-${name}`,
-    agentId: "agent-1",
-    name,
-    description,
-    parameters,
-    output: null,
-    handler: null,
-    component: null,
-    enabled: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-
   it("resolves tool.NAME.description to description", async () => {
-    // Query order: templateVars, wikiDocs, lookupTables, dataObjects, tools
     setupDbChain([
-      [], // templateVars
-      [], // wikiDocs
-      [], // lookupTables
-      [], // dataObjects
+      [],
+      [],
       [makeTool("route_loan", "Route loan products to the best match")],
     ]);
 
@@ -765,8 +509,6 @@ describe("tool namespace", () => {
     setupDbChain([
       [],
       [],
-      [],
-      [],
       [makeTool("calculate_dti", "Calculate DTI ratio")],
     ]);
 
@@ -780,8 +522,6 @@ describe("tool namespace", () => {
 
   it("resolves tool.NAME.params to comma-separated param names", async () => {
     setupDbChain([
-      [],
-      [],
       [],
       [],
       [
@@ -807,8 +547,6 @@ describe("tool namespace", () => {
     setupDbChain([
       [],
       [],
-      [],
-      [],
       [makeTool("calc_rate", "Calculate rate", params)],
     ]);
 
@@ -827,8 +565,6 @@ describe("tool namespace", () => {
 
   it("resolves tool.NAME.parameters for iteration", async () => {
     setupDbChain([
-      [],
-      [],
       [],
       [],
       [
@@ -851,8 +587,6 @@ describe("tool namespace", () => {
     setupDbChain([
       [],
       [],
-      [],
-      [],
       [
         makeTool("calc", "Calculate", [
           { id: "p1", name: "amount", type: "number", description: "Loan amount", required: true },
@@ -871,8 +605,6 @@ describe("tool namespace", () => {
 
   it("tool.NAME.parameters includes enum when present", async () => {
     setupDbChain([
-      [],
-      [],
       [],
       [],
       [
@@ -894,8 +626,6 @@ describe("tool namespace", () => {
     setupDbChain([
       [],
       [],
-      [],
-      [],
       [
         makeTool("tool_a", "First tool"),
         makeTool("tool_b", "Second tool"),
@@ -912,8 +642,6 @@ describe("tool namespace", () => {
 
   it("supports {% for %} over tool_entries", async () => {
     setupDbChain([
-      [],
-      [],
       [],
       [],
       [
@@ -934,8 +662,6 @@ describe("tool namespace", () => {
     setupDbChain([
       [],
       [],
-      [],
-      [],
       [
         makeTool("calc", "Calculate", [
           { id: "p1", name: "x", type: "number", description: "X val", required: true },
@@ -952,23 +678,20 @@ describe("tool namespace", () => {
     expect(result).toBe("x:number;y:string;");
   });
 
-  it("tool namespace does not conflict with lookup or template vars", async () => {
+  it("tool namespace does not conflict with dataset vars", async () => {
     setupDbChain([
-      [{ key: "search", value: "custom-search", type: "text" }],
+      [{ key: "search", layer: 0, data: "custom-search" }],
       [],
-      [{ id: "lt-1", key: "search" }],
-      [{ value: "web", label: "Web Search", metadata: null }],
-      [], // dataObjects
       [makeTool("search", "Search tool description")],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
-      "var={{search}} lookup={{lookup.search}} tool={{tool.search.description}}",
+      "var={{search}} tool={{tool.search.description}}",
       "agent-1"
     );
     expect(result).toBe(
-      "var=custom-search lookup=web tool=Search tool description"
+      "var=custom-search tool=Search tool description"
     );
   });
 
@@ -977,8 +700,6 @@ describe("tool namespace", () => {
       [],
       [],
       [],
-      [],
-      [], // no tools
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -991,8 +712,6 @@ describe("tool namespace", () => {
 
   it("tool.NAME.params is empty string when tool has no parameters", async () => {
     setupDbChain([
-      [],
-      [],
       [],
       [],
       [makeTool("no_args_tool", "A tool with no args")],
@@ -1008,17 +727,13 @@ describe("tool namespace", () => {
 });
 
 // ---------------------------------------------------------------------------
-// renderMetadataField + object type lookup tests
+// Tests — renderObjectField (from datasets/queries)
 // ---------------------------------------------------------------------------
 
-describe("renderMetadataField", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
+describe("renderObjectField", () => {
   it("renders LiquidJS expressions inside metadata JSON", async () => {
-    const { renderMetadataField } = await import("../render");
-    const result = renderMetadataField(
+    const { renderObjectField } = await import("@/lib/datasets/queries");
+    const result = renderObjectField(
       { label: "{{name}} Plan", count: 5 },
       { name: "Premium" }
     );
@@ -1026,18 +741,15 @@ describe("renderMetadataField", () => {
   });
 
   it("returns original metadata when rendering fails", async () => {
-    const { renderMetadataField } = await import("../render");
-    // Circular reference can't be JSON.stringified but we pass a
-    // non-circular object that might fail in LiquidJS
+    const { renderObjectField } = await import("@/lib/datasets/queries");
     const raw = { label: "{% invalid_tag %}" };
-    const result = renderMetadataField(raw, {});
-    // Should return original since LiquidJS will throw
+    const result = renderObjectField(raw, {});
     expect(result).toEqual(raw);
   });
 
   it("renders nested arrays and objects in metadata", async () => {
-    const { renderMetadataField } = await import("../render");
-    const result = renderMetadataField(
+    const { renderObjectField } = await import("@/lib/datasets/queries");
+    const result = renderObjectField(
       {
         incomes: ["{{type_a}}", "{{type_b}}"],
         states: ["CA", "TX"],
@@ -1048,124 +760,5 @@ describe("renderMetadataField", () => {
       incomes: ["Full Doc", "NQM"],
       states: ["CA", "TX"],
     });
-  });
-});
-
-describe("data object namespace (data.*)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("resolves data object as nested object in template", async () => {
-    setupDbChain([
-      [], // templateVars
-      [], // wikiDocs
-      [], // lookupTables (empty)
-      // dataObjects
-      [{ key: "routes", data: {
-        universe: { label: "Universe", states: ["CA", "TX"] },
-        ocean: { label: "Ocean", states: ["NV"] },
-      }}],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{{data.routes.universe.label}}",
-      "agent-1"
-    );
-    expect(result).toBe("Universe");
-  });
-
-  it("resolves data object states via join filter", async () => {
-    setupDbChain([
-      [],
-      [],
-      [],
-      [{ key: "routes", data: {
-        universe: { label: "Universe", states: ["CA", "TX", "NY"] },
-      }}],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      '{{data.routes.universe.states | join: ", "}}',
-      "agent-1"
-    );
-    expect(result).toBe("CA, TX, NY");
-  });
-
-  it("resolves data object _json variant", async () => {
-    setupDbChain([
-      [],
-      [],
-      [],
-      [{ key: "products", data: {
-        alpha: { label: "Alpha" },
-      }}],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{{data.products_json}}",
-      "agent-1"
-    );
-    const parsed = JSON.parse(result);
-    expect(parsed).toEqual({ alpha: { label: "Alpha" } });
-  });
-
-  it("resolves data object _entries as virtual entries", async () => {
-    setupDbChain([
-      [],
-      [],
-      [],
-      [{ key: "products", data: {
-        alpha: { label: "Alpha Product" },
-        beta: { label: "Beta Product" },
-      }}],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{% for e in data.products_entries %}{{e.value}}:{{e.label}};{% endfor %}",
-      "agent-1"
-    );
-    expect(result).toBe("alpha:Alpha Product;beta:Beta Product;");
-  });
-
-  it("renders LiquidJS expressions in data object", async () => {
-    setupDbChain([
-      [{ key: "product_name", value: "GMCC Universe", type: "text" }],
-      [],
-      [], // lookupTables (empty)
-      // dataObjects
-      [{ key: "routes", data: {
-        universe: { label: "{{product_name}}", states: ["CA"] },
-      }}],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{{data.routes.universe.label}}",
-      "agent-1"
-    );
-    expect(result).toBe("GMCC Universe");
-  });
-
-  it("table type metadata is rendered with LiquidJS expressions", async () => {
-    setupDbChain([
-      [{ key: "wiki_id", value: "wiki-uw-universe", type: "text" }],
-      [],
-      [{ id: "lt-1", key: "plans" }],
-      [
-        { value: "plan_a", label: "Plan A", metadata: { wikiId: "{{wiki_id}}" } },
-      ],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{% for e in lookup.plans_entries %}{{e.metadata.wikiId}}{% endfor %}",
-      "agent-1"
-    );
-    expect(result).toBe("wiki-uw-universe");
   });
 });

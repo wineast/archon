@@ -1,0 +1,111 @@
+[
+  {
+    "id": "pe-1",
+    "name": "config",
+    "type": "json",
+    "description": "Pricing configuration object (product-specific base rates, adjustments, LLPA matrices, etc.)",
+    "required": true,
+    "properties": [
+      {
+        "id": "pe-1-1",
+        "name": "productName",
+        "type": "string",
+        "description": "Product display name",
+        "required": true
+      },
+      {
+        "id": "pe-1-2",
+        "name": "baseRates",
+        "type": "json",
+        "description": "Base rate entries with category, rate, price, and optional when condition",
+        "required": true
+      },
+      {
+        "id": "pe-1-3",
+        "name": "adjustments",
+        "type": "json",
+        "description": "Adjustment rules (name, when, priceAdj/rateAdj, appliesTo, citations)",
+        "required": false
+      },
+      {
+        "id": "pe-1-4",
+        "name": "llpaMatrices",
+        "type": "json",
+        "description": "LLPA matrix definitions (FICO x LTV grids)",
+        "required": false
+      },
+      {
+        "id": "pe-1-5",
+        "name": "stackingRules",
+        "type": "json",
+        "description": "Stacking rules for conflicting adjustments (mutex, max-one, sum-cap)",
+        "required": false
+      },
+      {
+        "id": "pe-1-6",
+        "name": "extensionCosts",
+        "type": "json",
+        "description": "Extension cost tiers by days and category",
+        "required": false
+      },
+      {
+        "id": "pe-1-7",
+        "name": "lockDayPrices",
+        "type": "json",
+        "description": "Lock day price adjustments keyed by day count",
+        "required": false
+      },
+      {
+        "id": "pe-1-8",
+        "name": "rateSheets",
+        "type": "json",
+        "description": "Rate sheet references for citation",
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "pe-2",
+    "name": "ficoScore",
+    "type": "number",
+    "description": "Borrower FICO score",
+    "required": false
+  },
+  {
+    "id": "pe-3",
+    "name": "ltv",
+    "type": "number",
+    "description": "Loan-to-Value ratio (percentage)",
+    "required": false
+  },
+  {
+    "id": "pe-4",
+    "name": "loanAmount",
+    "type": "number",
+    "description": "Loan amount in dollars",
+    "required": false
+  },
+  {
+    "id": "pe-5",
+    "name": "loanPurpose",
+    "type": "string",
+    "description": "Loan purpose (purchase, refinance, cashOut)",
+    "required": false
+  },
+  {
+    "id": "pe-6",
+    "name": "lockDays",
+    "type": "number",
+    "description": "Lock period in days",
+    "required": false,
+    "defaultValue": 30
+  },
+  {
+    "id": "pe-7",
+    "name": "extensionDays",
+    "type": "number",
+    "description": "Extension days",
+    "required": false,
+    "defaultValue": 0
+  }
+]

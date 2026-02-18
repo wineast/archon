@@ -11,7 +11,6 @@ import { db } from "@/db";
 import { tools, modelConfigs } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
-import { resolveEnumRefs } from "@/lib/tools/resolve-enum-refs";
 import {
   createSession,
   saveMessage,
@@ -77,10 +76,6 @@ export async function POST(req: Request) {
     output: row.output ?? "",
     handler: row.handler ?? "",
   }));
-
-  // Resolve enumRef → enum for all parameters
-  const allParams = toolPayloads.flatMap((t) => t.parameters);
-  await resolveEnumRefs(allParams);
 
   // Gather template data once for both system prompt and tool output rendering
   const templateData = await gatherTemplateData(agentId);

@@ -40,6 +40,9 @@ export async function POST(req: Request) {
       parameters: body.parameters ?? [],
       output: body.output ?? null,
       handler: body.handler ?? null,
+      component: body.component ?? null,
+      componentSource: body.componentSource ?? null,
+      componentMockData: body.componentMockData ?? null,
       enabled: body.enabled ?? true,
     })
     .returning();

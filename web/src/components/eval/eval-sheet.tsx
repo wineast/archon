@@ -156,6 +156,7 @@ export function EvalSheet({
         <CaseDetail
           key={activeCase.id}
           evalCase={activeCase}
+          agentId={agentId}
           onSave={handleSaveCase}
           onDelete={handleDeleteCase}
         />
@@ -166,6 +167,7 @@ export function EvalSheet({
         <JudgeConfigDetail
           key={activeConfig.id}
           config={activeConfig}
+          agentId={agentId}
           onSave={handleSaveConfig}
           onDelete={handleDeleteConfig}
           onSetDefault={handleSetDefaultConfig}
@@ -175,6 +177,7 @@ export function EvalSheet({
     if (activeView?.type === "results") {
       return (
         <ResultsPanel
+          agentId={agentId}
           selectedTags={selectedTags}
         />
       );

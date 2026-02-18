@@ -57,6 +57,11 @@ cmd_delete() {
         cd "$PROJECT_ROOT"
     fi
 
+    # 删除对应的本地数据库
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q archon-postgres; then
+        (cd "$worktree_path" && make db-drop) || true
+    fi
+
     # 删除 worktree
     info "删除 worktree: $worktree_path"
     git worktree remove "$worktree_path" --force

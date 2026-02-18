@@ -1,0 +1,172 @@
+{
+  "productName": "Radiant CRA",
+  "baseRates": [
+    {
+      "category": "30 Year Fixed",
+      "rate": 6,
+      "price": 99.75
+    },
+    {
+      "category": "7/6 ARM",
+      "rate": 5.75,
+      "price": 99.75
+    }
+  ],
+  "adjustments": [
+    {
+      "name": "Cash-Out",
+      "when": "loanPurpose == \"cashOut\"",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Cash Out | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 40,
+            "end": 40
+          }
+        }
+      ]
+    },
+    {
+      "name": "Investment",
+      "when": "occupancy == \"investment\"",
+      "rateAdj": 0.25,
+      "citations": [
+        {
+          "quote": "| Investment | 0.250% to Rate |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 41,
+            "end": 41
+          }
+        }
+      ]
+    },
+    {
+      "name": "2-4 Units",
+      "when": "units >= 2 and units <= 4",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| 2 to 4 Unit | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 42,
+            "end": 42
+          }
+        }
+      ]
+    },
+    {
+      "name": "Short Employment History",
+      "when": "hasShortEmploymentHistory",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Same line of work less than two years or extended employment gap** | 0.125% to Rate or 0.50% to Fee |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 43,
+            "end": 43
+          }
+        }
+      ]
+    },
+    {
+      "name": "Condominium",
+      "when": "propertyType == \"condo\"",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Condominium | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 44,
+            "end": 44
+          }
+        }
+      ]
+    },
+    {
+      "name": "FICO 640-679",
+      "when": "ficoScore >= 640 and ficoScore <= 679",
+      "rateAdj": 0.25,
+      "citations": [
+        {
+          "quote": "| 640 to 679 FICO | 0.250% to Rate |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 45,
+            "end": 45
+          }
+        }
+      ]
+    },
+    {
+      "name": "FICO 680-699",
+      "when": "ficoScore >= 680 and ficoScore <= 699",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| 680 to 699 FICO | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 46,
+            "end": 46
+          }
+        }
+      ]
+    },
+    {
+      "name": "Non-Traditional Credit with Derogatories",
+      "when": "hasNonTraditionalCreditDerogatories",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Non-Traditional Credit with derogatories | 0.125% to Rate |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 47,
+            "end": 47
+          }
+        }
+      ]
+    },
+    {
+      "name": "Any Exception",
+      "when": "hasException",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Any Exception | 0.125% to Rate or 0.50% to Fee |",
+          "docPath": "radiant/rate-sheets/cra-matrix.md",
+          "lines": {
+            "start": 48,
+            "end": 48
+          }
+        }
+      ]
+    }
+  ],
+  "stackingRules": [],
+  "extensionCosts": [
+    {
+      "days": 7,
+      "cost": 0.125,
+      "category": "all"
+    },
+    {
+      "days": 15,
+      "cost": 0.25,
+      "category": "all"
+    }
+  ],
+  "rateSheets": [
+    {
+      "type": "pdf",
+      "url": "/products/radiant/rate-sheets/GMCC Radiant Rate Sheet 1.2.2026.pdf",
+      "title": "GMCC Radiant Rate Sheet 1.2.2026 - Page 3"
+    }
+  ]
+}

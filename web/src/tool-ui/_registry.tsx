@@ -1,24 +1,24 @@
-import type { ComponentType } from "react";
-
 export interface ToolRendererProps {
   toolName: string;
   state: string;
   input: unknown;
   output: unknown;
+  isLoading?: boolean;
+  isComplete?: boolean;
+  isError?: boolean;
 }
 
-const registry = new Map<string, ComponentType<ToolRendererProps>>();
+/* ── Dynamic JSX source registry ── */
 
-export function registerToolRenderer(
-  name: string,
-  component: ComponentType<ToolRendererProps>
-) {
-  registry.set(name, component);
+const dynamicRegistry = new Map<string, string>();
+
+export function registerDynamicToolSource(key: string, source: string) {
+  dynamicRegistry.set(key, source);
 }
 
-export function getToolRenderer(
-  name: string | undefined | null
-): ComponentType<ToolRendererProps> | undefined {
-  if (!name) return undefined;
-  return registry.get(name);
+export function getDynamicToolSource(
+  key: string | undefined | null
+): string | undefined {
+  if (!key) return undefined;
+  return dynamicRegistry.get(key);
 }

@@ -88,6 +88,7 @@ source "$SCRIPT_DIR/cmd/create.sh"
 source "$SCRIPT_DIR/cmd/delete.sh"
 source "$SCRIPT_DIR/cmd/select-delete.sh"
 source "$SCRIPT_DIR/cmd/merge.sh"
+source "$SCRIPT_DIR/cmd/sync.sh"
 
 # ============================================================
 # 主入口
@@ -103,6 +104,7 @@ cmd_help() {
     echo "命令:"
     echo "  list                       列出所有 worktree"
     echo "  create <name> [base]       创建新 worktree（可指定基础分支）"
+    echo "  sync                       同步上游分支到当前工作区"
     echo "  merge <name>               合并工作区分支回 base 分支"
     echo "  delete <name>              删除 worktree"
     echo "  select-delete              交互式选择删除 worktree"
@@ -122,6 +124,9 @@ case "${1:-help}" in
         ;;
     create|new|add)
         cmd_create "$2" "$3"
+        ;;
+    sync)
+        cmd_sync
         ;;
     merge)
         cmd_merge "$2"

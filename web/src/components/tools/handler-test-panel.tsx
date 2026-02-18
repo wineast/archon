@@ -9,7 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { CodeEditor } from "@/components/ui/code-editor";
+import { JsonEditor } from "@/components/ui/editors/json-editor";
 import { Spinner } from "@/components/ui/spinner";
 import type { ToolParameter } from "@/lib/tools/types";
 
@@ -18,7 +18,7 @@ interface HandlerTestPanelProps {
   parameters: ToolParameter[];
 }
 
-function buildDefaultArgs(parameters: ToolParameter[]): string {
+function buildDefaults(parameters: ToolParameter[]): Record<string, unknown> {
   const obj: Record<string, unknown> = {};
   for (const p of parameters) {
     switch (p.type) {
@@ -28,11 +28,21 @@ function buildDefaultArgs(parameters: ToolParameter[]): string {
       case "boolean":
         obj[p.name] = false;
         break;
+      case "json":
+        obj[p.name] =
+          p.properties && p.properties.length > 0
+            ? buildDefaults(p.properties)
+            : {};
+        break;
       default:
         obj[p.name] = "";
     }
   }
-  return JSON.stringify(obj, null, 2);
+  return obj;
+}
+
+function buildDefaultArgs(parameters: ToolParameter[]): string {
+  return JSON.stringify(buildDefaults(parameters), null, 2);
 }
 
 export function HandlerTestPanel({
@@ -109,10 +119,9 @@ export function HandlerTestPanel({
             <label className="text-xs font-medium text-muted-foreground">
               参数 (JSON)
             </label>
-            <CodeEditor
+            <JsonEditor
               value={argsInput}
               onChange={setArgsInput}
-              language="json"
               height="100px"
               className="mt-1"
             />
@@ -123,9 +132,8 @@ export function HandlerTestPanel({
               <label className="text-xs font-medium text-muted-foreground">
                 输出
               </label>
-              <CodeEditor
+              <JsonEditor
                 value={output}
-                language="json"
                 readOnly
                 height="120px"
                 className="mt-1"

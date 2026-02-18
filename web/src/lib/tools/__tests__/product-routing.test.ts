@@ -2,52 +2,27 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import type { DataEntry, ToolContext, WikiDoc } from "../tool-context";
+import { resolveDatasets } from "@/lib/datasets/queries";
 
 // ── Load seed data ──
 const seedDir = path.resolve(__dirname, "../../../db/seed-data/gmcc-advisor");
 
-const dataObjects = JSON.parse(
-  fs.readFileSync(path.join(seedDir, "data-objects.json"), "utf8")
-) as Array<{ key: string; data: Record<string, unknown> }>;
-
-const templateVars = JSON.parse(
-  fs.readFileSync(path.join(seedDir, "template-vars.json"), "utf8")
-) as Array<{ key: string; type: string; value: string }>;
+const allDatasets = JSON.parse(
+  fs.readFileSync(path.join(seedDir, "datasets.json"), "utf8")
+) as Array<{ key: string; layer: number; data: unknown }>;
 
 const tools = JSON.parse(
   fs.readFileSync(path.join(seedDir, "tools.json"), "utf8")
 ) as Array<{ name: string; handler: string }>;
 
-// ── Resolve template variables in data (same as renderMetadataField) ──
-const incomeTypeEnum: Record<string, string> = JSON.parse(
-  templateVars.find((v) => v.key === "income_type_enum")!.value
-);
-
-function resolveTemplates(obj: unknown): unknown {
-  if (typeof obj === "string") {
-    return obj.replace(/\{\{income_type_enum\.(\w+)\}\}/g, (_, key) => {
-      const val = incomeTypeEnum[key];
-      if (!val) throw new Error(`Unknown income_type_enum key: ${key}`);
-      return val;
-    });
-  }
-  if (Array.isArray(obj)) return obj.map(resolveTemplates);
-  if (obj && typeof obj === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(obj)) out[k] = resolveTemplates(v);
-    return out;
-  }
-  return obj;
-}
-
-// ── Build mock context.data.get() result (mirrors tool-context.ts data.get) ──
-const productRoutesRaw = dataObjects.find((d) => d.key === "product_routes")!.data;
-const productRoutesResolved = resolveTemplates(productRoutesRaw) as Record<
+// ── Resolve datasets (layer 0 + layer 1) ──
+const { resolvedVars } = resolveDatasets(allDatasets);
+const productRoutes = resolvedVars.product_routes as Record<
   string,
   Record<string, unknown>
 >;
 
-const mockDataEntries: DataEntry[] = Object.entries(productRoutesResolved).map(
+const mockDataEntries: DataEntry[] = Object.entries(productRoutes).map(
   ([key, val]) => ({
     value: key,
     label: (val.label as string) ?? null,
@@ -58,8 +33,6 @@ const mockDataEntries: DataEntry[] = Object.entries(productRoutesResolved).map(
 // ── Eval the real handler from tools.json ──
 const handlerSource = tools.find((t) => t.name === "route_loan_products")!.handler;
 
-// The handler string is: "async ({ income_type, property_state }, context) => { ... }"
-// Wrap in parentheses to make it an expression
 // eslint-disable-next-line no-eval
 const handlerFn = eval(`(${handlerSource})`) as (
   args: { income_type: string; property_state: string },
@@ -71,14 +44,6 @@ const handlerFn = eval(`(${handlerSource})`) as (
 
 // ── Mock context ──
 const mockContext = {
-  data: {
-    async get(_key: string) {
-      return mockDataEntries;
-    },
-    async find() {
-      return [];
-    },
-  },
   wiki: {
     async get(_id: string): Promise<WikiDoc> {
       return { meta: null, content: "(wiki content stub)" };
@@ -90,19 +55,21 @@ const mockContext = {
       return [];
     },
   },
-  lookup: {
-    async get() {
-      return [];
+  dataset: {
+    async get(key: string) {
+      return resolvedVars[key] ?? null;
     },
-    async find() {
-      return [];
+    async getEntries(key: string) {
+      const val = resolvedVars[key];
+      if (!val || typeof val !== "object" || Array.isArray(val)) return [];
+      return Object.entries(val as Record<string, unknown>).map(([k, v]) => ({
+        value: k,
+        label: ((v as Record<string, unknown>)?.label as string | null) ?? null,
+        metadata: v as Record<string, unknown>,
+      }));
     },
   },
-  vars: {
-    async get() {
-      return null;
-    },
-  },
+  fn: async () => { throw new Error("not implemented"); },
 } satisfies ToolContext;
 
 // ── Helper: call real handler, return sorted product keys ──

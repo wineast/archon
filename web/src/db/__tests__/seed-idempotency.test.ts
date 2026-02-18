@@ -1,22 +1,29 @@
 import { config } from "dotenv";
+config({ path: ".env.development.local" });
 config({ path: ".env.local" });
-import { describe, it, expect } from "vitest";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { describe, it, expect, afterAll } from "vitest";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
 import { seed } from "../seed";
 import {
-  agents,
   chatConfigs,
-  templateVars,
+  datasets,
   evalJudgeConfigs,
   evalCases,
 } from "../schema";
 
+const pgClient = postgres(
+  (process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL)!
+);
+
 function createDb() {
-  const client = neon(process.env.DATABASE_URL_UNPOOLED!);
-  return drizzle({ client });
+  return drizzle({ client: pgClient });
 }
+
+afterAll(async () => {
+  await pgClient.end();
+});
 
 describe("seed idempotency", () => {
   it("should return identical IDs when run twice", async () => {
@@ -29,11 +36,9 @@ describe("seed idempotency", () => {
     expect(result2.toolIds).toEqual(result1.toolIds);
     expect(result2.modelConfigIds).toEqual(result1.modelConfigIds);
     expect(result2.chatConfigId).toBe(result1.chatConfigId);
-    expect(result2.templateVarIds).toEqual(result1.templateVarIds);
+    expect(result2.datasetIds).toEqual(result1.datasetIds);
     expect(result2.evalJudgeConfigId).toBe(result1.evalJudgeConfigId);
     expect(result2.evalCaseIds).toEqual(result1.evalCaseIds);
-    expect(result2.lookupTableIds).toEqual(result1.lookupTableIds);
-    expect(result2.dataObjectIds).toEqual(result1.dataObjectIds);
   }, 60_000);
 
   it("should not produce duplicate name rows", async () => {
@@ -74,16 +79,16 @@ describe("seed idempotency", () => {
       }
     }
 
-    // templateVars: check by key instead of name
-    const varRows = await db
-      .select({ key: templateVars.key, count: sql<number>`count(*)` })
-      .from(templateVars)
-      .groupBy(templateVars.key);
+    // datasets: check by key instead of name
+    const datasetRows = await db
+      .select({ key: datasets.key, count: sql<number>`count(*)` })
+      .from(datasets)
+      .groupBy(datasets.key);
 
-    for (const row of varRows) {
+    for (const row of datasetRows) {
       expect(
         Number(row.count),
-        `templateVars has duplicate key "${row.key}"`
+        `datasets has duplicate key "${row.key}"`
       ).toBe(1);
     }
   }, 120_000);

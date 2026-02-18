@@ -1,0 +1,130 @@
+[
+  {
+    "id": "ret-1",
+    "name": "success",
+    "type": "boolean",
+    "description": "Whether the pricing calculation succeeded",
+    "required": true
+  },
+  {
+    "id": "ret-2",
+    "name": "productName",
+    "type": "string",
+    "description": "The product display name from config",
+    "required": true
+  },
+  {
+    "id": "ret-3",
+    "name": "options",
+    "type": "json",
+    "description": "Pricing option with final rate, price, and triggered adjustments",
+    "required": true,
+    "isArray": true,
+    "properties": [
+      {
+        "id": "ret-3-1",
+        "name": "category",
+        "type": "string",
+        "description": "Rate category identifier",
+        "required": true
+      },
+      {
+        "id": "ret-3-2",
+        "name": "baseRate",
+        "type": "number",
+        "description": "Original base rate before adjustments",
+        "required": true
+      },
+      {
+        "id": "ret-3-3",
+        "name": "basePrice",
+        "type": "number",
+        "description": "Original base price before adjustments",
+        "required": true
+      },
+      {
+        "id": "ret-3-4",
+        "name": "finalRate",
+        "type": "number",
+        "description": "Final rate after all adjustments applied",
+        "required": true
+      },
+      {
+        "id": "ret-3-5",
+        "name": "finalPrice",
+        "type": "number",
+        "description": "Final price after all adjustments applied",
+        "required": true
+      },
+      {
+        "id": "ret-3-6",
+        "name": "adjustments",
+        "type": "json",
+        "description": "Triggered adjustment with name, expression, rateAdj/priceAdj, citations",
+        "required": true,
+        "isArray": true
+      },
+      {
+        "id": "ret-3-7",
+        "name": "lockDayAdj",
+        "type": "number",
+        "description": "Lock day price adjustment (if non-zero)",
+        "required": false
+      },
+      {
+        "id": "ret-3-8",
+        "name": "extensionCost",
+        "type": "number",
+        "description": "Extension cost deduction (if non-zero)",
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "ret-4",
+    "name": "error",
+    "type": "string",
+    "description": "Error message when success is false",
+    "required": false
+  },
+  {
+    "id": "ret-5",
+    "name": "rateSheets",
+    "type": "json",
+    "description": "Rate sheet reference for citation",
+    "required": false,
+    "isArray": true
+  },
+  {
+    "id": "ret-6",
+    "name": "skippedAdjustments",
+    "type": "json",
+    "description": "Adjustment that was skipped due to missing input fields",
+    "required": false,
+    "isArray": true,
+    "properties": [
+      {
+        "id": "ret-6-1",
+        "name": "name",
+        "type": "string",
+        "description": "Adjustment name",
+        "required": true
+      },
+      {
+        "id": "ret-6-2",
+        "name": "reason",
+        "type": "string",
+        "description": "Skip reason (e.g. missing_field)",
+        "required": true
+      },
+      {
+        "id": "ret-6-3",
+        "name": "missingFields",
+        "type": "string",
+        "description": "List of missing field names",
+        "required": true,
+        "isArray": true
+      }
+    ]
+  }
+]

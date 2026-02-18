@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { PricingSOPResultUI } from "@/tool-ui/pricing-result";
+import { DynamicToolRenderer } from "@/tool-ui";
+import { DynamicComponentErrorBoundary } from "@/tool-ui";
 import {
   // Universe
   successMultiCategoryArgs,
@@ -37,9 +38,83 @@ import {
   radiantAuResult,
 } from "./pricing-mock-data";
 
+// Minimal dynamic component for storybook — delegates to full component source at runtime
+const STORY_SOURCE = `function Component({ output, isLoading }) {
+  if (isLoading || !output) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Spinner className="h-3 w-3" />
+        <span>Calculating pricing...</span>
+      </div>
+    );
+  }
+  if (!output.success) {
+    return <div className="text-xs text-muted-foreground">Pricing Error: {output.error || "Unknown error"}</div>;
+  }
+  var options = output.options || [];
+  if (options.length === 0) {
+    return <div className="text-xs text-muted-foreground">No options available</div>;
+  }
+  var productName = output.productName || "Options";
+  return (
+    <div className="border rounded-lg overflow-hidden divide-y">
+      <div className="px-4 pt-3 pb-2 text-sm font-semibold">{productName} Pricing</div>
+      <ResultSection>
+        <Table className="border">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Rate</TableHead>
+              <TableHead className="text-xs text-right">Price</TableHead>
+              <TableHead className="text-xs">{options[0].category || productName}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {options.slice(0, 10).map(function(opt, i) {
+              return (
+                <TableRow key={i}>
+                  <TableCell className="text-xs font-mono">{opt.finalRate.toFixed(3)}%</TableCell>
+                  <TableCell className="text-xs text-right font-mono">{opt.finalPrice.toFixed(3)}</TableCell>
+                  <TableCell className="text-xs">{opt.category || productName}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        {options.length > 10 && (
+          <div className="text-xs text-muted-foreground p-2 text-center">
+            + {options.length - 10} more options
+          </div>
+        )}
+      </ResultSection>
+    </div>
+  );
+}`;
+
+function PricingStory({
+  args: input,
+  result: output,
+  state = "output-available",
+}: {
+  args?: Record<string, unknown>;
+  result?: unknown;
+  state?: string;
+}) {
+  return (
+    <DynamicComponentErrorBoundary fallbackToolName="pricing-story">
+      <DynamicToolRenderer
+        toolName="pricing_universe"
+        state={state}
+        input={input ?? {}}
+        output={output ?? null}
+        source={STORY_SOURCE}
+      />
+    </DynamicComponentErrorBoundary>
+  );
+}
+
 const meta = {
   title: "Tools/Pricing/PricingSOPResultUI",
-  component: PricingSOPResultUI,
+  component: PricingStory,
   parameters: {
     layout: "padded",
   },
@@ -50,7 +125,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof PricingSOPResultUI>;
+} satisfies Meta<typeof PricingStory>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -59,159 +134,90 @@ type Story = StoryObj<typeof meta>;
 // Universe
 // ============================================================================
 
-/** Universe: Full result with multiple categories (30 Yr Fixed, 10/1 ARM) */
 export const Universe: Story = {
-  args: {
-    result: successMultiCategoryResult,
-    args: successMultiCategoryArgs,
-    state: "result",
-  },
+  args: { result: successMultiCategoryResult, args: successMultiCategoryArgs, state: "output-available" },
 };
 
-/** Universe: Low FICO + outside US doc signing + short sale — multiple adjustments triggered */
 export const UniverseWithAdjustments: Story = {
-  args: {
-    result: withAdjustmentsResult,
-    args: withAdjustmentsArgs,
-    state: "result",
-  },
+  args: { result: withAdjustmentsResult, args: withAdjustmentsArgs, state: "output-available" },
 };
 
-/** Universe: New York uses special CRA-only rate */
 export const UniverseNYSpecial: Story = {
-  args: {
-    result: nySpecialResult,
-    args: nySpecialArgs,
-    state: "result",
-  },
+  args: { result: nySpecialResult, args: nySpecialArgs, state: "output-available" },
 };
 
-/** Universe: Partial input — some adjustments skipped due to missing fields */
 export const UniverseSkippedAdjustments: Story = {
-  args: {
-    result: skippedAdjustmentsResult,
-    args: skippedAdjustmentsArgs,
-    state: "result",
-  },
+  args: { result: skippedAdjustmentsResult, args: skippedAdjustmentsArgs, state: "output-available" },
 };
 
 // ============================================================================
 // Ocean
 // ============================================================================
 
-/** Ocean: ARM-only product (5/6 ARM + 7/6 ARM) */
 export const Ocean: Story = {
-  args: {
-    result: oceanResult,
-    args: oceanArgs,
-    state: "result",
-  },
+  args: { result: oceanResult, args: oceanArgs, state: "output-available" },
 };
 
 // ============================================================================
 // Hermes CA
 // ============================================================================
 
-/** Hermes CA: Non-QM with LLPA matrices and income doc adjustments */
 export const HermesCA: Story = {
-  args: {
-    result: hermesCaResult,
-    args: hermesCaArgs,
-    state: "result",
-  },
+  args: { result: hermesCaResult, args: hermesCaArgs, state: "output-available" },
 };
 
 // ============================================================================
 // Thunder
 // ============================================================================
 
-/** Thunder: Conforming 30yr Fixed with LLPA */
 export const Thunder: Story = {
-  args: {
-    result: thunderResult,
-    args: thunderArgs,
-    state: "result",
-  },
+  args: { result: thunderResult, args: thunderArgs, state: "output-available" },
 };
 
 // ============================================================================
 // Fabulous
 // ============================================================================
 
-/** Fabulous: Florida ARM product (5/6, 7/6, 10/6 ARM) with LLPA */
 export const Fabulous: Story = {
-  args: {
-    result: fabulousResult,
-    args: fabulousArgs,
-    state: "result",
-  },
+  args: { result: fabulousResult, args: fabulousArgs, state: "output-available" },
 };
 
 // ============================================================================
 // Celebrity
 // ============================================================================
 
-/** Celebrity: Conforming Fixed — largest product with many LLPA matrices */
 export const CelebrityConforming: Story = {
-  args: {
-    result: celebrityConformingResult,
-    args: celebrityConformingArgs,
-    state: "result",
-  },
+  args: { result: celebrityConformingResult, args: celebrityConformingArgs, state: "output-available" },
 };
 
-/** Celebrity: Non-Conforming ARM with FICO/LTV rate adjustments */
 export const CelebrityNonConformingARM: Story = {
-  args: {
-    result: celebrityNonConformingResult,
-    args: celebrityNonConformingArgs,
-    state: "result",
-  },
+  args: { result: celebrityNonConformingResult, args: celebrityNonConformingArgs, state: "output-available" },
 };
 
 // ============================================================================
 // Radiant CRA
 // ============================================================================
 
-/** Radiant CRA: Community lending (30yr Fixed + 7/6 ARM), rate adjustments */
 export const RadiantCRA: Story = {
-  args: {
-    result: radiantCraResult,
-    args: radiantCraArgs,
-    state: "result",
-  },
+  args: { result: radiantCraResult, args: radiantCraArgs, state: "output-available" },
 };
 
 // ============================================================================
 // Radiant AU
 // ============================================================================
 
-/** Radiant AU: Asset utilization (3/6 + 5/6 ARM), no income verification */
 export const RadiantAU: Story = {
-  args: {
-    result: radiantAuResult,
-    args: radiantAuArgs,
-    state: "result",
-  },
+  args: { result: radiantAuResult, args: radiantAuArgs, state: "output-available" },
 };
 
 // ============================================================================
 // Shared states
 // ============================================================================
 
-/** Engine returned an error */
 export const Error: Story = {
-  args: {
-    result: errorResult,
-    args: errorArgs,
-    state: "result",
-  },
+  args: { result: errorResult, args: errorArgs, state: "output-available" },
 };
 
-/** Loading state — tool call in progress */
 export const Loading: Story = {
-  args: {
-    result: undefined,
-    state: "input-streaming",
-  },
+  args: { result: undefined, state: "input-streaming" },
 };

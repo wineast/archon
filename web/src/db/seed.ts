@@ -1,25 +1,22 @@
-import { config } from "dotenv";
-config({ path: ".env.local" });
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { nanoid } from "nanoid";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   agents,
   chatConfigs,
   modelConfigs,
-  templateVars,
+  datasets,
+  functions,
+  functionTestCases,
   tools,
   wikiDocuments,
   evalCases,
   evalJudgeConfigs,
   evalRunResults,
   evalRuns,
-  lookupTables,
-  lookupEntries,
-  dataObjects,
 } from "./schema";
 import type { ToolParameter } from "@/lib/tools/types";
 import type { Assertion, Dimension } from "@/lib/eval/types";
@@ -37,18 +34,18 @@ export interface SeedResult {
   toolIds: string[];
   modelConfigIds: string[];
   chatConfigId: string;
-  templateVarIds: string[];
+  datasetIds: string[];
+  functionIds: string[];
   evalJudgeConfigId: string;
   evalCaseIds: string[];
-  lookupTableIds: string[];
-  dataObjectIds: string[];
 }
 
 // ── seed ──
 
-export async function seed(db?: NeonHttpDatabase): Promise<SeedResult> {
+export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   if (!db) {
-    const sql = neon(process.env.DATABASE_URL_UNPOOLED!);
+    const { createClient } = await import("./client");
+    const sql = createClient();
     db = drizzle({ client: sql });
   }
 
@@ -82,6 +79,22 @@ export async function seed(db?: NeonHttpDatabase): Promise<SeedResult> {
   // Seed system tools
   console.log("Seeding system tools...");
 
+  // Read component source files
+  const componentsDir = join(agentDir, "components");
+  const componentSources: Record<string, string> = {};
+  try {
+    const componentFiles = readdirSync(componentsDir).filter(
+      (f) => f.endsWith(".jsx") || f.endsWith(".tsx")
+    );
+    for (const file of componentFiles) {
+      const key = file.replace(/\.(jsx|tsx)$/, "");
+      componentSources[key] = readFileSync(join(componentsDir, file), "utf-8");
+    }
+    console.log(`  Loaded ${Object.keys(componentSources).length} component source(s)`);
+  } catch {
+    // components dir may not exist
+  }
+
   const toolsSeed = readJson<
     Array<{
       name: string;
@@ -89,28 +102,33 @@ export async function seed(db?: NeonHttpDatabase): Promise<SeedResult> {
       parameters: ToolParameter[];
       handler?: string;
       enabled: boolean;
-      component?: string;
+      componentSource?: string;
     }>
   >(join(agentDir, "tools.json"));
 
   const toolIds: string[] = [];
   for (const t of toolsSeed) {
+    // Resolve componentSource: inline value or reference to component file
+    const componentSource = t.componentSource
+      ? componentSources[t.componentSource] ?? t.componentSource
+      : null;
+
     const [row] = await db
       .insert(tools)
-      .values({ ...t, agentId })
+      .values({ ...t, componentSource, agentId })
       .onConflictDoUpdate({
         target: tools.name,
         set: {
           description: t.description,
           parameters: t.parameters,
           handler: t.handler ?? null,
-          component: t.component ?? null,
+          componentSource,
           agentId,
         },
       })
       .returning();
     toolIds.push(row.id);
-    console.log(`  - ${row.name} (${row.id})`);
+    console.log(`  - ${row.name} (${row.id})${componentSource ? " [+component]" : ""}`);
   }
 
   // Seed wiki documents
@@ -201,39 +219,178 @@ export async function seed(db?: NeonHttpDatabase): Promise<SeedResult> {
     .returning();
   console.log(`  - chat config (${chatConfig.id})`);
 
-  // Seed template vars
-  console.log("Seeding template vars...");
+  // Seed datasets (unified JSON store)
+  console.log("Seeding datasets...");
 
-  const templateVarsSeed = readJson<
-    Array<{ key: string; value: string; type?: string; isArray?: boolean; description?: string }>
-  >(join(agentDir, "template-vars.json"));
+  const datasetsSeed = readJson<
+    Array<{
+      key: string;
+      name: string;
+      description?: string;
+      layer: number;
+      data: unknown;
+    }>
+  >(join(agentDir, "datasets.json"));
 
-  const templateVarIds: string[] = [];
-  for (const tv of templateVarsSeed) {
+  const datasetIds: string[] = [];
+  for (const ds of datasetsSeed) {
     const [row] = await db
-      .insert(templateVars)
+      .insert(datasets)
       .values({
         agentId,
-        key: tv.key,
-        description: tv.description ?? null,
-        value: tv.value,
-        type: (tv.type as "text" | "number" | "boolean" | "json") ?? "text",
-        isArray: tv.isArray ?? false,
+        key: ds.key,
+        name: ds.name,
+        description: ds.description ?? "",
+        layer: ds.layer,
+        data: ds.data,
       })
       .onConflictDoUpdate({
-        target: [templateVars.agentId, templateVars.key],
+        target: [datasets.agentId, datasets.key],
         set: {
-          description: tv.description ?? null,
-          value: tv.value,
-          type: (tv.type as "text" | "number" | "boolean" | "json") ?? "text",
-          isArray: tv.isArray ?? false,
+          name: ds.name,
+          description: ds.description ?? "",
+          layer: ds.layer,
+          data: ds.data,
         },
       })
       .returning();
-    templateVarIds.push(row.id);
-    console.log(`  - ${row.key} (${row.id})`);
+    datasetIds.push(row.id);
+    console.log(`  - ${row.key} [layer ${row.layer}] (${row.id})`);
   }
-  console.log(`Seeded ${templateVarsSeed.length} template vars`);
+  // Seed pricing config datasets from JSON files
+  const pricingConfigsDir = join(agentDir, "pricing-configs");
+  try {
+    const configFiles = readdirSync(pricingConfigsDir).filter((f) =>
+      f.endsWith(".json")
+    );
+    for (const file of configFiles) {
+      const key = `pricing_config_${file.replace(/\.json$/, "").replace(/-/g, "_")}`;
+      const data = readJson<unknown>(join(pricingConfigsDir, file));
+      const name = `Pricing Config: ${(data as { productName?: string }).productName ?? file}`;
+
+      const [row] = await db
+        .insert(datasets)
+        .values({
+          agentId,
+          key,
+          name,
+          description: `Pricing configuration for ${name}`,
+          layer: 0,
+          data,
+        })
+        .onConflictDoUpdate({
+          target: [datasets.agentId, datasets.key],
+          set: { name, description: `Pricing configuration for ${name}`, layer: 0, data },
+        })
+        .returning();
+      datasetIds.push(row.id);
+      console.log(`  - ${row.key} [pricing config] (${row.id})`);
+    }
+    console.log(`Seeded ${configFiles.length} pricing config datasets`);
+  } catch {
+    // pricing-configs dir may not exist
+  }
+
+  console.log(`Seeded ${datasetsSeed.length} datasets (+ pricing configs)`);
+
+  // Seed functions
+  console.log("Seeding functions...");
+
+  const functionsDir = join(agentDir, "functions");
+  const functionIds: string[] = [];
+  const functionMap: { id: string; key: string }[] = [];
+  try {
+    const fnFiles = readdirSync(functionsDir).filter((f) => f.endsWith(".js"));
+    for (const file of fnFiles) {
+      const key = file.replace(/\.js$/, "").replace(/-/g, "_");
+      const code = readFileSync(join(functionsDir, file), "utf-8");
+      const name = key
+        .split("_")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+
+      // Look for companion <key>.params.json and <key>.return-params.json
+      const paramsFile = file.replace(/\.js$/, ".params.json");
+      let parameters: ToolParameter[] = [];
+      try {
+        parameters = readJson<ToolParameter[]>(join(functionsDir, paramsFile));
+      } catch {
+        // No params file — use empty array
+      }
+
+      const returnParamsFile = file.replace(/\.js$/, ".return-params.json");
+      let returnParameters: ToolParameter[] = [];
+      try {
+        returnParameters = readJson<ToolParameter[]>(join(functionsDir, returnParamsFile));
+      } catch {
+        // No return params file — use empty array
+      }
+
+      const [row] = await db
+        .insert(functions)
+        .values({
+          agentId,
+          key,
+          name,
+          description: "",
+          code,
+          parameters,
+          returnParameters,
+        })
+        .onConflictDoUpdate({
+          target: [functions.agentId, functions.key],
+          set: { name, code, parameters, returnParameters },
+        })
+        .returning();
+      functionIds.push(row.id);
+      functionMap.push({ id: row.id, key: row.key });
+      console.log(`  - ${row.key} (${row.id})${parameters.length > 0 ? ` [${parameters.length} params]` : ""}`);
+    }
+    console.log(`Seeded ${fnFiles.length} functions`);
+  } catch {
+    // functions dir may not exist
+  }
+
+  // Seed function test cases
+  console.log("Seeding function test cases...");
+  try {
+    for (const { id: fnId, key: fnKey } of functionMap) {
+      const tcFile = join(functionsDir, `${fnKey.replace(/_/g, "-")}.test-cases.json`);
+      let tcSeed: Array<{
+        name: string;
+        input: Record<string, unknown>;
+        expectedOutput?: unknown;
+        tags?: string[];
+      }>;
+      try {
+        tcSeed = readJson(tcFile);
+      } catch {
+        continue; // No test cases file
+      }
+
+      // Clear existing test cases for this function before re-seeding
+      await db
+        .delete(functionTestCases)
+        .where(eq(functionTestCases.functionId, fnId));
+
+      let count = 0;
+      for (const tc of tcSeed) {
+        await db
+          .insert(functionTestCases)
+          .values({
+            functionId: fnId,
+            name: tc.name,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput ?? null,
+            tags: tc.tags ?? [],
+          });
+        count++;
+      }
+      console.log(`  - ${fnKey}: ${count} test cases`);
+    }
+  } catch (e) {
+    console.warn("  Warning seeding test cases:", e);
+  }
 
   // Seed eval judge configs
   console.log("Seeding eval judge configs...");
@@ -309,115 +466,15 @@ export async function seed(db?: NeonHttpDatabase): Promise<SeedResult> {
   }
   console.log(`Seeded ${evalCasesSeed.length} eval cases`);
 
-  // Seed lookup tables
-  console.log("Seeding lookup tables...");
-
-  const lookupTablesSeed = readJson<
-    Array<{
-      key: string;
-      name: string;
-      description: string;
-      entries?: Array<{
-        value: string;
-        label?: string;
-        metadata?: Record<string, unknown>;
-      }>;
-    }>
-  >(join(agentDir, "lookup-tables.json"));
-
-  const lookupTableIds: string[] = [];
-  for (const lt of lookupTablesSeed) {
-    const [row] = await db
-      .insert(lookupTables)
-      .values({
-        agentId,
-        key: lt.key,
-        name: lt.name,
-        description: lt.description,
-      })
-      .onConflictDoUpdate({
-        target: [lookupTables.agentId, lookupTables.key],
-        set: {
-          name: lt.name,
-          description: lt.description,
-        },
-      })
-      .returning();
-    lookupTableIds.push(row.id);
-    console.log(`  - ${row.key} (${row.id})`);
-
-    if (lt.entries) {
-      for (let i = 0; i < lt.entries.length; i++) {
-        const entry = lt.entries[i];
-        await db
-          .insert(lookupEntries)
-          .values({
-            tableId: row.id,
-            value: entry.value,
-            label: entry.label ?? null,
-            metadata: entry.metadata ?? null,
-            order: i,
-          })
-          .onConflictDoUpdate({
-            target: [lookupEntries.tableId, lookupEntries.value],
-            set: {
-              label: entry.label ?? null,
-              metadata: entry.metadata ?? null,
-              order: i,
-            },
-          });
-      }
-    }
-  }
-  console.log(`Seeded ${lookupTablesSeed.length} lookup tables`);
-
-  // Seed data objects
-  console.log("Seeding data objects...");
-
-  const dataObjectsSeed = readJson<
-    Array<{
-      key: string;
-      name: string;
-      description: string;
-      data: Record<string, unknown>;
-    }>
-  >(join(agentDir, "data-objects.json"));
-
-  const dataObjectIds: string[] = [];
-  for (const lo of dataObjectsSeed) {
-    const [row] = await db
-      .insert(dataObjects)
-      .values({
-        agentId,
-        key: lo.key,
-        name: lo.name,
-        description: lo.description,
-        data: lo.data,
-      })
-      .onConflictDoUpdate({
-        target: [dataObjects.agentId, dataObjects.key],
-        set: {
-          name: lo.name,
-          description: lo.description,
-          data: lo.data,
-        },
-      })
-      .returning();
-    dataObjectIds.push(row.id);
-    console.log(`  - ${row.key} (${row.id})`);
-  }
-  console.log(`Seeded ${dataObjectsSeed.length} data objects`);
-
   return {
     agentId,
     toolIds,
     modelConfigIds,
     chatConfigId: chatConfig.id,
-    templateVarIds,
+    datasetIds,
+    functionIds,
     evalJudgeConfigId: judgeConfig.id,
     evalCaseIds,
-    lookupTableIds,
-    dataObjectIds,
   };
 }
 
@@ -429,7 +486,16 @@ const isDirectRun =
   (process.argv[1].endsWith("/seed.ts") || process.argv[1].endsWith("/seed.js"));
 
 if (isDirectRun) {
-  seed().catch((err) => {
+  (async () => {
+    const { createClient } = await import("./client");
+    const sql = createClient();
+    const db = drizzle({ client: sql });
+    try {
+      await seed(db);
+    } finally {
+      await sql.end();
+    }
+  })().catch((err) => {
     console.error("Seed failed:", err);
     process.exit(1);
   });

@@ -26,7 +26,7 @@
 ## 约束
 
 ### Commands
-- 常用命令统一使用 `make` 执行（如 `make dev`、`make test`、`make db-push`、`make seed` 等）
+- 常用命令统一使用 `make` 执行，所有可用 target 见 @Makefile
 - 如果需要的 make target 不存在，先在 Makefile 中补充，再执行
 
 ### UI
@@ -45,6 +45,10 @@
 - 使用文档见 `guide/template-engine.md`
 - 数据源：数据集（2 层 JSON）+ 工具定义
 - 保留字：`tool`、`tool_names`、`tool_entries`
+
+### Screenshots
+- Playwright 截图统一存放到 `screenshots/` 目录（已 gitignore）
+- 不要在项目根目录或其他位置随意放置截图文件
 
 ### Chat Persistence
 - 非阻塞原则：用 Next.js `after()` 异步保存，绝不阻塞流式响应
