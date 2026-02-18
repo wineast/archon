@@ -24,7 +24,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
   const [code, setCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<"form" | "verify">("form");
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const completeSignIn = async (sessionId: string | null) => {
     await setActive?.({ session: sessionId });
@@ -33,9 +33,9 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded || busy) return;
+    if (!isLoaded || busyAction) return;
 
-    setBusy(true);
+    setBusyAction("submit");
     try {
       const result = await signIn.create({
         identifier: email,
@@ -63,15 +63,15 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
       toast.error(clerkErr.errors?.[0]?.longMessage ?? "登录失败");
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded || busy) return;
+    if (!isLoaded || busyAction) return;
 
-    setBusy(true);
+    setBusyAction("verify");
     try {
       const result = await signIn.attemptSecondFactor({
         strategy: "email_code",
@@ -84,14 +84,14 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
       toast.error(clerkErr.errors?.[0]?.longMessage ?? "验证失败");
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   };
 
   const handleResendCode = async () => {
-    if (!isLoaded || busy) return;
+    if (!isLoaded || busyAction) return;
 
-    setBusy(true);
+    setBusyAction("resend");
     try {
       await signIn.prepareSecondFactor({ strategy: "email_code" });
       toast.success("验证码已重新发送");
@@ -99,14 +99,14 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
       toast.error(clerkErr.errors?.[0]?.longMessage ?? "发送失败");
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   };
 
   const handleGoogleSignIn = async () => {
-    if (!isLoaded || busy) return;
+    if (!isLoaded || busyAction) return;
 
-    setBusy(true);
+    setBusyAction("google");
     try {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
@@ -116,7 +116,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
       toast.error(clerkErr.errors?.[0]?.longMessage ?? "Google 登录失败");
-      setBusy(false);
+      setBusyAction(null);
     }
   };
 
@@ -143,8 +143,8 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
                 onChange={(e) => setCode(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy && <Spinner className="size-4" />}
+            <Button type="submit" className="w-full" disabled={!!busyAction}>
+              {busyAction === "verify" && <Spinner className="size-4" />}
               验证
             </Button>
             <div className="text-center text-sm">
@@ -153,7 +153,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
                 type="button"
                 className="underline underline-offset-4"
                 onClick={handleResendCode}
-                disabled={busy}
+                disabled={!!busyAction}
               >
                 重新发送
               </button>
@@ -176,9 +176,9 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
             variant="outline"
             className="w-full"
             onClick={handleGoogleSignIn}
-            disabled={busy}
+            disabled={!!busyAction}
           >
-            {busy ? (
+            {busyAction === "google" ? (
               <Spinner className="size-4" />
             ) : (
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="size-4">
@@ -230,8 +230,8 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy && <Spinner className="size-4" />}
+            <Button type="submit" className="w-full" disabled={!!busyAction}>
+              {busyAction === "submit" && <Spinner className="size-4" />}
               登录
             </Button>
           </form>
