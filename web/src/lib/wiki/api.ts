@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import type { KeyedMutator } from "swr";
+import { resolveTitle } from "./frontmatter";
 import type { WikiDocument } from "./types";
 
 export const WIKI_API_KEY = "/api/wiki";
@@ -32,7 +33,7 @@ export async function createDocument(
     const res = await fetch("/api/wiki", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(doc),
+      body: JSON.stringify({ id, content: "", order }),
     });
     if (!res.ok) throw new Error("Failed to create document");
     await mutate([...docs, doc], { revalidate: false });
@@ -46,7 +47,7 @@ export async function createDocument(
 
 export async function updateDocument(
   id: string,
-  updates: Partial<Pick<WikiDocument, "title" | "content">>,
+  updates: { content: string },
   docs: WikiDocument[],
   mutate: KeyedMutator<WikiDocument[]>
 ): Promise<boolean> {
@@ -59,7 +60,9 @@ export async function updateDocument(
     if (!res.ok) throw new Error("Failed to update document");
     await mutate(
       docs.map((d) =>
-        d.id === id ? { ...d, ...updates, updatedAt: Date.now() } : d
+        d.id === id
+          ? { ...d, ...updates, title: resolveTitle(updates.content), updatedAt: Date.now() }
+          : d
       ),
       { revalidate: false }
     );

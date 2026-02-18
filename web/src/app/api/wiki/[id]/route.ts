@@ -11,7 +11,6 @@ export async function PATCH(
   const body = await req.json();
 
   const updates: Record<string, unknown> = {};
-  if (body.title !== undefined) updates.title = body.title;
   if (body.content !== undefined) updates.content = body.content;
   if (body.order !== undefined) updates.order = body.order;
 

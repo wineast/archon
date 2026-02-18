@@ -143,15 +143,14 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     const filename = mdFiles[i];
     const slug = filename.replace(/\.md$/, "");
     const content = readFileSync(join(wikiDir, filename), "utf-8");
-    const title = content.split("\n")[0].trim() || slug;
     const docId = `wiki-uw-${slug}`;
 
     await db
       .insert(wikiDocuments)
-      .values({ id: docId, title, content, order: i, agentId })
+      .values({ id: docId, content, order: i, agentId })
       .onConflictDoUpdate({
         target: wikiDocuments.id,
-        set: { title, content, order: i, agentId },
+        set: { content, order: i, agentId },
       });
   }
 

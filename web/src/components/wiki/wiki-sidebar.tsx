@@ -12,7 +12,6 @@ interface WikiSidebarProps {
   activeDocId: string | null;
   onSelect: (id: string) => void;
   onCreate: () => Promise<void>;
-  onUpdate: (id: string, updates: Partial<{ title: string; content: string }>) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
   onReorder: (id: string, direction: "up" | "down") => Promise<void>;
 }
@@ -22,7 +21,6 @@ export function WikiSidebar({
   activeDocId,
   onSelect,
   onCreate,
-  onUpdate,
   onDelete,
   onReorder,
 }: WikiSidebarProps) {
@@ -57,7 +55,6 @@ export function WikiSidebar({
                 doc={doc}
                 isActive={activeDocId === doc.id}
                 onSelect={onSelect}
-                onUpdate={onUpdate}
                 onDelete={onDelete}
                 onReorder={onReorder}
               />

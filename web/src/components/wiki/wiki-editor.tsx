@@ -4,43 +4,39 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { EyeIcon, PencilIcon } from "lucide-react";
 import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { processTemplate } from "@/lib/wiki/template";
-import { stripFrontmatter } from "@/lib/wiki/frontmatter";
+import { resolveTitle, stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 
 interface WikiEditorProps {
   doc: WikiDocument;
   documents: WikiDocument[];
-  onUpdate: (id: string, updates: Partial<{ title: string; content: string }>) => Promise<boolean>;
+  onUpdate: (id: string, updates: { content: string }) => Promise<boolean>;
 }
 
 export function WikiEditor({ doc, documents, onUpdate }: WikiEditorProps) {
-  const [title, setTitle] = useState(doc.title);
   const [content, setContent] = useState(doc.content);
   const [mode, setMode] = useState<"preview" | "edit">("preview");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setTitle(doc.title);
     setContent(doc.content);
     setMode("preview");
-  }, [doc.id, doc.title, doc.content]);
+  }, [doc.id, doc.content]);
 
-  const dirty = title !== doc.title || content !== doc.content;
+  const title = useMemo(() => resolveTitle(content), [content]);
+
+  const dirty = content !== doc.content;
 
   const handleDone = useCallback(async () => {
     if (dirty) {
       setSaving(true);
-      const updates: Partial<Pick<WikiDocument, "title" | "content">> = {};
-      if (title !== doc.title) updates.title = title;
-      if (content !== doc.content) updates.content = content;
-      await onUpdate(doc.id, updates);
+      await onUpdate(doc.id, { content });
       setSaving(false);
     }
     setMode("preview");
-  }, [doc.id, doc.title, doc.content, title, content, dirty, onUpdate]);
+  }, [doc.id, doc.content, content, dirty, onUpdate]);
 
   const renderedContent = useMemo(() => {
     if (!content) return "";
@@ -58,18 +54,9 @@ export function WikiEditor({ doc, documents, onUpdate }: WikiEditorProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="shrink-0 px-6 py-4">
-        {mode === "edit" ? (
-          <Input
-            className="border-none px-0 text-xl font-semibold shadow-none focus-visible:ring-0"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Untitled"
-          />
-        ) : (
-          <h1 className="truncate text-xl font-semibold">
-            {title || "Untitled"}
-          </h1>
-        )}
+        <h1 className="truncate text-xl font-semibold">
+          {title || "Untitled"}
+        </h1>
         <p className="mt-1 text-xs text-muted-foreground">
           Created {createdAt} &middot; Updated {updatedAt}
         </p>

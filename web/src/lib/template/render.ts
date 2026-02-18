@@ -3,7 +3,7 @@ import { wikiDocuments, tools } from "@/db/schema";
 import type { ToolRow } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { processTemplate } from "@/lib/wiki/template";
-import { stripFrontmatter } from "@/lib/wiki/frontmatter";
+import { resolveTitle, stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import { getResolvedDatasets } from "@/lib/datasets/queries";
 
@@ -26,7 +26,6 @@ async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
   const rows = await db
     .select({
       id: wikiDocuments.id,
-      title: wikiDocuments.title,
       content: wikiDocuments.content,
       order: wikiDocuments.order,
       createdAt: wikiDocuments.createdAt,
@@ -37,6 +36,7 @@ async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
 
   return rows.map((r) => ({
     ...r,
+    title: resolveTitle(r.content),
     createdAt: r.createdAt.getTime(),
     updatedAt: r.updatedAt.getTime(),
   }));

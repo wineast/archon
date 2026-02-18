@@ -18,7 +18,6 @@ vi.mock("@/db/schema", () => ({
   },
   wikiDocuments: {
     id: "id",
-    title: "title",
     content: "content",
     agentId: "agent_id",
   },
@@ -36,6 +35,7 @@ vi.mock("@/lib/template/render", () => ({
 
 vi.mock("@/lib/wiki/frontmatter", () => ({
   parseWikiContent: vi.fn((c: string) => ({ meta: {}, content: c })),
+  resolveTitle: vi.fn((c: string) => c.split("\n")[0]?.trim() || "Untitled"),
 }));
 
 function mockDbRows(rows: unknown[]) {
