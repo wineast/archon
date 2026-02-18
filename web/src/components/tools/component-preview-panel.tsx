@@ -1,0 +1,99 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+import { ChevronDownIcon, EyeIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { DynamicToolRenderer } from "@/tool-ui";
+import { DynamicComponentErrorBoundary } from "@/tool-ui";
+
+interface ComponentPreviewPanelProps {
+  componentSource: string;
+  mockData: string;
+  onMockDataChange: (value: string) => void;
+}
+
+export function ComponentPreviewPanel({
+  componentSource,
+  mockData,
+  onMockDataChange,
+}: ComponentPreviewPanelProps) {
+  const [open, setOpen] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
+
+  const parsedMock = useMemo(() => {
+    try {
+      return JSON.parse(mockData || "{}");
+    } catch {
+      return {};
+    }
+  }, [mockData]);
+
+  const handleRefresh = useCallback(() => {
+    setPreviewKey((k) => k + 1);
+  }, []);
+
+  if (!componentSource.trim()) return null;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1 px-0 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ChevronDownIcon
+            className={`size-3 transition-transform ${open ? "" : "-rotate-90"}`}
+          />
+          预览
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="mt-2 space-y-2">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              Mock 数据 (JSON)
+            </label>
+            <JsonEditor
+              value={mockData}
+              onChange={onMockDataChange}
+              height="100px"
+              className="mt-1"
+            />
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefresh}
+            className="gap-1"
+          >
+            <EyeIcon className="size-3" />
+            刷新预览
+          </Button>
+
+          <div className="rounded-md border p-3">
+            <DynamicComponentErrorBoundary
+              key={previewKey}
+              fallbackToolName="preview"
+            >
+              <DynamicToolRenderer
+                toolName="preview"
+                state="output-available"
+                input={{}}
+                output={parsedMock}
+                source={componentSource}
+              />
+            </DynamicComponentErrorBoundary>
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}

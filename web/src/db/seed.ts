@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { nanoid } from "nanoid";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -8,6 +9,8 @@ import {
   chatConfigs,
   modelConfigs,
   datasets,
+  functions,
+  functionTestCases,
   tools,
   wikiDocuments,
   evalCases,
@@ -32,6 +35,7 @@ export interface SeedResult {
   modelConfigIds: string[];
   chatConfigId: string;
   datasetIds: string[];
+  functionIds: string[];
   evalJudgeConfigId: string;
   evalCaseIds: string[];
 }
@@ -75,6 +79,22 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   // Seed system tools
   console.log("Seeding system tools...");
 
+  // Read component source files
+  const componentsDir = join(agentDir, "components");
+  const componentSources: Record<string, string> = {};
+  try {
+    const componentFiles = readdirSync(componentsDir).filter(
+      (f) => f.endsWith(".jsx") || f.endsWith(".tsx")
+    );
+    for (const file of componentFiles) {
+      const key = file.replace(/\.(jsx|tsx)$/, "");
+      componentSources[key] = readFileSync(join(componentsDir, file), "utf-8");
+    }
+    console.log(`  Loaded ${Object.keys(componentSources).length} component source(s)`);
+  } catch {
+    // components dir may not exist
+  }
+
   const toolsSeed = readJson<
     Array<{
       name: string;
@@ -82,28 +102,33 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
       parameters: ToolParameter[];
       handler?: string;
       enabled: boolean;
-      component?: string;
+      componentSource?: string;
     }>
   >(join(agentDir, "tools.json"));
 
   const toolIds: string[] = [];
   for (const t of toolsSeed) {
+    // Resolve componentSource: inline value or reference to component file
+    const componentSource = t.componentSource
+      ? componentSources[t.componentSource] ?? t.componentSource
+      : null;
+
     const [row] = await db
       .insert(tools)
-      .values({ ...t, agentId })
+      .values({ ...t, componentSource, agentId })
       .onConflictDoUpdate({
         target: tools.name,
         set: {
           description: t.description,
           parameters: t.parameters,
           handler: t.handler ?? null,
-          component: t.component ?? null,
+          componentSource,
           agentId,
         },
       })
       .returning();
     toolIds.push(row.id);
-    console.log(`  - ${row.name} (${row.id})`);
+    console.log(`  - ${row.name} (${row.id})${componentSource ? " [+component]" : ""}`);
   }
 
   // Seed wiki documents
@@ -232,7 +257,140 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     datasetIds.push(row.id);
     console.log(`  - ${row.key} [layer ${row.layer}] (${row.id})`);
   }
-  console.log(`Seeded ${datasetsSeed.length} datasets`);
+  // Seed pricing config datasets from JSON files
+  const pricingConfigsDir = join(agentDir, "pricing-configs");
+  try {
+    const configFiles = readdirSync(pricingConfigsDir).filter((f) =>
+      f.endsWith(".json")
+    );
+    for (const file of configFiles) {
+      const key = `pricing_config_${file.replace(/\.json$/, "").replace(/-/g, "_")}`;
+      const data = readJson<unknown>(join(pricingConfigsDir, file));
+      const name = `Pricing Config: ${(data as { productName?: string }).productName ?? file}`;
+
+      const [row] = await db
+        .insert(datasets)
+        .values({
+          agentId,
+          key,
+          name,
+          description: `Pricing configuration for ${name}`,
+          layer: 0,
+          data,
+        })
+        .onConflictDoUpdate({
+          target: [datasets.agentId, datasets.key],
+          set: { name, description: `Pricing configuration for ${name}`, layer: 0, data },
+        })
+        .returning();
+      datasetIds.push(row.id);
+      console.log(`  - ${row.key} [pricing config] (${row.id})`);
+    }
+    console.log(`Seeded ${configFiles.length} pricing config datasets`);
+  } catch {
+    // pricing-configs dir may not exist
+  }
+
+  console.log(`Seeded ${datasetsSeed.length} datasets (+ pricing configs)`);
+
+  // Seed functions
+  console.log("Seeding functions...");
+
+  const functionsDir = join(agentDir, "functions");
+  const functionIds: string[] = [];
+  const functionMap: { id: string; key: string }[] = [];
+  try {
+    const fnFiles = readdirSync(functionsDir).filter((f) => f.endsWith(".js"));
+    for (const file of fnFiles) {
+      const key = file.replace(/\.js$/, "").replace(/-/g, "_");
+      const code = readFileSync(join(functionsDir, file), "utf-8");
+      const name = key
+        .split("_")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+
+      // Look for companion <key>.params.json and <key>.return-params.json
+      const paramsFile = file.replace(/\.js$/, ".params.json");
+      let parameters: ToolParameter[] = [];
+      try {
+        parameters = readJson<ToolParameter[]>(join(functionsDir, paramsFile));
+      } catch {
+        // No params file — use empty array
+      }
+
+      const returnParamsFile = file.replace(/\.js$/, ".return-params.json");
+      let returnParameters: ToolParameter[] = [];
+      try {
+        returnParameters = readJson<ToolParameter[]>(join(functionsDir, returnParamsFile));
+      } catch {
+        // No return params file — use empty array
+      }
+
+      const [row] = await db
+        .insert(functions)
+        .values({
+          agentId,
+          key,
+          name,
+          description: "",
+          code,
+          parameters,
+          returnParameters,
+        })
+        .onConflictDoUpdate({
+          target: [functions.agentId, functions.key],
+          set: { name, code, parameters, returnParameters },
+        })
+        .returning();
+      functionIds.push(row.id);
+      functionMap.push({ id: row.id, key: row.key });
+      console.log(`  - ${row.key} (${row.id})${parameters.length > 0 ? ` [${parameters.length} params]` : ""}`);
+    }
+    console.log(`Seeded ${fnFiles.length} functions`);
+  } catch {
+    // functions dir may not exist
+  }
+
+  // Seed function test cases
+  console.log("Seeding function test cases...");
+  try {
+    for (const { id: fnId, key: fnKey } of functionMap) {
+      const tcFile = join(functionsDir, `${fnKey.replace(/_/g, "-")}.test-cases.json`);
+      let tcSeed: Array<{
+        name: string;
+        input: Record<string, unknown>;
+        expectedOutput?: unknown;
+        tags?: string[];
+      }>;
+      try {
+        tcSeed = readJson(tcFile);
+      } catch {
+        continue; // No test cases file
+      }
+
+      // Clear existing test cases for this function before re-seeding
+      await db
+        .delete(functionTestCases)
+        .where(eq(functionTestCases.functionId, fnId));
+
+      let count = 0;
+      for (const tc of tcSeed) {
+        await db
+          .insert(functionTestCases)
+          .values({
+            functionId: fnId,
+            name: tc.name,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput ?? null,
+            tags: tc.tags ?? [],
+          });
+        count++;
+      }
+      console.log(`  - ${fnKey}: ${count} test cases`);
+    }
+  } catch (e) {
+    console.warn("  Warning seeding test cases:", e);
+  }
 
   // Seed eval judge configs
   console.log("Seeding eval judge configs...");
@@ -314,6 +472,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     modelConfigIds,
     chatConfigId: chatConfig.id,
     datasetIds,
+    functionIds,
     evalJudgeConfigId: judgeConfig.id,
     evalCaseIds,
   };

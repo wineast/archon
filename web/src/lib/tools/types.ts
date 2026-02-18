@@ -1,4 +1,4 @@
-export type ToolParamType = "string" | "number" | "boolean" | "enum";
+export type ToolParamType = "string" | "number" | "boolean" | "enum" | "json";
 
 export interface ToolParameter {
   id: string;
@@ -6,8 +6,14 @@ export interface ToolParameter {
   type: ToolParamType;
   description: string;
   required: boolean;
+  /** Whether this field is an array of the given type. */
+  isArray?: boolean;
+  /** Default value for this parameter. */
+  defaultValue?: unknown;
   enum?: string[];
   enumRef?: string;
+  /** Nested fields when type === "json". */
+  properties?: ToolParameter[];
 }
 
 export interface ToolDefinition {
@@ -17,6 +23,9 @@ export interface ToolDefinition {
   parameters: ToolParameter[];
   output: string;
   handler: string;
+  component: string;
+  componentSource: string;
+  componentMockData: string;
   enabled: boolean;
 }
 

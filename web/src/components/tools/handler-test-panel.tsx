@@ -18,7 +18,7 @@ interface HandlerTestPanelProps {
   parameters: ToolParameter[];
 }
 
-function buildDefaultArgs(parameters: ToolParameter[]): string {
+function buildDefaults(parameters: ToolParameter[]): Record<string, unknown> {
   const obj: Record<string, unknown> = {};
   for (const p of parameters) {
     switch (p.type) {
@@ -28,11 +28,21 @@ function buildDefaultArgs(parameters: ToolParameter[]): string {
       case "boolean":
         obj[p.name] = false;
         break;
+      case "json":
+        obj[p.name] =
+          p.properties && p.properties.length > 0
+            ? buildDefaults(p.properties)
+            : {};
+        break;
       default:
         obj[p.name] = "";
     }
   }
-  return JSON.stringify(obj, null, 2);
+  return obj;
+}
+
+function buildDefaultArgs(parameters: ToolParameter[]): string {
+  return JSON.stringify(buildDefaults(parameters), null, 2);
 }
 
 export function HandlerTestPanel({

@@ -1,0 +1,223 @@
+{
+  "productName": "Ocean",
+  "baseRates": [
+    {
+      "category": "5/6 ARM",
+      "rate": 5.875,
+      "price": 100
+    },
+    {
+      "category": "5/6 ARM",
+      "rate": 6,
+      "price": 100.125
+    },
+    {
+      "category": "5/6 ARM",
+      "rate": 6.125,
+      "price": 100.25
+    },
+    {
+      "category": "5/6 ARM",
+      "rate": 6.25,
+      "price": 100.375
+    },
+    {
+      "category": "5/6 ARM",
+      "rate": 6.375,
+      "price": 100.5
+    },
+    {
+      "category": "7/6 ARM",
+      "rate": 6.125,
+      "price": 100
+    },
+    {
+      "category": "7/6 ARM",
+      "rate": 6.25,
+      "price": 100.125
+    },
+    {
+      "category": "7/6 ARM",
+      "rate": 6.375,
+      "price": 100.25
+    },
+    {
+      "category": "7/6 ARM",
+      "rate": 6.5,
+      "price": 100.375
+    },
+    {
+      "category": "7/6 ARM",
+      "rate": 6.625,
+      "price": 100.5
+    }
+  ],
+  "adjustments": [
+    {
+      "name": "Cash Out > 50% LTV",
+      "when": "loanPurpose == \"cashOut\" and ltv > 50",
+      "rateAdj": 0.375,
+      "citations": [
+        {
+          "quote": "| Cash out > 50% | +0.375% |",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 41,
+            "end": 41
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cash Out ≤ 50% LTV",
+      "when": "loanPurpose == \"cashOut\" and ltv <= 50",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Cash out ≤ 50% | +0.125% |",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 42,
+            "end": 42
+          }
+        }
+      ]
+    },
+    {
+      "name": "2-4 Units",
+      "when": "units >= 2 and units <= 4",
+      "rateAdj": 0.25,
+      "citations": [
+        {
+          "quote": "| 2-4 Units | +0.250% |",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 43,
+            "end": 43
+          }
+        }
+      ]
+    },
+    {
+      "name": "Condominium LTV > 60%",
+      "when": "propertyType == \"condo\" and ltv > 60",
+      "rateAdj": 0.125,
+      "citations": [
+        {
+          "quote": "| Condominium LTV > 60% | +0.125% |",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 44,
+            "end": 44
+          }
+        }
+      ]
+    },
+    {
+      "name": "FICO < 700",
+      "when": "ficoScore < 700 and not isForeignNational",
+      "rateAdj": 0.375,
+      "citations": [
+        {
+          "quote": "| FICO < 700 | +0.375% |",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 45,
+            "end": 45
+          }
+        },
+        {
+          "quote": "FICO adjuster is NOT applicable for Foreign Program",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 52,
+            "end": 52
+          }
+        }
+      ]
+    },
+    {
+      "name": "Second Home / NOO",
+      "when": "(occupancy == \"secondHome\" or occupancy == \"investment\") and not isForeignNational",
+      "rateAdj": 0.25,
+      "citations": [
+        {
+          "quote": "| Second Home / Non-Owner Occupied | +0.250% |",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 46,
+            "end": 46
+          }
+        },
+        {
+          "quote": "Second Home adjuster is NOT applicable for Foreign Program",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 53,
+            "end": 53
+          }
+        }
+      ]
+    },
+    {
+      "name": "Foreign Program",
+      "when": "isForeignNational",
+      "rateAdj": 0.25,
+      "citations": [
+        {
+          "quote": "| Foreign Program | +0.250% |",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 47,
+            "end": 47
+          }
+        }
+      ]
+    },
+    {
+      "name": "Purchase LTV ≤ 60%",
+      "when": "loanPurpose == \"purchase\" and ltv <= 60",
+      "rateAdj": -0.25,
+      "citations": [
+        {
+          "quote": "| Purchase Transaction LTV ≤ 60% | -0.250% |",
+          "docPath": "ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.md",
+          "lines": {
+            "start": 48,
+            "end": 48
+          }
+        }
+      ]
+    }
+  ],
+  "stackingRules": [],
+  "extensionCosts": [
+    {
+      "days": 7,
+      "cost": 0.125,
+      "category": "5/6 ARM"
+    },
+    {
+      "days": 7,
+      "cost": 0.125,
+      "category": "7/6 ARM"
+    },
+    {
+      "days": 15,
+      "cost": 0.25,
+      "category": "5/6 ARM"
+    },
+    {
+      "days": 15,
+      "cost": 0.25,
+      "category": "7/6 ARM"
+    }
+  ],
+  "rateSheets": [
+    {
+      "type": "pdf",
+      "url": "/products/ocean/rate-sheets/GMCC Ocean Rate Sheet 12.18.2025.pdf",
+      "title": "GMCC Ocean Rate Sheet 12.18.2025"
+    }
+  ]
+}

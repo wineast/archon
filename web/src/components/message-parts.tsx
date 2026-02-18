@@ -24,14 +24,16 @@ import {
   SourcesContent,
   SourcesTrigger,
 } from "@/components/ai-elements/sources";
-import { getToolRenderer } from "@/tool-ui";
+import {
+  getDynamicToolSource,
+  DynamicToolRenderer,
+  DynamicComponentErrorBoundary,
+} from "@/tool-ui";
 
 export function MessageParts({
   message,
-  toolComponentMap,
 }: {
   message: UIMessage;
-  toolComponentMap: Record<string, string>;
 }) {
   const sourceUrls = message.parts?.filter(
     (p) => p.type === "source-url"
@@ -67,23 +69,26 @@ export function MessageParts({
           const toolName = isDynamic
             ? (part as { toolName: string }).toolName
             : part.type.split("-").slice(1).join("-");
-          const CustomRenderer = getToolRenderer(toolComponentMap[toolName]);
 
-          // No custom renderer → only show in development
-          if (!CustomRenderer && process.env.NODE_ENV !== "development") {
-            return null;
+          // 1) Dynamic component source from DB
+          const dynamicSource = getDynamicToolSource(toolName);
+          if (dynamicSource) {
+            return (
+              <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackToolName={toolName}>
+                <DynamicToolRenderer
+                  toolName={toolName}
+                  state={part.state}
+                  input={part.input}
+                  output={part.output}
+                  source={dynamicSource}
+                />
+              </DynamicComponentErrorBoundary>
+            );
           }
 
-          if (CustomRenderer) {
-            return (
-              <CustomRenderer
-                key={`tool-${i}`}
-                toolName={toolName}
-                state={part.state}
-                input={part.input}
-                output={part.output}
-              />
-            );
+          // 2) Default tool UI (only in dev mode)
+          if (process.env.NODE_ENV !== "development") {
+            return null;
           }
 
           return (

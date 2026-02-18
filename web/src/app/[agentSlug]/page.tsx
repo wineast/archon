@@ -39,6 +39,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { EvalSheet } from "@/components/eval/eval-sheet";
 import { DatasetsSheet } from "@/components/datasets/datasets-sheet";
+import { FunctionsSheet } from "@/components/functions/functions-sheet";
 import { RequestInspectorModal } from "@/components/request-inspector-modal";
 import { ChatConfigSheet } from "@/components/chat-config/chat-config-sheet";
 import { UserSettingsModal } from "@/components/user/user-settings-modal";
@@ -47,6 +48,7 @@ import { ModelConfigSheet } from "@/components/model-config/model-config-sheet";
 import { useChatConfig } from "@/lib/chat-config/hooks";
 import { useActiveModelConfig } from "@/lib/model-config/hooks";
 import { useTools } from "@/lib/tools/hooks";
+import { registerDynamicToolSource } from "@/tool-ui";
 import { SessionHistory } from "@/components/session-history";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -58,6 +60,7 @@ import {
   DownloadIcon,
   EllipsisVerticalIcon,
   FlaskConicalIcon,
+  FunctionSquareIcon,
   SearchCodeIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
@@ -99,17 +102,17 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
   const [modelConfigOpen, setModelConfigOpen] = useState(false);
   const [evalOpen, setEvalOpen] = useState(false);
   const [datasetsOpen, setDatasetsOpen] = useState(false);
+  const [functionsOpen, setFunctionsOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
   const [wikiOpen, setWikiOpen] = useState(false);
 
   const { activeConfig } = useActiveModelConfig();
   const { tools: toolsList } = useTools();
-  const toolComponentMap = useMemo(() => {
-    const map: Record<string, string> = {};
+  // Register dynamic component sources from DB
+  useMemo(() => {
     for (const t of toolsList) {
-      if (t.component) map[t.name] = t.component;
+      if (t.componentSource) registerDynamicToolSource(t.name, t.componentSource);
     }
-    return map;
   }, [toolsList]);
 
   const sessionIdRef = useRef<string | null>(null);
@@ -483,6 +486,10 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
                   <DatabaseIcon className="size-4" />
                   Datasets
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFunctionsOpen(true)}>
+                  <FunctionSquareIcon className="size-4" />
+                  Functions
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEvalOpen(true)}>
                   <FlaskConicalIcon className="size-4" />
                   Evaluate
@@ -538,7 +545,7 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
                         </MessageResponse>
                       </MessageContent>
                     ) : (
-                      <MessageParts message={message} toolComponentMap={toolComponentMap} />
+                      <MessageParts message={message} />
                     )}
                   </Message>
                 ))}
@@ -595,6 +602,7 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
       <WikiSheet open={wikiOpen} onOpenChange={setWikiOpen} />
       <ToolsSheet open={toolsOpen} onOpenChange={setToolsOpen} />
       <DatasetsSheet open={datasetsOpen} onOpenChange={setDatasetsOpen} />
+      <FunctionsSheet open={functionsOpen} onOpenChange={setFunctionsOpen} />
       <ModelConfigSheet open={modelConfigOpen} onOpenChange={setModelConfigOpen} />
     </SidebarProvider>
   );

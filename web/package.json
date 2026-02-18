@@ -67,6 +67,7 @@
     "shiki": "^3.22.0",
     "sonner": "^2.0.7",
     "streamdown": "^2.2.0",
+    "sucrase": "^3.35.1",
     "svix": "^1.85.0",
     "swr": "^2.4.0",
     "tailwind-merge": "^3.4.0",
