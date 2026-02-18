@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { JsEditor } from "@/components/ui/editors/js-editor";
-import { ComponentPreviewPanel } from "../component-preview-panel";
+import { JsEditor } from "@/components/editors/js-editor";
+import { ComponentPreviewPanel } from "@/components/tools/component-preview-panel";
 
 // ---------------------------------------------------------------------------
 // Combined demo component (mirrors tool-form's JSX section)
@@ -64,6 +64,7 @@ function JsxEditorPreview({
           componentSource={source}
           mockData={mockData}
           onMockDataChange={setMockData}
+          collapsible={false}
         />
       )}
 
@@ -85,7 +86,7 @@ function JsxEditorPreview({
 // ---------------------------------------------------------------------------
 
 const meta = {
-  title: "Tools/JSX Editor + Preview",
+  title: "Editors/JSX Editor + Preview",
   component: JsxEditorPreview,
   parameters: { layout: "padded" },
   decorators: [
@@ -179,6 +180,65 @@ const richMockData = JSON.stringify(
   2
 );
 
+const hooksSource = `function Component({ output }) {
+  const [selected, setSelected] = useState(null);
+  const items = output?.items ?? [];
+
+  const total = useMemo(
+    () => items.reduce((sum, r) => sum + r.amount, 0),
+    [items],
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Badge>{items.length} items</Badge>
+        <span className="text-sm text-muted-foreground">
+          Total: ¥{total.toLocaleString()}
+        </span>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Amount</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item, i) => (
+            <TableRow
+              key={i}
+              className={selected === i ? "bg-muted" : "cursor-pointer"}
+              onClick={() => setSelected(selected === i ? null : i)}
+            >
+              <TableCell className="font-medium">{item.name}</TableCell>
+              <TableCell>¥{item.amount.toLocaleString()}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {selected !== null && (
+        <div className="rounded-md border p-3 text-sm">
+          Selected: <Badge variant="outline">{items[selected]?.name}</Badge>
+        </div>
+      )}
+    </div>
+  );
+}`;
+
+const hooksMockData = JSON.stringify(
+  {
+    items: [
+      { name: "Cloud Server", amount: 2400 },
+      { name: "Database", amount: 800 },
+      { name: "CDN", amount: 350 },
+      { name: "Storage", amount: 120 },
+    ],
+  },
+  null,
+  2,
+);
+
 // ---------------------------------------------------------------------------
 // Stories
 // ---------------------------------------------------------------------------
@@ -218,5 +278,13 @@ export const RichComponent: Story = {
   args: {
     initialSource: richSource,
     initialMockData: richMockData,
+  },
+};
+
+export const WithHooks: Story = {
+  name: "With Hooks (useState + useMemo)",
+  args: {
+    initialSource: hooksSource,
+    initialMockData: hooksMockData,
   },
 };

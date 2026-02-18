@@ -12,7 +12,7 @@ import {
   deleteDocument,
   reorderDocument,
 } from "@/lib/wiki/api";
-import { WikiEditor } from "./wiki-editor";
+import { WikiEditor } from "@/components/editors/wiki-editor";
 import { WikiEmptyState } from "./wiki-empty-state";
 import { WikiSidebar } from "./wiki-sidebar";
 

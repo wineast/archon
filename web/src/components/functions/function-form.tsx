@@ -8,7 +8,7 @@ import {
 } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { JsEditor } from "@/components/ui/editors/js-editor";
+import { JsEditor } from "@/components/editors/js-editor";
 import { ParameterList } from "@/components/parameters/parameter-list";
 import { ReturnParameterList } from "@/components/parameters/return-parameter-list";
 import type { ToolParameter } from "@/lib/tools/types";

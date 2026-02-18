@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { JsonEditor } from "@/components/editors/json-editor";
 import {
   Select,
   SelectContent,

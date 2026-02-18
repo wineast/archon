@@ -2,8 +2,8 @@
 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { JsEditor } from "@/components/ui/editors/js-editor";
-import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { JsEditor } from "@/components/editors/js-editor";
+import { JsonEditor } from "@/components/editors/json-editor";
 import type { ToolDefinition } from "@/lib/tools/types";
 import { useDatasets } from "@/lib/datasets/hooks";
 import type { EnumRefOption } from "@/components/parameters/parameter-row";

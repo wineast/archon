@@ -9,7 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { JsonEditor } from "@/components/editors/json-editor";
 import { Spinner } from "@/components/ui/spinner";
 import type { ToolParameter } from "@/lib/tools/types";
 

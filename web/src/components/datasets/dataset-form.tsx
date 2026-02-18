@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { JsonEditor } from "@/components/editors/json-editor";
 import { Textarea } from "@/components/ui/textarea";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
