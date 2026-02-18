@@ -7,13 +7,34 @@
 
 ## 快速开始
 
-首次设置，一条命令搞定：
+### 首次 clone 项目
 
 ```bash
-make db-local-setup
+# 1. 先关联 Vercel（交互式，需手动执行）
+cd web && npx vercel link && npx vercel pull
+cd ..
+
+# 2. 一键初始化
+make setup
 ```
 
-它会依次执行：`db-up` → `db-local-env` → `db-push` → `seed`。
+`make setup` 会检查 `web/.vercel` 是否存在，不存在则提示先执行上面的 vercel 命令。检查通过后依次执行：`npm install` → `db-setup`（启动 Docker + 主库初始化）。
+
+### 仅初始化数据库（已有依赖和 env）
+
+```bash
+make db-setup
+```
+
+依次执行：`db-up` → `db-local-env` → `db-push` → `seed`。
+
+### 工作区内初始化数据库
+
+```bash
+make db-init
+```
+
+仅执行 `db-push` → `seed`。数据库和 env 文件已由 `wt-create` 自动创建。
 
 完成后启动开发服务器：
 
@@ -98,7 +119,7 @@ make seed             # 如果新增了表或字段，重新播种
 
 ```bash
 make db-destroy       # 删除容器和数据卷
-make db-local-setup   # 重新一键设置
+make db-setup         # 重新一键设置
 ```
 
 ## 架构说明

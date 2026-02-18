@@ -1,4 +1,26 @@
-.PHONY: dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-setup db-init wt-list wt-create wt-sync wt-merge wt-delete
+.PHONY: setup vercel-check dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-setup db-init wt-list wt-create wt-sync wt-merge wt-delete
+
+# ============================================================
+# Setup (clone 后执行一次)
+# ============================================================
+
+## 项目初始化（clone 后执行一次）
+## install → 检查 vercel → 启动本地数据库 → push → seed
+setup: install vercel-check db-setup
+
+vercel-check:
+	@if [ ! -d web/.vercel ]; then \
+		echo ""; \
+		echo "========================================"; \
+		echo "  web/.vercel 不存在，请先手动执行:"; \
+		echo ""; \
+		echo "  cd web && npx vercel link && npx vercel pull"; \
+		echo ""; \
+		echo "  完成后重新运行 make setup"; \
+		echo "========================================"; \
+		echo ""; \
+		exit 1; \
+	fi
 
 # ============================================================
 # Development
