@@ -10,8 +10,8 @@
 
 | 命令 | 说明 | 场景 |
 |------|------|------|
-| `make setup` | vercel-check → db-up → wt-meta → wt-setup | clone 后执行一次 |
-| `make reset` | 清理缓存/依赖 → 停 Docker → 删环境文件/元数据 | 重置到初始状态 |
+| `make setup` | vercel-check → db-up → wt-setup → wt-init | clone 后执行一次 |
+| `make teardown` | wt-fini → wt-teardown → 停 Docker 并删除数据卷 | 重置到初始状态 |
 | `make db-init` | db-push + seed | 重新推 schema + 灌数据 |
 
 ### 工作区
@@ -40,11 +40,12 @@ make setup
 
 1. **vercel-check** — 确保 `web/.vercel` 存在
 2. **db-up** — 启动 Docker PostgreSQL
-3. **wt-meta** — 创建 `.worktree/meta.json`（主仓库也视为工作区，端口 3000）
-4. **wt-setup** (`scripts/wt-setup.sh`) — 共用初始化：
+3. **wt-setup**（`scripts/wt-setup.sh`）— 静态环境初始化：
+   - wt-meta — 创建 `.worktree/meta.json`（主仓库端口 3000）
    - link-env — 创建 `.env.local` symlink
    - db-local-env — 生成 `.env.development.local`（指向独立数据库）
    - npm install
+4. **wt-init**（`scripts/wt-init.sh`）— 数据初始化：
    - db-push + seed
 
 ### 创建工作区
@@ -53,8 +54,8 @@ make setup
 
 1. **git worktree add** — 基于 base 分支创建新分支 `<base>-<name>-<日期>`，目录 `.worktrees/<name>`
 2. **复制 Vercel 配置** — 将 `web/.vercel` 拷贝到工作区
-3. **生成 `.worktree/meta.json`** — 随机分配端口 + 记录 baseBranch
-4. **`wt-setup.sh`** — 共用初始化（同上），自动创建独立数据库 `archon_<name>`
+3. **wt-setup** — 通过环境变量传随机端口，创建 `meta.json` + link-env + createdb + npm install
+4. **wt-init** — db-push + seed
 5. **生成 `CLAUDE.local.md`** — 工作区路径和端口
 6. **执行 `init.sh`** — 如果主仓库 `.worktree/` 下存在
 7. **链接 Claude Code 自动记忆** — 共享主项目记忆
@@ -102,8 +103,10 @@ make setup
 
 1. 检查是否有未提交更改，有则确认
 2. 执行 `.worktree/cleanup.sh`（如果存在）
-3. 删除对应的本地数据库 `archon_<name>`（如果存在）
-4. `git worktree remove` 删除工作区
+3. 终止端口服务
+4. **wt-fini** — 删除对应的本地数据库 `archon_<name>`
+5. **wt-teardown** — 删缓存/依赖 + 环境文件 + `.worktree/`
+6. `git worktree remove` 删除工作区
 
 ---
 

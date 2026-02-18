@@ -1,4 +1,4 @@
-.PHONY: setup reset up down dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-reset
+.PHONY: setup teardown up down dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini
 
 # ============================================================
 # Setup
@@ -20,28 +20,21 @@ setup:
 		exit 1; \
 	fi
 	@echo "🐘 [db-up] 启动 Docker PostgreSQL..."
+	@docker info >/dev/null 2>&1 || { echo "❌ Docker 未运行，请先启动 Docker Desktop"; exit 1; }
 	@docker compose up -d --wait
-	@echo "📦 [wt-meta] 创建工作区元数据..."
-	@mkdir -p .worktree
-	@if [ ! -f .worktree/meta.json ]; then \
-		echo '{"dev":3000,"storybook":6006,"studio":4983,"baseBranch":"main"}' > .worktree/meta.json; \
-		echo "  Created .worktree/meta.json (main workspace)"; \
-	else \
-		echo "  .worktree/meta.json 已存在，跳过"; \
-	fi
-	@./scripts/wt-setup.sh .
+	@$(MAKE) wt-setup
+	@$(MAKE) wt-init
 	@echo ""
 	@echo "✅ Setup 完成"
 
 ## 反向清理
-reset:
-	@./scripts/wt-reset.sh .
-	@echo "🐘 [reset] 停止 Docker 并删除数据卷..."
-	docker compose down -v
-	@echo "📦 [reset] 删除工作区元数据..."
-	rm -rf .worktree
+teardown:
+	@$(MAKE) wt-fini
+	@$(MAKE) wt-teardown
+	@echo "🐘 [teardown] 停止 Docker 并删除数据卷..."
+	@docker compose down -v 2>/dev/null || echo "  Docker 未运行，跳过"
 	@echo ""
-	@echo "✅ Reset 完成"
+	@echo "✅ Teardown 完成"
 
 # ============================================================
 # Development
@@ -211,11 +204,19 @@ wt-merge:
 wt-delete:
 	@./.claude/skills/worktree/scripts/worktree.sh delete $(NAME)
 
-## 工作区环境初始化（用法: make wt-setup [DIR=.worktrees/xxx]）
+## 工作区静态环境初始化（link-env + db-local-env + npm install）
 wt-setup:
 	@./scripts/wt-setup.sh $(or $(DIR),.)
 
-## 工作区环境重置（用法: make wt-reset [DIR=.worktrees/xxx]）
-wt-reset:
-	@./scripts/wt-reset.sh $(or $(DIR),.)
+## 工作区静态环境清理（wt-setup 的反向）
+wt-teardown:
+	@./scripts/wt-teardown.sh $(or $(DIR),.)
+
+## 工作区数据初始化（db-push + seed）
+wt-init:
+	@./scripts/wt-init.sh $(or $(DIR),.)
+
+## 工作区数据清理（wt-init 的反向）
+wt-fini:
+	@./scripts/wt-fini.sh $(or $(DIR),.)
 

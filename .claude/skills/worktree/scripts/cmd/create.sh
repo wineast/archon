@@ -71,23 +71,18 @@ cmd_create() {
         info "已复制 web/.vercel"
     fi
 
-    # 创建 .worktree 目录和 meta.json（必须在 wt-setup 之前，db-local-env 需要它识别 worktree）
-    local wt_config_dir="$worktree_path/.worktree"
-    if [ ! -d "$wt_config_dir" ]; then
-        info "创建 .worktree/ 配置目录..."
-        mkdir -p "$wt_config_dir"
-    fi
-
-    # 生成工作区元数据写入 meta.json
+    # 随机分配端口
     local dev_port=$(( RANDOM % 5000 + 4000 ))  # 4000-8999
     local storybook_port=$(( dev_port + 1 ))
     local studio_port=$(( dev_port + 2 ))
-    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"studio\":$studio_port,\"baseBranch\":\"$base_branch\"}" > "$wt_config_dir/meta.json"
-    info "端口分配: dev=$dev_port, storybook=$storybook_port, studio=$studio_port, baseBranch=$base_branch (写入 .worktree/meta.json)"
+    local wt_config_dir="$worktree_path/.worktree"
 
-    # 环境初始化：env (link-env + db-local-env) → deps (npm install) → db-init (push + seed)
+    # 静态环境初始化（通过环境变量传端口和 baseBranch）
     info "初始化工作区环境..."
-    "$PROJECT_ROOT/scripts/wt-setup.sh" "$worktree_path"
+    WT_DEV_PORT=$dev_port WT_SB_PORT=$storybook_port WT_STUDIO_PORT=$studio_port WT_BASE_BRANCH="$base_branch" \
+        "$PROJECT_ROOT/scripts/wt-setup.sh" "$worktree_path"
+    # 数据初始化
+    "$PROJECT_ROOT/scripts/wt-init.sh" "$worktree_path"
     success "工作区环境初始化完成"
 
     # 生成 CLAUDE.local.md（提醒 Claude 使用正确的端口）

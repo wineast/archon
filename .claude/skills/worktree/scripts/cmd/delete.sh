@@ -60,8 +60,10 @@ cmd_delete() {
     # 终止工作区启动的服务（dev server / storybook / drizzle studio）
     kill_worktree_services "$worktree_path"
 
-    # 重置工作区环境（删缓存/依赖 → 删数据库 → 删环境文件）
-    "$PROJECT_ROOT/scripts/wt-reset.sh" "$worktree_path"
+    # 清理工作区数据（drop DB + 删元数据）
+    "$PROJECT_ROOT/scripts/wt-fini.sh" "$worktree_path"
+    # 清理工作区静态环境（删缓存/依赖 + 删环境文件）
+    "$PROJECT_ROOT/scripts/wt-teardown.sh" "$worktree_path"
 
     # 删除 worktree
     info "删除 worktree: $worktree_path"

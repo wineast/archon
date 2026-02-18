@@ -1,8 +1,8 @@
 #!/bin/bash
-# 工作区环境重置（wt-setup 的反向操作）
-# 用法: ./scripts/wt-reset.sh [target_dir]
+# 工作区数据清理（wt-init 的反向操作）
+# 用法: ./scripts/wt-fini.sh [target_dir]
 #
-# 流程: 删缓存/依赖 → 删数据库 → 删环境文件
+# 流程: 删数据库
 
 set -e
 
@@ -12,12 +12,7 @@ CONTAINER="archon-postgres"
 DB_USER="archon"
 DEFAULT_DB="archon"
 
-# ---- 清理缓存和依赖 ----
-echo "🗑️  [wt-reset] 清理构建缓存和依赖..."
-rm -rf "$target_dir/web/.next" "$target_dir/web/node_modules"
-
-# ---- 删除数据库 ----
-echo "🗄️  [wt-reset] 删除数据库..."
+echo "🗄️  [wt-fini] 删除数据库..."
 cd "$target_dir"
 if [ -f .worktree/meta.json ]; then
     wt_name=$(basename "$PWD")
@@ -31,7 +26,3 @@ if [ -f .worktree/meta.json ]; then
         echo "  Database $db_name does not exist"
     fi
 fi
-
-# ---- 删除环境文件 ----
-echo "📄 [wt-reset] 删除环境文件..."
-rm -f "$target_dir/web/.env.development.local" "$target_dir/web/.env.local"
