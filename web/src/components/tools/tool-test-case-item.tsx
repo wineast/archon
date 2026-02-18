@@ -18,7 +18,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { JsonEditor } from "@/components/editors/json-editor";
 import { Spinner } from "@/components/ui/spinner";
 import type { ToolTestCaseRow } from "@/db/schema";
 import type { RunTestCaseResult } from "@/lib/tools/test-case-hooks";
