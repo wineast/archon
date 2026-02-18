@@ -1,4 +1,4 @@
-.PHONY: setup reset dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete
+.PHONY: setup reset up down dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-reset
 
 # ============================================================
 # Setup
@@ -46,6 +46,47 @@ reset:
 # ============================================================
 # Development
 # ============================================================
+
+## 启动所有开发服务（dev + storybook + db-studio）
+up:
+	@if [ -f .worktree/meta.json ]; then \
+		DEV_PORT=$$(node -p "require('./.worktree/meta.json').dev") && \
+		SB_PORT=$$(node -p "require('./.worktree/meta.json').storybook") && \
+		STUDIO_PORT=$$(node -p "require('./.worktree/meta.json').studio") && \
+		lsof -ti :$$DEV_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :$$SB_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :$$STUDIO_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
+		echo "🚀 启动服务 (dev=$$DEV_PORT, storybook=$$SB_PORT, studio=$$STUDIO_PORT)" && \
+		(cd web && npm run dev -- --port $$DEV_PORT) & \
+		(cd web && npm run storybook -- -p $$SB_PORT) & \
+		(cd web && npx drizzle-kit studio --port $$STUDIO_PORT) & \
+		wait; \
+	else \
+		lsof -ti :3000 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :4983 2>/dev/null | xargs kill 2>/dev/null || true; \
+		echo "🚀 启动服务 (dev=3000, storybook=6006, studio=4983)" && \
+		(cd web && npm run dev) & \
+		(cd web && npm run storybook) & \
+		(cd web && npm run db:studio) & \
+		wait; \
+	fi
+
+## 停止所有开发服务
+down:
+	@if [ -f .worktree/meta.json ]; then \
+		DEV_PORT=$$(node -p "require('./.worktree/meta.json').dev") && \
+		SB_PORT=$$(node -p "require('./.worktree/meta.json').storybook") && \
+		STUDIO_PORT=$$(node -p "require('./.worktree/meta.json').studio") && \
+		lsof -ti :$$DEV_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :$$SB_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :$$STUDIO_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
+	else \
+		lsof -ti :3000 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :4983 2>/dev/null | xargs kill 2>/dev/null || true; \
+	fi
+	@echo "✅ 所有服务已停止"
 
 dev:
 	@if [ -f .worktree/meta.json ]; then \
@@ -169,4 +210,12 @@ wt-merge:
 ## 删除 worktree（用法: make wt-delete NAME=feature-xxx）
 wt-delete:
 	@./.claude/skills/worktree/scripts/worktree.sh delete $(NAME)
+
+## 工作区环境初始化（用法: make wt-setup [DIR=.worktrees/xxx]）
+wt-setup:
+	@./scripts/wt-setup.sh $(or $(DIR),.)
+
+## 工作区环境重置（用法: make wt-reset [DIR=.worktrees/xxx]）
+wt-reset:
+	@./scripts/wt-reset.sh $(or $(DIR),.)
 
