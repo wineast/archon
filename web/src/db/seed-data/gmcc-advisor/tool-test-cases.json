@@ -1,0 +1,209 @@
+{
+  "route_loan_products": [
+    {
+      "name": "W2 borrower in CA",
+      "input": { "income_type": "W2", "property_state": "CA" },
+      "tags": ["route", "w2", "ca"]
+    },
+    {
+      "name": "Self-employed borrower in TX",
+      "input": { "income_type": "Self-Employed", "property_state": "TX" },
+      "tags": ["route", "self-employed", "tx"]
+    },
+    {
+      "name": "Foreign national in FL",
+      "input": { "income_type": "Foreign National", "property_state": "FL" },
+      "tags": ["route", "foreign-national"]
+    },
+    {
+      "name": "DSCR borrower in NY",
+      "input": { "income_type": "DSCR", "property_state": "NY" },
+      "tags": ["route", "dscr"]
+    },
+    {
+      "name": "No match scenario",
+      "input": { "income_type": "NONEXISTENT", "property_state": "ZZ" },
+      "tags": ["route", "no-match"]
+    }
+  ],
+  "pricing_universe": [
+    {
+      "name": "Basic — FICO 750, CA",
+      "input": { "ficoScore": 750, "state": "CA" },
+      "tags": ["pricing", "universe", "basic"]
+    },
+    {
+      "name": "NY (special CRA rate)",
+      "input": { "ficoScore": 720, "state": "NY" },
+      "tags": ["pricing", "universe", "ny"]
+    },
+    {
+      "name": "Refinance with low FICO",
+      "input": { "ficoScore": 680, "state": "TX", "isUniverseRefinance": true },
+      "tags": ["pricing", "universe", "refi"]
+    },
+    {
+      "name": "Short sale history + outside US signing",
+      "input": { "ficoScore": 700, "state": "WA", "hasShortSaleOrForeclosureWithin5Years": true, "docSigningLocation": "outsideUS" },
+      "tags": ["pricing", "universe", "adjustments"]
+    }
+  ],
+  "pricing_ocean": [
+    {
+      "name": "Basic — FICO 740, purchase, primary SFR",
+      "input": { "ficoScore": 740, "ltv": 70, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr" },
+      "tags": ["pricing", "ocean", "basic"]
+    },
+    {
+      "name": "Cash-out, investment condo",
+      "input": { "ficoScore": 720, "ltv": 65, "loanPurpose": "cashOut", "occupancy": "investment", "propertyType": "condo" },
+      "tags": ["pricing", "ocean", "investment"]
+    },
+    {
+      "name": "Foreign national, multi-unit",
+      "input": { "ficoScore": 700, "ltv": 60, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "multiUnit", "units": 2, "isForeignNational": true },
+      "tags": ["pricing", "ocean", "foreign-national"]
+    }
+  ],
+  "pricing_hermes_ca": [
+    {
+      "name": "Basic — FICO 740, CA primary SFR",
+      "input": { "ficoScore": 740, "ltv": 70, "loanAmount": 800000, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr" },
+      "tags": ["pricing", "hermes", "ca", "basic"]
+    },
+    {
+      "name": "Bank statement, investment condo",
+      "input": { "ficoScore": 720, "ltv": 65, "loanAmount": 600000, "loanPurpose": "refinance", "occupancy": "investment", "propertyType": "condo", "incomeDocType": "bankStatement" },
+      "tags": ["pricing", "hermes", "ca", "bank-statement"]
+    },
+    {
+      "name": "ADU property, foreign national",
+      "input": { "ficoScore": 700, "ltv": 60, "loanAmount": 500000, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr", "hasADU": true, "isForeignNational": true },
+      "tags": ["pricing", "hermes", "ca", "adu"]
+    }
+  ],
+  "pricing_hermes_non_ca": [
+    {
+      "name": "Basic — FICO 740, TX primary SFR",
+      "input": { "ficoScore": 740, "ltv": 70, "loanAmount": 600000, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr" },
+      "tags": ["pricing", "hermes", "non-ca", "basic"]
+    },
+    {
+      "name": "Alt doc, cash-out, NY",
+      "input": { "ficoScore": 720, "ltv": 65, "loanAmount": 500000, "loanPurpose": "cashOut", "occupancy": "primary", "propertyType": "sfr", "incomeDocType": "altDoc" },
+      "tags": ["pricing", "hermes", "non-ca", "cash-out"]
+    },
+    {
+      "name": "Foreign national, multi-unit investment",
+      "input": { "ficoScore": 700, "ltv": 55, "loanAmount": 400000, "loanPurpose": "purchase", "occupancy": "investment", "propertyType": "multiUnit", "units": 2, "isForeignNational": true },
+      "tags": ["pricing", "hermes", "non-ca", "foreign-national"]
+    }
+  ],
+  "pricing_thunder": [
+    {
+      "name": "Basic — FICO 750, conforming ARM, CA",
+      "input": { "ficoScore": 750, "ltv": 70, "loanAmount": 500000, "loanPurpose": "purchase", "loanType": "arm", "armTerm": "5/6", "occupancy": "primary", "propertyType": "sfr" },
+      "tags": ["pricing", "thunder", "basic"]
+    },
+    {
+      "name": "Jumbo fixed, 30yr, investment",
+      "input": { "ficoScore": 740, "ltv": 65, "loanAmount": 1000000, "loanPurpose": "purchase", "loanType": "fixed", "loanTerm": 30, "occupancy": "investment", "propertyType": "sfr" },
+      "tags": ["pricing", "thunder", "jumbo"]
+    },
+    {
+      "name": "Interest-only, subordinate financing",
+      "input": { "ficoScore": 720, "ltv": 60, "loanAmount": 900000, "loanPurpose": "refinance", "loanType": "arm", "armTerm": "5/6", "occupancy": "primary", "propertyType": "sfr", "isInterestOnly": true, "hasSubordinateFinancing": true },
+      "tags": ["pricing", "thunder", "io"]
+    }
+  ],
+  "pricing_fabulous": [
+    {
+      "name": "Basic — FICO 750, purchase, FL",
+      "input": { "ficoScore": 750, "ltv": 70, "loanAmount": 500000, "loanPurpose": "purchase" },
+      "tags": ["pricing", "fabulous", "basic"]
+    },
+    {
+      "name": "Cash-out — FICO 730",
+      "input": { "ficoScore": 730, "ltv": 65, "loanAmount": 600000, "loanPurpose": "cashOut" },
+      "tags": ["pricing", "fabulous", "cash-out"]
+    },
+    {
+      "name": "Large loan, refinance",
+      "input": { "ficoScore": 760, "ltv": 75, "loanAmount": 900000, "loanPurpose": "refinance" },
+      "tags": ["pricing", "fabulous", "large"]
+    }
+  ],
+  "pricing_celebrity": [
+    {
+      "name": "Conforming — FICO 740, CA primary, purchase",
+      "input": { "ficoScore": 740, "ltv": 80, "loanAmount": 500000, "loanProgram": "conforming", "loanPurpose": "purchase", "loanType": "fixed", "occupancy": "primary", "propertyType": "sfr", "propertyState": "CA" },
+      "tags": ["pricing", "celebrity", "conforming"]
+    },
+    {
+      "name": "FHA — FICO 660, FL",
+      "input": { "ficoScore": 660, "ltv": 96, "loanAmount": 300000, "loanProgram": "fha", "loanPurpose": "purchase", "loanType": "fixed", "occupancy": "primary", "propertyType": "sfr", "propertyState": "FL" },
+      "tags": ["pricing", "celebrity", "fha"]
+    },
+    {
+      "name": "Non-conforming ARM, high DTI",
+      "input": { "ficoScore": 720, "ltv": 70, "loanAmount": 800000, "loanProgram": "nonConforming", "loanPurpose": "purchase", "loanType": "arm", "occupancy": "primary", "propertyType": "sfr", "propertyState": "CA", "dti": 48 },
+      "tags": ["pricing", "celebrity", "non-conforming"]
+    },
+    {
+      "name": "Community opportunity, LMIB + LMIT",
+      "input": { "ficoScore": 680, "ltv": 85, "loanAmount": 400000, "loanProgram": "communityOpp", "loanPurpose": "purchase", "loanType": "fixed", "occupancy": "primary", "propertyType": "sfr", "propertyState": "GA", "propertyCounty": "Mecklenburg", "isLMIB": true, "isLMIT": true },
+      "tags": ["pricing", "celebrity", "community"]
+    }
+  ],
+  "pricing_radiant_cra": [
+    {
+      "name": "Basic — FICO 700, purchase, primary SFR",
+      "input": { "ficoScore": 700, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr" },
+      "tags": ["pricing", "radiant-cra", "basic"]
+    },
+    {
+      "name": "Investment condo, cash-out",
+      "input": { "ficoScore": 720, "loanPurpose": "cashOut", "occupancy": "investment", "propertyType": "condo" },
+      "tags": ["pricing", "radiant-cra", "investment"]
+    },
+    {
+      "name": "Short employment + exception",
+      "input": { "ficoScore": 680, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr", "hasShortEmploymentHistory": true, "hasException": true },
+      "tags": ["pricing", "radiant-cra", "adjustments"]
+    }
+  ],
+  "pricing_radiant_portfolio": [
+    {
+      "name": "Basic — FICO 720, purchase, primary SFR",
+      "input": { "ficoScore": 720, "ltv": 65, "loanAmount": 500000, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr" },
+      "tags": ["pricing", "radiant-portfolio", "basic"]
+    },
+    {
+      "name": "No FICO, low LTV",
+      "input": { "ltv": 50, "loanAmount": 300000, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr", "isNoFico": true },
+      "tags": ["pricing", "radiant-portfolio", "no-fico"]
+    },
+    {
+      "name": "Investment, borrower-signed P&L",
+      "input": { "ficoScore": 700, "ltv": 60, "loanAmount": 800000, "loanPurpose": "cashOut", "occupancy": "investment", "propertyType": "pud", "hasBorrowerSignedPL": true },
+      "tags": ["pricing", "radiant-portfolio", "investment"]
+    }
+  ],
+  "pricing_radiant_au": [
+    {
+      "name": "Basic — FICO 720, purchase, primary SFR",
+      "input": { "ficoScore": 720, "ltv": 60, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr" },
+      "tags": ["pricing", "radiant-au", "basic"]
+    },
+    {
+      "name": "No FICO, low LTV",
+      "input": { "ltv": 45, "loanPurpose": "purchase", "occupancy": "primary", "propertyType": "sfr", "isNoFico": true },
+      "tags": ["pricing", "radiant-au", "no-fico"]
+    },
+    {
+      "name": "Investment with CD waiver + reserve adj",
+      "input": { "ficoScore": 700, "ltv": 55, "loanPurpose": "cashOut", "occupancy": "investment", "propertyType": "condo", "financedProperties": 3, "reserveAdjustmentMonths": 6, "waiveCdMonths": 13 },
+      "tags": ["pricing", "radiant-au", "investment"]
+    }
+  ]
+}

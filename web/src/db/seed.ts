@@ -14,6 +14,7 @@ import {
   functions,
   functionTestCases,
   tools,
+  toolTestCases,
   wikiDocuments,
   evalCases,
   evalJudgeConfigs,
@@ -78,7 +79,40 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   const agentId = agent.id;
   console.log(`  - ${agent.name} (${agent.id})`);
 
-  // Seed agent members — make all existing users owners
+  // Seed users from seed-data/users.json
+  console.log("Seeding users...");
+  const seedUsers = readJson<
+    Array<{
+      id: string;
+      clerk_id: string;
+      email: string;
+      nickname: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      platform_role: "user" | "super_admin";
+    }>
+  >(join(__dirname, "seed-data/users.json"));
+
+  for (const u of seedUsers) {
+    await db
+      .insert(users)
+      .values({
+        id: u.id,
+        clerkId: u.clerk_id,
+        email: u.email,
+        nickname: u.nickname,
+        avatarUrl: u.avatar_url,
+        bio: u.bio,
+        platformRole: u.platform_role,
+      })
+      .onConflictDoUpdate({
+        target: users.clerkId,
+        set: { email: u.email, avatarUrl: u.avatar_url },
+      });
+    console.log(`  - ${u.email} (${u.id})`);
+  }
+
+  // Seed agent members — make all users owners
   console.log("Seeding agent members...");
   const allUsers = await db.select({ id: users.id }).from(users);
   for (const u of allUsers) {
@@ -142,6 +176,52 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
       .returning();
     toolIds.push(row.id);
     console.log(`  - ${row.name} (${row.id})${componentSource ? " [+component]" : ""}`);
+  }
+
+  // Seed tool test cases
+  console.log("Seeding tool test cases...");
+  try {
+    const toolTestCasesSeed = readJson<
+      Record<string, Array<{
+        name: string;
+        input: Record<string, unknown>;
+        expectedOutput?: unknown;
+        tags?: string[];
+      }>>
+    >(join(agentDir, "tool-test-cases.json"));
+
+    // Build name→id map from seeded tools
+    const toolNameToId: Record<string, string> = {};
+    for (let i = 0; i < toolsSeed.length; i++) {
+      toolNameToId[toolsSeed[i].name] = toolIds[i];
+    }
+
+    let totalToolTestCases = 0;
+    for (const [toolName, cases] of Object.entries(toolTestCasesSeed)) {
+      const toolId = toolNameToId[toolName];
+      if (!toolId) {
+        console.warn(`  Warning: tool "${toolName}" not found, skipping test cases`);
+        continue;
+      }
+
+      // Clear existing test cases for this tool before re-seeding
+      await db.delete(toolTestCases).where(eq(toolTestCases.toolId, toolId));
+
+      for (const tc of cases) {
+        await db.insert(toolTestCases).values({
+          toolId,
+          name: tc.name,
+          input: tc.input,
+          expectedOutput: tc.expectedOutput ?? null,
+          tags: tc.tags ?? [],
+        });
+        totalToolTestCases++;
+      }
+      console.log(`  - ${toolName}: ${cases.length} test cases`);
+    }
+    console.log(`Seeded ${totalToolTestCases} tool test cases`);
+  } catch (e) {
+    console.warn("  Warning seeding tool test cases:", e);
   }
 
   // Seed wiki documents
