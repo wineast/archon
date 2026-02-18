@@ -246,10 +246,7 @@ describe("buildDynamicTools", () => {
       resolvedVars: { greeting: "hello" },
       docs: [],
       datasetEntries: {
-        colors: [
-          { value: "red" },
-          { value: "blue" },
-        ],
+        colors: [{ value: "red" }, { value: "blue" }],
       },
       toolRows: [],
     };
