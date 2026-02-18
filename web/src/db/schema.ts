@@ -197,29 +197,36 @@ export const wikiDocuments = pgTable("wiki_documents", {
 export type WikiDocumentRow = typeof wikiDocuments.$inferSelect;
 export type NewWikiDocumentRow = typeof wikiDocuments.$inferInsert;
 
-export const tools = pgTable("tools", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  agentId: uuid("agent_id").references(() => agents.id, {
-    onDelete: "cascade",
-  }),
-  name: text("name").notNull().unique(),
-  description: text("description").notNull(),
-  parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
-  returnParameters: jsonb("return_parameters").$type<ToolParameter[]>().notNull().default([]),
-  output: text("output"),
-  handler: text("handler"),
-  component: text("component"),
-  componentSource: text("component_source"),
-  componentMockData: text("component_mock_data"),
-  enabled: boolean("enabled").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const tools = pgTable(
+  "tools",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
+    returnParameters: jsonb("return_parameters").$type<ToolParameter[]>().notNull().default([]),
+    output: text("output"),
+    handler: text("handler"),
+    component: text("component"),
+    componentSource: text("component_source"),
+    componentMockData: text("component_mock_data"),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    unique("tools_agent_id_key_idx").on(table.agentId, table.key),
+  ]
+);
 
 export type ToolRow = typeof tools.$inferSelect;
 export type NewToolRow = typeof tools.$inferInsert;

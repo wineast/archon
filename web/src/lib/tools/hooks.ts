@@ -27,6 +27,7 @@ export function useTools(agentId?: string) {
 export async function createTool(
   data: {
     agentId: string;
+    key: string;
     name: string;
     description: string;
     parameters?: unknown[];

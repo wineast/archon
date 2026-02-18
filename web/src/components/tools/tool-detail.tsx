@@ -67,6 +67,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
           <ToolForm
             tool={{
               id: tool.id,
+              key: tool.key,
               name: tool.name,
               description: tool.description,
               parameters: tool.parameters,

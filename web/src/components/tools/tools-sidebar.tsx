@@ -10,7 +10,7 @@ interface ToolsSidebarProps {
   tools: ToolRow[];
   activeToolId: string | null;
   onSelect: (id: string) => void;
-  onCreate: () => Promise<void>;
+  onCreate: () => void;
 }
 
 export function ToolsSidebar({

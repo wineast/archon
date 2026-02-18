@@ -18,6 +18,7 @@ export interface ToolParameter {
 
 export interface ToolDefinition {
   id: string;
+  key: string;
   name: string;
   description: string;
   parameters: ToolParameter[];

@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     .select()
     .from(tools)
     .where(eq(tools.agentId, agentId))
-    .orderBy(tools.createdAt);
+    .orderBy(tools.key);
   return NextResponse.json(rows);
 }
 
@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     .insert(tools)
     .values({
       agentId,
+      key: body.key,
       name: body.name,
       description: body.description,
       parameters: body.parameters ?? [],
