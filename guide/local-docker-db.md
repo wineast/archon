@@ -21,10 +21,11 @@ make setup
 `make setup` 会检查 `web/.vercel` 是否存在，不存在则提示先执行上面的 vercel 命令。检查通过后依次执行：
 
 ```
-vercel-check → db-up → wt-meta → wt-init
-                                    ├── env     (link-env + db-local-env)
-                                    ├── deps    (npm install)
-                                    └── db-init (db-push + seed)
+vercel-check → db-up → wt-meta → wt-setup.sh
+                                    ├── link-env
+                                    ├── db-local-env
+                                    ├── npm install
+                                    └── db-push + seed
 ```
 
 主仓库也被视为工作区——`wt-meta` 会创建 `.worktree/meta.json`（默认端口 3000），`db-local-env` 据此创建独立数据库 `archon_archon`。

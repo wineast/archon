@@ -1,35 +1,12 @@
-.PHONY: setup wt-init wt-meta env deps vercel-check dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-neon-env db-drop db-init wt-list wt-create wt-sync wt-merge wt-delete
+.PHONY: setup reset dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete
 
 # ============================================================
 # Setup
 # ============================================================
 
 ## 项目初始化（clone 后执行一次）
-## 检查 vercel → 启动 Docker → 创建主仓库 meta → wt-init
-setup: vercel-check db-up wt-meta wt-init
-
-## 工作区初始化（setup 和 wt-create 共用）
-## env (link-env + db-local-env) → deps (npm install) → db-init (push + seed)
-wt-init: env deps db-init
-
-## 创建主仓库的 .worktree/meta.json（把主仓库也视为工作区）
-wt-meta:
-	@mkdir -p .worktree
-	@if [ ! -f .worktree/meta.json ]; then \
-		echo '{"dev":3000,"storybook":6006,"studio":4983,"baseBranch":"main"}' > .worktree/meta.json; \
-		echo "Created .worktree/meta.json (main workspace)"; \
-	fi
-
-## 环境配置：创建 .env.local symlink + .env.development.local（指向正确数据库）
-env:
-	@./scripts/link-env.sh
-	@./scripts/db-local-env.sh
-
-## 安装依赖
-deps:
-	cd web && npm install
-
-vercel-check:
+setup:
+	@echo "🔍 [vercel-check] 检查 Vercel 配置..."
 	@if [ ! -d web/.vercel ]; then \
 		echo ""; \
 		echo "========================================"; \
@@ -42,6 +19,29 @@ vercel-check:
 		echo ""; \
 		exit 1; \
 	fi
+	@echo "🐘 [db-up] 启动 Docker PostgreSQL..."
+	@docker compose up -d --wait
+	@echo "📦 [wt-meta] 创建工作区元数据..."
+	@mkdir -p .worktree
+	@if [ ! -f .worktree/meta.json ]; then \
+		echo '{"dev":3000,"storybook":6006,"studio":4983,"baseBranch":"main"}' > .worktree/meta.json; \
+		echo "  Created .worktree/meta.json (main workspace)"; \
+	else \
+		echo "  .worktree/meta.json 已存在，跳过"; \
+	fi
+	@./scripts/wt-setup.sh .
+	@echo ""
+	@echo "✅ Setup 完成"
+
+## 反向清理
+reset:
+	@./scripts/wt-reset.sh .
+	@echo "🐘 [reset] 停止 Docker 并删除数据卷..."
+	docker compose down -v
+	@echo "📦 [reset] 删除工作区元数据..."
+	rm -rf .worktree
+	@echo ""
+	@echo "✅ Reset 完成"
 
 # ============================================================
 # Development
@@ -103,7 +103,7 @@ db-push-force:
 db-reset:
 	cd web && npm run db:reset
 
-db-seed seed:
+db-seed:
 	cd web && npm run db:seed
 
 db-studio:
@@ -123,6 +123,7 @@ db-studio:
 
 ## 启动本地 Docker PostgreSQL
 db-up:
+	@echo "🐘 [db-up] 启动 Docker PostgreSQL..."
 	docker compose up -d --wait
 
 ## 停止容器
@@ -138,12 +139,12 @@ db-neon-env:
 	@rm -f web/.env.development.local && \
 	echo "Removed web/.env.development.local → Neon DB"
 
-## 删除当前工作区的独立数据库
-db-drop:
-	@./scripts/db-drop.sh
-
 ## 推 schema + 灌数据
-db-init: db-push seed
+db-init:
+	@echo "🗄️  [db-init] 推送 schema..."
+	@$(MAKE) db-push
+	@echo "🌱 [db-init] 灌入种子数据..."
+	@$(MAKE) db-seed
 
 # ============================================================
 # Git Worktree

@@ -71,7 +71,7 @@ cmd_create() {
         info "已复制 web/.vercel"
     fi
 
-    # 创建 .worktree 目录和 meta.json（必须在 wt-init 之前，db-local-env 需要它识别 worktree）
+    # 创建 .worktree 目录和 meta.json（必须在 wt-setup 之前，db-local-env 需要它识别 worktree）
     local wt_config_dir="$worktree_path/.worktree"
     if [ ! -d "$wt_config_dir" ]; then
         info "创建 .worktree/ 配置目录..."
@@ -87,7 +87,7 @@ cmd_create() {
 
     # 环境初始化：env (link-env + db-local-env) → deps (npm install) → db-init (push + seed)
     info "初始化工作区环境..."
-    (cd "$worktree_path" && make wt-init)
+    "$PROJECT_ROOT/scripts/wt-setup.sh" "$worktree_path"
     success "工作区环境初始化完成"
 
     # 生成 CLAUDE.local.md（提醒 Claude 使用正确的端口）

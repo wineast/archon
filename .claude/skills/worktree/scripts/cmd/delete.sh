@@ -60,10 +60,8 @@ cmd_delete() {
     # 终止工作区启动的服务（dev server / storybook / drizzle studio）
     kill_worktree_services "$worktree_path"
 
-    # 删除对应的本地数据库
-    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q archon-postgres; then
-        (cd "$worktree_path" && make db-drop) || true
-    fi
+    # 重置工作区环境（删缓存/依赖 → 删数据库 → 删环境文件）
+    "$PROJECT_ROOT/scripts/wt-reset.sh" "$worktree_path"
 
     # 删除 worktree
     info "删除 worktree: $worktree_path"
