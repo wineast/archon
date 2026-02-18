@@ -100,6 +100,9 @@ cmd_select_delete() {
         cd "$PROJECT_ROOT"
     fi
 
+    # 终止工作区启动的服务（dev server / storybook / drizzle studio）
+    kill_worktree_services "$selected_path"
+
     info "删除 worktree: $selected_path"
     git worktree remove "$selected_path" --force
 

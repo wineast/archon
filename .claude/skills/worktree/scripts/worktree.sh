@@ -53,6 +53,35 @@ link_auto_memory() {
     info "已链接 auto memory → main"
 }
 
+kill_worktree_services() {
+    local wt_path="$1"
+    local meta="$wt_path/.worktree/meta.json"
+    local killed=0
+
+    if [ ! -f "$meta" ]; then
+        return
+    fi
+
+    # 读取端口
+    local dev_port=$(node -p "require('$meta').dev" 2>/dev/null)
+    local storybook_port=$(node -p "require('$meta').storybook" 2>/dev/null)
+    local studio_port=$(node -p "require('$meta').studio" 2>/dev/null)
+
+    for port in $dev_port $storybook_port $studio_port; do
+        if [ -n "$port" ] && [ "$port" != "undefined" ]; then
+            local pids=$(lsof -ti :"$port" 2>/dev/null || true)
+            if [ -n "$pids" ]; then
+                echo "$pids" | xargs kill 2>/dev/null || true
+                killed=$((killed + 1))
+            fi
+        fi
+    done
+
+    if [ "$killed" -gt 0 ]; then
+        info "已终止 $killed 个工作区服务"
+    fi
+}
+
 ensure_worktrees_dir() {
     if [ ! -d "$WORKTREES_DIR" ]; then
         info "创建 .worktrees/ 目录..."
