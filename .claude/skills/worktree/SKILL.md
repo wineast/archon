@@ -107,6 +107,8 @@ make wt-sync
 
 将工作区分支合并回其 base 分支（记录在 `.worktree/meta.json` 中）。从主仓库执行。
 
+- 合并后自动检测 `package.json` / `package-lock.json` 是否有变更，有则自动执行 `npm install`
+
 ```bash
 make wt-merge NAME=<name>
 ```

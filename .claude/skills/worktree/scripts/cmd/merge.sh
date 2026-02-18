@@ -61,6 +61,19 @@ cmd_merge() {
     # 合并
     if git merge "$wt_branch"; then
         success "已合并 $wt_branch → $base_branch"
+
+        # 检查依赖文件是否有变更，有则自动安装
+        local merge_diff
+        merge_diff=$(git diff HEAD~1 --name-only 2>/dev/null || true)
+
+        if echo "$merge_diff" | grep -q "package-lock.json\|package.json"; then
+            info "检测到依赖文件变更，执行 npm install..."
+            if [ -d "$PROJECT_ROOT/web" ]; then
+                (cd "$PROJECT_ROOT/web" && npm install)
+                success "依赖安装完成"
+            fi
+        fi
+
         echo ""
         echo "下一步（可选）："
         echo "  make wt-delete NAME=$target    # 删除工作区"
