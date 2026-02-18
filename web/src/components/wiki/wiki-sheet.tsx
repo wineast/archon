@@ -53,7 +53,7 @@ export function WikiSheet({
   }, [documents, mutate]);
 
   const handleUpdate = useCallback(
-    async (id: string, updates: Partial<{ title: string; content: string }>) => {
+    async (id: string, updates: { content: string }) => {
       return updateDocument(id, updates, documents, mutate);
     },
     [documents, mutate]
@@ -94,7 +94,6 @@ export function WikiSheet({
             activeDocId={activeDocId}
             onSelect={setActiveDocId}
             onCreate={handleCreate}
-            onUpdate={handleUpdate}
             onDelete={handleDelete}
             onReorder={handleReorder}
           />
@@ -115,7 +114,6 @@ export function WikiSheet({
               activeDocId={activeDocId}
               onSelect={setActiveDocId}
               onCreate={handleCreate}
-              onUpdate={handleUpdate}
               onDelete={handleDelete}
               onReorder={handleReorder}
             />

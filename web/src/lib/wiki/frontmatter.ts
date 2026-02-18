@@ -33,3 +33,13 @@ export function parseWikiContent(raw: string): ParsedWikiContent {
 export function stripFrontmatter(raw: string): string {
   return parseWikiContent(raw).content;
 }
+
+/**
+ * Derive a display title from wiki content.
+ * Priority: frontmatter `title` → first line of body (stripped of `#` prefix) → "Untitled".
+ */
+export function resolveTitle(content: string): string {
+  const { meta, content: body } = parseWikiContent(content);
+  const firstLine = body.split("\n")[0]?.trim().replace(/^#+\s*/, "") || "";
+  return meta.title || firstLine || "Untitled";
+}

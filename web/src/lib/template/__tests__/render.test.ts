@@ -23,7 +23,6 @@ vi.mock("@/db/schema", () => ({
   wikiDocuments: {
     id: "id",
     agentId: "agent_id",
-    title: "title",
     content: "content",
     order: "order",
     createdAt: "created_at",
@@ -158,7 +157,6 @@ describe("renderSystemPrompt", () => {
       [
         {
           id: "faq-doc",
-          title: "FAQ",
           content: "Q: What? A: This.",
           order: 0,
           createdAt: now,
@@ -170,7 +168,7 @@ describe("renderSystemPrompt", () => {
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
-      "{% include 'FAQ' %}",
+      "{% include 'faq-doc' %}",
       "agent-1"
     );
     expect(result).toBe("Q: What? A: This.");
@@ -409,7 +407,6 @@ describe("renderWikiContent", () => {
       [
         {
           id: "doc-1",
-          title: "Main",
           content: "Main doc",
           order: 0,
           createdAt: now,
@@ -417,7 +414,6 @@ describe("renderWikiContent", () => {
         },
         {
           id: "doc-2",
-          title: "Footer",
           content: "-- End --",
           order: 1,
           createdAt: now,
@@ -429,7 +425,7 @@ describe("renderWikiContent", () => {
 
     const { renderWikiContent } = await import("../render");
     const result = await renderWikiContent(
-      "{{org}}\n{% include 'Footer' %}",
+      "{{org}}\n{% include 'doc-2' %}",
       "agent-1",
       "doc-1"
     );
@@ -459,7 +455,6 @@ describe("renderWikiContent", () => {
       [
         {
           id: "wiki-uw-ocean",
-          title: "Ocean",
           content: "合格：{{ocean_incomes}}。\n不合格：{{ocean_incomes_excluded}}。\n州：{{ocean_states}}。",
           order: 0,
           createdAt: now,

@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { wikiDocuments, datasets } from "@/db/schema";
 import { eq, like, ilike } from "drizzle-orm";
 import { renderWikiContent } from "@/lib/template/render";
-import { parseWikiContent } from "@/lib/wiki/frontmatter";
+import { parseWikiContent, resolveTitle } from "@/lib/wiki/frontmatter";
 import {
   renderField,
   renderObjectField,
@@ -83,14 +83,13 @@ export function createToolContext(agentId?: string): ToolContext {
         const rows = await db
           .select({
             id: wikiDocuments.id,
-            title: wikiDocuments.title,
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
           .where(like(wikiDocuments.id, `${prefix}%`));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
-          return { id: r.id, title: r.title, meta: Object.keys(meta).length > 0 ? meta : null, content };
+          return { id: r.id, title: resolveTitle(r.content), meta: Object.keys(meta).length > 0 ? meta : null, content };
         });
       },
 
@@ -98,14 +97,13 @@ export function createToolContext(agentId?: string): ToolContext {
         const rows = await db
           .select({
             id: wikiDocuments.id,
-            title: wikiDocuments.title,
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
           .where(ilike(wikiDocuments.content, `%${query}%`));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
-          return { id: r.id, title: r.title, meta: Object.keys(meta).length > 0 ? meta : null, content };
+          return { id: r.id, title: resolveTitle(r.content), meta: Object.keys(meta).length > 0 ? meta : null, content };
         });
       },
     },

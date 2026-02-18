@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
-import { parseWikiContent } from "@/lib/wiki/frontmatter";
+import { resolveTitle } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import type { WikiDocumentRow } from "@/db/schema";
 
 function toWikiDocument(row: WikiDocumentRow): WikiDocument {
-  const { meta, content: body } = parseWikiContent(row.content);
   return {
     id: row.id,
-    title: meta.title || body.split("\n")[0]?.trim() || row.title,
+    title: resolveTitle(row.content),
     content: row.content,
     order: row.order,
     createdAt: row.createdAt.getTime(),
@@ -28,7 +27,6 @@ export async function POST(req: Request) {
     .insert(wikiDocuments)
     .values({
       id: body.id,
-      title: body.title,
       content: body.content,
       order: body.order,
     })

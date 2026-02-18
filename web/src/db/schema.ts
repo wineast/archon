@@ -114,7 +114,6 @@ export const wikiDocuments = pgTable("wiki_documents", {
     onDelete: "cascade",
   }),
   parentId: text("parent_id"),
-  title: text("title").notNull().default("Untitled"),
   content: text("content").notNull().default(""),
   order: integer("order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
