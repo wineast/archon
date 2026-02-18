@@ -3,7 +3,7 @@
 import { use } from "react";
 import { notFound } from "next/navigation";
 import useSWR from "swr";
-import { UserButton } from "@clerk/nextjs";
+import { UserMenu } from "@/components/auth/user-menu";
 import { DefaultChatTransport, isTextUIPart } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
@@ -42,7 +42,6 @@ import { DatasetsSheet } from "@/components/datasets/datasets-sheet";
 import { FunctionsSheet } from "@/components/functions/functions-sheet";
 import { RequestInspectorModal } from "@/components/request-inspector-modal";
 import { ChatConfigSheet } from "@/components/chat-config/chat-config-sheet";
-import { UserSettingsModal } from "@/components/user/user-settings-modal";
 import { ToolsSheet } from "@/components/tools/tools-sheet";
 import { ModelConfigSheet } from "@/components/model-config/model-config-sheet";
 import { MembersSheet } from "@/components/members/members-sheet";
@@ -68,7 +67,6 @@ import {
   SlidersHorizontalIcon,
   Trash2Icon,
   UploadIcon,
-  UserCogIcon,
   UsersIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -106,7 +104,6 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
   const [evalOpen, setEvalOpen] = useState(false);
   const [datasetsOpen, setDatasetsOpen] = useState(false);
   const [functionsOpen, setFunctionsOpen] = useState(false);
-  const [userSettingsOpen, setUserSettingsOpen] = useState(false);
   const [wikiOpen, setWikiOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
 
@@ -433,7 +430,6 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
         />
         <ChatConfigSheet open={configOpen} onOpenChange={setConfigOpen} agentId={agent.id} />
         <EvalSheet open={evalOpen} onOpenChange={setEvalOpen} agentId={agent.id} />
-        <UserSettingsModal open={userSettingsOpen} onOpenChange={setUserSettingsOpen} />
 
         {/* ── Layout header ── */}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
@@ -520,14 +516,9 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setUserSettingsOpen(true)}>
-                  <UserCogIcon className="size-4" />
-                  Settings
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <UserButton />
+            <UserMenu />
           </div>
         </header>
 

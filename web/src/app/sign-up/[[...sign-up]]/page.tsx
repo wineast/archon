@@ -1,15 +1,24 @@
-import { SignUp } from "@clerk/nextjs";
+"use client";
 
-export default async function SignUpPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ redirect_url?: string }>;
-}) {
-  const { redirect_url } = await searchParams;
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { SignUpForm } from "@/components/auth/sign-up-form";
+
+function SignUpContent() {
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect_url") ?? "/";
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <SignUp forceRedirectUrl={redirect_url ?? "/"} />
+    <div className="flex min-h-svh items-center justify-center p-4">
+      <SignUpForm redirectUrl={redirectUrl} />
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpContent />
+    </Suspense>
   );
 }
