@@ -2,11 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { JsonEditor } from "@/components/ui/editors/json-editor";
 import {
   Select,
   SelectContent,
@@ -16,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { ToolParameter, ToolParamType } from "@/lib/tools/types";
-import { EqualIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { BracesIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import {
   Controller,
@@ -107,6 +103,156 @@ function NestedProperties({
   );
 }
 
+/** Only re-renders when `required` changes. */
+function RequiredLabel({ fieldPath }: { fieldPath: string }) {
+  const { control } = useFormContext();
+  const required = useWatch({ control, name: `${fieldPath}.required` }) as boolean;
+  return (
+    <span className="text-[10px] text-muted-foreground w-8">
+      {required ? "req" : "opt"}
+    </span>
+  );
+}
+
+/** Only re-renders when `defaultValue` changes (for icon highlight). */
+function DefaultValueToggleButton({
+  fieldPath,
+  onClick,
+}: {
+  fieldPath: string;
+  onClick: () => void;
+}) {
+  const { control } = useFormContext();
+  const defaultValue = useWatch({ control, name: `${fieldPath}.defaultValue` });
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      className={`size-8 p-0 ${defaultValue != null ? "text-foreground" : "text-muted-foreground/50"}`}
+    >
+      <BracesIcon className="size-3.5" />
+    </Button>
+  );
+}
+
+/** Type-specific default value editor — watches its own fields. */
+function DefaultValueEditor({
+  type,
+  fieldPath,
+  enumRefValues,
+}: {
+  type: ToolParamType;
+  fieldPath: string;
+  enumRefValues: Record<string, string[]>;
+}) {
+  const { control, setValue } = useFormContext();
+  const defaultValue = useWatch({ control, name: `${fieldPath}.defaultValue` });
+  const enumValues = useWatch({ control, name: `${fieldPath}.enum` }) as string[] | undefined;
+  const enumRef = useWatch({ control, name: `${fieldPath}.enumRef` }) as string | undefined;
+
+  // Resolve available options for enum type
+  const options =
+    enumRef && enumRefValues[enumRef]
+      ? enumRefValues[enumRef]
+      : enumValues ?? [];
+
+  if (type === "boolean") {
+    return (
+      <div className="flex items-center gap-2 pl-[128px]">
+        <label className="text-xs text-muted-foreground shrink-0">默认值</label>
+        <Switch
+          size="sm"
+          checked={defaultValue === true}
+          onCheckedChange={(checked: boolean) =>
+            setValue(`${fieldPath}.defaultValue`, checked)
+          }
+        />
+        <span className="text-xs text-muted-foreground">
+          {defaultValue === true ? "true" : "false"}
+        </span>
+      </div>
+    );
+  }
+
+  if (type === "enum") {
+    return (
+      <div className="flex items-center gap-2 pl-[128px]">
+        <label className="text-xs text-muted-foreground shrink-0">默认值</label>
+        <Select
+          value={defaultValue != null ? String(defaultValue) : ""}
+          onValueChange={(value: string) =>
+            setValue(`${fieldPath}.defaultValue`, value || undefined)
+          }
+        >
+          <SelectTrigger className="flex-1" size="sm">
+            <SelectValue placeholder="选择默认值..." />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((v) => (
+              <SelectItem key={v} value={v}>
+                {v}
+              </SelectItem>
+            ))}
+            {options.length === 0 && (
+              <SelectItem value="__empty__" disabled>
+                请先定义枚举值
+              </SelectItem>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+
+  if (type === "json") {
+    return (
+      <div className="pl-[128px] space-y-1">
+        <label className="text-xs text-muted-foreground">默认值</label>
+        <JsonEditor
+          value={defaultValue != null ? JSON.stringify(defaultValue, null, 2) : ""}
+          onChange={(raw) => {
+            if (!raw?.trim()) {
+              setValue(`${fieldPath}.defaultValue`, undefined);
+            } else {
+              try {
+                setValue(`${fieldPath}.defaultValue`, JSON.parse(raw));
+              } catch {
+                // keep raw string while user is still typing
+              }
+            }
+          }}
+          height="100px"
+        />
+      </div>
+    );
+  }
+
+  // string / number — plain input
+  return (
+    <div className="flex items-center gap-2 pl-[128px]">
+      <label className="text-xs text-muted-foreground shrink-0">默认值</label>
+      <Input
+        className="h-8 flex-1 text-xs font-mono"
+        type={type === "number" ? "number" : "text"}
+        value={defaultValue != null ? String(defaultValue) : ""}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") {
+            setValue(`${fieldPath}.defaultValue`, undefined);
+          } else if (type === "number") {
+            const num = Number(raw);
+            setValue(`${fieldPath}.defaultValue`, isNaN(num) ? raw : num);
+          } else {
+            setValue(`${fieldPath}.defaultValue`, raw);
+          }
+        }}
+        placeholder={type === "number" ? "0" : "default value"}
+      />
+    </div>
+  );
+}
+
 export function ParameterRow({
   fieldPath,
   onDelete,
@@ -115,12 +261,10 @@ export function ParameterRow({
   hideDefault = false,
   depth = 0,
 }: ParameterRowProps) {
-  const { register, control, setValue } = useFormContext();
+  const { register, control, setValue, getValues } = useFormContext();
 
-  // Only watch fields needed for conditional rendering
+  // Only watch fields needed for conditional rendering in this component
   const type = useWatch({ control, name: `${fieldPath}.type` }) as ToolParamType;
-  const required = useWatch({ control, name: `${fieldPath}.required` }) as boolean;
-  const defaultValue = useWatch({ control, name: `${fieldPath}.defaultValue` });
   const enumRef = useWatch({ control, name: `${fieldPath}.enumRef` }) as string | undefined;
 
   const isEnum = type === "enum";
@@ -129,6 +273,10 @@ export function ParameterRow({
 
   const [enumSource, setEnumSource] = useState<EnumSource>(() =>
     enumRef ? "ref" : "manual"
+  );
+  // Read initial defaultValue once (no subscription) to set initial expand state
+  const [showDefault, setShowDefault] = useState(
+    () => getValues(`${fieldPath}.defaultValue`) != null
   );
 
   return (
@@ -175,40 +323,10 @@ export function ParameterRow({
           placeholder="description"
         />
         {!hideDefault && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`size-8 p-0 ${defaultValue != null ? "text-foreground" : "text-muted-foreground/50"}`}
-              >
-                <EqualIcon className="size-3.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-3" align="end">
-              <label className="text-xs font-medium text-muted-foreground">
-                Default Value
-              </label>
-              <Input
-                className="mt-1.5 h-8 text-xs font-mono"
-                value={defaultValue != null ? String(defaultValue) : ""}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "") {
-                    setValue(`${fieldPath}.defaultValue`, undefined);
-                  } else {
-                    try {
-                      setValue(`${fieldPath}.defaultValue`, JSON.parse(raw));
-                    } catch {
-                      setValue(`${fieldPath}.defaultValue`, raw);
-                    }
-                  }
-                }}
-                placeholder="default value"
-                autoFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <DefaultValueToggleButton
+            fieldPath={fieldPath}
+            onClick={() => setShowDefault((v) => !v)}
+          />
         )}
         <div className="flex items-center gap-1">
           <Controller
@@ -238,9 +356,7 @@ export function ParameterRow({
               />
             )}
           />
-          <span className="text-[10px] text-muted-foreground w-8">
-            {required ? "req" : "opt"}
-          </span>
+          <RequiredLabel fieldPath={fieldPath} />
         </div>
         <Button
           variant="ghost"
@@ -251,6 +367,14 @@ export function ParameterRow({
           <Trash2Icon className="size-3.5" />
         </Button>
       </div>
+
+      {!hideDefault && showDefault && (
+        <DefaultValueEditor
+          type={type}
+          fieldPath={fieldPath}
+          enumRefValues={enumRefValues}
+        />
+      )}
 
       {isEnum && (
         <div className="flex items-center gap-2 pl-[128px]">
@@ -319,7 +443,7 @@ export function ParameterRow({
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="__empty__" disabled>
                           无可用的码表或变量
                         </SelectItem>
                       )}

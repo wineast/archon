@@ -1,27 +1,24 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { JsEditor } from "@/components/ui/editors/js-editor";
 import { JsonEditor } from "@/components/ui/editors/json-editor";
 import type { ToolDefinition } from "@/lib/tools/types";
 import { useDatasets } from "@/lib/datasets/hooks";
-import type { EnumRefOption } from "./parameter-row";
-import { ParameterRow } from "./parameter-row";
+import type { EnumRefOption } from "@/components/parameters/parameter-row";
+import { ParameterList } from "@/components/parameters/parameter-list";
 import { HandlerTestPanel } from "./handler-test-panel";
 import { ComponentPreviewPanel } from "./component-preview-panel";
-import { nanoid } from "nanoid";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Controller,
   FormProvider,
-  useFieldArray,
   useForm,
   useFormContext,
   useWatch,
 } from "react-hook-form";
-import { CodeIcon, GlobeIcon, LinkIcon, PlusIcon, TypeIcon } from "lucide-react";
+import { CodeIcon, GlobeIcon, LinkIcon, TypeIcon } from "lucide-react";
 
 export interface ToolFormHandle {
   getDraft: () => ToolDefinition;
@@ -106,12 +103,6 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
     return map;
   }, [datasets]);
 
-  const {
-    fields: paramFields,
-    append: appendParam,
-    remove: removeParam,
-  } = useFieldArray({ control: form.control, name: "parameters" });
-
   useEffect(() => {
     onDraftRef({
       getDraft: () => form.getValues(),
@@ -188,45 +179,12 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
             placeholder="Describe what this tool does and when the AI should use it..."
           />
         </div>
-        <div>
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-muted-foreground">
-              Parameters
-            </label>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                appendParam({
-                  id: nanoid(),
-                  name: "",
-                  type: "string",
-                  description: "",
-                  required: true,
-                })
-              }
-            >
-              <PlusIcon className="mr-1 size-3" />
-              Add
-            </Button>
-          </div>
-          <div className="mt-1 space-y-2">
-            {paramFields.map((field, idx) => (
-              <ParameterRow
-                key={field.id}
-                fieldPath={`parameters.${idx}`}
-                onDelete={() => removeParam(idx)}
-                enumRefOptions={enumRefOptions}
-                enumRefValues={enumRefValues}
-              />
-            ))}
-            {paramFields.length === 0 && (
-              <p className="text-xs text-muted-foreground py-2">
-                No parameters. This tool will be called without arguments.
-              </p>
-            )}
-          </div>
-        </div>
+        <ParameterList
+          fieldName="parameters"
+          label="Parameters"
+          enumRefOptions={enumRefOptions}
+          enumRefValues={enumRefValues}
+        />
         <div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">

@@ -4,16 +4,13 @@ import { useEffect, useRef } from "react";
 import {
   Controller,
   FormProvider,
-  useFieldArray,
   useForm,
 } from "react-hook-form";
-import { nanoid } from "nanoid";
-import { PlusIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { JsEditor } from "@/components/ui/editors/js-editor";
-import { ParameterRow } from "@/components/tools/parameter-row";
+import { ParameterList } from "@/components/parameters/parameter-list";
+import { ReturnParameterList } from "@/components/parameters/return-parameter-list";
 import type { ToolParameter } from "@/lib/tools/types";
 
 export interface FunctionFormValues {
@@ -61,18 +58,6 @@ export function FunctionForm({
 
   const form = useForm<FunctionFormValues>({ defaultValues });
   const originalRef = useRef(JSON.stringify(defaultValues));
-
-  const {
-    fields: paramFields,
-    append: appendParam,
-    remove: removeParam,
-  } = useFieldArray({ control: form.control, name: "parameters" });
-
-  const {
-    fields: returnParamFields,
-    append: appendReturnParam,
-    remove: removeReturnParam,
-  } = useFieldArray({ control: form.control, name: "returnParameters" });
 
   // Expose handle to parent
   useEffect(() => {
@@ -135,70 +120,11 @@ export function FunctionForm({
           />
         </div>
 
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            Parameters
-          </label>
-          <div className="mt-1 space-y-2">
-            {paramFields.map((field, index) => (
-              <ParameterRow
-                key={field.id}
-                fieldPath={`parameters.${index}`}
-                onDelete={() => removeParam(index)}
-              />
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                appendParam({
-                  id: nanoid(),
-                  name: "",
-                  type: "string",
-                  description: "",
-                  required: false,
-                })
-              }
-              className="gap-1"
-            >
-              <PlusIcon className="size-3" />
-              Add Parameter
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            Return Parameters
-          </label>
-          <div className="mt-1 space-y-2">
-            {returnParamFields.map((field, index) => (
-              <ParameterRow
-                key={field.id}
-                fieldPath={`returnParameters.${index}`}
-                onDelete={() => removeReturnParam(index)}
-                hideDefault
-              />
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                appendReturnParam({
-                  id: nanoid(),
-                  name: "",
-                  type: "string",
-                  description: "",
-                  required: false,
-                })
-              }
-              className="gap-1"
-            >
-              <PlusIcon className="size-3" />
-              Add Return Parameter
-            </Button>
-          </div>
-        </div>
+        <ParameterList fieldName="parameters" label="Parameters" />
+        <ReturnParameterList
+          fieldName="returnParameters"
+          label="Return Parameters"
+        />
 
         <div>
           <label className="text-xs font-medium text-muted-foreground">
