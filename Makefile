@@ -16,7 +16,7 @@ wt-init: env deps db-init
 wt-meta:
 	@mkdir -p .worktree
 	@if [ ! -f .worktree/meta.json ]; then \
-		echo '{"dev":3000,"storybook":6006,"baseBranch":"main"}' > .worktree/meta.json; \
+		echo '{"dev":3000,"storybook":6006,"studio":4983,"baseBranch":"main"}' > .worktree/meta.json; \
 		echo "Created .worktree/meta.json (main workspace)"; \
 	fi
 
