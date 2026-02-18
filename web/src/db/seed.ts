@@ -6,6 +6,8 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   agents,
+  agentMembers,
+  users,
   chatConfigs,
   modelConfigs,
   datasets,
@@ -75,6 +77,17 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     .returning();
   const agentId = agent.id;
   console.log(`  - ${agent.name} (${agent.id})`);
+
+  // Seed agent members — make all existing users owners
+  console.log("Seeding agent members...");
+  const allUsers = await db.select({ id: users.id }).from(users);
+  for (const u of allUsers) {
+    await db
+      .insert(agentMembers)
+      .values({ agentId, userId: u.id, role: "owner" })
+      .onConflictDoNothing();
+  }
+  console.log(`  - ${allUsers.length} user(s) added as owner`);
 
   // Seed system tools
   console.log("Seeding system tools...");
