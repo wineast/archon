@@ -10,167 +10,123 @@ vi.mock("@/db", () => ({
 }));
 
 vi.mock("@/db/schema", () => ({
-  wikiDocuments: { id: "id", title: "title", content: "content" },
-  lookupTables: { id: "id", key: "key" },
-  lookupEntries: {
-    tableId: "table_id",
-    value: "value",
-    label: "label",
-    metadata: "metadata",
-    order: "order",
+  datasets: {
+    key: "key",
+    layer: "layer",
+    data: "data",
+    agentId: "agent_id",
   },
-  dataObjects: { key: "key", data: "data" },
+  wikiDocuments: {
+    id: "id",
+    title: "title",
+    content: "content",
+    agentId: "agent_id",
+  },
 }));
 
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((a, b) => ({ op: "eq", a, b })),
   like: vi.fn((a, b) => ({ op: "like", a, b })),
   ilike: vi.fn((a, b) => ({ op: "ilike", a, b })),
-  and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
 }));
 
-describe("ToolContext.lookup (lookup tables only)", () => {
+vi.mock("@/lib/template/render", () => ({
+  renderWikiContent: vi.fn(),
+}));
+
+vi.mock("@/lib/wiki/frontmatter", () => ({
+  parseWikiContent: vi.fn((c: string) => ({ meta: {}, content: c })),
+}));
+
+function mockDbRows(rows: unknown[]) {
+  mockSelect.mockImplementation(() => ({
+    from: () => ({
+      where: () => ({
+        limit: () => ({
+          then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(rows)),
+        }),
+        then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(rows)),
+      }),
+    }),
+  }));
+}
+
+describe("ToolContext.dataset", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("get() returns empty array when table not found", async () => {
-    mockSelect.mockImplementation(() => ({
-      from: () => ({
-        where: () => ({
-          limit: () => Promise.resolve([]),
-        }),
-      }),
-    }));
+  it("get() returns null when no datasets found", async () => {
+    mockDbRows([]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext();
-    const result = await ctx.lookup.get("nonexistent");
-    expect(result).toEqual([]);
-    // Should only query lookupTables, NOT fall back to dataObjects
+    const ctx = createToolContext("agent-1");
+    const result = await ctx.dataset.get("nonexistent");
+    expect(result).toBeNull();
     expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 
-  it("get() returns entries when table exists", async () => {
-    const entries = [
-      { value: "CA", label: "California", metadata: null },
-      { value: "TX", label: "Texas", metadata: null },
-    ];
-
-    let callCount = 0;
-    mockSelect.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        return {
-          from: () => ({
-            where: () => ({
-              limit: () => Promise.resolve([{ id: "table-1" }]),
-            }),
-          }),
-        };
-      }
-      return {
-        from: () => ({
-          where: () => ({
-            orderBy: () => Promise.resolve(entries),
-          }),
-        }),
-      };
-    });
+  it("get() returns string value for layer 0 string dataset", async () => {
+    mockDbRows([{ key: "company", layer: 0, data: "Acme Corp" }]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext();
-    const result = await ctx.lookup.get("property_state");
-    expect(result).toEqual(entries);
+    const ctx = createToolContext("agent-1");
+    const result = await ctx.dataset.get("company");
+    expect(result).toBe("Acme Corp");
   });
 
-  it("find() filters entries by metadata", async () => {
-    const entries = [
-      { value: "CA", label: "California", metadata: { region: "west" } },
-      { value: "TX", label: "Texas", metadata: { region: "south" } },
-      { value: "WA", label: "Washington", metadata: { region: "west" } },
-    ];
-
-    let callCount = 0;
-    mockSelect.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        return {
-          from: () => ({
-            where: () => ({
-              limit: () => Promise.resolve([{ id: "table-1" }]),
-            }),
-          }),
-        };
-      }
-      return {
-        from: () => ({
-          where: () => ({
-            orderBy: () => Promise.resolve(entries),
-          }),
-        }),
-      };
-    });
+  it("get() returns object for layer 0 object dataset", async () => {
+    mockDbRows([
+      {
+        key: "states",
+        layer: 0,
+        data: { CA: "California", TX: "Texas" },
+      },
+    ]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext();
-    const result = await ctx.lookup.find("states", { region: "west" });
-    expect(result).toHaveLength(2);
-    expect(result[0].value).toBe("CA");
-    expect(result[1].value).toBe("WA");
-  });
-});
-
-describe("ToolContext.data (data objects only)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    const ctx = createToolContext("agent-1");
+    const result = await ctx.dataset.get("states");
+    expect(result).toEqual({ CA: "California", TX: "Texas" });
   });
 
-  it("get() returns empty array when object not found", async () => {
-    mockSelect.mockImplementation(() => ({
-      from: () => ({
-        where: () => ({
-          limit: () => Promise.resolve([]),
-        }),
-      }),
-    }));
+  it("get() resolves layer 1 data with layer 0 references", async () => {
+    mockDbRows([
+      { key: "name", layer: 0, data: "Universe" },
+      {
+        key: "routes",
+        layer: 1,
+        data: { product: { label: "{{name}}" } },
+      },
+    ]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext();
-    const result = await ctx.data.get("nonexistent");
-    expect(result).toEqual([]);
-    // Should only query dataObjects
-    expect(mockSelect).toHaveBeenCalledTimes(1);
+    const ctx = createToolContext("agent-1");
+    const result = await ctx.dataset.get("routes");
+    expect(result).toEqual({ product: { label: "Universe" } });
   });
 
-  it("get() returns entries from data object", async () => {
-    mockSelect.mockImplementation(() => ({
-      from: () => ({
-        where: () => ({
-          limit: () =>
-            Promise.resolve([
-              {
-                data: {
-                  universe: {
-                    label: "GMCC Universe",
-                    incomes: ["NQM-WVOE"],
-                    states: ["CA", "TX"],
-                  },
-                  ocean: {
-                    label: "GMCC Ocean",
-                    incomes: ["NQM-WVOE"],
-                    states: ["CA"],
-                  },
-                },
-              },
-            ]),
-        }),
-      }),
-    }));
+  it("getEntries() returns entries from object dataset", async () => {
+    mockDbRows([
+      {
+        key: "products",
+        layer: 0,
+        data: {
+          universe: {
+            label: "GMCC Universe",
+            states: ["CA", "TX"],
+          },
+          ocean: {
+            label: "GMCC Ocean",
+            states: ["CA"],
+          },
+        },
+      },
+    ]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext();
-    const result = await ctx.data.get("product_routes");
+    const ctx = createToolContext("agent-1");
+    const result = await ctx.dataset.getEntries("products");
     expect(result).toHaveLength(2);
     expect(result[0].value).toBe("universe");
     expect(result[0].label).toBe("GMCC Universe");
@@ -178,45 +134,34 @@ describe("ToolContext.data (data objects only)", () => {
     expect(result[1].label).toBe("GMCC Ocean");
   });
 
-  it("find() filters data object entries by metadata", async () => {
-    mockSelect.mockImplementation(() => ({
-      from: () => ({
-        where: () => ({
-          limit: () =>
-            Promise.resolve([
-              {
-                data: {
-                  universe: {
-                    label: "GMCC Universe",
-                    incomes: ["NQM-WVOE"],
-                    states: ["CA", "TX"],
-                  },
-                  ocean: {
-                    label: "GMCC Ocean",
-                    incomes: ["NQM-WVOE"],
-                    states: ["CA"],
-                  },
-                  thunder: {
-                    label: "GMCC Thunder",
-                    incomes: ["Full Doc"],
-                    states: ["CA"],
-                  },
-                },
-              },
-            ]),
-        }),
-      }),
-    }));
+  it("getEntries() returns empty array for non-object datasets", async () => {
+    mockDbRows([{ key: "name", layer: 0, data: "simple string" }]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext();
-    const result = await ctx.data.find("product_routes", {
-      incomes: "NQM-WVOE",
-      states: "CA",
-    });
+    const ctx = createToolContext("agent-1");
+    const result = await ctx.dataset.getEntries("name");
+    expect(result).toEqual([]);
+  });
 
-    expect(result).toHaveLength(2);
-    expect(result[0].value).toBe("universe");
-    expect(result[1].value).toBe("ocean");
+  it("get() returns null when no agentId provided", async () => {
+    const { createToolContext } = await import("../tool-context");
+    const ctx = createToolContext(); // no agentId
+    const result = await ctx.dataset.get("anything");
+    expect(result).toBeNull();
+    expect(mockSelect).not.toHaveBeenCalled();
+  });
+
+  it("caches resolved data across multiple get() calls", async () => {
+    mockDbRows([
+      { key: "a", layer: 0, data: "value_a" },
+      { key: "b", layer: 0, data: "value_b" },
+    ]);
+
+    const { createToolContext } = await import("../tool-context");
+    const ctx = createToolContext("agent-1");
+    expect(await ctx.dataset.get("a")).toBe("value_a");
+    expect(await ctx.dataset.get("b")).toBe("value_b");
+    // DB should only be queried once (result is cached)
+    expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 });

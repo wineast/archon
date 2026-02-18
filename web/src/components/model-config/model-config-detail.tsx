@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 import {
   CheckIcon,
   DownloadIcon,
-  PlayIcon,
   PowerIcon,
   RotateCcwIcon,
   SaveIcon,
@@ -19,11 +18,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TemplateEditor } from "@/components/ui/template-editor";
+import { MdEditor } from "@/components/ui/editors/md-editor";
 import type { ModelConfigRow } from "@/db/schema";
-import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
-import { useLookupTables } from "@/lib/lookup-tables/hooks";
-import { useDataObjects } from "@/lib/data-objects/hooks";
+import { useDatasetVarsMap, useDatasets } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
 import { WIKI_API_KEY, wikiFetcher } from "@/lib/wiki/api";
@@ -61,21 +58,17 @@ export function ModelConfigDetail({
   const [previewContent, setPreviewContent] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("edit");
-  const [splitPreviewContent, setSplitPreviewContent] = useState("");
-  const [splitPreviewLoading, setSplitPreviewLoading] = useState(false);
   const [promptAssistOpen, setPromptAssistOpen] = useState(false);
   const busy = saving || deleting || activating || pulling;
 
   const { tools: allTools } = useTools();
-  const { templateVars } = useTemplateVars();
+  const { datasetVars } = useDatasetVarsMap();
   const { data: wikiDocs = [] } = useSWR(WIKI_API_KEY, wikiFetcher);
-  const { tables: lookupTables } = useLookupTables();
-  const { objects: dataObjs } = useDataObjects();
 
   const allVariables = useMemo(() => {
-    const customNames = Object.keys(templateVars);
-    return [...BUILTIN_VAR_NAMES, ...customNames];
-  }, [templateVars]);
+    const datasetKeys = Object.keys(datasetVars);
+    return [...BUILTIN_VAR_NAMES, ...datasetKeys];
+  }, [datasetVars]);
 
   const completionTools = useMemo(
     () =>
@@ -90,13 +83,6 @@ export function ModelConfigDetail({
     [wikiDocs]
   );
 
-  const completionLookups = useMemo(
-    () => [
-      ...lookupTables.map((t) => ({ key: t.key, name: t.name })),
-      ...dataObjs.map((o) => ({ key: o.key, name: o.name })),
-    ],
-    [lookupTables, dataObjs]
-  );
 
   const dirty =
     name !== config.name ||
@@ -175,26 +161,6 @@ export function ModelConfigDetail({
     }
   }, [onPull]);
 
-  const handleSplitPreview = useCallback(async () => {
-    if (!systemPrompt) {
-      setSplitPreviewContent("");
-      return;
-    }
-    setSplitPreviewLoading(true);
-    try {
-      const res = await fetch("/api/template/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: systemPrompt, agentId: config.agentId }),
-      });
-      const { rendered } = await res.json();
-      setSplitPreviewContent(rendered);
-    } catch {
-      setSplitPreviewContent(systemPrompt);
-    } finally {
-      setSplitPreviewLoading(false);
-    }
-  }, [systemPrompt, config.agentId]);
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
@@ -247,16 +213,15 @@ export function ModelConfigDetail({
               <TabsList className="h-8">
                 <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
                 <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
-                <TabsTrigger value="split" className="text-xs">Split</TabsTrigger>
               </TabsList>
               <TabsContent value="edit">
-                <TemplateEditor
+                <MdEditor
                   className="min-h-[200px] max-h-[50vh] overflow-y-auto"
                   value={systemPrompt}
                   onChange={setSystemPrompt}
                   variables={allVariables}
                   documents={completionDocs}
-                  lookups={completionLookups}
+
                   tools={completionTools}
                   placeholder="Enter system prompt... (supports {{variables}}, {{lookup &quot;key&quot;}}, {{include &quot;doc&quot;}})"
                 />
@@ -274,53 +239,6 @@ export function ModelConfigDetail({
                   ) : (
                     <p className="text-sm text-muted-foreground">No content to preview</p>
                   )}
-                </div>
-              </TabsContent>
-              <TabsContent value="split">
-                <div className="flex min-h-[200px] max-h-[50vh]">
-                  <div className="w-1/2">
-                    <TemplateEditor
-                      className="min-h-[200px] max-h-[50vh] overflow-y-auto"
-                      value={systemPrompt}
-                      onChange={setSystemPrompt}
-                      variables={allVariables}
-                      documents={completionDocs}
-                      lookups={completionLookups}
-                      tools={completionTools}
-                      placeholder='Enter system prompt... (supports {{variables}}, {{lookup "key"}}, {{include "doc"}})'
-                    />
-                  </div>
-                  <div className="flex w-1/2 flex-col border-l">
-                    <div className="flex items-center justify-end border-b px-2 py-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs"
-                        onClick={handleSplitPreview}
-                        disabled={splitPreviewLoading}
-                      >
-                        {splitPreviewLoading ? (
-                          <Spinner className="mr-1 size-3" />
-                        ) : (
-                          <PlayIcon className="mr-1 size-3" />
-                        )}
-                        Render
-                      </Button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3">
-                      {splitPreviewLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                          <Spinner className="size-5" />
-                        </div>
-                      ) : splitPreviewContent ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                          <Markdown remarkPlugins={[remarkGfm]}>{splitPreviewContent}</Markdown>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Click Render to preview</p>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </TabsContent>
             </Tabs>

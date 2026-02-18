@@ -1,13 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CodeEditor } from "@/components/ui/code-editor";
+import { JsonEditor } from "@/components/ui/editors/json-editor";
+import { JsEditor } from "@/components/ui/editors/js-editor";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { ToolDefinition, ToolParameter } from "@/lib/tools/types";
-import { useTemplateVarRows } from "@/lib/template-vars/hooks";
-import { parseTemplateVarValue } from "@/lib/template-vars/parse";
-import { useLookupTablesWithEntries } from "@/lib/lookup-tables/hooks";
+import { useDatasets } from "@/lib/datasets/hooks";
 import type { EnumRefOption } from "./parameter-row";
 import { nanoid } from "nanoid";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -46,45 +45,31 @@ export function ToolForm({ tool, onDraftRef, onDirtyChange }: ToolFormProps) {
   draftRef.current = draft;
   const originalRef = useRef(JSON.stringify(tool));
 
-  // Fetch array-type template vars and lookup tables for enum ref options
-  const { rows: templateVarRows } = useTemplateVarRows();
-  const { tables: lookupTableRows } = useLookupTablesWithEntries();
+  // Fetch datasets for enum ref options
+  const { datasets } = useDatasets();
 
   const enumRefOptions = useMemo<EnumRefOption[]>(() => {
-    const options: EnumRefOption[] = [];
-    for (const t of lookupTableRows) {
-      options.push({ key: t.key, source: "lookup" });
-    }
-    for (const v of templateVarRows) {
-      if (v.isArray || (v.type === "json" && !v.isArray)) {
-        options.push({ key: v.key, source: "var" });
-      }
-    }
-    return options;
-  }, [templateVarRows, lookupTableRows]);
+    return datasets
+      .filter((d) => typeof d.data === "object" && d.data !== null)
+      .map((d) => ({ key: d.key, source: "dataset" as const }));
+  }, [datasets]);
 
   const enumRefValues = useMemo<Record<string, string[]>>(() => {
     const map: Record<string, string[]> = {};
-    for (const t of lookupTableRows) {
-      if (t.entries?.length) {
-        map[t.key] = t.entries.map((e) => e.value);
-      }
-    }
-    for (const v of templateVarRows) {
-      if (v.isArray) {
-        const parsed = parseTemplateVarValue(v.value, v.type, v.isArray);
-        if (Array.isArray(parsed)) {
-          map[v.key] = parsed.map(String);
-        }
-      } else if (v.type === "json") {
-        const parsed = parseTemplateVarValue(v.value, v.type, v.isArray);
-        if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
-          map[v.key] = Object.values(parsed as Record<string, unknown>).map(String);
+    for (const d of datasets) {
+      if (Array.isArray(d.data)) {
+        map[d.key] = (d.data as unknown[]).map(String);
+      } else if (typeof d.data === "object" && d.data !== null) {
+        const vals = Object.values(d.data as Record<string, unknown>);
+        if (vals.every((v) => typeof v === "string")) {
+          map[d.key] = vals as string[];
+        } else {
+          map[d.key] = Object.keys(d.data as Record<string, unknown>);
         }
       }
     }
     return map;
-  }, [templateVarRows, lookupTableRows]);
+  }, [datasets]);
 
   useEffect(() => {
     onDraftRef({
@@ -268,10 +253,9 @@ export function ToolForm({ tool, onDraftRef, onDirtyChange }: ToolFormProps) {
           </>
         ) : (
           <>
-            <CodeEditor
+            <JsEditor
               value={draft.handler}
               onChange={(value) => setDraft({ ...draft, handler: value })}
-              language="javascript"
               height="300px"
               className="mt-1"
             />
@@ -293,10 +277,9 @@ export function ToolForm({ tool, onDraftRef, onDirtyChange }: ToolFormProps) {
         <label className="text-xs font-medium text-muted-foreground">
           Output (JSON)
         </label>
-        <CodeEditor
+        <JsonEditor
           value={draft.output}
           onChange={(value) => setDraft({ ...draft, output: value })}
-          language="json"
           height="150px"
           readOnly={hasHandler}
           className="mt-1"

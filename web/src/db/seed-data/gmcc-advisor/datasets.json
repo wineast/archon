@@ -1,0 +1,202 @@
+[
+  {
+    "key": "company_name",
+    "name": "公司名称",
+    "layer": 0,
+    "data": "GMCC"
+  },
+  {
+    "key": "reply_language",
+    "name": "AI 回复语言",
+    "layer": 0,
+    "data": "中文"
+  },
+  {
+    "key": "income_type_enum",
+    "name": "Income Type",
+    "description": "Income type 枚举（短key→全称）",
+    "layer": 0,
+    "data": {
+      "w2": "Full Doc - W2 Wage Earner",
+      "self_employed": "NQM - 1year of 2-years Full Doc-Self-employed",
+      "no_ratio": "No Ratio - No Job/No DTI-DTA",
+      "bank_stmt": "NQM 12/24mo Bank Statements",
+      "borrower_pl": "NQM-Borrower Prepared P&L",
+      "cpa_pl": "NQM-CPA Prepared P&L",
+      "nqm_1099": "NQM - 1-2yr 1099",
+      "wvoe": "NQM-WVOE",
+      "dscr": "NQM-DSCR",
+      "asset_depletion": "No Ratio - Asset Depletion/Utilization",
+      "atr": "NQM - ATR In Full",
+      "vvoe": "NQM-VVOE",
+      "personal_bank_3mo": "NQM-3mo Personal Bank Statement",
+      "business_bank_6mo": "NQM-6mo Business Bank Statement"
+    }
+  },
+  {
+    "key": "state_enum",
+    "name": "美国州枚举",
+    "description": "美国州缩写枚举（缩写→缩写）",
+    "layer": 0,
+    "data": {
+      "AL": "AL", "AK": "AK", "AZ": "AZ", "AR": "AR", "CA": "CA",
+      "CO": "CO", "CT": "CT", "DE": "DE", "DC": "DC", "FL": "FL",
+      "GA": "GA", "HI": "HI", "ID": "ID", "IL": "IL", "IN": "IN",
+      "IA": "IA", "KS": "KS", "KY": "KY", "LA": "LA", "ME": "ME",
+      "MD": "MD", "MA": "MA", "MI": "MI", "MN": "MN", "MS": "MS",
+      "MO": "MO", "MT": "MT", "NE": "NE", "NV": "NV", "NH": "NH",
+      "NJ": "NJ", "NM": "NM", "NY": "NY", "NC": "NC", "ND": "ND",
+      "OH": "OH", "OK": "OK", "OR": "OR", "PA": "PA", "RI": "RI",
+      "SC": "SC", "SD": "SD", "TN": "TN", "TX": "TX", "UT": "UT",
+      "VT": "VT", "VA": "VA", "WA": "WA", "WV": "WV", "WI": "WI",
+      "WY": "WY"
+    }
+  },
+  {
+    "key": "product_name_enum",
+    "name": "贷款产品名称枚举",
+    "description": "贷款产品名称枚举（短key→全称）",
+    "layer": 0,
+    "data": {
+      "universe": "GMCC Universe",
+      "ocean": "GMCC Ocean",
+      "hermes_ca": "GMCC Hermes (CA)",
+      "hermes_non_ca": "GMCC Hermes (Non-CA)",
+      "thunder": "GMCC Thunder",
+      "fabulous": "GMCC Fabulous",
+      "celebrity": "GMCC Celebrity",
+      "radiant_cra": "GMCC Radiant CRA",
+      "radiant_portfolio": "GMCC Radiant Portfolio",
+      "radiant_au": "GMCC Radiant AU"
+    }
+  },
+  {
+    "key": "transaction_type_enum",
+    "name": "交易类型枚举",
+    "description": "交易类型枚举（短key→全称）",
+    "layer": 0,
+    "data": {
+      "purchase": "Purchase",
+      "rate_term_refi": "Rate/Term Refinance",
+      "cash_out_refi": "Cash Out Refinance",
+      "delayed_financing": "Delayed Financing"
+    }
+  },
+  {
+    "key": "occupancy_type_enum",
+    "name": "居住类型枚举",
+    "description": "居住类型枚举（短key→全称）",
+    "layer": 0,
+    "data": {
+      "primary": "Primary",
+      "second_home": "2nd Home",
+      "investment": "Investment"
+    }
+  },
+  {
+    "key": "property_type_enum",
+    "name": "房产类型枚举",
+    "description": "房产类型枚举（短key→全称）",
+    "layer": 0,
+    "data": {
+      "sfr": "SFR",
+      "pud": "PUD",
+      "two_four_units": "2-4 Units",
+      "warrantable_condo": "Warrantable Condo",
+      "non_warrantable_condo": "Non-Warrantable Condo"
+    }
+  },
+  {
+    "key": "citizenship_status_enum",
+    "name": "身份/签证状态枚举",
+    "description": "身份/签证状态枚举（短key→全称）",
+    "layer": 0,
+    "data": {
+      "us_citizen": "US Citizen",
+      "green_card": "Green Card",
+      "visa_type": "Visa Type",
+      "f1_visa": "F1 Visa with EAD or without EAD",
+      "ead_type": "EAD Type",
+      "fn": "FN",
+      "itin": "ITIN"
+    }
+  },
+  {
+    "key": "lien_position_enum",
+    "name": "抵押权顺位枚举",
+    "description": "抵押权顺位枚举（短key→全称）",
+    "layer": 0,
+    "data": {
+      "first": "1st Mortgage",
+      "second": "2nd Mortgage"
+    }
+  },
+  {
+    "key": "product_routes",
+    "name": "Product Routes",
+    "description": "贷款产品路由配置，object 类型，按产品 key 索引",
+    "layer": 1,
+    "data": {
+      "universe": {
+        "label": "GMCC Universe",
+        "wikiId": "wiki-uw-universe",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.no_ratio}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.nqm_1099}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.dscr}}", "{{income_type_enum.asset_depletion}}", "{{income_type_enum.atr}}", "{{income_type_enum.vvoe}}", "{{income_type_enum.personal_bank_3mo}}", "{{income_type_enum.business_bank_6mo}}"],
+        "states": ["CA", "GA", "MA", "NV", "TX", "WA", "NY"]
+      },
+      "ocean": {
+        "label": "GMCC Ocean",
+        "wikiId": "wiki-uw-ocean",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.nqm_1099}}"],
+        "states": ["CA", "TX", "NV"]
+      },
+      "hermes_ca": {
+        "label": "GMCC Hermes (CA)",
+        "wikiId": "wiki-uw-hermes-ca",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.vvoe}}", "{{income_type_enum.personal_bank_3mo}}"],
+        "states": ["CA"]
+      },
+      "hermes_non_ca": {
+        "label": "GMCC Hermes (Non-CA)",
+        "wikiId": "wiki-uw-hermes-non-ca",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.vvoe}}", "{{income_type_enum.personal_bank_3mo}}"],
+        "states": ["AZ", "CO", "DC", "GA", "IL", "NJ", "NY", "NV", "TX", "VA", "WA"]
+      },
+      "thunder": {
+        "label": "GMCC Thunder",
+        "wikiId": "wiki-uw-thunder",
+        "incomes": ["{{income_type_enum.w2}}"],
+        "states": ["CA", "TX", "ID"]
+      },
+      "fabulous": {
+        "label": "GMCC Fabulous",
+        "wikiId": "wiki-uw-fabulous",
+        "incomes": ["{{income_type_enum.w2}}"],
+        "states": ["FL"]
+      },
+      "celebrity": {
+        "label": "GMCC Celebrity",
+        "wikiId": "wiki-uw-celebrity",
+        "incomes": ["{{income_type_enum.w2}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.nqm_1099}}"],
+        "states": ["CA"]
+      },
+      "radiant_cra": {
+        "label": "GMCC Radiant CRA",
+        "wikiId": "wiki-uw-radiant-cra",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.bank_stmt}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.nqm_1099}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.dscr}}", "{{income_type_enum.atr}}", "{{income_type_enum.vvoe}}", "{{income_type_enum.personal_bank_3mo}}", "{{income_type_enum.business_bank_6mo}}"],
+        "states": ["CA", "NY", "NJ", "IL", "NV"]
+      },
+      "radiant_portfolio": {
+        "label": "GMCC Radiant Portfolio",
+        "wikiId": "wiki-uw-radiant-portfolio",
+        "incomes": ["{{income_type_enum.self_employed}}", "{{income_type_enum.borrower_pl}}", "{{income_type_enum.cpa_pl}}", "{{income_type_enum.nqm_1099}}", "{{income_type_enum.wvoe}}", "{{income_type_enum.dscr}}", "{{income_type_enum.atr}}", "{{income_type_enum.vvoe}}"],
+        "states": ["CA", "HI", "IL", "NJ", "NY", "NV"]
+      },
+      "radiant_au": {
+        "label": "GMCC Radiant AU",
+        "wikiId": "wiki-uw-radiant-au",
+        "incomes": ["{{income_type_enum.no_ratio}}", "{{income_type_enum.asset_depletion}}"],
+        "states": ["CA", "HI", "IL", "NJ", "NY", "NV"]
+      }
+    }
+  }
+]

@@ -30,7 +30,7 @@ cmd_merge() {
     base_branch=$(node -p "require('$meta_json').baseBranch")
 
     if [ -z "$base_branch" ]; then
-        error "meta.json 中没有 base 字段"
+        error "meta.json 中没有 baseBranch 字段"
         exit 1
     fi
 

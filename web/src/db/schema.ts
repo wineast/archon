@@ -78,20 +78,20 @@ export const chatSessions = pgTable("chat_sessions", {
 export type ChatSession = typeof chatSessions.$inferSelect;
 export type NewChatSession = typeof chatSessions.$inferInsert;
 
-export const templateVars = pgTable(
-  "template_vars",
+/* ─────────── Datasets (unified JSON store) ─────────── */
+
+export const datasets = pgTable(
+  "datasets",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
     key: text("key").notNull(),
-    description: text("description"),
-    value: text("value").notNull().default(""),
-    type: text("type").notNull().default("text").$type<
-      "text" | "number" | "boolean" | "json"
-    >(),
-    isArray: boolean("is_array").notNull().default(false),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    layer: integer("layer").notNull().default(0),
+    data: jsonb("data").$type<unknown>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -101,12 +101,12 @@ export const templateVars = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    unique("template_vars_agent_id_key_idx").on(table.agentId, table.key),
+    unique("datasets_agent_id_key_idx").on(table.agentId, table.key),
   ]
 );
 
-export type TemplateVarRow = typeof templateVars.$inferSelect;
-export type NewTemplateVarRow = typeof templateVars.$inferInsert;
+export type DatasetRow = typeof datasets.$inferSelect;
+export type NewDatasetRow = typeof datasets.$inferInsert;
 
 export const wikiDocuments = pgTable("wiki_documents", {
   id: text("id").primaryKey(),
@@ -319,87 +319,3 @@ export const evalRunResults = pgTable(
 export type EvalRunResultRow = typeof evalRunResults.$inferSelect;
 export type NewEvalRunResultRow = typeof evalRunResults.$inferInsert;
 
-/* ─────────── Lookup Tables ─────────── */
-
-export const lookupTables = pgTable(
-  "lookup_tables",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    agentId: uuid("agent_id").references(() => agents.id, {
-      onDelete: "cascade",
-    }),
-    key: text("key").notNull(),
-    name: text("name").notNull(),
-    description: text("description").notNull().default(""),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    unique("lookup_tables_agent_id_key_idx").on(table.agentId, table.key),
-  ]
-);
-
-export type LookupTableRow = typeof lookupTables.$inferSelect;
-export type NewLookupTableRow = typeof lookupTables.$inferInsert;
-
-export const lookupEntries = pgTable(
-  "lookup_entries",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    tableId: uuid("table_id")
-      .notNull()
-      .references(() => lookupTables.id, { onDelete: "cascade" }),
-    value: text("value").notNull(),
-    label: text("label"),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-    order: integer("order").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    unique("lookup_entries_table_id_value_idx").on(table.tableId, table.value),
-    index("lookup_entries_table_id_idx").on(table.tableId),
-  ]
-);
-
-export type LookupEntryRow = typeof lookupEntries.$inferSelect;
-export type NewLookupEntryRow = typeof lookupEntries.$inferInsert;
-
-/* ─────────── Data Objects ─────────── */
-
-export const dataObjects = pgTable(
-  "data_objects",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    agentId: uuid("agent_id").references(() => agents.id, {
-      onDelete: "cascade",
-    }),
-    key: text("key").notNull(),
-    name: text("name").notNull(),
-    description: text("description").notNull().default(""),
-    data: jsonb("data").$type<Record<string, unknown>>().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    unique("data_objects_agent_id_key_idx").on(table.agentId, table.key),
-  ]
-);
-
-export type DataObjectRow = typeof dataObjects.$inferSelect;
-export type NewDataObjectRow = typeof dataObjects.$inferInsert;

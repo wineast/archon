@@ -1,4 +1,4 @@
-.PHONY: dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-local-setup wt-list wt-create wt-merge wt-delete
+.PHONY: dev build lint typecheck test clean install storybook db-generate db-migrate db-push db-push-force db-reset db-seed seed db-studio db-up db-down db-destroy db-local-env db-neon-env db-local-setup wt-list wt-create wt-sync wt-merge wt-delete
 
 # ============================================================
 # Development
@@ -90,9 +90,21 @@ db-destroy:
 	docker compose down -v
 
 ## 切换到本地 Docker DB（创建 .env.development.local 覆盖 .env.local）
+## 在 worktree 中自动使用独立数据库（archon_<worktree_name>）
 db-local-env:
-	@printf 'DATABASE_URL=$(LOCAL_DB_URL)\nDATABASE_URL_UNPOOLED=$(LOCAL_DB_URL)\n' > web/.env.development.local && \
-	echo "Created web/.env.development.local → local DB"
+	@if [ -f .worktree/meta.json ]; then \
+		wt_name=$$(basename "$$PWD") && \
+		db_name="archon_$$(echo "$$wt_name" | tr '-' '_')" && \
+		db_url="postgresql://archon:archon@localhost:5432/$$db_name" && \
+		docker exec archon-postgres psql -U archon -d archon -tc \
+			"SELECT 1 FROM pg_database WHERE datname = '$$db_name'" | grep -q 1 \
+			|| docker exec archon-postgres createdb -U archon "$$db_name" && \
+		printf 'DATABASE_URL=%s\nDATABASE_URL_UNPOOLED=%s\n' "$$db_url" "$$db_url" > web/.env.development.local && \
+		echo "Created web/.env.development.local → local DB ($$db_name)"; \
+	else \
+		printf 'DATABASE_URL=$(LOCAL_DB_URL)\nDATABASE_URL_UNPOOLED=$(LOCAL_DB_URL)\n' > web/.env.development.local && \
+		echo "Created web/.env.development.local → local DB (archon)"; \
+	fi
 
 ## 切回 Neon 云 DB（删除覆盖文件，.env.local 恢复生效）
 db-neon-env:
@@ -113,6 +125,10 @@ wt-list:
 ## 创建 worktree（用法: make wt-create NAME=feature-xxx [BASE=main]）
 wt-create:
 	@./.claude/skills/worktree/scripts/worktree.sh create $(NAME) $(BASE)
+
+## 同步上游分支到当前工作区
+wt-sync:
+	@./.claude/skills/worktree/scripts/worktree.sh sync
 
 ## 合并工作区回 base 分支（用法: make wt-merge NAME=feature-xxx）
 wt-merge:

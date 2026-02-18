@@ -23,7 +23,7 @@ const PARAM_TYPES: { value: ToolParamType; label: string }[] = [
 
 export interface EnumRefOption {
   key: string;
-  source: "var" | "lookup";
+  source: "dataset";
 }
 
 interface ParameterRowProps {
@@ -171,7 +171,7 @@ export function ParameterRow({
                     enumRefOptions.map((o) => (
                       <SelectItem key={o.key} value={o.key}>
                         <span className="mr-1.5 text-[10px] text-muted-foreground">
-                          {o.source === "lookup" ? "[码表]" : "[变量]"}
+                          [数据集]
                         </span>
                         {o.key}
                       </SelectItem>

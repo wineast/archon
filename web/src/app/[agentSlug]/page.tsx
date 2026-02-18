@@ -38,13 +38,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { EvalSheet } from "@/components/eval/eval-sheet";
-import { TemplateVarsSheet } from "@/components/template-vars/template-vars-sheet";
+import { DatasetsSheet } from "@/components/datasets/datasets-sheet";
 import { RequestInspectorModal } from "@/components/request-inspector-modal";
 import { ChatConfigSheet } from "@/components/chat-config/chat-config-sheet";
 import { UserSettingsModal } from "@/components/user/user-settings-modal";
 import { ToolsSheet } from "@/components/tools/tools-sheet";
-import { LookupTablesSheet } from "@/components/lookup-tables/lookup-tables-sheet";
-import { DataObjectsSheet } from "@/components/data-objects/data-objects-sheet";
 import { ModelConfigSheet } from "@/components/model-config/model-config-sheet";
 import { useChatConfig } from "@/lib/chat-config/hooks";
 import { useActiveModelConfig } from "@/lib/model-config/hooks";
@@ -56,8 +54,6 @@ import { useSessions, deleteSession } from "@/lib/session/hooks";
 import { WikiSheet } from "@/components/wiki/wiki-sheet";
 import {
   BookOpenIcon,
-  BoxIcon,
-  BracesIcon,
   DatabaseIcon,
   DownloadIcon,
   EllipsisVerticalIcon,
@@ -102,11 +98,9 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [modelConfigOpen, setModelConfigOpen] = useState(false);
   const [evalOpen, setEvalOpen] = useState(false);
-  const [varsOpen, setVarsOpen] = useState(false);
+  const [datasetsOpen, setDatasetsOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
   const [wikiOpen, setWikiOpen] = useState(false);
-  const [lookupTablesOpen, setLookupTablesOpen] = useState(false);
-  const [dataObjectsOpen, setDataObjectsOpen] = useState(false);
 
   const { activeConfig } = useActiveModelConfig();
   const { tools: toolsList } = useTools();
@@ -427,7 +421,6 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
         />
         <ChatConfigSheet open={configOpen} onOpenChange={setConfigOpen} />
         <EvalSheet open={evalOpen} onOpenChange={setEvalOpen} />
-        <TemplateVarsSheet open={varsOpen} onOpenChange={setVarsOpen} />
         <UserSettingsModal open={userSettingsOpen} onOpenChange={setUserSettingsOpen} />
 
         {/* ── Layout header ── */}
@@ -486,21 +479,13 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
                   <BookOpenIcon className="size-4" />
                   Wiki
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLookupTablesOpen(true)}>
+                <DropdownMenuItem onClick={() => setDatasetsOpen(true)}>
                   <DatabaseIcon className="size-4" />
-                  Lookup Tables
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setDataObjectsOpen(true)}>
-                  <BoxIcon className="size-4" />
-                  Data Objects
+                  Datasets
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEvalOpen(true)}>
                   <FlaskConicalIcon className="size-4" />
                   Evaluate
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setVarsOpen(true)}>
-                  <BracesIcon className="size-4" />
-                  Variables
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setModelConfigOpen(true)}>
                   <SettingsIcon className="size-4" />
@@ -609,8 +594,7 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
       </SidebarInset>
       <WikiSheet open={wikiOpen} onOpenChange={setWikiOpen} />
       <ToolsSheet open={toolsOpen} onOpenChange={setToolsOpen} />
-      <LookupTablesSheet open={lookupTablesOpen} onOpenChange={setLookupTablesOpen} />
-      <DataObjectsSheet open={dataObjectsOpen} onOpenChange={setDataObjectsOpen} />
+      <DatasetsSheet open={datasetsOpen} onOpenChange={setDatasetsOpen} />
       <ModelConfigSheet open={modelConfigOpen} onOpenChange={setModelConfigOpen} />
     </SidebarProvider>
   );

@@ -16,9 +16,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { TemplateTextarea } from "@/components/ui/template-textarea";
-import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
-import { useLookupTables } from "@/lib/lookup-tables/hooks";
-import { useDataObjects } from "@/lib/data-objects/hooks";
+import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
 import { WIKI_API_KEY, wikiFetcher } from "@/lib/wiki/api";
@@ -48,31 +46,21 @@ export function JudgeConfigDetail({
   const [settingDefault, setSettingDefault] = useState(false);
   const busy = saving || deleting || settingDefault;
 
-  const { templateVars } = useTemplateVars();
+  const { datasetVars } = useDatasetVarsMap();
   const { tools: toolDefinitions } = useTools();
   const { data: wikiDocs = [] } = useSWR(WIKI_API_KEY, wikiFetcher);
-  const { tables: lookupTables } = useLookupTables();
-  const { objects: dataObjs } = useDataObjects();
 
   const allVariables = useMemo(() => {
     const toolNames = toolDefinitions
       .filter((d) => d.enabled)
       .map((d) => d.name);
-    const customNames = Object.keys(templateVars);
-    return [...BUILTIN_VAR_NAMES, ...toolNames, ...customNames];
-  }, [toolDefinitions, templateVars]);
+    const datasetKeys = Object.keys(datasetVars);
+    return [...BUILTIN_VAR_NAMES, ...toolNames, ...datasetKeys];
+  }, [toolDefinitions, datasetVars]);
 
   const completionDocs = useMemo(
     () => wikiDocs.map((d) => ({ title: d.title })),
     [wikiDocs]
-  );
-
-  const completionLookups = useMemo(
-    () => [
-      ...lookupTables.map((t) => ({ key: t.key, name: t.name })),
-      ...dataObjs.map((o) => ({ key: o.key, name: o.name })),
-    ],
-    [lookupTables, dataObjs]
   );
 
   const dirty =
@@ -164,7 +152,6 @@ export function JudgeConfigDetail({
               onChange={setSystemPrompt}
               variables={allVariables}
               documents={completionDocs}
-              lookups={completionLookups}
               placeholder="Judge system prompt... (supports {{variables}}, {{lookup &quot;key&quot;}}, {{include &quot;doc&quot;}})"
             />
           </div>

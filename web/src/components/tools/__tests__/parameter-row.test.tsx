@@ -19,8 +19,8 @@ function makeParam(overrides: Partial<ToolParameter> = {}): ToolParameter {
 }
 
 const defaultEnumRefOptions: EnumRefOption[] = [
-  { key: "states", source: "lookup" },
-  { key: "languages", source: "var" },
+  { key: "states", source: "dataset" },
+  { key: "languages", source: "dataset" },
 ];
 
 function renderRow(

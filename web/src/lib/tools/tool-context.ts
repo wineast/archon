@@ -1,19 +1,13 @@
 import { db } from "@/db";
-import { wikiDocuments, lookupTables, lookupEntries, dataObjects } from "@/db/schema";
+import { wikiDocuments, datasets } from "@/db/schema";
 import { eq, like, ilike } from "drizzle-orm";
-import {
-  renderWikiContent,
-  renderEntryField,
-  renderMetadataField,
-} from "@/lib/template/render";
+import { renderWikiContent } from "@/lib/template/render";
 import { parseWikiContent } from "@/lib/wiki/frontmatter";
-import { getTemplateVars } from "@/lib/template-vars/queries";
-
-export interface LookupEntry {
-  value: string;
-  label: string | null;
-  metadata: Record<string, unknown> | null;
-}
+import {
+  renderField,
+  renderObjectField,
+  resolveDatasets,
+} from "@/lib/datasets/queries";
 
 export interface DataEntry {
   value: string;
@@ -36,45 +30,33 @@ export interface ToolContext {
       query: string
     ): Promise<Array<{ id: string; title: string; meta: Record<string, unknown> | null; content: string }>>;
   };
-  lookup: {
-    get(key: string): Promise<LookupEntry[]>;
-    find(
-      key: string,
-      filter: Record<string, unknown>
-    ): Promise<LookupEntry[]>;
+  dataset: {
+    get(key: string): Promise<unknown>;
+    getEntries(key: string): Promise<DataEntry[]>;
   };
-  data: {
-    get(key: string): Promise<DataEntry[]>;
-    find(
-      key: string,
-      filter: Record<string, unknown>
-    ): Promise<DataEntry[]>;
-  };
-  vars: {
-    get(key: string): Promise<string | null>;
-  };
-}
-
-function filterEntries<T extends { metadata: Record<string, unknown> | null }>(
-  entries: T[],
-  filter: Record<string, unknown>
-): T[] {
-  return entries.filter((entry) => {
-    if (!entry.metadata) return false;
-    for (const [k, v] of Object.entries(filter)) {
-      const metaVal = entry.metadata[k];
-      if (Array.isArray(metaVal)) {
-        if (!metaVal.includes(v)) return false;
-      } else if (metaVal !== v) {
-        return false;
-      }
-    }
-    return true;
-  });
 }
 
 export function createToolContext(agentId?: string): ToolContext {
-  let varsCache: Record<string, unknown> | null = null;
+  let resolvedCache: Record<string, unknown> | null = null;
+
+  async function getResolved(): Promise<Record<string, unknown>> {
+    if (resolvedCache) return resolvedCache;
+    if (!agentId) return {};
+
+    const rows = await db
+      .select({
+        key: datasets.key,
+        layer: datasets.layer,
+        data: datasets.data,
+      })
+      .from(datasets)
+      .where(eq(datasets.agentId, agentId));
+
+    const { resolvedVars } = resolveDatasets(rows);
+    resolvedCache = resolvedVars;
+    return resolvedVars;
+  }
+
   return {
     wiki: {
       async get(id: string) {
@@ -128,91 +110,22 @@ export function createToolContext(agentId?: string): ToolContext {
       },
     },
 
-    lookup: {
-      async get(key: string): Promise<LookupEntry[]> {
-        if (!varsCache && agentId) {
-          varsCache = await getTemplateVars(agentId);
-        }
-        const vars = varsCache ?? {};
-
-        const [table] = await db
-          .select({ id: lookupTables.id })
-          .from(lookupTables)
-          .where(eq(lookupTables.key, key))
-          .limit(1);
-
-        if (!table) return [];
-
-        const entries = await db
-          .select({
-            value: lookupEntries.value,
-            label: lookupEntries.label,
-            metadata: lookupEntries.metadata,
-          })
-          .from(lookupEntries)
-          .where(eq(lookupEntries.tableId, table.id))
-          .orderBy(lookupEntries.order);
-
-        return (entries as LookupEntry[]).map((e) => ({
-          ...e,
-          value: renderEntryField(e.value, vars),
-          label: e.label ? renderEntryField(e.label, vars) : e.label,
-          metadata: e.metadata ? renderMetadataField(e.metadata, vars) : e.metadata,
-        }));
+    dataset: {
+      async get(key: string): Promise<unknown> {
+        const all = await getResolved();
+        return all[key] ?? null;
       },
 
-      async find(
-        key: string,
-        filter: Record<string, unknown>
-      ): Promise<LookupEntry[]> {
-        const all = await this.get(key);
-        return filterEntries(all, filter);
-      },
-    },
-
-    data: {
-      async get(key: string): Promise<DataEntry[]> {
-        if (!varsCache && agentId) {
-          varsCache = await getTemplateVars(agentId);
-        }
-        const vars = varsCache ?? {};
-
-        const [obj] = await db
-          .select({ data: dataObjects.data })
-          .from(dataObjects)
-          .where(eq(dataObjects.key, key))
-          .limit(1);
-
-        if (!obj?.data) return [];
-
-        const rendered = renderMetadataField(
-          obj.data as Record<string, unknown>,
-          vars
-        );
-        return Object.entries(rendered).map(([k, v]) => ({
+      async getEntries(key: string): Promise<DataEntry[]> {
+        const all = await getResolved();
+        const val = all[key];
+        if (!val || typeof val !== "object" || Array.isArray(val)) return [];
+        return Object.entries(val as Record<string, unknown>).map(([k, v]) => ({
           value: k,
-          label: (v as Record<string, unknown>)?.label as string | null ?? null,
+          label:
+            (v as Record<string, unknown>)?.label as string | null ?? null,
           metadata: v as Record<string, unknown>,
         }));
-      },
-
-      async find(
-        key: string,
-        filter: Record<string, unknown>
-      ): Promise<DataEntry[]> {
-        const all = await this.get(key);
-        return filterEntries(all, filter);
-      },
-    },
-
-    vars: {
-      async get(key: string): Promise<string | null> {
-        if (!agentId) return null;
-        if (!varsCache) {
-          varsCache = await getTemplateVars(agentId);
-        }
-        const val = varsCache![key];
-        return val != null ? String(val) : null;
       },
     },
   };

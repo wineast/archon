@@ -52,36 +52,22 @@ describe("schema-builder — enum type", () => {
     });
   });
 
-  describe("type: enum with enumRef → activeVars", () => {
-    const activeVars = {
+  describe("type: enum with enumRef → resolvedVars (array)", () => {
+    const resolvedVars = {
       states: ["CA", "NY", "TX"],
       non_list: "not an array",
     };
 
-    it("resolves enumRef from activeVars", () => {
+    it("resolves enumRef from array in resolvedVars", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumRef: "states" })],
-        {},
-        activeVars
+        resolvedVars
       );
       expect(() => schema.parse({ field: "CA" })).not.toThrow();
       expect(() => schema.parse({ field: "FL" })).toThrow();
     });
 
-    it("lookupVars takes priority over activeVars", () => {
-      const lookupVars = {
-        states: [{ value: "FL" }, { value: "GA" }],
-      };
-      const schema = buildInputSchema(
-        [makeParam({ type: "enum", enumRef: "states" })],
-        lookupVars,
-        activeVars
-      );
-      expect(() => schema.parse({ field: "FL" })).not.toThrow();
-      expect(() => schema.parse({ field: "CA" })).toThrow();
-    });
-
-    it("ignores non-array activeVars and falls back to enum", () => {
+    it("ignores non-array/non-object resolvedVars and falls back to enum", () => {
       const schema = buildInputSchema(
         [
           makeParam({
@@ -90,35 +76,32 @@ describe("schema-builder — enum type", () => {
             enum: ["fallback"],
           }),
         ],
-        {},
-        activeVars
+        resolvedVars
       );
       expect(() => schema.parse({ field: "fallback" })).not.toThrow();
     });
 
-    it("falls back to enum when enumRef not found in either source", () => {
+    it("falls back to enum when enumRef not found in resolvedVars", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumRef: "unknown", enum: ["x", "y"] })],
-        {},
-        activeVars
+        resolvedVars
       );
       expect(() => schema.parse({ field: "x" })).not.toThrow();
       expect(() => schema.parse({ field: "z" })).toThrow();
     });
   });
 
-  describe("type: enum with enumRef → activeVars (json object)", () => {
-    const activeVars = {
+  describe("type: enum with enumRef → resolvedVars (json object)", () => {
+    const resolvedVars = {
       income_type: { salary: "Salary", bonus: "Bonus", rental: "Rental Income" },
       states: ["CA", "NY"],
       plain_string: "not an object",
     };
 
-    it("resolves enumRef from a plain object via Object.values()", () => {
+    it("resolves enumRef from object via Object.values() when values are strings", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumRef: "income_type" })],
-        {},
-        activeVars
+        resolvedVars
       );
       expect(() => schema.parse({ field: "Salary" })).not.toThrow();
       expect(() => schema.parse({ field: "Bonus" })).not.toThrow();
@@ -126,31 +109,19 @@ describe("schema-builder — enum type", () => {
       expect(() => schema.parse({ field: "salary" })).toThrow(); // key, not value
     });
 
-    it("converts non-string object values to strings", () => {
+    it("resolves enumRef from object via Object.keys() when values are non-strings", () => {
       const vars = { nums: { a: 1, b: 2, c: 3 } };
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumRef: "nums" })],
-        {},
         vars
       );
-      expect(() => schema.parse({ field: "1" })).not.toThrow();
-      expect(() => schema.parse({ field: "2" })).not.toThrow();
+      // Object.keys() → ["a", "b", "c"]
+      expect(() => schema.parse({ field: "a" })).not.toThrow();
+      expect(() => schema.parse({ field: "b" })).not.toThrow();
+      expect(() => schema.parse({ field: "1" })).toThrow(); // value, not key
     });
 
-    it("lookupVars takes priority over json object activeVars", () => {
-      const lookupVars = {
-        income_type: [{ value: "W2" }, { value: "1099" }],
-      };
-      const schema = buildInputSchema(
-        [makeParam({ type: "enum", enumRef: "income_type" })],
-        lookupVars,
-        activeVars
-      );
-      expect(() => schema.parse({ field: "W2" })).not.toThrow();
-      expect(() => schema.parse({ field: "Salary" })).toThrow();
-    });
-
-    it("ignores non-object/non-array activeVars and falls back to enum", () => {
+    it("ignores non-object/non-array resolvedVars and falls back to enum", () => {
       const schema = buildInputSchema(
         [
           makeParam({
@@ -159,8 +130,7 @@ describe("schema-builder — enum type", () => {
             enum: ["fallback"],
           }),
         ],
-        {},
-        activeVars
+        resolvedVars
       );
       expect(() => schema.parse({ field: "fallback" })).not.toThrow();
       expect(() => schema.parse({ field: "not an object" })).toThrow();
@@ -169,8 +139,7 @@ describe("schema-builder — enum type", () => {
     it("arrays still resolve as arrays, not as objects", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumRef: "states" })],
-        {},
-        activeVars
+        resolvedVars
       );
       expect(() => schema.parse({ field: "CA" })).not.toThrow();
       expect(() => schema.parse({ field: "FL" })).toThrow();
@@ -186,10 +155,10 @@ describe("schema-builder — enum type", () => {
       expect(() => schema.parse({ field: "c" })).toThrow();
     });
 
-    it("string type with enumRef still resolves from lookupVars", () => {
+    it("string type with enumRef resolves from resolvedVars", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "string", enumRef: "colors" })],
-        { colors: [{ value: "red" }, { value: "blue" }] }
+        { colors: ["red", "blue"] }
       );
       expect(() => schema.parse({ field: "red" })).not.toThrow();
       expect(() => schema.parse({ field: "green" })).toThrow();
