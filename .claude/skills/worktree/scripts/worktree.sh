@@ -115,7 +115,6 @@ get_date_suffix() {
 source "$SCRIPT_DIR/cmd/list.sh"
 source "$SCRIPT_DIR/cmd/create.sh"
 source "$SCRIPT_DIR/cmd/delete.sh"
-source "$SCRIPT_DIR/cmd/select-delete.sh"
 source "$SCRIPT_DIR/cmd/merge.sh"
 source "$SCRIPT_DIR/cmd/sync.sh"
 
@@ -136,7 +135,6 @@ cmd_help() {
     echo "  sync                       同步上游分支到当前工作区"
     echo "  merge <name>               合并工作区分支回 base 分支"
     echo "  delete <name>              删除 worktree"
-    echo "  select-delete              交互式选择删除 worktree"
     echo "  help                       显示帮助"
     echo ""
     echo "示例:"
@@ -163,10 +161,7 @@ case "${1:-help}" in
     delete|remove|rm)
         cmd_delete "$2"
         ;;
-    select-delete|sd)
-        cmd_select_delete
-        ;;
-    help|--help|-h)
+help|--help|-h)
         cmd_help
         ;;
     *)
