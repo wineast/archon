@@ -8,6 +8,7 @@ import type { ToolDefinition } from "@/lib/tools/types";
 import { useDatasets } from "@/lib/datasets/hooks";
 import type { EnumRefOption } from "@/components/parameters/parameter-row";
 import { ParameterList } from "@/components/parameters/parameter-list";
+import { ReturnParameterList } from "@/components/parameters/return-parameter-list";
 import { HandlerTestPanel } from "./handler-test-panel";
 import { ComponentPreviewPanel } from "./component-preview-panel";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -294,6 +295,10 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
             </p>
           )}
         </div>
+        <ReturnParameterList
+          fieldName="returnParameters"
+          label="Return Parameters"
+        />
         <div>
           <label className="text-xs font-medium text-muted-foreground">
             UI Component (JSX)

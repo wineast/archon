@@ -71,6 +71,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
               name: tool.name,
               description: tool.description,
               parameters: tool.parameters,
+              returnParameters: tool.returnParameters ?? [],
               output: tool.output ?? "{}",
               handler: tool.handler ?? "",
               component: tool.component ?? "",
