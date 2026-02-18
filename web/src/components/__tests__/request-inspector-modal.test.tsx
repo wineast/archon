@@ -40,6 +40,7 @@ const sampleMessages: UIMessage[] = [
 const sampleToolRows: ToolRow[] = [
   {
     id: "t1",
+    key: "get_weather",
     name: "get_weather",
     description: "Get the current weather",
     parameters: [
@@ -64,6 +65,7 @@ const sampleToolRows: ToolRow[] = [
   },
   {
     id: "t2",
+    key: "search",
     name: "search",
     description: "Search the web",
     parameters: [],

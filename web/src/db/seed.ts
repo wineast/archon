@@ -144,6 +144,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
 
   const toolsSeed = readJson<
     Array<{
+      key?: string;
       name: string;
       description: string;
       parameters: ToolParameter[];
@@ -160,12 +161,16 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
       ? componentSources[t.componentSource] ?? t.componentSource
       : null;
 
+    // Derive key from name if not provided
+    const key = t.key ?? t.name.replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
+
     const [row] = await db
       .insert(tools)
-      .values({ ...t, componentSource, agentId })
+      .values({ ...t, key, componentSource, agentId })
       .onConflictDoUpdate({
-        target: tools.name,
+        target: [tools.agentId, tools.key],
         set: {
+          name: t.name,
           description: t.description,
           parameters: t.parameters,
           handler: t.handler ?? null,

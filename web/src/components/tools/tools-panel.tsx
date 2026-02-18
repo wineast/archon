@@ -16,6 +16,7 @@ import type { ToolDefinition } from "@/lib/tools/types";
 import { ToolsSidebar } from "./tools-sidebar";
 import { ToolDetail } from "./tool-detail";
 import { ToolsEmptyState } from "./tools-empty-state";
+import { ToolCreateDialog } from "./tool-create-dialog";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -26,6 +27,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
   );
   const [activeToolId, setActiveToolId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const activeTool = useMemo(
     () => tools.find((t) => t.id === activeToolId) ?? null,
@@ -38,21 +40,32 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
     }
   }, [activeToolId]);
 
-  const handleCreate = useCallback(async () => {
-    const result = await createTool(
-      {
-        agentId,
-        name: "newTool",
-        description: "",
-        parameters: [],
-        output: "{}",
-        handler: "",
-        enabled: true,
-      },
-      mutate
-    );
-    if (result?.id) setActiveToolId(result.id);
-  }, [mutate]);
+  const handleOpenCreateDialog = useCallback(() => {
+    setCreateDialogOpen(true);
+  }, []);
+
+  const handleCreate = useCallback(
+    async (key: string, name: string) => {
+      const result = await createTool(
+        {
+          agentId,
+          key,
+          name,
+          description: "",
+          parameters: [],
+          output: "{}",
+          handler: "",
+          enabled: true,
+        },
+        mutate
+      );
+      if (result?.id) {
+        setActiveToolId(result.id);
+        setCreateDialogOpen(false);
+      }
+    },
+    [agentId, mutate]
+  );
 
   const handleSave = useCallback(
     async (updated: ToolDefinition) => {
@@ -92,13 +105,19 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
 
   return (
     <div className="flex h-full flex-col">
+      <ToolCreateDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onCreate={handleCreate}
+      />
+
       {/* Desktop layout */}
       <div className="hidden h-full sm:flex">
         <ToolsSidebar
           tools={tools}
           activeToolId={activeToolId}
           onSelect={setActiveToolId}
-          onCreate={handleCreate}
+          onCreate={handleOpenCreateDialog}
         />
         <div className="flex-1 min-w-0 overflow-hidden">
           {activeTool ? (
@@ -111,7 +130,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
               onToggle={handleToggle}
             />
           ) : (
-            <ToolsEmptyState onCreate={handleCreate} />
+            <ToolsEmptyState onCreate={handleOpenCreateDialog} />
           )}
         </div>
       </div>
@@ -123,7 +142,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
             tools={tools}
             activeToolId={activeToolId}
             onSelect={setActiveToolId}
-            onCreate={handleCreate}
+            onCreate={handleOpenCreateDialog}
           />
         ) : (
           <>

@@ -26,6 +26,7 @@ export async function PATCH(
   const [updated] = await db
     .update(tools)
     .set({
+      ...(body.key !== undefined && { key: body.key }),
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.parameters !== undefined && { parameters: body.parameters }),

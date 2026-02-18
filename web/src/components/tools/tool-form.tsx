@@ -150,6 +150,16 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
       <div className="space-y-3 min-w-0">
         <div>
           <label className="text-xs font-medium text-muted-foreground">
+            Key
+          </label>
+          <Input
+            className="mt-1 h-8 text-sm font-mono bg-muted"
+            {...form.register("key")}
+            readOnly
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
             Tool Name
           </label>
           <Input
