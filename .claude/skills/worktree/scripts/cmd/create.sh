@@ -87,13 +87,15 @@ cmd_create() {
     # 生成工作区元数据写入 meta.json
     local dev_port=$(( RANDOM % 5000 + 4000 ))  # 4000-8999
     local storybook_port=$(( dev_port + 1 ))
-    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"base\":\"$base_branch\"}" > "$wt_config_dir/meta.json"
-    info "端口分配: dev=$dev_port, storybook=$storybook_port, base=$base_branch (写入 .worktree/meta.json)"
+    local studio_port=$(( dev_port + 2 ))
+    echo "{\"dev\":$dev_port,\"storybook\":$storybook_port,\"studio\":$studio_port,\"base\":\"$base_branch\"}" > "$wt_config_dir/meta.json"
+    info "端口分配: dev=$dev_port, storybook=$storybook_port, studio=$studio_port, base=$base_branch (写入 .worktree/meta.json)"
 
     # 生成 CLAUDE.local.md（提醒 Claude 使用正确的端口）
     sed -e "s|{{WORKTREE_PATH}}|$worktree_path|g" \
         -e "s|{{DEV_PORT}}|$dev_port|g" \
         -e "s|{{STORYBOOK_PORT}}|$storybook_port|g" \
+        -e "s|{{STUDIO_PORT}}|$studio_port|g" \
         "$SCRIPT_DIR/claude-local.tpl" > "$worktree_path/CLAUDE.local.md"
     info "已生成 CLAUDE.local.md (dev=$dev_port)"
 

@@ -1,11 +1,8 @@
-import { config } from "dotenv";
-config({ path: ".env.local" });
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { nanoid } from "nanoid";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/postgres-js";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   agents,
   chatConfigs,
@@ -46,9 +43,10 @@ export interface SeedResult {
 
 // ── seed ──
 
-export async function seed(db?: NeonHttpDatabase): Promise<SeedResult> {
+export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   if (!db) {
-    const sql = neon(process.env.DATABASE_URL_UNPOOLED!);
+    const { createClient } = await import("./client");
+    const sql = createClient();
     db = drizzle({ client: sql });
   }
 
@@ -429,7 +427,16 @@ const isDirectRun =
   (process.argv[1].endsWith("/seed.ts") || process.argv[1].endsWith("/seed.js"));
 
 if (isDirectRun) {
-  seed().catch((err) => {
+  (async () => {
+    const { createClient } = await import("./client");
+    const sql = createClient();
+    const db = drizzle({ client: sql });
+    try {
+      await seed(db);
+    } finally {
+      await sql.end();
+    }
+  })().catch((err) => {
     console.error("Seed failed:", err);
     process.exit(1);
   });
