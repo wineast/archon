@@ -18,23 +18,16 @@ cd ..
 make setup
 ```
 
-`make setup` 会检查 `web/.vercel` 是否存在，不存在则提示先执行上面的 vercel 命令。检查通过后依次执行：`npm install` → `db-setup`（启动 Docker + 主库初始化）。
+`make setup` 会检查 `web/.vercel` 是否存在，不存在则提示先执行上面的 vercel 命令。检查通过后依次执行：
 
-### 仅初始化数据库（已有依赖和 env）
-
-```bash
-make db-setup
+```
+vercel-check → db-up → wt-meta → wt-init
+                                    ├── env     (link-env + db-local-env)
+                                    ├── deps    (npm install)
+                                    └── db-init (db-push + seed)
 ```
 
-依次执行：`db-up` → `db-local-env` → `db-push` → `seed`。
-
-### 工作区内初始化数据库
-
-```bash
-make db-init
-```
-
-仅执行 `db-push` → `seed`。数据库和 env 文件已由 `wt-create` 自动创建。
+主仓库也被视为工作区——`wt-meta` 会创建 `.worktree/meta.json`（默认端口 3000），`db-local-env` 据此创建独立数据库 `archon_archon`。
 
 完成后启动开发服务器：
 
@@ -54,10 +47,10 @@ make dev
 ### 切到本地 DB
 
 ```bash
-make db-local-env
+make env
 ```
 
-创建 `web/.env.development.local`（只含 2 行 DB URL），自动覆盖 `.env.local` 中的 Neon 地址。Clerk 等其他变量不受影响，继续从 `.env.local` 读取。
+创建 `web/.env.local` symlink + `web/.env.development.local`（只含 2 行 DB URL），自动覆盖 `.env.local` 中的 Neon 地址。Clerk 等其他变量不受影响，继续从 `.env.local` 读取。在 worktree 中会自动创建独立数据库 `archon_<name>`。
 
 ### 切回 Neon 云 DB
 
@@ -119,7 +112,7 @@ make seed             # 如果新增了表或字段，重新播种
 
 ```bash
 make db-destroy       # 删除容器和数据卷
-make db-setup         # 重新一键设置
+make setup            # 重新一键设置
 ```
 
 ## 架构说明
@@ -144,7 +137,7 @@ ORM 层使用 `drizzle-orm/postgres-js`。
 | `DATABASE_URL` | 主连接 URL（Next.js 运行时使用） |
 | `DATABASE_URL_UNPOOLED` | 直连 URL（CLI 脚本、Drizzle Kit 优先使用） |
 
-本地开发时两者相同，都指向 `postgresql://archon:archon@localhost:5432/archon`。
+本地开发时两者相同，主仓库指向 `postgresql://archon:archon@localhost:5432/archon_archon`，worktree 指向 `archon_<name>`。
 
 生产环境中 `DATABASE_URL` 可能指向连接池（如 Neon 的 pooler），`DATABASE_URL_UNPOOLED` 指向直连地址。
 
@@ -170,4 +163,4 @@ docker compose logs postgres  # 查看日志
 cat web/.env.development.local
 ```
 
-应该看到 `localhost:5432`。如果文件不存在，运行 `make db-local-env`。
+应该看到 `localhost:5432`。如果文件不存在，运行 `make env`。

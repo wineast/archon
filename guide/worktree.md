@@ -6,12 +6,15 @@
 
 ## 命令速查
 
-### 数据库
+### 初始化
 
-| 命令 | 说明 | 执行频率 |
-|------|------|----------|
-| `make db-setup` | 启动 Docker + 主库初始化（push + seed） | 全局一次 |
-| `make db-init` | push schema + seed（数据库已存在） | 每个工作区 |
+| 命令 | 说明 | 场景 |
+|------|------|------|
+| `make setup` | vercel-check → db-up → wt-meta → wt-init | clone 后执行一次 |
+| `make wt-init` | env → deps → db-init | 工作区内初始化（wt-create 自动调用） |
+| `make env` | link-env + db-local-env | 重新生成环境配置 |
+| `make deps` | npm install | 重新安装依赖 |
+| `make db-init` | db-push + seed | 重新推 schema + 灌数据 |
 
 ### 工作区
 
@@ -26,32 +29,39 @@
 
 ---
 
-## 创建流程
+## 初始化流程
 
-`make wt-create NAME=<name>` 执行以下初始化步骤：
+### 首次 clone
 
-### 1. 创建 git worktree
+```bash
+cd web && npx vercel link && npx vercel pull && cd ..
+make setup
+```
 
-基于 base 分支创建新分支 `<base>-<name>-<日期>`，工作目录位于 `.worktrees/<name>`。
+`make setup` 执行：
 
-### 2. 复制 Vercel 配置
+1. **vercel-check** — 确保 `web/.vercel` 存在
+2. **db-up** — 启动 Docker PostgreSQL
+3. **wt-meta** — 创建 `.worktree/meta.json`（主仓库也视为工作区，端口 3000）
+4. **wt-init** — 共用初始化：
+   - `env` — 创建 `.env.local` symlink + `.env.development.local`（指向独立数据库）
+   - `deps` — npm install
+   - `db-init` — db-push + seed
 
-将主仓库 `web/.vercel` 拷贝到工作区，并创建软链接 `web/.env.local → .vercel/.env.development.local`。
+### 创建工作区
 
-### 3. 创建独立本地数据库
+`make wt-create NAME=<name>` 执行：
 
-如果 Docker 容器 `archon-postgres` 正在运行，自动：
-- 在容器内 `createdb` 创建独立数据库 `archon_<name>`
-- 写入独立的 `.env.development.local` 指向该数据库
-- 执行 `make db-init`（push schema + seed 数据）
-
-每个工作区数据完全隔离，互不影响。
-
-### 4. 生成 `.worktree/meta.json`
-
-随机分配端口，记录 base 分支信息：
+1. **git worktree add** — 基于 base 分支创建新分支 `<base>-<name>-<日期>`，目录 `.worktrees/<name>`
+2. **复制 Vercel 配置** — 将 `web/.vercel` 拷贝到工作区
+3. **生成 `.worktree/meta.json`** — 随机分配端口 + 记录 baseBranch
+4. **`make wt-init`** — 共用初始化（同上），自动创建独立数据库 `archon_<name>`
+5. **生成 `CLAUDE.local.md`** — 工作区路径和端口
+6. **执行 `init.sh`** — 如果主仓库 `.worktree/` 下存在
+7. **链接 Claude Code 自动记忆** — 共享主项目记忆
 
 ```json
+// .worktree/meta.json
 {
   "dev": 5183,
   "storybook": 5184,
@@ -60,23 +70,7 @@
 }
 ```
 
-### 5. 生成 `CLAUDE.local.md`
-
-从模板渲染，告诉 Claude Code 当前工作区路径和端口：
-
-| 服务 | 说明 |
-|------|------|
-| Dev Server | `make dev` |
-| Storybook | `make storybook` |
-| Drizzle Studio | `make db-studio` |
-
-### 6. 执行初始化脚本
-
-如果主仓库 `.worktree/` 下存在 `init.sh`，会复制到工作区并执行。
-
-### 7. 链接 Claude Code 自动记忆
-
-工作区共享主项目的 Claude Code auto memory，确保跨工作区的记忆一致。
+每个工作区（包括主仓库）拥有独立数据库，完全隔离。
 
 ---
 
