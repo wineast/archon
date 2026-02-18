@@ -156,7 +156,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
 
   return (
     <FormProvider {...form}>
-      <div className="space-y-3">
+      <div className="space-y-3 min-w-0">
         <div>
           <label className="text-xs font-medium text-muted-foreground">
             Tool Name

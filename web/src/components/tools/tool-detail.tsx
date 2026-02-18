@@ -64,7 +64,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
     <div className="flex h-full flex-col">
       {/* Form body */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="p-4">
+        <div className="p-4 min-w-0 overflow-hidden">
           <ToolForm
             tool={{
               id: tool.id,

@@ -70,7 +70,7 @@ function NestedProperties({
   });
 
   return (
-    <div className="border-l-2 border-muted pl-4 ml-2 space-y-1.5">
+    <div className="border-l-2 border-muted pl-4 ml-2 space-y-1.5 min-w-0">
       {fields.map((field, index) => (
         <ParameterRow
           key={field.id}
@@ -280,8 +280,8 @@ export function ParameterRow({
   );
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
+    <div className="space-y-1.5 min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
         <Input
           className="h-8 w-[120px] text-sm"
           {...register(`${fieldPath}.name`)}
@@ -377,7 +377,7 @@ export function ParameterRow({
       )}
 
       {isEnum && (
-        <div className="flex items-center gap-2 pl-[128px]">
+        <div className="flex items-center gap-2 pl-[128px] min-w-0">
           <Select
             value={enumSource}
             onValueChange={(value: EnumSource) => {
@@ -418,7 +418,7 @@ export function ParameterRow({
               )}
             />
           ) : (
-            <div className="flex-1 space-y-1">
+            <div className="flex-1 min-w-0 space-y-1">
               <Controller
                 name={`${fieldPath}.enumRef`}
                 control={control}

@@ -100,7 +100,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
           onSelect={setActiveToolId}
           onCreate={handleCreate}
         />
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-w-0 overflow-hidden">
           {activeTool ? (
             <ToolDetail
               key={activeTool.id}
@@ -137,7 +137,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
               </Button>
               <span className="text-sm font-medium">Back</span>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-w-0 overflow-hidden">
               <ToolDetail
                 key={activeTool.id}
                 tool={activeTool}
