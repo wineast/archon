@@ -13,21 +13,14 @@ export interface BuildSchemaOptions {
  */
 function buildParamSchema(
   param: ToolParameter,
-  resolvedVars?: Record<string, unknown>,
   options?: BuildSchemaOptions
 ): z.ZodTypeAny {
-  // Resolve enumRef → actual enum values from datasets
+  // Resolve enum values from datasets or manual list
   let resolvedEnum: string[] | undefined;
 
-  // 1. enumDatasetId → from datasetsById (by UUID)
+  // enumDatasetId → from datasetsById (by UUID)
   if (param.enumDatasetId && options?.datasetsById?.[param.enumDatasetId] != null) {
     const val = options.datasetsById[param.enumDatasetId];
-    resolvedEnum = resolveEnumFromValue(val);
-  }
-
-  // 2. enumRef → from resolvedVars (by key, backward compat)
-  if (!resolvedEnum && param.enumRef && resolvedVars?.[param.enumRef] != null) {
-    const val = resolvedVars[param.enumRef];
     resolvedEnum = resolveEnumFromValue(val);
   }
 
@@ -50,7 +43,7 @@ function buildParamSchema(
         const refParams = options.schemaMap[param.schemaId];
         const nested: Record<string, z.ZodTypeAny> = {};
         for (const child of refParams) {
-          let childSchema = buildParamSchema(child, resolvedVars, options);
+          let childSchema = buildParamSchema(child, options);
           if (child.description) {
             childSchema = childSchema.describe(child.description);
           }
@@ -63,7 +56,7 @@ function buildParamSchema(
       } else if (param.properties && param.properties.length > 0) {
         const nested: Record<string, z.ZodTypeAny> = {};
         for (const child of param.properties) {
-          let childSchema = buildParamSchema(child, resolvedVars, options);
+          let childSchema = buildParamSchema(child, options);
           if (child.description) {
             childSchema = childSchema.describe(child.description);
           }
@@ -119,20 +112,19 @@ function resolveEnumFromValue(val: unknown): string[] | undefined {
  * Build a zod object schema from a list of ToolParameter definitions.
  * Returns z.object({}) when parameters is empty (no-arg tool).
  *
- * When `resolvedVars` is provided, `enumRef` on a parameter resolves to
- * the dataset's values. For object-type datasets with string values,
- * uses Object.values(); for arrays, uses array elements; for objects
- * with non-string values, uses Object.keys().
+ * When `options.datasetsById` is provided, `enumDatasetId` on a parameter
+ * resolves to the dataset's values. For object-type datasets with string
+ * values, uses Object.values(); for arrays, uses array elements; for
+ * objects with non-string values, uses Object.keys().
  */
 export function buildInputSchema(
   parameters: ToolParameter[],
-  resolvedVars?: Record<string, unknown>,
   options?: BuildSchemaOptions
 ) {
   const shape: Record<string, z.ZodTypeAny> = {};
 
   for (const param of parameters) {
-    let schema = buildParamSchema(param, resolvedVars, options);
+    let schema = buildParamSchema(param, options);
 
     if (param.description) {
       schema = schema.describe(param.description);

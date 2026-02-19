@@ -158,15 +158,12 @@ function DefaultValueEditor({
   const defaultValue = useWatch({ control, name: `${fieldPath}.defaultValue` });
   const enumValues = useWatch({ control, name: `${fieldPath}.enum` }) as string[] | undefined;
   const enumDatasetId = useWatch({ control, name: `${fieldPath}.enumDatasetId` }) as string | undefined;
-  const enumRef = useWatch({ control, name: `${fieldPath}.enumRef` }) as string | undefined;
 
   // Resolve available options for enum type
   const options =
     enumDatasetId && enumRefValues[enumDatasetId]
       ? enumRefValues[enumDatasetId]
-      : enumRef && enumRefValues[enumRef]
-        ? enumRefValues[enumRef]
-        : enumValues ?? [];
+      : enumValues ?? [];
 
   if (type === "boolean") {
     return (
@@ -296,7 +293,6 @@ export function ParameterRow({
   // Only watch fields needed for conditional rendering in this component
   const type = useWatch({ control, name: `${fieldPath}.type` }) as ToolParamType;
   const enumDatasetId = useWatch({ control, name: `${fieldPath}.enumDatasetId` }) as string | undefined;
-  const enumRef = useWatch({ control, name: `${fieldPath}.enumRef` }) as string | undefined;
   const schemaId = useWatch({ control, name: `${fieldPath}.schemaId` }) as string | undefined;
 
   const isEnum = type === "enum";
@@ -304,7 +300,7 @@ export function ParameterRow({
   const canNest = isJson && depth < MAX_DEPTH;
 
   const [enumSource, setEnumSource] = useState<EnumSource>(() =>
-    enumDatasetId || enumRef ? "ref" : "manual"
+    enumDatasetId ? "ref" : "manual"
   );
   const [jsonSource, setJsonSource] = useState<JsonSource>(() =>
     schemaId ? "ref" : "manual"
@@ -334,7 +330,6 @@ export function ParameterRow({
                 field.onChange(value);
                 if (value !== "enum") {
                   setValue(`${fieldPath}.enum`, undefined);
-                  setValue(`${fieldPath}.enumRef`, undefined);
                   setValue(`${fieldPath}.enumDatasetId`, undefined);
                 }
                 if (value !== "json") {
@@ -422,7 +417,6 @@ export function ParameterRow({
             onValueChange={(value: EnumSource) => {
               setEnumSource(value);
               if (value === "manual") {
-                setValue(`${fieldPath}.enumRef`, undefined);
                 setValue(`${fieldPath}.enumDatasetId`, undefined);
               } else {
                 setValue(`${fieldPath}.enum`, undefined);
@@ -467,8 +461,6 @@ export function ParameterRow({
                     value={field.value ?? ""}
                     onValueChange={(value: string) => {
                       field.onChange(value || undefined);
-                      // Clear legacy enumRef when selecting by ID
-                      setValue(`${fieldPath}.enumRef`, undefined);
                     }}
                   >
                     <SelectTrigger className="w-full" size="sm">

@@ -235,7 +235,7 @@ export const WithEnumRef: Story = {
           type: "enum",
           description: "US state code",
           required: true,
-          enumRef: "us_states",
+          enumDatasetId: "ds-us-states",
         },
         {
           id: "e2",

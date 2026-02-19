@@ -152,7 +152,6 @@ export function buildDynamicTools(
   for (const def of definitions) {
     const inputSchema = buildInputSchema(
       def.parameters,
-      templateData?.resolvedVars,
       {
         datasetsById: templateData?.datasetsById,
         schemaMap: templateData?.schemaMap,
