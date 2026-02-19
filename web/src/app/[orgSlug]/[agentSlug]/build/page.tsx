@@ -6,6 +6,7 @@ import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import { UserButton } from "@clerk/nextjs";
 import {
+  ActivityIcon,
   ArrowLeftIcon,
   BarChart3Icon,
   BookOpenIcon,
@@ -56,6 +57,7 @@ import { FilesPanel } from "@/components/agent-files/files-panel";
 import { useAgentRole } from "@/lib/auth/hooks";
 import { BuildChatPanel } from "@/components/build-chat/build-chat-panel";
 import { AuditLogSheet } from "@/components/audit-log/audit-log-sheet";
+import { RuntimeEventsPanel } from "@/components/runtime-events/runtime-events-panel";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
 import { TrashSheet } from "@/components/trash/trash-sheet";
@@ -84,6 +86,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "model-config", label: "Model Config", icon: SettingsIcon },
   { value: "embed", label: "Embed", icon: CodeIcon },
   { value: "usage", label: "Usage", icon: BarChart3Icon },
+  { value: "runtime", label: "Runtime", icon: ActivityIcon },
   { value: "members", label: "Members", icon: UsersIcon },
 ];
 
@@ -124,7 +127,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
   const visibleTabs = useMemo(
     () =>
       SETTINGS_TABS.filter((t) => {
-        if (t.value === "members" || t.value === "usage") return canManageMembers;
+        if (t.value === "members" || t.value === "usage" || t.value === "runtime") return canManageMembers;
         return true;
       }),
     [canManageMembers]
@@ -248,6 +251,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return <EmbedTokensPanel agentId={agent.id} />;
       case "usage":
         return canManageMembers ? <UsagePanel agentId={agent.id} /> : null;
+      case "runtime":
+        return canManageMembers ? <RuntimeEventsPanel agentId={agent.id} /> : null;
       case "members":
         return canManageMembers ? (
           <MembersPanel agentId={agent.id} isPublic={agent.isPublic} />

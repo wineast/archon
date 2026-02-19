@@ -3,6 +3,7 @@ import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
 import type { TemplateData } from "@/lib/template/render";
+import type { RuntimeEventInput } from "@/lib/runtime-events/record";
 
 function isUrl(s: string): boolean {
   return s.startsWith("http://") || s.startsWith("https://");
@@ -74,13 +75,82 @@ function resolveExecutor(def: ToolDefinitionPayload, agentId?: string): (args: a
   });
 }
 
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max) + "…" : s;
+}
+
+/**
+ * Wrap an executor with timing + event collection.
+ */
+function wrapExecutorWithTiming(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  executor: (args: any) => Promise<any>,
+  toolName: string,
+  agentId: string,
+  collector: RuntimeEventInput[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): (args: any) => Promise<any> {
+  return async (args) => {
+    const start = performance.now();
+    try {
+      const result = await executor(args);
+      const durationMs = Math.round(performance.now() - start);
+      const inputStr = JSON.stringify(args);
+      const outputStr = JSON.stringify(result);
+
+      // Check if the tool returned an error object
+      const isError =
+        result && typeof result === "object" && "error" in result;
+
+      collector.push({
+        agentId,
+        eventType: isError ? "tool_error" : "tool_call",
+        severity: isError ? "warning" : "info",
+        durationMs,
+        metadata: {
+          toolName,
+          inputSize: inputStr.length,
+          outputSize: outputStr.length,
+          ...(isError
+            ? { error: truncate(String(result.error), 500) }
+            : {}),
+        },
+      });
+
+      return result;
+    } catch (e) {
+      const durationMs = Math.round(performance.now() - start);
+      const errorMsg =
+        e instanceof Error ? e.message : String(e);
+      const isTimeout =
+        errorMsg.toLowerCase().includes("timeout") ||
+        errorMsg.toLowerCase().includes("timed out");
+
+      collector.push({
+        agentId,
+        eventType: isTimeout ? "tool_timeout" : "tool_error",
+        severity: "error",
+        durationMs,
+        metadata: {
+          toolName,
+          inputSize: JSON.stringify(args).length,
+          error: truncate(errorMsg, 500),
+        },
+      });
+
+      throw e;
+    }
+  };
+}
+
 /**
  * Convert UI-defined tool payloads into AI SDK tool objects.
  */
 export function buildDynamicTools(
   definitions: ToolDefinitionPayload[],
   templateData?: TemplateData,
-  agentId?: string
+  agentId?: string,
+  collector?: RuntimeEventInput[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, Tool<any, any>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,10 +170,15 @@ export function buildDynamicTools(
       // Client tools: schema only, no execute → tool call passes through to frontend
       tools[def.name] = tool({ description: def.description, inputSchema });
     } else {
+      const executor = resolveExecutor(def, agentId);
+      const execute =
+        collector && agentId
+          ? wrapExecutorWithTiming(executor, def.name, agentId, collector)
+          : executor;
       tools[def.name] = tool({
         description: def.description,
         inputSchema,
-        execute: resolveExecutor(def, agentId),
+        execute,
       });
     }
   }
