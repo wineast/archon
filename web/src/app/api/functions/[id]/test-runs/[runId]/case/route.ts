@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { functions, schemas, functionTestRuns, functionTestRunResults } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { compileFn } from "@/lib/functions/compile";
+import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import type { ToolParameter } from "@/lib/tools/types";
 
@@ -70,12 +70,6 @@ export async function POST(
   let passed = false;
 
   try {
-    // Compile
-    const compiled = compileFn(fn.code);
-    if (typeof compiled !== "function") {
-      throw new Error("Function code must return a callable");
-    }
-
     // Resolve parameters from schema FK
     let parameters: ToolParameter[] = [];
     if (fn.parametersSchemaId) {
@@ -90,15 +84,19 @@ export async function POST(
       validatedInput = inputSchema.parse(input ?? {});
     }
 
-    // Execute
-    output = await (compiled as (input: unknown) => unknown)(validatedInput);
+    // Compile + execute in sandbox
+    output = await compileAndExecFn(fn.code, validatedInput);
 
     // Exact match comparison
     passed =
       expectedOutput == null ||
       stableStringify(output) === stableStringify(expectedOutput);
   } catch (e) {
-    error = e instanceof Error ? e.message : String(e);
+    if (e instanceof SandboxCompilationError) {
+      error = `Compilation error: ${e.message}`;
+    } else {
+      error = e instanceof Error ? e.message : String(e);
+    }
     passed = false;
   }
 

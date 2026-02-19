@@ -106,9 +106,9 @@ export function createToolContext(agentId?: string): ToolContext {
       parameters: r.parametersSchemaId ? schemaMap.get(r.parametersSchemaId) ?? [] : [],
     }));
 
-    const compiled = resolveAndCompileFunctions(fnRecords);
-    setCachedFunctions(agentId, compiled);
-    return compiled;
+    const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords);
+    setCachedFunctions(agentId, fns, sandbox);
+    return fns;
   }
 
   return {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { functions, schemas } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { compileFn } from "@/lib/functions/compile";
+import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import type { ToolParameter } from "@/lib/tools/types";
 
@@ -53,29 +53,6 @@ export async function POST(
 
   const start = Date.now();
 
-  // Compile
-  let compiled: unknown;
-  try {
-    compiled = compileFn(fn.code);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({
-      success: false,
-      error: `Compilation error: ${msg}`,
-      durationMs: Date.now() - start,
-      passed: false,
-    });
-  }
-
-  if (typeof compiled !== "function") {
-    return NextResponse.json({
-      success: false,
-      error: "Function code must return a callable",
-      durationMs: Date.now() - start,
-      passed: false,
-    });
-  }
-
   // Resolve parameters from schema FK
   let parameters: ToolParameter[] = [];
   if (fn.parametersSchemaId) {
@@ -100,11 +77,19 @@ export async function POST(
     }
   }
 
-  // Execute
+  // Compile + execute in sandbox
   let result: unknown;
   try {
-    result = await (compiled as (input: unknown) => unknown)(validatedInput);
+    result = await compileAndExecFn(fn.code, validatedInput);
   } catch (e) {
+    if (e instanceof SandboxCompilationError) {
+      return NextResponse.json({
+        success: false,
+        error: `Compilation error: ${e.message}`,
+        durationMs: Date.now() - start,
+        passed: false,
+      });
+    }
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({
       success: false,
