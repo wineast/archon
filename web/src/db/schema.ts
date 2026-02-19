@@ -621,7 +621,8 @@ export const components = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     componentSource: text("component_source").notNull().default(""),
-    schemaId: uuid("schema_id").references(() => schemas.id, { onDelete: "set null" }),
+    inputSchemaId: uuid("input_schema_id").references(() => schemas.id, { onDelete: "set null" }),
+    outputSchemaId: uuid("output_schema_id").references(() => schemas.id, { onDelete: "set null" }),
     generatedCss: text("generated_css").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

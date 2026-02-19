@@ -193,7 +193,8 @@ export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
         name: c.name,
         description: c.description,
         componentSource: c.componentSource,
-        schemaKey: c.schemaId ? schemaIdToKey.get(c.schemaId) ?? null : null,
+        inputSchemaKey: c.inputSchemaId ? schemaIdToKey.get(c.inputSchemaId) ?? null : null,
+        outputSchemaKey: c.outputSchemaId ? schemaIdToKey.get(c.outputSchemaId) ?? null : null,
         generatedCss: c.generatedCss,
         testCases: compTestsByKey.get(c.key) ?? [],
       })
@@ -392,7 +393,8 @@ export async function restoreSnapshot(
           name: c.name,
           description: c.description,
           componentSource: c.componentSource,
-          schemaId: c.schemaKey ? schemaKeyToNewId.get(c.schemaKey) ?? null : null,
+          inputSchemaId: c.inputSchemaKey ? schemaKeyToNewId.get(c.inputSchemaKey) ?? null : null,
+          outputSchemaId: c.outputSchemaKey ? schemaKeyToNewId.get(c.outputSchemaKey) ?? null : null,
           generatedCss: c.generatedCss,
         }))
       )

@@ -68,12 +68,23 @@ export function ComponentDetail({ component, agentId, onSave, onDelete }: Compon
                 name: component.name,
                 description: component.description,
                 componentSource: component.componentSource,
-                schemaId: component.schemaId ?? null,
+                inputSchemaId: component.inputSchemaId ?? null,
+                outputSchemaId: component.outputSchemaId ?? null,
               }}
               agentId={agentId}
               onDraftRef={handleDraftRef}
               onDirtyChange={setDirty}
             />
+            {component.generatedCss && (
+              <div className="mt-4">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Generated CSS
+                </label>
+                <pre className="mt-1 bg-muted rounded p-3 text-xs font-mono overflow-auto max-h-[200px]">
+                  {component.generatedCss}
+                </pre>
+              </div>
+            )}
           </div>
         </ScrollArea>
 

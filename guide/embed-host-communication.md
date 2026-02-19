@@ -520,6 +520,77 @@ Dashboard 工具定义：
 
 ---
 
+## 安全与限制
+
+### Origin 验证
+
+所有 postMessage 通信都会严格验证消息来源（origin），防止恶意页面伪造消息：
+
+**iframe 侧**（Archon 服务）：
+- iframe 只接受来自**已注册 Embed Token 的 `allowedOrigins`** 中的域名的 postMessage
+- 如果 Token 未设置 `allowedOrigins`（即允许所有域名），则接受任意来源
+- 不在白名单中的来源发送的消息会被静默丢弃
+
+**宿主侧**（widget.js）：
+- widget.js 只接受来自 **Archon 服务域名** 的 postMessage（即 `<script src>` 中的域名）
+- 其他来源的消息会被静默丢弃
+
+**实际效果**：即使恶意脚本注入了宿主页面，它也无法向 iframe 发送伪造的 `archon:context` 或 `archon:tool-result` 消息，因为 iframe 会校验 origin 是否在 Token 白名单中。
+
+> **建议**：生产环境务必在创建 Embed Token 时设置 `allowedOrigins`，不要使用通配符。
+
+### Host Context 限制
+
+| 限制项 | 值 | 说明 |
+|-------|---|------|
+| 总大小 | **10 KB**（JSON 序列化后） | 超出部分会被截断，API 返回 warning |
+| 值类型 | `string`、`number`、`boolean` | 不支持嵌套对象、数组 |
+| Key 命名 | 仅 `[a-zA-Z0-9_]` | 不合法的 key 会被忽略 |
+| 更新频率 | 无限制 | 但只在发送消息时生效 |
+
+**不要在 context 中传递敏感信息**（密码、Token、密钥等），因为 context 会被完整写入系统提示词，发送给 AI 模型。
+
+### Host Tool 执行限制
+
+| 限制项 | 值 | 说明 |
+|-------|---|------|
+| 执行超时 | **30 秒** | 超时后 iframe 会向 AI 返回超时错误，AI 可能重试或向用户说明 |
+| 返回值大小 | **100 KB**（JSON 序列化后） | 超出会截断 |
+| 并发调用 | 无限制 | AI 可能同时调用多个工具，宿主 handler 应能处理并发 |
+| 错误处理 | 自动捕获 | handler 抛出的异常会被 widget.js 捕获，错误 message 传回给 AI |
+
+**超时处理流程**：
+
+```
+AI 调用 addToCart(...)
+  → iframe 发送 archon:tool-call
+  → 启动 30 秒倒计时
+  → 30 秒内未收到 archon:tool-result / archon:tool-error
+  → iframe 向 AI 返回: { error: "Tool execution timed out after 30s" }
+  → AI 收到错误，决定如何回复用户（通常会告知操作失败）
+```
+
+### 工具可见性：双重匹配
+
+Host 工具必须同时满足以下两个条件，AI 才能看到并调用它：
+
+1. **Dashboard 中定义**：工具在 Settings → Tools 中创建，`executionTarget` 设为 `Host`
+2. **宿主已注册 Handler**：宿主调用 `ArchonEmbed.registerTools({ toolName: handler })` 注册了同名 handler
+
+| Dashboard 定义 | 宿主注册 Handler | AI 是否可见 |
+|---------------|----------------|-----------|
+| 有 | 有 | 可见，可调用 |
+| 有 | **无** | **不可见** |
+| **无** | 有 | **不可见**（宿主注册了但 Dashboard 没定义，会被忽略） |
+| 无 | 无 | 不可见 |
+
+这确保了：
+- Agent 创建者通过 Dashboard 控制工具的 Schema 和描述（AI 看到什么）
+- 宿主开发者通过代码控制工具的实际执行逻辑（工具做什么）
+- 两侧必须对齐，缺一不可
+
+---
+
 ## 常见问题
 
 ### setContext 什么时候调用？
@@ -532,20 +603,30 @@ Dashboard 工具定义：
 
 ### context 更新后，已经发送的系统提示词会变吗？
 
-不会。每次用户发送消息时，才会用当前 context 快照渲染系统提示词。已经进行中的对话不受影响，下一条消息开始生效。
+不会。每次用户发送消息时，才会用**当前 context 快照**重新渲染系统提示词。已经进行中的对话不受影响，下一条消息开始生效。
 
 ### host 工具和 client 工具有什么区别？
 
-- **client 工具**：handler 代码写在 Dashboard，在 iframe 内执行。适合不需要访问宿主页面的通用逻辑。
-- **host 工具**：handler 由宿主开发者在自己的代码中注册，在宿主页面执行。适合需要访问宿主页面 DOM、API 或业务逻辑的场景。
+| | Client 工具 | Host 工具 |
+|---|-----------|---------|
+| Handler 来源 | Dashboard 中编写 JS 代码 | 宿主开发者通过 `registerTools()` 注册 |
+| 执行位置 | iframe 内部 | 宿主页面 |
+| 能否访问宿主 DOM | 不能 | 能 |
+| 能否调用宿主 API | 不能（跨域限制） | 能（同源） |
+| 适用场景 | 通用逻辑（格式化、计算等） | 需要与宿主页面交互的业务逻辑 |
 
-### 工具执行超时怎么办？
+### handler 抛出异常会怎样？
 
-handler 执行超时时间为 30 秒。超时后 AI 会收到超时错误信息，可能会尝试重试或向用户说明情况。
+异常会被 widget.js 自动捕获，错误的 `message` 字段通过 `archon:tool-error` 传回 iframe，AI 会收到类似 `{ error: "Cannot read property 'add' of undefined" }` 的信息。AI 通常会据此向用户解释操作失败的原因。
 
-### 安全性如何保证？
+### 同一个工具能否同时定义为 server 和 host？
 
-- 所有 postMessage 通信都验证消息来源（origin），只有 Archon 域名发出的消息才会被处理
-- host context 数据大小限制为 10 KB
-- 宿主工具只有在 Dashboard 预定义 + 宿主注册 handler 双重匹配时才可用，AI 无法调用未定义的工具
-- Embed Token 的域名白名单限制仍然有效
+不能。每个工具只有一个 `executionTarget`。如果你需要在服务端和宿主页面都能执行类似逻辑，应创建两个独立的工具。
+
+### 页面导航（SPA 路由切换）后 context 还在吗？
+
+如果是 SPA 内部路由切换（不刷新页面），context 保持不变——但你应该主动调用 `setContext()` 更新 `currentPage` 等值。如果是整页刷新，context 会丢失，需要重新设置。
+
+### 多个 iframe 嵌入同一页面会冲突吗？
+
+不会。每个 widget.js 实例维护独立的 context 和 tool handlers，postMessage 通过 iframe 引用精确投递，互不干扰。

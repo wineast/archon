@@ -90,7 +90,7 @@ export async function DELETE(
   const referencingComponents = await db
     .select({ id: components.id, name: components.name })
     .from(components)
-    .where(eq(components.schemaId, id));
+    .where(or(eq(components.inputSchemaId, id), eq(components.outputSchemaId, id)));
 
   if (referencingTools.length > 0 || referencingComponents.length > 0) {
     const names = [
