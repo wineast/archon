@@ -1,5 +1,5 @@
 import type { ToolParameter } from "@/lib/tools/types";
-import type { SchemaRow } from "@/db/schema";
+import type { SchemaWithIncludes } from "@/db/schema";
 
 export interface ResolvedParameter extends ToolParameter {
   _source?: string; // 'own' | schema name
@@ -11,8 +11,8 @@ export interface ResolvedParameter extends ToolParameter {
  * `seen` set detects circular references.
  */
 export function resolveParameters(
-  schema: Pick<SchemaRow, "id" | "name" | "parameters" | "includeSchemaIds">,
-  allSchemasMap: Map<string, SchemaRow>,
+  schema: Pick<SchemaWithIncludes, "id" | "name" | "parameters" | "includeSchemaIds">,
+  allSchemasMap: Map<string, SchemaWithIncludes>,
   seen?: Set<string>
 ): ResolvedParameter[] {
   const visited = seen ?? new Set<string>();
@@ -51,7 +51,7 @@ export function resolveParameters(
 export function detectCycle(
   schemaId: string,
   candidateIncludes: string[],
-  allSchemasMap: Map<string, SchemaRow>
+  allSchemasMap: Map<string, SchemaWithIncludes>
 ): boolean {
   const visited = new Set<string>();
 
@@ -83,7 +83,7 @@ export function detectCycle(
  */
 export function getReachableSchemaIds(
   schemaId: string,
-  allSchemasMap: Map<string, SchemaRow>
+  allSchemasMap: Map<string, SchemaWithIncludes>
 ): Set<string> {
   const reachable = new Set<string>();
 

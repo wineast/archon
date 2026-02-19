@@ -15,13 +15,13 @@ import {
   Trash2Icon,
   PlusIcon,
 } from "lucide-react";
-import type { SchemaRow } from "@/db/schema";
+import type { SchemaWithIncludes } from "@/db/schema";
 import { getReachableSchemaIds } from "@/lib/schemas/resolve";
 
 interface SchemaIncludesEditorProps {
   includeSchemaIds: string[];
   onChange: (ids: string[]) => void;
-  allSchemas: SchemaRow[];
+  allSchemas: SchemaWithIncludes[];
   currentSchemaId?: string;
 }
 

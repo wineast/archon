@@ -235,7 +235,6 @@ export const schemas = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
-    includeSchemaIds: uuid("include_schema_ids").array().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -251,6 +250,35 @@ export const schemas = pgTable(
 
 export type SchemaRow = typeof schemas.$inferSelect;
 export type NewSchemaRow = typeof schemas.$inferInsert;
+
+/** Computed type: SchemaRow + resolved includeSchemaIds from junction table */
+export type SchemaWithIncludes = SchemaRow & { includeSchemaIds: string[] };
+
+/* ─────────── Schema Includes (junction table) ─────────── */
+
+export const schemaIncludes = pgTable(
+  "schema_includes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    schemaId: uuid("schema_id")
+      .notNull()
+      .references(() => schemas.id, { onDelete: "cascade" }),
+    includeSchemaId: uuid("include_schema_id")
+      .notNull()
+      .references(() => schemas.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("schema_includes_schema_include_idx").on(t.schemaId, t.includeSchemaId),
+    index("schema_includes_schema_id_idx").on(t.schemaId),
+  ]
+);
+
+export type SchemaIncludeRow = typeof schemaIncludes.$inferSelect;
+export type NewSchemaIncludeRow = typeof schemaIncludes.$inferInsert;
 
 /* ─────────── Tools ─────────── */
 

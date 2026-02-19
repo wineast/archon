@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { schemas, tools } from "@/db/schema";
-import { eq, or, and, not } from "drizzle-orm";
+import { schemas, schemaIncludes, tools } from "@/db/schema";
+import type { SchemaWithIncludes } from "@/db/schema";
+import { eq, or, asc, inArray } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveParameters, detectCycle } from "@/lib/schemas/resolve";
+
+/** Get ordered include IDs for a single schema. */
+async function getIncludeIds(schemaId: string): Promise<string[]> {
+  const rows = await db
+    .select({ includeSchemaId: schemaIncludes.includeSchemaId })
+    .from(schemaIncludes)
+    .where(eq(schemaIncludes.schemaId, schemaId))
+    .orderBy(asc(schemaIncludes.position));
+  return rows.map((r) => r.includeSchemaId);
+}
 
 export async function GET(
   req: Request,
@@ -23,16 +34,36 @@ export async function GET(
   const ctx = await requireAgentRole(existing.agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  // Load all schemas for resolving
+  // Load all schemas + includes for resolving
   const allRows = await db
     .select()
     .from(schemas)
     .where(eq(schemas.agentId, existing.agentId));
-  const allSchemasMap = new Map(allRows.map((r) => [r.id, r]));
+
+  const allIncludeRows = allRows.length > 0
+    ? await db
+        .select()
+        .from(schemaIncludes)
+        .where(inArray(schemaIncludes.schemaId, allRows.map((r) => r.id)))
+        .orderBy(asc(schemaIncludes.position))
+    : [];
+
+  const includesBySchemaId = new Map<string, string[]>();
+  for (const row of allIncludeRows) {
+    const arr = includesBySchemaId.get(row.schemaId) ?? [];
+    arr.push(row.includeSchemaId);
+    includesBySchemaId.set(row.schemaId, arr);
+  }
+
+  const allSchemasMap = new Map<string, SchemaWithIncludes>(
+    allRows.map((r) => [r.id, { ...r, includeSchemaIds: includesBySchemaId.get(r.id) ?? [] }])
+  );
+
+  const schemaWithIncludes = allSchemasMap.get(id)!;
 
   return NextResponse.json({
-    ...existing,
-    resolvedParameters: resolveParameters(existing, allSchemasMap),
+    ...schemaWithIncludes,
+    resolvedParameters: resolveParameters(schemaWithIncludes, allSchemasMap),
   });
 }
 
@@ -61,7 +92,25 @@ export async function PATCH(
       .select()
       .from(schemas)
       .where(eq(schemas.agentId, existing.agentId));
-    const allSchemasMap = new Map(allRows.map((r) => [r.id, r]));
+
+    const allIncludeRows = allRows.length > 0
+      ? await db
+          .select()
+          .from(schemaIncludes)
+          .where(inArray(schemaIncludes.schemaId, allRows.map((r) => r.id)))
+          .orderBy(asc(schemaIncludes.position))
+      : [];
+
+    const includesBySchemaId = new Map<string, string[]>();
+    for (const row of allIncludeRows) {
+      const arr = includesBySchemaId.get(row.schemaId) ?? [];
+      arr.push(row.includeSchemaId);
+      includesBySchemaId.set(row.schemaId, arr);
+    }
+
+    const allSchemasMap = new Map<string, SchemaWithIncludes>(
+      allRows.map((r) => [r.id, { ...r, includeSchemaIds: includesBySchemaId.get(r.id) ?? [] }])
+    );
 
     if (detectCycle(id, body.includeSchemaIds, allSchemasMap)) {
       return NextResponse.json(
@@ -78,12 +127,33 @@ export async function PATCH(
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.parameters !== undefined && { parameters: body.parameters }),
-      ...(body.includeSchemaIds !== undefined && { includeSchemaIds: body.includeSchemaIds }),
     })
     .where(eq(schemas.id, id))
     .returning();
 
-  return NextResponse.json(updated);
+  // Update includes if provided
+  if (body.includeSchemaIds !== undefined) {
+    // Delete old includes
+    await db.delete(schemaIncludes).where(eq(schemaIncludes.schemaId, id));
+    // Insert new includes with position
+    const newIncludes: string[] = body.includeSchemaIds;
+    if (newIncludes.length > 0) {
+      await db.insert(schemaIncludes).values(
+        newIncludes.map((includeId, i) => ({
+          schemaId: id,
+          includeSchemaId: includeId,
+          position: i,
+        }))
+      );
+    }
+  }
+
+  // Return with includeSchemaIds
+  const includeIds = body.includeSchemaIds !== undefined
+    ? body.includeSchemaIds
+    : await getIncludeIds(id);
+
+  return NextResponse.json({ ...updated, includeSchemaIds: includeIds });
 }
 
 export async function DELETE(
@@ -125,28 +195,7 @@ export async function DELETE(
     );
   }
 
-  // Remove this schema ID from other schemas' includeSchemaIds
-  const includingSchemas = await db
-    .select({ id: schemas.id, includeSchemaIds: schemas.includeSchemaIds })
-    .from(schemas)
-    .where(
-      and(
-        eq(schemas.agentId, existing.agentId),
-        not(eq(schemas.id, id))
-      )
-    );
-
-  for (const s of includingSchemas) {
-    if (s.includeSchemaIds.includes(id)) {
-      await db
-        .update(schemas)
-        .set({
-          includeSchemaIds: s.includeSchemaIds.filter((sid) => sid !== id),
-        })
-        .where(eq(schemas.id, s.id));
-    }
-  }
-
+  // CASCADE on schemaIncludes handles cleanup automatically
   await db.delete(schemas).where(eq(schemas.id, id));
   return NextResponse.json({ ok: true });
 }

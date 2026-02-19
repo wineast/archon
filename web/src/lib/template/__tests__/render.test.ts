@@ -49,6 +49,11 @@ vi.mock("@/db/schema", () => ({
     name: "name",
     parameters: "parameters",
   },
+  schemaIncludes: {
+    schemaId: "schema_id",
+    includeSchemaId: "include_schema_id",
+    position: "position",
+  },
   objectTypes: {
     id: "id",
     agentId: "agent_id",
@@ -66,6 +71,7 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn((a, b) => ({ op: "eq", a, b })),
   and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
   inArray: vi.fn((a, b) => ({ op: "inArray", a, b })),
+  asc: vi.fn((a) => ({ op: "asc", a })),
 }));
 
 // ---------------------------------------------------------------------------
@@ -82,12 +88,13 @@ vi.mock("drizzle-orm", () => ({
  *   [4] objectTypes rows    — ontology types
  *   [5] objectRelations rows — ontology relations
  *   [6] all schema rows     — for resolveParameters
+ *   [7] schema includes     — junction table rows
  *
  * For convenience, pass 3 items and the helper fills the rest with [].
  */
 function setupDbChain(queries: unknown[][]) {
   // Auto-fill missing trailing queries with empty arrays
-  while (queries.length < 7) queries.push([]);
+  while (queries.length < 8) queries.push([]);
   let callIdx = 0;
   mockSelect.mockImplementation(() => {
     const rows = queries[callIdx] ?? [];
@@ -115,7 +122,6 @@ const makeSchemaRow = (id: string, params: unknown[]) => ({
   key: id,
   name: id,
   parameters: params,
-  includeSchemaIds: [],
   createdAt: new Date(),
   updatedAt: new Date(),
 });

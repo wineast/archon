@@ -8,7 +8,7 @@ import { ParameterList } from "@/components/parameters/parameter-list";
 import { SchemaIncludesEditor } from "./schema-includes-editor";
 import { SchemaResolvedPreview } from "./schema-resolved-preview";
 import type { ToolParameter } from "@/lib/tools/types";
-import type { SchemaRow } from "@/db/schema";
+import type { SchemaWithIncludes } from "@/db/schema";
 
 export interface SchemaFormValues {
   key: string;
@@ -28,7 +28,7 @@ interface SchemaFormProps {
   schema: SchemaFormValues;
   onDraftRef: (ref: SchemaFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
-  allSchemas?: SchemaRow[];
+  allSchemas?: SchemaWithIncludes[];
   currentSchemaId?: string;
 }
 

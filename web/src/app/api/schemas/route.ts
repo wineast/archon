@@ -1,19 +1,45 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { schemas } from "@/db/schema";
-import type { SchemaRow } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { schemas, schemaIncludes } from "@/db/schema";
+import type { SchemaWithIncludes } from "@/db/schema";
+import { eq, asc, inArray } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveParameters, detectCycle } from "@/lib/schemas/resolve";
 
-/** Load all schemas for an agent into a Map<id, SchemaRow>. */
+/** Load all schemas for an agent with their includes, returning a Map<id, SchemaWithIncludes>. */
 async function getAllSchemasMap(agentId: string) {
   const rows = await db
     .select()
     .from(schemas)
     .where(eq(schemas.agentId, agentId))
     .orderBy(schemas.key);
-  return { rows, map: new Map(rows.map((r) => [r.id, r])) };
+
+  // Load all includes for these schemas
+  const includeRows = rows.length > 0
+    ? await db
+        .select()
+        .from(schemaIncludes)
+        .where(inArray(schemaIncludes.schemaId, rows.map((r) => r.id)))
+        .orderBy(asc(schemaIncludes.position))
+    : [];
+
+  // Build includes map
+  const includesBySchemaId = new Map<string, string[]>();
+  for (const row of includeRows) {
+    const arr = includesBySchemaId.get(row.schemaId) ?? [];
+    arr.push(row.includeSchemaId);
+    includesBySchemaId.set(row.schemaId, arr);
+  }
+
+  const withIncludes: SchemaWithIncludes[] = rows.map((r) => ({
+    ...r,
+    includeSchemaIds: includesBySchemaId.get(r.id) ?? [],
+  }));
+
+  return {
+    rows: withIncludes,
+    map: new Map(withIncludes.map((r) => [r.id, r])),
+  };
 }
 
 export async function GET(req: Request) {
@@ -50,9 +76,8 @@ export async function POST(req: Request) {
   // Validate cycle if includes are provided
   if (includeSchemaIds.length > 0) {
     const { map } = await getAllSchemasMap(agentId);
-    // Use a temporary ID for the new schema
     const tempId = "__new__";
-    const tempSchema: SchemaRow = {
+    const tempSchema: SchemaWithIncludes = {
       id: tempId,
       agentId,
       key: body.key,
@@ -80,9 +105,19 @@ export async function POST(req: Request) {
       name: body.name,
       description: body.description ?? "",
       parameters: body.parameters ?? [],
-      includeSchemaIds,
     })
     .returning();
 
-  return NextResponse.json(row, { status: 201 });
+  // Insert schema includes
+  if (includeSchemaIds.length > 0) {
+    await db.insert(schemaIncludes).values(
+      includeSchemaIds.map((includeId, i) => ({
+        schemaId: row.id,
+        includeSchemaId: includeId,
+        position: i,
+      }))
+    );
+  }
+
+  return NextResponse.json({ ...row, includeSchemaIds }, { status: 201 });
 }
