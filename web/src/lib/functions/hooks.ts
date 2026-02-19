@@ -3,7 +3,6 @@
 import useSWR from "swr";
 import { toast } from "sonner";
 import type { FunctionRow } from "@/db/schema";
-import type { ToolParameter } from "@/lib/tools/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -45,7 +44,6 @@ export async function createFunction(
     name: string;
     description?: string;
     code: string;
-    parameters?: ToolParameter[];
     agentId: string;
   },
   mutate: () => void

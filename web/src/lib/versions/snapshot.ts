@@ -182,8 +182,8 @@ export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
         name: f.name,
         description: f.description,
         code: f.code,
-        parameters: f.parameters,
-        returnParameters: f.returnParameters,
+        parametersSchemaKey: f.parametersSchemaId ? schemaIdToKey.get(f.parametersSchemaId) ?? null : null,
+        returnParametersSchemaKey: f.returnParametersSchemaId ? schemaIdToKey.get(f.returnParametersSchemaId) ?? null : null,
         testCases: funcTestsByKey.get(f.key) ?? [],
       })
     ),
@@ -359,8 +359,8 @@ export async function restoreSnapshot(
           name: f.name,
           description: f.description,
           code: f.code,
-          parameters: f.parameters,
-          returnParameters: f.returnParameters,
+          parametersSchemaId: f.parametersSchemaKey ? schemaKeyToNewId.get(f.parametersSchemaKey) ?? null : null,
+          returnParametersSchemaId: f.returnParametersSchemaKey ? schemaKeyToNewId.get(f.returnParametersSchemaKey) ?? null : null,
         }))
       )
       .returning({ id: functions.id, key: functions.key });

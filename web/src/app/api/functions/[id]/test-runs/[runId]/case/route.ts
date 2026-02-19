@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { functions, functionTestRuns, functionTestRunResults } from "@/db/schema";
+import { functions, schemas, functionTestRuns, functionTestRunResults } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { compileFn } from "@/lib/functions/compile";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
+import type { ToolParameter } from "@/lib/tools/types";
 
 /** Stable JSON stringify with sorted keys for deep equality comparison.
  *  Skips keys whose value is `undefined` (matching JSON.stringify behaviour). */
@@ -75,11 +76,18 @@ export async function POST(
       throw new Error("Function code must return a callable");
     }
 
+    // Resolve parameters from schema FK
+    let parameters: ToolParameter[] = [];
+    if (fn.parametersSchemaId) {
+      const [schemaRow] = await db.select().from(schemas).where(eq(schemas.id, fn.parametersSchemaId));
+      if (schemaRow) parameters = schemaRow.parameters;
+    }
+
     // Validate input
     let validatedInput = input ?? {};
-    if (fn.parameters && fn.parameters.length > 0) {
-      const schema = buildInputSchema(fn.parameters);
-      validatedInput = schema.parse(input ?? {});
+    if (parameters.length > 0) {
+      const inputSchema = buildInputSchema(parameters);
+      validatedInput = inputSchema.parse(input ?? {});
     }
 
     // Execute

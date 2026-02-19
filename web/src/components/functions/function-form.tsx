@@ -5,20 +5,28 @@ import {
   Controller,
   FormProvider,
   useForm,
+  useWatch,
 } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { JsEditor } from "@/components/editors/js-editor";
-import { ParameterList } from "@/components/parameters/parameter-list";
-import { ReturnParameterList } from "@/components/parameters/return-parameter-list";
+import { useSchemas } from "@/lib/schemas/hooks";
+import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
 import type { ToolParameter } from "@/lib/tools/types";
 
 export interface FunctionFormValues {
   name: string;
   description: string;
   code: string;
-  parameters: ToolParameter[];
-  returnParameters: ToolParameter[];
+  parametersSchemaId: string | null;
+  returnParametersSchemaId: string | null;
 }
 
 export interface FunctionFormHandle {
@@ -28,36 +36,96 @@ export interface FunctionFormHandle {
 }
 
 interface FunctionFormProps {
+  agentId: string;
   functionKey: string;
   name: string;
   description: string;
   code: string;
-  parameters: ToolParameter[];
-  returnParameters: ToolParameter[];
+  parametersSchemaId: string | null;
+  returnParametersSchemaId: string | null;
   onDraftRef: (ref: FunctionFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
 
+interface ParameterSectionProps {
+  label: string;
+  schemaIdFieldName: "parametersSchemaId" | "returnParametersSchemaId";
+  schemaIdValue: string | null | undefined;
+  schemas: { id: string; key: string; name: string; parameters: ToolParameter[] }[];
+  form: ReturnType<typeof useForm<FunctionFormValues>>;
+}
+
+function ParameterSection({
+  label,
+  schemaIdFieldName,
+  schemaIdValue,
+  schemas,
+  form,
+}: ParameterSectionProps) {
+  const selectedSchema = schemas.find((s) => s.id === schemaIdValue);
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
+      <div className="mt-1 space-y-2">
+        <Controller
+          name={schemaIdFieldName}
+          control={form.control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? "__none__"}
+              onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Select a schema..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {schemas.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} ({s.key})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {selectedSchema && (
+          <SchemaParameterPreview parameters={selectedSchema.parameters} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function FunctionForm({
+  agentId,
   functionKey,
   name: initialName,
   description: initialDescription,
   code: initialCode,
-  parameters: initialParameters,
-  returnParameters: initialReturnParameters,
+  parametersSchemaId: initialParametersSchemaId,
+  returnParametersSchemaId: initialReturnParametersSchemaId,
   onDraftRef,
   onDirtyChange,
 }: FunctionFormProps) {
+  const { schemas } = useSchemas(agentId);
+
   const defaultValues: FunctionFormValues = {
     name: initialName,
     description: initialDescription,
     code: initialCode,
-    parameters: initialParameters ?? [],
-    returnParameters: initialReturnParameters ?? [],
+    parametersSchemaId: initialParametersSchemaId ?? null,
+    returnParametersSchemaId: initialReturnParametersSchemaId ?? null,
   };
 
   const form = useForm<FunctionFormValues>({ defaultValues });
   const originalRef = useRef(JSON.stringify(defaultValues));
+
+  const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });
+  const returnParametersSchemaId = useWatch({ control: form.control, name: "returnParametersSchemaId" });
 
   // Expose handle to parent
   useEffect(() => {
@@ -120,10 +188,19 @@ export function FunctionForm({
           />
         </div>
 
-        <ParameterList fieldName="parameters" label="Parameters" />
-        <ReturnParameterList
-          fieldName="returnParameters"
+        <ParameterSection
+          label="Parameters"
+          schemaIdFieldName="parametersSchemaId"
+          schemaIdValue={parametersSchemaId}
+          schemas={schemas}
+          form={form}
+        />
+        <ParameterSection
           label="Return Parameters"
+          schemaIdFieldName="returnParametersSchemaId"
+          schemaIdValue={returnParametersSchemaId}
+          schemas={schemas}
+          form={form}
         />
 
         <div>

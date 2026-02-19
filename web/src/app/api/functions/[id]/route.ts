@@ -59,8 +59,8 @@ export async function PATCH(
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.code !== undefined && { code: body.code }),
-      ...(body.parameters !== undefined && { parameters: body.parameters }),
-      ...(body.returnParameters !== undefined && { returnParameters: body.returnParameters }),
+      ...(body.parametersSchemaId !== undefined && { parametersSchemaId: body.parametersSchemaId }),
+      ...(body.returnParametersSchemaId !== undefined && { returnParametersSchemaId: body.returnParametersSchemaId }),
     })
     .where(eq(functions.id, id))
     .returning();

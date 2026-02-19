@@ -13,18 +13,19 @@ import {
 import { FunctionPlayground } from "./function-playground";
 import { FunctionTestCasesPanel } from "./function-test-cases-panel";
 import type { FunctionRow } from "@/db/schema";
-import type { ToolParameter } from "@/lib/tools/types";
 
 interface FunctionDetailProps {
+  agentId: string;
   fn: FunctionRow;
   onSave: (
     id: string,
-    data: { name: string; description: string; code: string; parameters: ToolParameter[]; returnParameters: ToolParameter[] }
+    data: { name: string; description: string; code: string; parametersSchemaId: string | null; returnParametersSchemaId: string | null }
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
 export function FunctionDetail({
+  agentId,
   fn,
   onSave,
   onDelete,
@@ -44,8 +45,8 @@ export function FunctionDetail({
         name: draft.name,
         description: draft.description,
         code: draft.code,
-        parameters: draft.parameters,
-        returnParameters: draft.returnParameters,
+        parametersSchemaId: draft.parametersSchemaId,
+        returnParametersSchemaId: draft.returnParametersSchemaId,
       });
     } finally {
       setSaving(false);
@@ -78,12 +79,13 @@ export function FunctionDetail({
           <div className="p-4 space-y-3">
             <FunctionForm
               key={fn.id}
+              agentId={agentId}
               functionKey={fn.key}
               name={fn.name}
               description={fn.description}
               code={fn.code}
-              parameters={fn.parameters ?? []}
-              returnParameters={fn.returnParameters ?? []}
+              parametersSchemaId={fn.parametersSchemaId ?? null}
+              returnParametersSchemaId={fn.returnParametersSchemaId ?? null}
               onDraftRef={setDraftRef}
               onDirtyChange={setDirty}
             />
