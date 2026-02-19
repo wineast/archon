@@ -1,5 +1,6 @@
 # Model Config 面板的 Pull 按钮需要删除
 
+- **类型**: cleanup
 - **优先级**: low
 - **发现日期**: 2026-02-19
 - **工作区**: cleanup-dead-code

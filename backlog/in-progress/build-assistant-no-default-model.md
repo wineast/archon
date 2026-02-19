@@ -1,5 +1,6 @@
 # Build 助手设置没有默认模型
 
+- **类型**: bug
 - **优先级**: medium
 - **发现日期**: 2026-02-19
 - **工作区**: fix-build-model-default

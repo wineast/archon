@@ -43,7 +43,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 
 - 功能树：`features/README.md`
 - 使用指南：`guide/`
-- Issue 跟踪：`issues/`
+- Backlog（issue + 需求）：`backlog/`
 
 ## 通用约定
 - 使用中文回复

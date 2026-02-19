@@ -1,5 +1,6 @@
 # 组件 JSX 编辑器缺少 AI 编辑功能
 
+- **类型**: feature
 - **优先级**: medium
 - **发现日期**: 2026-02-19
 - **工作区**: component-editor-enhance

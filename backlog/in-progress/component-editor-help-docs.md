@@ -1,5 +1,6 @@
 # 组件编辑器增加帮助文档按钮
 
+- **类型**: feature
 - **优先级**: medium
 - **发现日期**: 2026-02-19
 - **工作区**: component-editor-enhance

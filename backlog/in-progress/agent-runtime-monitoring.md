@@ -1,5 +1,6 @@
 # Agent 运行监控系统
 
+- **类型**: feature
 - **优先级**: high
 - **发现日期**: 2026-02-19
 - **工作区**: agent-monitoring
