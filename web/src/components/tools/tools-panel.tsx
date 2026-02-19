@@ -76,8 +76,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
           returnParametersSchemaId: updated.returnParametersSchemaId ?? null,
           output: updated.output,
           handler: updated.handler,
-          component: updated.component,
-          componentSource: updated.componentSource,
+          componentId: updated.componentId,
         },
         mutate
       );

@@ -254,8 +254,7 @@ export const tools = pgTable(
     returnParametersSchemaId: uuid("return_parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
     output: text("output"),
     handler: text("handler"),
-    component: text("component"),
-    componentSource: text("component_source"),
+    componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),
     enabled: boolean("enabled").notNull().default(true),
     executionTarget: text("execution_target").notNull().default("server").$type<"server" | "client" | "host">(),
     createdAt: timestamp("created_at", { withTimezone: true })

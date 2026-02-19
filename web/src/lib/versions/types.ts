@@ -11,8 +11,7 @@ export interface ToolSnapshotItem {
   returnParametersSchemaKey: string | null;
   output: string | null;
   handler: string | null;
-  component: string | null;
-  componentSource: string | null;
+  componentKey: string | null;
   enabled: boolean;
   executionTarget: "server" | "client" | "host";
   testCases: ToolTestCaseSnapshotItem[];

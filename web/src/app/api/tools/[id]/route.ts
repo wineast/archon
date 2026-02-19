@@ -30,10 +30,9 @@ export async function PATCH(
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.handler !== undefined && { handler: body.handler }),
-      ...(body.component !== undefined && { component: body.component }),
+      ...(body.componentId !== undefined && { componentId: body.componentId }),
       ...(body.parametersSchemaId !== undefined && { parametersSchemaId: body.parametersSchemaId }),
       ...(body.returnParametersSchemaId !== undefined && { returnParametersSchemaId: body.returnParametersSchemaId }),
-      ...(body.componentSource !== undefined && { componentSource: body.componentSource }),
       ...(typeof body.enabled === "boolean" && { enabled: body.enabled }),
       ...(body.executionTarget !== undefined && { executionTarget: body.executionTarget }),
     })

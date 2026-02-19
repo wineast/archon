@@ -121,7 +121,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   // Fetch components for component selector
   const { components: componentsList } = useComponents(agentId);
   const componentOptions = useMemo(
-    () => componentsList.map((c) => ({ key: c.key, name: c.name })),
+    () => componentsList.map((c) => ({ id: c.id, key: c.key, name: c.name })),
     [componentsList]
   );
 
@@ -348,12 +348,12 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
             UI Component
           </label>
           <Controller
-            name="component"
+            name="componentId"
             control={form.control}
             render={({ field }) => (
               <Select
                 value={field.value || "__none__"}
-                onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+                onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
               >
                 <SelectTrigger className="mt-1 h-8 text-sm">
                   <SelectValue placeholder="Select a component..." />
@@ -361,7 +361,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                 <SelectContent>
                   <SelectItem value="__none__">None</SelectItem>
                   {componentOptions.map((c) => (
-                    <SelectItem key={c.key} value={c.key}>
+                    <SelectItem key={c.id} value={c.id}>
                       {c.name} ({c.key})
                     </SelectItem>
                   ))}

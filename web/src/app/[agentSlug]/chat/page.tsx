@@ -104,7 +104,8 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
   // Register dynamic component sources with composition support
   useMemo(() => {
     clearCompiledRegistry();
-    const componentMap = new Map(componentsList.map((c) => [c.key, c.componentSource]));
+    // Build componentId → key map
+    const idToKey = new Map(componentsList.map((c) => [c.id, c.key]));
 
     // Build component records for graph compilation
     const records: ComponentRecord[] = componentsList
@@ -120,15 +121,15 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
     }
 
     for (const t of toolsList) {
-      const compKey = t.component;
+      const compKey = t.componentId ? idToKey.get(t.componentId) : undefined;
       const compiledComp = compKey ? compiled.get(compKey) : undefined;
       if (compiledComp) {
         // Use pre-compiled component (with composition deps resolved)
         registerCompiledToolComponent(t.name, compiledComp);
-      } else {
-        // Fallback: inline source without composition
-        const source = (compKey && componentMap.get(compKey)) || t.componentSource;
-        if (source) registerDynamicToolSource(t.name, source);
+      } else if (compKey) {
+        // Fallback: look up source from componentsList
+        const comp = componentsList.find((c) => c.key === compKey);
+        if (comp?.componentSource) registerDynamicToolSource(t.name, comp.componentSource);
       }
     }
   }, [toolsList, componentsList]);

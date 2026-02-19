@@ -21,11 +21,12 @@ export async function GET(req: Request) {
     db
       .select({
         name: tools.name,
-        component: tools.component,
-        componentSource: tools.componentSource,
+        component: components.key,
+        componentSource: components.componentSource,
         executionTarget: tools.executionTarget,
       })
       .from(tools)
+      .leftJoin(components, eq(tools.componentId, components.id))
       .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true))),
     db
       .select({

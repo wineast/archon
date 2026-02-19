@@ -185,6 +185,18 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     console.log("  No components directory found, skipping");
   }
 
+  // Build componentKeyToId map for tools referencing components
+  const componentKeyToId: Record<string, string> = {};
+  {
+    const allComponentRows = await db
+      .select({ id: components.id, key: components.key })
+      .from(components)
+      .where(eq(components.agentId, agentId));
+    for (const c of allComponentRows) {
+      componentKeyToId[c.key] = c.id;
+    }
+  }
+
   // Seed system tools
   console.log("Seeding system tools...");
 
@@ -242,7 +254,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
         description: t.description,
         parametersSchemaId: schemaIdMap[t.name] ?? null,
         handler: t.handler ?? null,
-        component: t.component ?? null,
+        componentId: t.component ? componentKeyToId[t.component] ?? null : null,
         enabled: t.enabled,
       })
       .onConflictDoUpdate({
@@ -252,7 +264,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
           description: t.description,
           parametersSchemaId: schemaIdMap[t.name] ?? null,
           handler: t.handler ?? null,
-          component: t.component ?? null,
+          componentId: t.component ? componentKeyToId[t.component] ?? null : null,
           agentId,
         },
       })
