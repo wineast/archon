@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { functions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { clearFunctionCache } from "@/lib/functions/compile";
+import { logAudit } from "@/lib/audit/log";
 
 export async function GET(
   _req: Request,
@@ -69,6 +70,18 @@ export async function PATCH(
     clearFunctionCache(existing.agentId);
   }
 
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "updated",
+      resourceType: "function",
+      resourceId: id,
+      resourceKey: updated.key,
+      resourceName: updated.name,
+    });
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -98,6 +111,18 @@ export async function DELETE(
   if (existing.agentId) {
     clearFunctionCache(existing.agentId);
   }
+
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "deleted",
+      resourceType: "function",
+      resourceId: id,
+      resourceKey: existing.key,
+      resourceName: existing.name,
+    });
+  });
 
   return NextResponse.json({ ok: true });
 }

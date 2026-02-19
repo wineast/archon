@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { objectRelations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { logAudit } from "@/lib/audit/log";
 
 export async function GET(
   req: Request,
@@ -59,6 +60,18 @@ export async function PATCH(
     .where(eq(objectRelations.id, id))
     .returning();
 
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId,
+      userId: ctx.user.id,
+      action: "updated",
+      resourceType: "object_relation",
+      resourceId: id,
+      resourceKey: updated.key,
+      resourceName: updated.name,
+    });
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -81,5 +94,18 @@ export async function DELETE(
   if (ctx instanceof NextResponse) return ctx;
 
   await db.delete(objectRelations).where(eq(objectRelations.id, id));
+
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId,
+      userId: ctx.user.id,
+      action: "deleted",
+      resourceType: "object_relation",
+      resourceId: id,
+      resourceKey: existing.key,
+      resourceName: existing.name,
+    });
+  });
+
   return NextResponse.json({ ok: true });
 }

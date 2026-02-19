@@ -65,6 +65,7 @@
 ### 通用
 
 - [x] **创建对话框 + Key 字段** — Model Config、Eval Case、Eval Judge Config 创建时弹出 Dialog 输入 Key+Name，Key 创建后只读
+- [ ] **配置变更审计日志** — 记录 Agent 资源的 CRUD 操作，Build 页面侧边栏查看操作时间线，支持按资源类型和成员筛选
 
 ### Tools
 

@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { datasets } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { validateNoCycle } from "@/lib/datasets/queries";
+import { logAudit } from "@/lib/audit/log";
 
 export async function GET(
   _req: Request,
@@ -92,6 +93,18 @@ export async function PATCH(
     .where(eq(datasets.id, id))
     .returning();
 
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "updated",
+      resourceType: "dataset",
+      resourceId: id,
+      resourceKey: updated.key,
+      resourceName: updated.name,
+    });
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -117,5 +130,18 @@ export async function DELETE(
   if (ctx instanceof NextResponse) return ctx;
 
   await db.delete(datasets).where(eq(datasets.id, id));
+
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "deleted",
+      resourceType: "dataset",
+      resourceId: id,
+      resourceKey: existing.key,
+      resourceName: existing.name,
+    });
+  });
+
   return NextResponse.json({ ok: true });
 }

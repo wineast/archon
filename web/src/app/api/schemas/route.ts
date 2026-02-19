@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { schemas, schemaIncludes } from "@/db/schema";
 import type { SchemaWithIncludes } from "@/db/schema";
 import { eq, asc, inArray } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveParameters, detectCycle } from "@/lib/schemas/resolve";
+import { logAudit } from "@/lib/audit/log";
 
 /** Load all schemas for an agent with their includes, returning a Map<id, SchemaWithIncludes>. */
 async function getAllSchemasMap(agentId: string) {
@@ -118,6 +119,18 @@ export async function POST(req: Request) {
       }))
     );
   }
+
+  after(async () => {
+    await logAudit({
+      agentId,
+      userId: ctx.user.id,
+      action: "created",
+      resourceType: "schema",
+      resourceId: row.id,
+      resourceKey: row.key,
+      resourceName: row.name,
+    });
+  });
 
   return NextResponse.json({ ...row, includeSchemaIds }, { status: 201 });
 }

@@ -1065,3 +1065,43 @@ export const platformSettings = pgTable("platform_settings", {
 export type PlatformSettingsRow = typeof platformSettings.$inferSelect;
 export type NewPlatformSettingsRow = typeof platformSettings.$inferInsert;
 
+/* ─────────── Audit Logs ─────────── */
+
+export const auditLogActions = ["created", "updated", "deleted", "restored", "permanently_deleted"] as const;
+export type AuditLogAction = (typeof auditLogActions)[number];
+
+export const auditLogResourceTypes = [
+  "tool", "function", "component", "schema", "dataset", "wiki",
+  "model_config", "eval_case", "eval_judge_config",
+  "object_type", "object_relation", "chat_config",
+] as const;
+export type AuditLogResourceType = (typeof auditLogResourceTypes)[number];
+
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull().$type<AuditLogAction>(),
+    resourceType: text("resource_type").notNull().$type<AuditLogResourceType>(),
+    resourceId: uuid("resource_id").notNull(),
+    resourceKey: text("resource_key"),
+    resourceName: text("resource_name"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("audit_logs_agent_id_created_at_idx").on(t.agentId, t.createdAt),
+    index("audit_logs_agent_id_resource_type_idx").on(t.agentId, t.resourceType),
+  ]
+);
+
+export type AuditLogRow = typeof auditLogs.$inferSelect;
+export type NewAuditLogRow = typeof auditLogs.$inferInsert;
+

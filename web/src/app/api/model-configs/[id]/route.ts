@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { modelConfigs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { logAudit } from "@/lib/audit/log";
 
 export async function PUT(
   req: Request,
@@ -41,6 +42,18 @@ export async function PUT(
     .where(eq(modelConfigs.id, id))
     .returning();
 
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "updated",
+      resourceType: "model_config",
+      resourceId: id,
+      resourceKey: updated.key,
+      resourceName: updated.name,
+    });
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -73,5 +86,18 @@ export async function DELETE(
   }
 
   await db.delete(modelConfigs).where(eq(modelConfigs.id, id));
+
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "deleted",
+      resourceType: "model_config",
+      resourceId: id,
+      resourceKey: existing.key,
+      resourceName: existing.name,
+    });
+  });
+
   return NextResponse.json({ ok: true });
 }

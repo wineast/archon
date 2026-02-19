@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { logAudit } from "@/lib/audit/log";
 
 export async function PATCH(
   req: Request,
@@ -34,6 +35,19 @@ export async function PATCH(
   }
 
   await db.update(wikiDocuments).set(updates).where(eq(wikiDocuments.id, id));
+
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "updated",
+      resourceType: "wiki",
+      resourceId: id,
+      resourceKey: existing.key,
+      resourceName: existing.title,
+    });
+  });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -56,5 +70,18 @@ export async function DELETE(
   if (ctx instanceof NextResponse) return ctx;
 
   await db.delete(wikiDocuments).where(eq(wikiDocuments.id, id));
+
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "deleted",
+      resourceType: "wiki",
+      resourceId: id,
+      resourceKey: existing.key,
+      resourceName: existing.title,
+    });
+  });
+
   return NextResponse.json({ ok: true });
 }

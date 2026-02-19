@@ -15,6 +15,7 @@ import {
   FileIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
+  HistoryIcon,
   MessageSquareIcon,
   NetworkIcon,
   PuzzleIcon,
@@ -53,6 +54,7 @@ import { EmbedTokensPanel } from "@/components/embed-tokens/embed-tokens-panel";
 import { FilesPanel } from "@/components/agent-files/files-panel";
 import { useAgentRole } from "@/lib/auth/hooks";
 import { BuildChatPanel } from "@/components/build-chat/build-chat-panel";
+import { AuditLogSheet } from "@/components/audit-log/audit-log-sheet";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
 
@@ -110,6 +112,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
   const [sheetVersionId, setSheetVersionId] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [auditLogOpen, setAuditLogOpen] = useState(false);
 
   const visibleTabs = useMemo(
     () =>
@@ -304,23 +307,32 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         )}
 
         {/* Desktop settings nav */}
-        <nav className="hidden w-48 shrink-0 flex-col gap-1 border-r p-2 sm:flex">
-          {visibleTabs.map((t) => {
-            const isActive = t.value === activeTab;
-            return (
-              <button
-                key={t.value}
-                onClick={() => handleTabChange(t.value)}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                  isActive && "bg-accent text-foreground font-medium"
-                )}
-              >
-                <t.icon className="size-4" />
-                {t.label}
-              </button>
-            );
-          })}
+        <nav className="hidden w-48 shrink-0 flex-col justify-between border-r p-2 sm:flex">
+          <div className="flex flex-col gap-1">
+            {visibleTabs.map((t) => {
+              const isActive = t.value === activeTab;
+              return (
+                <button
+                  key={t.value}
+                  onClick={() => handleTabChange(t.value)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                    isActive && "bg-accent text-foreground font-medium"
+                  )}
+                >
+                  <t.icon className="size-4" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => setAuditLogOpen(true)}
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <HistoryIcon className="size-4" />
+            操作日志
+          </button>
         </nav>
 
         {/* Mobile horizontal tabs */}
@@ -341,6 +353,13 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
               </button>
             );
           })}
+          <button
+            onClick={() => setAuditLogOpen(true)}
+            className="flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors"
+          >
+            <HistoryIcon className="size-3.5" />
+            日志
+          </button>
         </div>
 
         {/* Content — always the normal editable panels */}
@@ -375,6 +394,12 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
           }}
         />
       )}
+
+      <AuditLogSheet
+        agentId={agent.id}
+        open={auditLogOpen}
+        onOpenChange={setAuditLogOpen}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -6,6 +6,7 @@ import { resolveTitle } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import type { WikiDocumentRow } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { logAudit } from "@/lib/audit/log";
 
 function toWikiDocument(row: WikiDocumentRow): WikiDocument {
   return {
@@ -62,5 +63,17 @@ export async function POST(req: Request) {
       order: body.order,
     })
     .returning();
+  after(async () => {
+    await logAudit({
+      agentId,
+      userId: ctx.user.id,
+      action: "created",
+      resourceType: "wiki",
+      resourceId: row.id,
+      resourceKey: row.key,
+      resourceName: row.title,
+    });
+  });
+
   return NextResponse.json(toWikiDocument(row), { status: 201 });
 }

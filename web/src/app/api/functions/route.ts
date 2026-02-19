@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { functions } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { logAudit } from "@/lib/audit/log";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -43,6 +44,18 @@ export async function POST(req: Request) {
       returnParametersSchemaId: body.returnParametersSchemaId ?? null,
     })
     .returning();
+
+  after(async () => {
+    await logAudit({
+      agentId,
+      userId: ctx.user.id,
+      action: "created",
+      resourceType: "function",
+      resourceId: row.id,
+      resourceKey: row.key,
+      resourceName: row.name,
+    });
+  });
 
   return NextResponse.json(row, { status: 201 });
 }

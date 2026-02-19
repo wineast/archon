@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { datasets } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { validateNoCycle } from "@/lib/datasets/queries";
+import { logAudit } from "@/lib/audit/log";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -60,6 +61,18 @@ export async function POST(req: Request) {
     .insert(datasets)
     .values(newRow)
     .returning();
+
+  after(async () => {
+    await logAudit({
+      agentId,
+      userId: ctx.user.id,
+      action: "created",
+      resourceType: "dataset",
+      resourceId: row.id,
+      resourceKey: row.key,
+      resourceName: row.name,
+    });
+  });
 
   return NextResponse.json(row, { status: 201 });
 }

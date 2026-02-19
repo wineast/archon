@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { schemas, schemaIncludes, tools } from "@/db/schema";
 import type { SchemaWithIncludes } from "@/db/schema";
 import { eq, or, asc, inArray } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveParameters, detectCycle } from "@/lib/schemas/resolve";
+import { logAudit } from "@/lib/audit/log";
 
 /** Get ordered include IDs for a single schema. */
 async function getIncludeIds(schemaId: string): Promise<string[]> {
@@ -153,6 +154,18 @@ export async function PATCH(
     ? body.includeSchemaIds
     : await getIncludeIds(id);
 
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId,
+      userId: ctx.user.id,
+      action: "updated",
+      resourceType: "schema",
+      resourceId: id,
+      resourceKey: updated.key,
+      resourceName: updated.name,
+    });
+  });
+
   return NextResponse.json({ ...updated, includeSchemaIds: includeIds });
 }
 
@@ -197,5 +210,18 @@ export async function DELETE(
 
   // CASCADE on schemaIncludes handles cleanup automatically
   await db.delete(schemas).where(eq(schemas.id, id));
+
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId,
+      userId: ctx.user.id,
+      action: "deleted",
+      resourceType: "schema",
+      resourceId: id,
+      resourceKey: existing.key,
+      resourceName: existing.name,
+    });
+  });
+
   return NextResponse.json({ ok: true });
 }

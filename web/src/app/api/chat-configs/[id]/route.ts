@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { chatConfigs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { logAudit } from "@/lib/audit/log";
 
 export async function PUT(
   req: Request,
@@ -36,6 +37,18 @@ export async function PUT(
     })
     .where(eq(chatConfigs.id, id))
     .returning();
+
+  after(async () => {
+    await logAudit({
+      agentId: existing.agentId!,
+      userId: ctx.user.id,
+      action: "updated",
+      resourceType: "chat_config",
+      resourceId: id,
+      resourceKey: existing.id,
+      resourceName: existing.title || "chat_config",
+    });
+  });
 
   return NextResponse.json(updated);
 }
