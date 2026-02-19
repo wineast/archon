@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { functions } from "@/db/schema";
+import { functions, schemas } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { compileFn } from "@/lib/functions/compile";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
+import type { ToolParameter } from "@/lib/tools/types";
 
 /** Stable JSON stringify with sorted keys for deep equality comparison.
  *  Skips keys whose value is `undefined` (matching JSON.stringify behaviour). */
@@ -75,12 +76,19 @@ export async function POST(
     });
   }
 
+  // Resolve parameters from schema FK
+  let parameters: ToolParameter[] = [];
+  if (fn.parametersSchemaId) {
+    const [schemaRow] = await db.select().from(schemas).where(eq(schemas.id, fn.parametersSchemaId));
+    if (schemaRow) parameters = schemaRow.parameters;
+  }
+
   // Validate input
   let validatedInput = input ?? {};
-  if (fn.parameters && fn.parameters.length > 0) {
+  if (parameters.length > 0) {
     try {
-      const schema = buildInputSchema(fn.parameters);
-      validatedInput = schema.parse(input ?? {});
+      const inputSchema = buildInputSchema(parameters);
+      validatedInput = inputSchema.parse(input ?? {});
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return NextResponse.json({

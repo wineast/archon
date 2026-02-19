@@ -133,8 +133,8 @@ export const functions = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     code: text("code").notNull(),
-    parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
-    returnParameters: jsonb("return_parameters").$type<ToolParameter[]>().notNull().default([]),
+    parametersSchemaId: uuid("parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
+    returnParametersSchemaId: uuid("return_parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

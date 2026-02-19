@@ -23,8 +23,8 @@ export interface FunctionSnapshotItem {
   name: string;
   description: string;
   code: string;
-  parameters: ToolParameter[];
-  returnParameters: ToolParameter[];
+  parametersSchemaKey: string | null;
+  returnParametersSchemaKey: string | null;
   testCases: FunctionTestCaseSnapshotItem[];
 }
 

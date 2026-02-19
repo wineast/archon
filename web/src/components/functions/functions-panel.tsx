@@ -108,6 +108,7 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
       return (
         <FunctionDetail
           key={activeFunction.id}
+          agentId={agentId}
           fn={activeFunction}
           onSave={handleSave}
           onDelete={handleDelete}

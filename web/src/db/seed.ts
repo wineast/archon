@@ -520,6 +520,70 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   const functionMap: { id: string; key: string }[] = [];
   try {
     const fnFiles = readdirSync(functionsDir).filter((f) => f.endsWith(".js"));
+
+    // First pass: create schemas for function parameters/returnParameters
+    console.log("Seeding function parameter schemas...");
+    const fnSchemaIdMap: Record<string, { paramsSchemaId: string | null; returnParamsSchemaId: string | null }> = {};
+    for (const file of fnFiles) {
+      const key = file.replace(/\.js$/, "").replace(/-/g, "_");
+      const name = key
+        .split("_")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+
+      let paramsSchemaId: string | null = null;
+      let returnParamsSchemaId: string | null = null;
+
+      // Parameters schema
+      const paramsFile = file.replace(/\.js$/, ".params.json");
+      try {
+        const parameters = readJson<ToolParameter[]>(join(functionsDir, paramsFile));
+        if (parameters.length > 0) {
+          const schemaKey = `${key}_params`;
+          const schemaName = `${name} Parameters`;
+          const [schemaRow] = await db
+            .insert(schemas)
+            .values({ agentId, key: schemaKey, name: schemaName, parameters })
+            .onConflictDoUpdate({
+              target: [schemas.agentId, schemas.key],
+              set: { name: schemaName, parameters },
+            })
+            .returning();
+          paramsSchemaId = schemaRow.id;
+          schemaIds.push(schemaRow.id);
+          console.log(`  - ${schemaKey} (${schemaRow.id})`);
+        }
+      } catch {
+        // No params file
+      }
+
+      // Return parameters schema
+      const returnParamsFile = file.replace(/\.js$/, ".return-params.json");
+      try {
+        const returnParameters = readJson<ToolParameter[]>(join(functionsDir, returnParamsFile));
+        if (returnParameters.length > 0) {
+          const schemaKey = `${key}_return_params`;
+          const schemaName = `${name} Return Parameters`;
+          const [schemaRow] = await db
+            .insert(schemas)
+            .values({ agentId, key: schemaKey, name: schemaName, parameters: returnParameters })
+            .onConflictDoUpdate({
+              target: [schemas.agentId, schemas.key],
+              set: { name: schemaName, parameters: returnParameters },
+            })
+            .returning();
+          returnParamsSchemaId = schemaRow.id;
+          schemaIds.push(schemaRow.id);
+          console.log(`  - ${schemaKey} (${schemaRow.id})`);
+        }
+      } catch {
+        // No return params file
+      }
+
+      fnSchemaIdMap[key] = { paramsSchemaId, returnParamsSchemaId };
+    }
+
+    // Second pass: insert functions referencing schema IDs
     for (const file of fnFiles) {
       const key = file.replace(/\.js$/, "").replace(/-/g, "_");
       const code = readFileSync(join(functionsDir, file), "utf-8");
@@ -528,22 +592,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(" ");
 
-      // Look for companion <key>.params.json and <key>.return-params.json
-      const paramsFile = file.replace(/\.js$/, ".params.json");
-      let parameters: ToolParameter[] = [];
-      try {
-        parameters = readJson<ToolParameter[]>(join(functionsDir, paramsFile));
-      } catch {
-        // No params file — use empty array
-      }
-
-      const returnParamsFile = file.replace(/\.js$/, ".return-params.json");
-      let returnParameters: ToolParameter[] = [];
-      try {
-        returnParameters = readJson<ToolParameter[]>(join(functionsDir, returnParamsFile));
-      } catch {
-        // No return params file — use empty array
-      }
+      const { paramsSchemaId, returnParamsSchemaId } = fnSchemaIdMap[key];
 
       const [row] = await db
         .insert(functions)
@@ -553,17 +602,17 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
           name,
           description: "",
           code,
-          parameters,
-          returnParameters,
+          parametersSchemaId: paramsSchemaId,
+          returnParametersSchemaId: returnParamsSchemaId,
         })
         .onConflictDoUpdate({
           target: [functions.agentId, functions.key],
-          set: { name, code, parameters, returnParameters },
+          set: { name, code, parametersSchemaId: paramsSchemaId, returnParametersSchemaId: returnParamsSchemaId },
         })
         .returning();
       functionIds.push(row.id);
       functionMap.push({ id: row.id, key: row.key });
-      console.log(`  - ${row.key} (${row.id})${parameters.length > 0 ? ` [${parameters.length} params]` : ""}`);
+      console.log(`  - ${row.key} (${row.id})${paramsSchemaId ? " [schema]" : ""}`);
     }
     console.log(`Seeded ${fnFiles.length} functions`);
   } catch {

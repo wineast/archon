@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { wikiDocuments, datasets, functions } from "@/db/schema";
-import { eq, and, like, ilike } from "drizzle-orm";
+import { wikiDocuments, datasets, functions, schemas } from "@/db/schema";
+import { eq, and, like, ilike, inArray } from "drizzle-orm";
 import { renderWikiContent } from "@/lib/template/render";
 import { parseWikiContent } from "@/lib/wiki/frontmatter";
 import {
@@ -71,17 +71,42 @@ export function createToolContext(agentId?: string): ToolContext {
     const cached = getCachedFunctions(agentId);
     if (cached) return cached;
 
-    // Load from DB and compile
+    // Load from DB and compile — join schemas for parameters
     const rows = await db
       .select({
         key: functions.key,
         code: functions.code,
-        parameters: functions.parameters,
+        parametersSchemaId: functions.parametersSchemaId,
       })
       .from(functions)
       .where(eq(functions.agentId, agentId));
 
-    const compiled = resolveAndCompileFunctions(rows as FunctionRecord[]);
+    // Batch-fetch referenced schemas
+    const schemaIds = rows
+      .map((r) => r.parametersSchemaId)
+      .filter((id): id is string => id != null);
+    const schemaMap = new Map<string, import("@/lib/tools/types").ToolParameter[]>();
+    if (schemaIds.length > 0) {
+      const schemaRows = await db
+        .select({ id: schemas.id, parameters: schemas.parameters })
+        .from(schemas)
+        .where(
+          schemaIds.length === 1
+            ? eq(schemas.id, schemaIds[0])
+            : inArray(schemas.id, schemaIds)
+        );
+      for (const s of schemaRows) {
+        schemaMap.set(s.id, s.parameters);
+      }
+    }
+
+    const fnRecords: FunctionRecord[] = rows.map((r) => ({
+      key: r.key,
+      code: r.code,
+      parameters: r.parametersSchemaId ? schemaMap.get(r.parametersSchemaId) ?? [] : [],
+    }));
+
+    const compiled = resolveAndCompileFunctions(fnRecords);
     setCachedFunctions(agentId, compiled);
     return compiled;
   }
