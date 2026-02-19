@@ -31,6 +31,7 @@ const EVENT_TYPE_LABELS: Record<RuntimeEventType, string> = {
   tool_call: "工具调用",
   tool_error: "工具错误",
   tool_timeout: "工具超时",
+  tool_output_validation: "输出校验",
   stream_error: "流错误",
 };
 
