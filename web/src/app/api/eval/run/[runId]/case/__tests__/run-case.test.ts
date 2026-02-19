@@ -82,9 +82,6 @@ vi.mock("@/lib/template/render", () => ({
   ),
 }));
 
-// Mock tool-related modules
-vi.mock("@/tool-impls", () => ({}));
-
 const mockBuildDynamicTools = vi.fn().mockReturnValue({});
 vi.mock("@/app/api/chat/tools/build-dynamic-tools", () => ({
   buildDynamicTools: (...args: unknown[]) => mockBuildDynamicTools(...args),
@@ -228,7 +225,6 @@ describe("POST /api/eval/run/[runId]/case", () => {
         name: "my_tool",
         description: "A tool",
         parameters: [],
-        output: "",
         handler: "",
         enabled: true,
       },

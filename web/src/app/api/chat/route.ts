@@ -20,9 +20,6 @@ import {
 import { renderTemplate, gatherTemplateData } from "@/lib/template/render";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
-// Side-effect: all implementations self-register into the registry
-import "@/tool-impls";
-
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
@@ -73,11 +70,10 @@ export async function POST(req: Request) {
     name: row.name,
     description: row.description,
     parameters: row.parameters,
-    output: row.output ?? "",
     handler: row.handler ?? "",
   }));
 
-  // Gather template data once for both system prompt and tool output rendering
+  // Gather template data once for system prompt rendering and tool input schema
   const templateData = await gatherTemplateData(agentId);
 
   const allTools = toolPayloads.length

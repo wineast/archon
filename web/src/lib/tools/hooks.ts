@@ -31,7 +31,6 @@ export async function createTool(
     name: string;
     description: string;
     parameters?: unknown[];
-    output?: string;
     handler?: string;
     enabled?: boolean;
   },

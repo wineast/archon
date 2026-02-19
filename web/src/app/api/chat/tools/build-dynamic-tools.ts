@@ -1,9 +1,8 @@
 import { tool, type Tool } from "ai";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import { getToolExecutor } from "@/tool-impls";
 import { createToolContext } from "@/lib/tools/tool-context";
-import { renderTemplate, type TemplateData } from "@/lib/template/render";
+import type { TemplateData } from "@/lib/template/render";
 
 function isUrl(s: string): boolean {
   return s.startsWith("http://") || s.startsWith("https://");
@@ -17,14 +16,12 @@ function isJsCode(s: string): boolean {
  * Resolve the execute function for a tool definition.
  *
  * Priority:
- *   1. handler is a URL          → HTTP POST to that URL
- *   2. handler is a registry key → look up in registry
- *   3. handler is JS code        → dynamic execution
- *   4. handler is key but not in registry → error
- *   5. no handler                → static output field
+ *   1. handler is a URL     → HTTP POST to that URL
+ *   2. handler is JS code   → dynamic execution
+ *   3. no handler           → error
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function resolveExecutor(def: ToolDefinitionPayload, templateData?: TemplateData, agentId?: string): (args: any) => Promise<any> {
+function resolveExecutor(def: ToolDefinitionPayload, agentId?: string): (args: any) => Promise<any> {
   const handler = def.handler?.trim();
 
   if (handler) {
@@ -43,13 +40,7 @@ function resolveExecutor(def: ToolDefinitionPayload, templateData?: TemplateData
       };
     }
 
-    // 2. Registry lookup
-    const executor = getToolExecutor(handler);
-    if (executor) {
-      return async (args) => executor(args);
-    }
-
-    // 3. JS code handler → dynamic execution
+    // 2. JS code handler → dynamic execution
     if (isJsCode(handler)) {
       // Parse the function once at build time
       let fn: (args: unknown, context: unknown) => unknown;
@@ -71,24 +62,16 @@ function resolveExecutor(def: ToolDefinitionPayload, templateData?: TemplateData
       };
     }
 
-    // 4. Handler set but not found in registry — return error
+    // Unrecognized handler format
     return async () => ({
-      error: `Handler "${handler}" not found in registry`,
+      error: `Invalid handler: must be a URL (http/https) or JS code (arrow function / function)`,
     });
   }
 
-  // 5. No handler → static output (supports LiquidJS template)
-  return async () => {
-    let output = def.output;
-    if (templateData) {
-      output = await renderTemplate(output, templateData);
-    }
-    try {
-      return JSON.parse(output);
-    } catch {
-      return { result: output };
-    }
-  };
+  // No handler → error
+  return async () => ({
+    error: `Tool "${def.name}" has no handler configured`,
+  });
 }
 
 /**
@@ -112,7 +95,7 @@ export function buildDynamicTools(
     tools[def.name] = tool({
       description: def.description,
       inputSchema,
-      execute: resolveExecutor(def, templateData, agentId),
+      execute: resolveExecutor(def, agentId),
     });
   }
 
