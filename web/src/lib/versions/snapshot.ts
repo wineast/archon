@@ -47,7 +47,8 @@ type Tx = PgTransaction<
    Build Snapshot
    ═══════════════════════════════════════════════ */
 
-export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
+export async function buildSnapshot(agentId: string, externalDb?: typeof db): Promise<AgentSnapshot> {
+  const _db = externalDb ?? db;
   const [
     [agent],
     toolRows,
@@ -64,32 +65,32 @@ export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
     functionTestCaseRows,
     componentTestCaseRows,
   ] = await Promise.all([
-    db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
-    db.select().from(tools).where(eq(tools.agentId, agentId)),
-    db.select().from(functions).where(eq(functions.agentId, agentId)),
-    db.select().from(components).where(eq(components.agentId, agentId)),
-    db.select().from(schemas).where(eq(schemas.agentId, agentId)),
-    db.select().from(wikiDocuments).where(eq(wikiDocuments.agentId, agentId)),
-    db.select().from(datasets).where(eq(datasets.agentId, agentId)),
-    db.select().from(modelConfigs).where(eq(modelConfigs.agentId, agentId)),
-    db.select().from(chatConfigs).where(eq(chatConfigs.agentId, agentId)),
-    db.select().from(evalCases).where(eq(evalCases.agentId, agentId)),
-    db
+    _db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
+    _db.select().from(tools).where(eq(tools.agentId, agentId)),
+    _db.select().from(functions).where(eq(functions.agentId, agentId)),
+    _db.select().from(components).where(eq(components.agentId, agentId)),
+    _db.select().from(schemas).where(eq(schemas.agentId, agentId)),
+    _db.select().from(wikiDocuments).where(eq(wikiDocuments.agentId, agentId)),
+    _db.select().from(datasets).where(eq(datasets.agentId, agentId)),
+    _db.select().from(modelConfigs).where(eq(modelConfigs.agentId, agentId)),
+    _db.select().from(chatConfigs).where(eq(chatConfigs.agentId, agentId)),
+    _db.select().from(evalCases).where(eq(evalCases.agentId, agentId)),
+    _db
       .select()
       .from(evalJudgeConfigs)
       .where(eq(evalJudgeConfigs.agentId, agentId)),
     // Test cases: join through parent tables
-    db
+    _db
       .select()
       .from(toolTestCases)
       .innerJoin(tools, eq(toolTestCases.toolId, tools.id))
       .where(eq(tools.agentId, agentId)),
-    db
+    _db
       .select()
       .from(functionTestCases)
       .innerJoin(functions, eq(functionTestCases.functionId, functions.id))
       .where(eq(functions.agentId, agentId)),
-    db
+    _db
       .select()
       .from(componentTestCases)
       .innerJoin(

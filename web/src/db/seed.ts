@@ -130,7 +130,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
       })
       .onConflictDoUpdate({
         target: users.clerkId,
-        set: { email: u.email, avatarUrl: u.avatar_url },
+        set: { email: u.email, avatarUrl: u.avatar_url, platformRole: u.platform_role },
       });
     console.log(`  - ${u.email} (${u.id})`);
   }
@@ -753,7 +753,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   // Create initial version 0.1.0
   console.log("Creating initial version 0.1.0...");
   const { buildSnapshot } = await import("@/lib/versions/snapshot");
-  const snapshot = await buildSnapshot(agentId);
+  const snapshot = await buildSnapshot(agentId, db);
   const [initialVersion] = await db
     .insert(agentVersions)
     .values({
