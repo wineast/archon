@@ -127,6 +127,9 @@ export interface ObjectTypeSnapshotItem {
   icon: string;
   color: string;
   schemaKey: string | null;
+  titleProperty: string | null;
+  source: "internal" | "external";
+  externalConfig: Record<string, unknown> | null;
   order: number;
 }
 

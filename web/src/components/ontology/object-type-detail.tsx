@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { RotateCcwIcon, SaveIcon, Trash2Icon, WandIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
@@ -30,6 +30,7 @@ interface ObjectTypeDetailProps {
     inverseName: string;
   }) => Promise<void>;
   onDeleteRelation: (id: string) => Promise<void>;
+  onGenerateTools?: (id: string) => Promise<void>;
 }
 
 export function ObjectTypeDetail({
@@ -41,16 +42,18 @@ export function ObjectTypeDetail({
   onDelete,
   onCreateRelation,
   onDeleteRelation,
+  onGenerateTools,
 }: ObjectTypeDetailProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const draftRef = useRef<ObjectTypeFormHandle | null>(null);
   const handleDraftRef = useCallback((ref: ObjectTypeFormHandle) => {
     draftRef.current = ref;
   }, []);
   const [dirty, setDirty] = useState(false);
   const [relationDialogOpen, setRelationDialogOpen] = useState(false);
-  const busy = saving || deleting;
+  const busy = saving || deleting || generating;
 
   const handleSave = useCallback(async () => {
     if (!draftRef.current) return;
@@ -63,6 +66,9 @@ export function ObjectTypeDetail({
         icon: draft.icon,
         color: draft.color,
         schemaId: draft.schemaId,
+        titleProperty: draft.titleProperty,
+        source: draft.source,
+        externalConfig: draft.externalConfig,
       });
     } finally {
       setSaving(false);
@@ -77,6 +83,16 @@ export function ObjectTypeDetail({
       setDeleting(false);
     }
   }, [objectType.id, onDelete]);
+
+  const handleGenerateTools = useCallback(async () => {
+    if (!onGenerateTools) return;
+    setGenerating(true);
+    try {
+      await onGenerateTools(objectType.id);
+    } finally {
+      setGenerating(false);
+    }
+  }, [objectType.id, onGenerateTools]);
 
   const handleCreateRelation = useCallback(
     async (data: {
@@ -108,6 +124,9 @@ export function ObjectTypeDetail({
               icon: objectType.icon,
               color: objectType.color,
               schemaId: objectType.schemaId,
+              titleProperty: objectType.titleProperty,
+              source: objectType.source,
+              externalConfig: objectType.externalConfig,
             }}
             onDraftRef={handleDraftRef}
             onDirtyChange={setDirty}
@@ -141,6 +160,21 @@ export function ObjectTypeDetail({
           <RotateCcwIcon className="mr-1 size-3" />
           Reset
         </Button>
+        {onGenerateTools && objectType.schemaId && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateTools}
+            disabled={busy}
+          >
+            {generating ? (
+              <Spinner className="mr-1 size-3" />
+            ) : (
+              <WandIcon className="mr-1 size-3" />
+            )}
+            {generating ? "Generating..." : "Generate CRUD Tools"}
+          </Button>
+        )}
         <div className="flex-1" />
         <Button
           variant="destructive"

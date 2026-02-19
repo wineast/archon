@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { objectTypes, objectRelations } from "@/db/schema";
+import { objectTypes, objectRelations, objectInstances } from "@/db/schema";
 import { eq, or } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
@@ -53,6 +53,9 @@ export async function PATCH(
       ...(body.icon !== undefined && { icon: body.icon }),
       ...(body.color !== undefined && { color: body.color }),
       ...(body.schemaId !== undefined && { schemaId: body.schemaId }),
+      ...(body.titleProperty !== undefined && { titleProperty: body.titleProperty }),
+      ...(body.source !== undefined && { source: body.source }),
+      ...(body.externalConfig !== undefined && { externalConfig: body.externalConfig }),
       ...(body.order !== undefined && { order: body.order }),
     })
     .where(eq(objectTypes.id, id))
@@ -78,6 +81,22 @@ export async function DELETE(
 
   const ctx = await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
+
+  // Check if any instances reference this type
+  const [instanceCount] = await db
+    .select({ count: objectInstances.id })
+    .from(objectInstances)
+    .where(eq(objectInstances.objectTypeId, id))
+    .limit(1);
+
+  if (instanceCount) {
+    return NextResponse.json(
+      {
+        error: "Object type has instances. Delete all instances before deleting the type.",
+      },
+      { status: 400 }
+    );
+  }
 
   // Check if any relations reference this type
   const referencingRelations = await db

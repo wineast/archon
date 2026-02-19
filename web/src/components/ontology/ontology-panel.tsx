@@ -11,6 +11,7 @@ import {
   useObjectRelations,
   createObjectRelation,
   deleteObjectRelation,
+  generateCrudTools,
 } from "@/lib/ontology/hooks";
 import type { ObjectTypeFormValues } from "./object-type-form";
 import { ObjectTypesSidebar } from "./object-types-sidebar";
@@ -94,6 +95,13 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
     [mutateRelations]
   );
 
+  const handleGenerateTools = useCallback(
+    async (id: string) => {
+      await generateCrudTools(id, mutateTypes);
+    },
+    [mutateTypes]
+  );
+
   return (
     <div className="flex h-full flex-col">
       <ObjectTypeCreateDialog
@@ -123,6 +131,7 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
               onDelete={handleDelete}
               onCreateRelation={handleCreateRelation}
               onDeleteRelation={handleDeleteRelation}
+              onGenerateTools={handleGenerateTools}
             />
           ) : (
             <OntologyEmptyState onCreate={handleOpenCreateDialog} />
