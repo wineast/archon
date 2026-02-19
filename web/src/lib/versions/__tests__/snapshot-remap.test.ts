@@ -17,7 +17,7 @@ describe("remapParameterRefs", () => {
       {
         id: "p1",
         name: "address",
-        type: "json",
+        type: "object",
         description: "",
         required: true,
         schemaId: "uuid-schema-1",
@@ -47,14 +47,14 @@ describe("remapParameterRefs", () => {
       {
         id: "p1",
         name: "outer",
-        type: "json",
+        type: "object",
         description: "",
         required: true,
         properties: [
           {
             id: "p2",
             name: "inner",
-            type: "json",
+            type: "object",
             description: "",
             required: true,
             schemaId: "uuid-schema-2",
@@ -80,7 +80,7 @@ describe("remapParameterRefs", () => {
       {
         id: "p1",
         name: "field",
-        type: "json",
+        type: "object",
         description: "",
         required: true,
         schemaId: "unknown-uuid",
@@ -130,7 +130,7 @@ describe("remapParameterRefs", () => {
       {
         id: "p1",
         name: "field",
-        type: "json",
+        type: "object",
         description: "",
         required: true,
         schemaId: "uuid-schema-1",
