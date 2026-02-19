@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { schemas, schemaIncludes, tools } from "@/db/schema";
 import type { SchemaWithIncludes } from "@/db/schema";
-import { eq, or, asc, inArray } from "drizzle-orm";
+import { eq, or, and, not, asc, inArray, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveParameters, detectCycle } from "@/lib/schemas/resolve";
 import { logAudit } from "@/lib/audit/log";
@@ -26,7 +26,7 @@ export async function GET(
   const [existing] = await db
     .select()
     .from(schemas)
-    .where(eq(schemas.id, id));
+    .where(and(eq(schemas.id, id), isNull(schemas.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Schema not found" }, { status: 404 });
@@ -39,7 +39,7 @@ export async function GET(
   const allRows = await db
     .select()
     .from(schemas)
-    .where(eq(schemas.agentId, existing.agentId));
+    .where(and(eq(schemas.agentId, existing.agentId), isNull(schemas.deletedAt)));
 
   const allIncludeRows = allRows.length > 0
     ? await db
@@ -78,7 +78,7 @@ export async function PATCH(
   const [existing] = await db
     .select()
     .from(schemas)
-    .where(eq(schemas.id, id));
+    .where(and(eq(schemas.id, id), isNull(schemas.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Schema not found" }, { status: 404 });
@@ -92,7 +92,7 @@ export async function PATCH(
     const allRows = await db
       .select()
       .from(schemas)
-      .where(eq(schemas.agentId, existing.agentId));
+      .where(and(eq(schemas.agentId, existing.agentId), isNull(schemas.deletedAt)));
 
     const allIncludeRows = allRows.length > 0
       ? await db
@@ -178,7 +178,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(schemas)
-    .where(eq(schemas.id, id));
+    .where(and(eq(schemas.id, id), isNull(schemas.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Schema not found" }, { status: 404 });
@@ -187,14 +187,17 @@ export async function DELETE(
   const ctx = await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  // Check if any tools reference this schema
+  // Check if any non-deleted tools reference this schema
   const referencingTools = await db
     .select({ id: tools.id, name: tools.name })
     .from(tools)
     .where(
-      or(
-        eq(tools.parametersSchemaId, id),
-        eq(tools.returnParametersSchemaId, id)
+      and(
+        or(
+          eq(tools.parametersSchemaId, id),
+          eq(tools.returnParametersSchemaId, id)
+        ),
+        isNull(tools.deletedAt)
       )
     );
 
@@ -208,8 +211,10 @@ export async function DELETE(
     );
   }
 
-  // CASCADE on schemaIncludes handles cleanup automatically
-  await db.delete(schemas).where(eq(schemas.id, id));
+  // Clean up schema includes from junction table
+  await db.delete(schemaIncludes).where(eq(schemaIncludes.includeSchemaId, id));
+
+  await db.update(schemas).set({ deletedAt: new Date() }).where(eq(schemas.id, id));
 
   after(async () => {
     await logAudit({

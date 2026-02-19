@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { modelConfigs } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function GET(req: Request) {
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   const [active] = await db
     .select()
     .from(modelConfigs)
-    .where(and(eq(modelConfigs.agentId, agentId), eq(modelConfigs.isActive, true)))
+    .where(and(eq(modelConfigs.agentId, agentId), eq(modelConfigs.isActive, true), isNull(modelConfigs.deletedAt)))
     .limit(1);
 
   if (!active) {

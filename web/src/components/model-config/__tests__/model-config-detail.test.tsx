@@ -68,6 +68,7 @@ const baseConfig: ModelConfigRow = {
   isActive: false,
   createdAt: new Date(),
   updatedAt: new Date(),
+  deletedAt: null,
 };
 
 /* ------------------------------------------------------------------ */

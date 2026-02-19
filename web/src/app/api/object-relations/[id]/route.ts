@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { objectRelations } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
 
@@ -14,7 +14,7 @@ export async function GET(
   const [existing] = await db
     .select()
     .from(objectRelations)
-    .where(eq(objectRelations.id, id));
+    .where(and(eq(objectRelations.id, id), isNull(objectRelations.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Relation not found" }, { status: 404 });
@@ -36,7 +36,7 @@ export async function PATCH(
   const [existing] = await db
     .select()
     .from(objectRelations)
-    .where(eq(objectRelations.id, id));
+    .where(and(eq(objectRelations.id, id), isNull(objectRelations.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Relation not found" }, { status: 404 });
@@ -84,7 +84,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(objectRelations)
-    .where(eq(objectRelations.id, id));
+    .where(and(eq(objectRelations.id, id), isNull(objectRelations.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Relation not found" }, { status: 404 });
@@ -93,7 +93,7 @@ export async function DELETE(
   const ctx = await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  await db.delete(objectRelations).where(eq(objectRelations.id, id));
+  await db.update(objectRelations).set({ deletedAt: new Date() }).where(eq(objectRelations.id, id));
 
   after(async () => {
     await logAudit({

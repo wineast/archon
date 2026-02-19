@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireEmbedToken } from "@/lib/auth/require-embed-token";
 import { db } from "@/db";
 import { chatConfigs, tools, components } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 export async function GET(req: Request) {
   const ctx = await requireEmbedToken(req);
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       })
       .from(tools)
       .leftJoin(components, eq(tools.componentId, components.id))
-      .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true))),
+      .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true), isNull(tools.deletedAt))),
     db
       .select({
         key: components.key,
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
         generatedCss: components.generatedCss,
       })
       .from(components)
-      .where(eq(components.agentId, agentId)),
+      .where(and(eq(components.agentId, agentId), isNull(components.deletedAt))),
   ]);
 
   return NextResponse.json({

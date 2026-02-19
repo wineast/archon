@@ -21,6 +21,7 @@ import {
   PuzzleIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
+  Trash2Icon,
   UsersIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -57,6 +58,8 @@ import { BuildChatPanel } from "@/components/build-chat/build-chat-panel";
 import { AuditLogSheet } from "@/components/audit-log/audit-log-sheet";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
+import { TrashSheet } from "@/components/trash/trash-sheet";
+import { useTrash } from "@/lib/trash/hooks";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -113,6 +116,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
   const [switching, setSwitching] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [auditLogOpen, setAuditLogOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const { totalCount: trashCount } = useTrash(agent.id);
 
   const visibleTabs = useMemo(
     () =>
@@ -307,25 +312,36 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         )}
 
         {/* Desktop settings nav */}
-        <nav className="hidden w-48 shrink-0 flex-col justify-between border-r p-2 sm:flex">
-          <div className="flex flex-col gap-1">
-            {visibleTabs.map((t) => {
-              const isActive = t.value === activeTab;
-              return (
-                <button
-                  key={t.value}
-                  onClick={() => handleTabChange(t.value)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                    isActive && "bg-accent text-foreground font-medium"
-                  )}
-                >
-                  <t.icon className="size-4" />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
+        <nav className="hidden w-48 shrink-0 flex-col border-r p-2 sm:flex">
+          {visibleTabs.map((t) => {
+            const isActive = t.value === activeTab;
+            return (
+              <button
+                key={t.value}
+                onClick={() => handleTabChange(t.value)}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                  isActive && "bg-accent text-foreground font-medium"
+                )}
+              >
+                <t.icon className="size-4" />
+                {t.label}
+              </button>
+            );
+          })}
+          <div className="flex-1" />
+          <button
+            onClick={() => setTrashOpen(true)}
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Trash2Icon className="size-4" />
+            回收站
+            {trashCount > 0 && (
+              <span className="ml-auto rounded-full bg-muted px-1.5 text-xs">
+                {trashCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => setAuditLogOpen(true)}
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -353,6 +369,18 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
               </button>
             );
           })}
+          <button
+            onClick={() => setTrashOpen(true)}
+            className="flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors"
+          >
+            <Trash2Icon className="size-3.5" />
+            回收站
+            {trashCount > 0 && (
+              <span className="ml-1 rounded-full bg-muted px-1.5 text-xs">
+                {trashCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => setAuditLogOpen(true)}
             className="flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors"
@@ -383,6 +411,12 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
           latestVersion={latestVersion}
         />
       )}
+
+      <TrashSheet
+        agentId={agent.id}
+        open={trashOpen}
+        onOpenChange={setTrashOpen}
+      />
 
       {sheetVersionId && (
         <VersionDetailSheet

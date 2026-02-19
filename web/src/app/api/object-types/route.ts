@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { objectTypes } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
 
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   const rows = await db
     .select()
     .from(objectTypes)
-    .where(eq(objectTypes.agentId, agentId))
+    .where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt)))
     .orderBy(objectTypes.order, objectTypes.key);
 
   return NextResponse.json(rows);

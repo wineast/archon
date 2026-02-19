@@ -18,7 +18,7 @@ import {
   objectTypes,
   objectRelations,
 } from "@/db/schema";
-import { eq, asc, inArray } from "drizzle-orm";
+import { eq, and, asc, inArray, isNull } from "drizzle-orm";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
@@ -73,30 +73,30 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
     objectRelationRows,
   ] = await Promise.all([
     _db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
-    _db.select().from(tools).where(eq(tools.agentId, agentId)),
-    _db.select().from(functions).where(eq(functions.agentId, agentId)),
-    _db.select().from(components).where(eq(components.agentId, agentId)),
-    _db.select().from(schemas).where(eq(schemas.agentId, agentId)),
-    _db.select().from(wikiDocuments).where(eq(wikiDocuments.agentId, agentId)),
-    _db.select().from(datasets).where(eq(datasets.agentId, agentId)),
-    _db.select().from(modelConfigs).where(eq(modelConfigs.agentId, agentId)),
+    _db.select().from(tools).where(and(eq(tools.agentId, agentId), isNull(tools.deletedAt))),
+    _db.select().from(functions).where(and(eq(functions.agentId, agentId), isNull(functions.deletedAt))),
+    _db.select().from(components).where(and(eq(components.agentId, agentId), isNull(components.deletedAt))),
+    _db.select().from(schemas).where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt))),
+    _db.select().from(wikiDocuments).where(and(eq(wikiDocuments.agentId, agentId), isNull(wikiDocuments.deletedAt))),
+    _db.select().from(datasets).where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt))),
+    _db.select().from(modelConfigs).where(and(eq(modelConfigs.agentId, agentId), isNull(modelConfigs.deletedAt))),
     _db.select().from(chatConfigs).where(eq(chatConfigs.agentId, agentId)),
-    _db.select().from(evalCases).where(eq(evalCases.agentId, agentId)),
+    _db.select().from(evalCases).where(and(eq(evalCases.agentId, agentId), isNull(evalCases.deletedAt))),
     _db
       .select()
       .from(evalJudgeConfigs)
-      .where(eq(evalJudgeConfigs.agentId, agentId)),
-    // Test cases: join through parent tables
+      .where(and(eq(evalJudgeConfigs.agentId, agentId), isNull(evalJudgeConfigs.deletedAt))),
+    // Test cases: join through parent tables (only non-deleted parents)
     _db
       .select()
       .from(toolTestCases)
       .innerJoin(tools, eq(toolTestCases.toolId, tools.id))
-      .where(eq(tools.agentId, agentId)),
+      .where(and(eq(tools.agentId, agentId), isNull(tools.deletedAt))),
     _db
       .select()
       .from(functionTestCases)
       .innerJoin(functions, eq(functionTestCases.functionId, functions.id))
-      .where(eq(functions.agentId, agentId)),
+      .where(and(eq(functions.agentId, agentId), isNull(functions.deletedAt))),
     _db
       .select()
       .from(componentTestCases)
@@ -104,9 +104,9 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         components,
         eq(componentTestCases.componentId, components.id)
       )
-      .where(eq(components.agentId, agentId)),
-    _db.select().from(objectTypes).where(eq(objectTypes.agentId, agentId)),
-    _db.select().from(objectRelations).where(eq(objectRelations.agentId, agentId)),
+      .where(and(eq(components.agentId, agentId), isNull(components.deletedAt))),
+    _db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))),
+    _db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
   ]);
 
   if (!agent) throw new Error("Agent not found");

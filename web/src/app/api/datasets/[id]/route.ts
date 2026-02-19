@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { datasets } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { validateNoCycle } from "@/lib/datasets/queries";
 import { logAudit } from "@/lib/audit/log";
@@ -15,7 +15,7 @@ export async function GET(
   const [row] = await db
     .select()
     .from(datasets)
-    .where(eq(datasets.id, id));
+    .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)));
 
   if (!row) {
     return NextResponse.json(
@@ -39,7 +39,7 @@ export async function PATCH(
   const [existing] = await db
     .select()
     .from(datasets)
-    .where(eq(datasets.id, id));
+    .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(
@@ -60,7 +60,7 @@ export async function PATCH(
       const allRows = await db
         .select({ id: datasets.id, key: datasets.key, data: datasets.data })
         .from(datasets)
-        .where(eq(datasets.agentId, agentId));
+        .where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt)));
 
       const updatedRows = allRows.map((r) =>
         r.id === id
@@ -117,7 +117,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(datasets)
-    .where(eq(datasets.id, id));
+    .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(
@@ -129,7 +129,7 @@ export async function DELETE(
   const ctx = await requireAgentRole(existing.agentId!, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  await db.delete(datasets).where(eq(datasets.id, id));
+  await db.update(datasets).set({ deletedAt: new Date() }).where(eq(datasets.id, id));
 
   after(async () => {
     await logAudit({

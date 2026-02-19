@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { datasets } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { Liquid } from "liquidjs";
 
 // Shared Liquid instance for simple variable substitution (no custom tags).
@@ -163,7 +163,7 @@ export async function getDatasets(agentId: string) {
       data: datasets.data,
     })
     .from(datasets)
-    .where(eq(datasets.agentId, agentId));
+    .where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt)));
 }
 
 /**

@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { objectTypes, schemas, tools } from "@/db/schema";
 import type { ToolParameter } from "@/lib/tools/types";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 interface GenerateResult {
   created: string[];
@@ -20,7 +20,7 @@ export async function generateCrudToolsForType(
   const [objType] = await db
     .select()
     .from(objectTypes)
-    .where(and(eq(objectTypes.id, objectTypeId), eq(objectTypes.agentId, agentId)));
+    .where(and(eq(objectTypes.id, objectTypeId), eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt)));
 
   if (!objType) throw new Error("Object type not found");
   if (!objType.schemaId) throw new Error("Object type has no schema assigned");
@@ -105,7 +105,7 @@ export async function generateCrudToolsForType(
     const [existingTool] = await db
       .select({ id: tools.id })
       .from(tools)
-      .where(and(eq(tools.agentId, agentId), eq(tools.key, def.toolKey)));
+      .where(and(eq(tools.agentId, agentId), eq(tools.key, def.toolKey), isNull(tools.deletedAt)));
 
     if (existingTool) {
       skipped.push(def.toolKey);
@@ -119,7 +119,7 @@ export async function generateCrudToolsForType(
       const [existingSchema] = await db
         .select({ id: schemas.id })
         .from(schemas)
-        .where(and(eq(schemas.agentId, agentId), eq(schemas.key, def.schemaKey)));
+        .where(and(eq(schemas.agentId, agentId), eq(schemas.key, def.schemaKey), isNull(schemas.deletedAt)));
 
       if (existingSchema) {
         parametersSchemaId = existingSchema.id;

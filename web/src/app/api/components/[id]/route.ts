@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { components } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { compileCssForComponent } from "@/lib/components/compile-css";
 import { logAudit } from "@/lib/audit/log";
@@ -16,7 +16,7 @@ export async function PATCH(
   const [existing] = await db
     .select()
     .from(components)
-    .where(eq(components.id, id));
+    .where(and(eq(components.id, id), isNull(components.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Component not found" }, { status: 404 });
@@ -67,7 +67,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(components)
-    .where(eq(components.id, id));
+    .where(and(eq(components.id, id), isNull(components.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Component not found" }, { status: 404 });
@@ -76,7 +76,7 @@ export async function DELETE(
   const ctx = await requireAgentRole(existing.agentId!, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  await db.delete(components).where(eq(components.id, id));
+  await db.update(components).set({ deletedAt: new Date() }).where(eq(components.id, id));
 
   after(async () => {
     await logAudit({

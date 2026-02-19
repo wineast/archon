@@ -114,6 +114,7 @@ const baseCase: EvalCaseRow = {
   tags: ["greeting"],
   createdAt: new Date(),
   updatedAt: new Date(),
+  deletedAt: null,
 };
 
 /* ------------------------------------------------------------------ */

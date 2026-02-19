@@ -17,6 +17,7 @@ function makeSchema(
     includeSchemaIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
     ...overrides,
   };
 }

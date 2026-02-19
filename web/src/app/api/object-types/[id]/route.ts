@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { objectTypes, objectRelations, objectInstances } from "@/db/schema";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
 
@@ -14,7 +14,7 @@ export async function GET(
   const [existing] = await db
     .select()
     .from(objectTypes)
-    .where(eq(objectTypes.id, id));
+    .where(and(eq(objectTypes.id, id), isNull(objectTypes.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Object type not found" }, { status: 404 });
@@ -36,7 +36,7 @@ export async function PATCH(
   const [existing] = await db
     .select()
     .from(objectTypes)
-    .where(eq(objectTypes.id, id));
+    .where(and(eq(objectTypes.id, id), isNull(objectTypes.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Object type not found" }, { status: 404 });
@@ -86,7 +86,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(objectTypes)
-    .where(eq(objectTypes.id, id));
+    .where(and(eq(objectTypes.id, id), isNull(objectTypes.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Object type not found" }, { status: 404 });
@@ -111,28 +111,15 @@ export async function DELETE(
     );
   }
 
-  // Check if any relations reference this type
-  const referencingRelations = await db
-    .select({ id: objectRelations.id, name: objectRelations.name })
-    .from(objectRelations)
-    .where(
-      or(
-        eq(objectRelations.sourceTypeId, id),
-        eq(objectRelations.targetTypeId, id)
-      )
-    );
-
-  if (referencingRelations.length > 0) {
-    const names = referencingRelations.map((r) => r.name).join(", ");
-    return NextResponse.json(
-      {
-        error: `Object type is referenced by relations: ${names}. Remove relations before deleting.`,
-      },
-      { status: 400 }
-    );
-  }
-
-  await db.delete(objectTypes).where(eq(objectTypes.id, id));
+  // Soft delete the object type and cascade soft delete related relations
+  const now = new Date();
+  await db.update(objectTypes).set({ deletedAt: now }).where(eq(objectTypes.id, id));
+  await db.update(objectRelations).set({ deletedAt: now }).where(
+    and(
+      or(eq(objectRelations.sourceTypeId, id), eq(objectRelations.targetTypeId, id)),
+      isNull(objectRelations.deletedAt)
+    )
+  );
 
   after(async () => {
     await logAudit({

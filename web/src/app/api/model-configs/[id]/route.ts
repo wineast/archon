@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { modelConfigs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
 
@@ -14,7 +14,7 @@ export async function PUT(
   const [existing] = await db
     .select()
     .from(modelConfigs)
-    .where(eq(modelConfigs.id, id));
+    .where(and(eq(modelConfigs.id, id), isNull(modelConfigs.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(
@@ -66,7 +66,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(modelConfigs)
-    .where(eq(modelConfigs.id, id));
+    .where(and(eq(modelConfigs.id, id), isNull(modelConfigs.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(
@@ -85,7 +85,7 @@ export async function DELETE(
     );
   }
 
-  await db.delete(modelConfigs).where(eq(modelConfigs.id, id));
+  await db.update(modelConfigs).set({ deletedAt: new Date() }).where(eq(modelConfigs.id, id));
 
   after(async () => {
     await logAudit({

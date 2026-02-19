@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { datasets } from "@/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { validateNoCycle } from "@/lib/datasets/queries";
 import { logAudit } from "@/lib/audit/log";
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const rows = await db
     .select()
     .from(datasets)
-    .where(eq(datasets.agentId, agentId))
+    .where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt)))
     .orderBy(asc(datasets.key));
   return NextResponse.json(rows);
 }
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     const existing = await db
       .select({ key: datasets.key, data: datasets.data })
       .from(datasets)
-      .where(eq(datasets.agentId, newRow.agentId));
+      .where(and(eq(datasets.agentId, newRow.agentId), isNull(datasets.deletedAt)));
     try {
       validateNoCycle([...existing, { key: newRow.key, data: newRow.data }]);
     } catch (e) {

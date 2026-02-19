@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { functions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { clearFunctionCache } from "@/lib/functions/compile";
 import { logAudit } from "@/lib/audit/log";
@@ -15,7 +15,7 @@ export async function GET(
   const [row] = await db
     .select()
     .from(functions)
-    .where(eq(functions.id, id));
+    .where(and(eq(functions.id, id), isNull(functions.deletedAt)));
 
   if (!row) {
     return NextResponse.json(
@@ -39,7 +39,7 @@ export async function PATCH(
   const [existing] = await db
     .select()
     .from(functions)
-    .where(eq(functions.id, id));
+    .where(and(eq(functions.id, id), isNull(functions.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(
@@ -94,7 +94,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(functions)
-    .where(eq(functions.id, id));
+    .where(and(eq(functions.id, id), isNull(functions.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(
@@ -106,7 +106,7 @@ export async function DELETE(
   const ctx = await requireAgentRole(existing.agentId!, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  await db.delete(functions).where(eq(functions.id, id));
+  await db.update(functions).set({ deletedAt: new Date() }).where(eq(functions.id, id));
 
   if (existing.agentId) {
     clearFunctionCache(existing.agentId);
