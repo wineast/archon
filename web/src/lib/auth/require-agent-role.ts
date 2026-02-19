@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { agents, agentMembers, users, AGENT_ROLE_LEVELS } from "@/db/schema";
 import type { AgentRole, User } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { ensureUser } from "./ensure-user";
 
 export interface AuthContext {
@@ -54,7 +54,7 @@ export async function requireAgentRole(
     const [agent] = await db
       .select({ isPublic: agents.isPublic })
       .from(agents)
-      .where(eq(agents.id, agentId))
+      .where(and(eq(agents.id, agentId), isNull(agents.deletedAt)))
       .limit(1);
 
     if (agent?.isPublic) {
