@@ -2,6 +2,7 @@ import { tool, type Tool } from "ai";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
+import { executeToolHandler } from "@/lib/tools/execute-handler";
 import type { TemplateData } from "@/lib/template/render";
 
 function isUrl(s: string): boolean {
@@ -40,21 +41,13 @@ function resolveExecutor(def: ToolDefinitionPayload, agentId?: string): (args: a
       };
     }
 
-    // 2. JS code handler → dynamic execution
+    // 2. JS code handler → sandbox execution
     if (isJsCode(handler)) {
-      // Parse the function once at build time
-      let fn: (args: unknown, context: unknown) => unknown;
-      try {
-        fn = new Function("return (" + handler + ")")() as typeof fn;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return async () => ({ error: `Failed to parse JS handler: ${msg}` });
-      }
-
       const context = createToolContext(agentId);
+      const sandboxMode = def.sandboxMode ?? "light";
       return async (args) => {
         try {
-          return await fn(args, context);
+          return await executeToolHandler(handler, args, context, sandboxMode);
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           return { error: `JS handler execution error: ${msg}` };

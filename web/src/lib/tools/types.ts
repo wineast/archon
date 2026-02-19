@@ -32,6 +32,7 @@ export interface ToolDefinition {
   componentId: string | null;
   enabled: boolean;
   executionTarget: "server" | "client" | "host";
+  sandboxMode: "light" | "full";
 }
 
 /** Slim payload sent to the API (no id/enabled). */
@@ -42,4 +43,5 @@ export interface ToolDefinitionPayload {
   returnParameters?: ToolParameter[];
   handler: string;
   executionTarget?: "server" | "client" | "host";
+  sandboxMode?: "light" | "full";
 }

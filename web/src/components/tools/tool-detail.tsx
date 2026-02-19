@@ -88,6 +88,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
                 componentId: tool.componentId ?? null,
                 enabled: tool.enabled,
                 executionTarget: tool.executionTarget ?? "server",
+                sandboxMode: tool.sandboxMode ?? "light",
               }}
               agentId={agentId}
               onDraftRef={handleDraftRef}

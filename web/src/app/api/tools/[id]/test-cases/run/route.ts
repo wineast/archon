@@ -4,6 +4,7 @@ import { tools, schemas } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
+import { executeToolHandler } from "@/lib/tools/execute-handler";
 
 /** Stable JSON stringify with sorted keys for deep equality comparison. */
 function stableStringify(val: unknown): string {
@@ -71,29 +72,6 @@ export async function POST(
 
   const start = Date.now();
 
-  // Compile handler
-  let handlerFn: (args: unknown, context: unknown) => unknown;
-  try {
-    handlerFn = new Function("return (" + tool.handler + ")")() as typeof handlerFn;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({
-      success: false,
-      error: `Compilation error: ${msg}`,
-      durationMs: Date.now() - start,
-      passed: false,
-    });
-  }
-
-  if (typeof handlerFn !== "function") {
-    return NextResponse.json({
-      success: false,
-      error: "Handler must evaluate to a function",
-      durationMs: Date.now() - start,
-      passed: false,
-    });
-  }
-
   // Validate input against schema parameters
   let validatedInput = input ?? {};
   if (tool.parametersSchemaId) {
@@ -117,11 +95,11 @@ export async function POST(
     }
   }
 
-  // Execute
+  // Execute in sandbox
   let result: unknown;
   try {
     const context = createToolContext(tool.agentId ?? undefined);
-    result = await handlerFn(validatedInput, context);
+    result = await executeToolHandler(tool.handler, validatedInput, context, tool.sandboxMode);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({
@@ -144,5 +122,6 @@ export async function POST(
     result,
     durationMs,
     passed,
+    sandboxMode: tool.sandboxMode,
   });
 }

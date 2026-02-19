@@ -21,7 +21,7 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
-import { CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, TypeIcon } from "lucide-react";
+import { BoxIcon, CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, TypeIcon, ZapIcon } from "lucide-react";
 
 export interface ToolFormHandle {
   getDraft: () => ToolDefinition;
@@ -112,6 +112,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   const handler = useWatch({ control: form.control, name: "handler" });
   const output = useWatch({ control: form.control, name: "output" });
   const executionTarget = useWatch({ control: form.control, name: "executionTarget" });
+  const sandboxMode = useWatch({ control: form.control, name: "sandboxMode" });
   const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });
   const returnParametersSchemaId = useWatch({ control: form.control, name: "returnParametersSchemaId" });
 
@@ -325,13 +326,46 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                 <p className="text-xs text-purple-500 mt-1">
                   {executionTarget === "client"
                     ? "JS 代码 — 在用户浏览器中执行"
-                    : "JS 代码 — 运行时动态执行"}
+                    : "JS 代码 — 在安全沙盒中执行"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {executionTarget === "client"
                     ? "浏览器端工具无法访问 wiki、数据集等服务端资源"
-                    : <>可用 context API：wiki.get(id) → {"{meta, content}"}, wiki.findByPrefix(prefix), wiki.search(query)</>}
+                    : <>可用 context API：wiki.get/findByPrefix/search, dataset.get/getEntries, fn(key), ontology.types/type/query/get/create/update/delete/link/unlink/graph</>}
                 </p>
+                {executionTarget === "server" && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      沙盒
+                    </label>
+                    <div className="flex items-center rounded-md border border-border p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("sandboxMode", "light", { shouldDirty: true })}
+                        className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                          sandboxMode === "light"
+                            ? "bg-muted text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <ZapIcon className="size-3" />
+                        轻量
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("sandboxMode", "full", { shouldDirty: true })}
+                        className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                          sandboxMode === "full"
+                            ? "bg-muted text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <BoxIcon className="size-3" />
+                        完整
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

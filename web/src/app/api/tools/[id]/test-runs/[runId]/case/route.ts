@@ -4,6 +4,7 @@ import { tools, toolTestRuns, toolTestRunResults, schemas } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
+import { executeToolHandler } from "@/lib/tools/execute-handler";
 
 /** Stable JSON stringify with sorted keys for deep equality comparison. */
 function stableStringify(val: unknown): string {
@@ -72,15 +73,6 @@ export async function POST(
       throw new Error("Tool has no handler defined");
     }
 
-    // Compile handler
-    const handlerFn = new Function("return (" + tool.handler + ")")() as (
-      args: unknown,
-      context: unknown
-    ) => unknown;
-    if (typeof handlerFn !== "function") {
-      throw new Error("Handler must evaluate to a function");
-    }
-
     // Validate input against schema parameters
     let validatedInput = input ?? {};
     if (tool.parametersSchemaId) {
@@ -94,9 +86,9 @@ export async function POST(
       }
     }
 
-    // Execute
+    // Execute in sandbox
     const context = createToolContext(tool.agentId ?? undefined);
-    output = await handlerFn(validatedInput, context);
+    output = await executeToolHandler(tool.handler, validatedInput, context, tool.sandboxMode);
 
     // Exact match comparison
     passed =

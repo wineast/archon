@@ -305,6 +305,7 @@ export const tools = pgTable(
     componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),
     enabled: boolean("enabled").notNull().default(true),
     executionTarget: text("execution_target").notNull().default("server").$type<"server" | "client" | "host">(),
+    sandboxMode: text("sandbox_mode").notNull().default("light").$type<"light" | "full">(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
