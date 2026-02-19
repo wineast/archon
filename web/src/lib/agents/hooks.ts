@@ -4,15 +4,14 @@ import useSWR, { type KeyedMutator } from "swr";
 import { toast } from "sonner";
 import type { AgentRow, AgentRole } from "@/db/schema";
 
-const AGENTS_API_KEY = "/api/agents";
-
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export type AgentWithRole = AgentRow & { myRole: AgentRole | null };
+export type AgentWithRole = AgentRow & { myRole: AgentRole | null; orgSlug?: string };
 
-export function useAgents() {
+export function useAgents(orgId?: string) {
+  const key = orgId ? `/api/agents?orgId=${orgId}` : "/api/agents";
   const { data, error, isLoading, mutate } = useSWR<AgentWithRole[]>(
-    AGENTS_API_KEY,
+    key,
     fetcher
   );
 
@@ -25,7 +24,7 @@ export function useAgents() {
 }
 
 export async function createAgent(
-  data: { name: string; description?: string; icon?: string; slug?: string },
+  data: { name: string; description?: string; icon?: string; slug?: string; orgId: string },
   mutate: KeyedMutator<AgentWithRole[]>
 ) {
   try {

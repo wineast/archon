@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     onFinish: ({ totalUsage }) => {
       after(async () => {
         await recordUsage({
+          orgId: null,
           agentId: null,
           userId: currentUserId,
           sessionId: null,

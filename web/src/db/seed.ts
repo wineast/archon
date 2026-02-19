@@ -12,6 +12,7 @@ export async function seed(db?: SeedDb): Promise<SeedResult> {
   const run = async (database: SeedDb) => {
     const ctx: SeedContext = {
       db: database,
+      orgId: "",
       agentId: "",
       agentDir: join(__dirname, "seed-data/gmcc-advisor"),
       componentKeyToId: {},

@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { agents } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { agents, orgs } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
@@ -15,11 +15,36 @@ export async function GET(
 
   let agent;
   if (by === "slug") {
-    [agent] = await db
-      .select()
-      .from(agents)
-      .where(eq(agents.slug, id))
-      .limit(1);
+    // Optionally resolve by orgSlug + agentSlug
+    const orgSlug = url.searchParams.get("orgSlug");
+    if (orgSlug) {
+      [agent] = await db
+        .select({
+          id: agents.id,
+          orgId: agents.orgId,
+          name: agents.name,
+          description: agents.description,
+          icon: agents.icon,
+          slug: agents.slug,
+          isPublic: agents.isPublic,
+          version: agents.version,
+          editingVersionId: agents.editingVersionId,
+          publishedVersionId: agents.publishedVersionId,
+          createdAt: agents.createdAt,
+          updatedAt: agents.updatedAt,
+        })
+        .from(agents)
+        .innerJoin(orgs, eq(orgs.id, agents.orgId))
+        .where(and(eq(orgs.slug, orgSlug), eq(agents.slug, id)))
+        .limit(1);
+    } else {
+      // Legacy: lookup by slug alone (first match)
+      [agent] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.slug, id))
+        .limit(1);
+    }
   } else {
     [agent] = await db
       .select()
@@ -47,6 +72,17 @@ export async function PUT(
   const ctx = await requireAgentRole(id, "admin");
   if (ctx instanceof NextResponse) return ctx;
 
+  // Get agent's orgId for slug uniqueness check
+  const [currentAgent] = await db
+    .select({ orgId: agents.orgId })
+    .from(agents)
+    .where(eq(agents.id, id))
+    .limit(1);
+
+  if (!currentAgent) {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+
   const body = await req.json();
   const { name, description, icon, slug, isPublic } = body as {
     name?: string;
@@ -64,7 +100,7 @@ export async function PUT(
 
   if (slug !== undefined) {
     const baseSlug = slug.trim() || toSlug(name ?? "");
-    updates.slug = await ensureUniqueSlug(baseSlug, id);
+    updates.slug = await ensureUniqueSlug(baseSlug, currentAgent.orgId, id);
   }
 
   const [agent] = await db

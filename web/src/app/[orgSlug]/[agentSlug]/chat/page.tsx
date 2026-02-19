@@ -91,7 +91,7 @@ function SuggestionItem({
 
 /* ─────────── Chat content ─────────── */
 
-function AgentChatContent({ agent }: { agent: AgentRow }) {
+function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string }) {
   const [input, setInput] = useState("");
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
@@ -511,7 +511,7 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
                       Inspect
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href={`/${agent.slug}/build`}>
+                      <Link href={`/${orgSlug}/${agent.slug}/build`}>
                         <SettingsIcon className="size-4" />
                         Agent Settings
                       </Link>
@@ -623,12 +623,12 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
 export default function AgentChatPage({
   params,
 }: {
-  params: Promise<{ agentSlug: string }>;
+  params: Promise<{ orgSlug: string; agentSlug: string }>;
 }) {
-  const { agentSlug } = use(params);
+  const { orgSlug, agentSlug } = use(params);
 
   const { data: agent, isLoading } = useSWR<AgentRow>(
-    `/api/agents/${agentSlug}?by=slug`,
+    `/api/agents/by-slug?org=${orgSlug}&agent=${agentSlug}`,
     fetcher
   );
 
@@ -652,7 +652,7 @@ export default function AgentChatPage({
         </div>
       }
     >
-      <AgentChatContent agent={agent} />
+      <AgentChatContent agent={agent} orgSlug={orgSlug} />
     </Suspense>
   );
 }

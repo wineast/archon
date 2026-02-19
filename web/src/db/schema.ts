@@ -15,29 +15,19 @@ import {
 import type { ToolParameter } from "@/lib/tools/types";
 import type { Assertion, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
 
-/* ─────────── Agent Role Constants ─────────── */
+/* ─────────── Org Role Constants ─────────── */
 
-export const AGENT_ROLE_LEVELS = { viewer: 0, editor: 1, admin: 2, owner: 3 } as const;
-export type AgentRole = keyof typeof AGENT_ROLE_LEVELS;
+export const ORG_ROLE_LEVELS = { member: 0, admin: 1, owner: 2 } as const;
+export type OrgRole = keyof typeof ORG_ROLE_LEVELS;
 
-/* ─────────── Agents ─────────── */
+/* ─────────── Organizations ─────────── */
 
-export const agents = pgTable("agents", {
+export const orgs = pgTable("orgs", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  description: text("description").notNull().default(""),
-  icon: text("icon").notNull().default("bot"),
   slug: text("slug").notNull().unique(),
-  isPublic: boolean("is_public").notNull().default(false),
-  version: text("version").notNull().default("0.0.0"),
-  editingVersionId: uuid("editing_version_id").references(
-    (): AnyPgColumn => agentVersions.id,
-    { onDelete: "set null" }
-  ),
-  publishedVersionId: uuid("published_version_id").references(
-    (): AnyPgColumn => agentVersions.id,
-    { onDelete: "set null" }
-  ),
+  isPersonal: boolean("is_personal").notNull().default(false),
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -46,6 +36,80 @@ export const agents = pgTable("agents", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+export type OrgRow = typeof orgs.$inferSelect;
+export type NewOrgRow = typeof orgs.$inferInsert;
+
+/* ─────────── Org Members ─────────── */
+
+export const orgMembers = pgTable(
+  "org_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").notNull().$type<OrgRole>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("org_members_org_user_idx").on(t.orgId, t.userId),
+    index("org_members_user_id_idx").on(t.userId),
+  ]
+);
+
+export type OrgMemberRow = typeof orgMembers.$inferSelect;
+export type NewOrgMemberRow = typeof orgMembers.$inferInsert;
+
+/* ─────────── Agent Role Constants ─────────── */
+
+export const AGENT_ROLE_LEVELS = { viewer: 0, editor: 1, admin: 2, owner: 3 } as const;
+export type AgentRole = keyof typeof AGENT_ROLE_LEVELS;
+
+/* ─────────── Agents ─────────── */
+
+export const agents = pgTable(
+  "agents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    icon: text("icon").notNull().default("bot"),
+    slug: text("slug").notNull(),
+    isPublic: boolean("is_public").notNull().default(false),
+    version: text("version").notNull().default("0.0.0"),
+    editingVersionId: uuid("editing_version_id").references(
+      (): AnyPgColumn => agentVersions.id,
+      { onDelete: "set null" }
+    ),
+    publishedVersionId: uuid("published_version_id").references(
+      (): AnyPgColumn => agentVersions.id,
+      { onDelete: "set null" }
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("agents_org_id_slug_idx").on(t.orgId, t.slug),
+  ]
+);
 
 export type AgentRow = typeof agents.$inferSelect;
 export type NewAgentRow = typeof agents.$inferInsert;
@@ -991,6 +1055,9 @@ export const usageRecords = pgTable(
   "usage_records",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id").references(() => orgs.id, {
+      onDelete: "set null",
+    }),
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
@@ -1012,6 +1079,8 @@ export const usageRecords = pgTable(
       .notNull(),
   },
   (t) => [
+    index("usage_records_org_id_idx").on(t.orgId),
+    index("usage_records_org_id_created_at_idx").on(t.orgId, t.createdAt),
     index("usage_records_agent_id_idx").on(t.agentId),
     index("usage_records_agent_id_created_at_idx").on(t.agentId, t.createdAt),
     index("usage_records_user_id_idx").on(t.userId),

@@ -25,18 +25,19 @@ export function toSlug(name: string): string {
 }
 
 /**
- * Ensure the slug is unique in the agents table.
+ * Ensure the slug is unique within the given org.
  * If conflict, append -2, -3, etc.
  */
 export async function ensureUniqueSlug(
   base: string,
+  orgId: string,
   excludeId?: string
 ): Promise<string> {
   let candidate = base;
   let suffix = 2;
 
   while (true) {
-    const conditions = [eq(agents.slug, candidate)];
+    const conditions = [eq(agents.slug, candidate), eq(agents.orgId, orgId)];
     if (excludeId) {
       conditions.push(ne(agents.id, excludeId));
     }

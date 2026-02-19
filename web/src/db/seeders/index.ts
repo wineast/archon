@@ -1,6 +1,7 @@
 export { seedModels } from "./seed-models";
 export { seedAgent } from "./seed-agent";
 export { seedUsers } from "./seed-users";
+export { seedOrgs } from "./seed-orgs";
 export { seedComponents } from "./seed-components";
 export { seedTools } from "./seed-tools";
 export { seedWiki } from "./seed-wiki";
@@ -17,6 +18,7 @@ import type { Seeder } from "./types";
 import { seedModels } from "./seed-models";
 import { seedAgent } from "./seed-agent";
 import { seedUsers } from "./seed-users";
+import { seedOrgs } from "./seed-orgs";
 import { seedComponents } from "./seed-components";
 import { seedTools } from "./seed-tools";
 import { seedWiki } from "./seed-wiki";
@@ -30,8 +32,9 @@ import { seedVersion } from "./seed-version";
 /** The full seed pipeline in execution order. */
 export const pipeline: Seeder[] = [
   seedModels,
-  seedAgent,
   seedUsers,
+  seedOrgs,
+  seedAgent,
   seedComponents,
   seedTools,
   seedWiki,

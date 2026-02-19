@@ -1,6 +1,7 @@
 import { join } from "path";
-import { agents } from "../schema";
+import { agents, agentMembers, users } from "../schema";
 import { readJson, logSection, log } from "../seed-utils";
+import { eq, and } from "drizzle-orm";
 import type { Seeder } from "./types";
 
 export const seedAgent: Seeder = {
@@ -15,20 +16,51 @@ export const seedAgent: Seeder = {
       icon: string;
     }>(join(ctx.agentDir, "agent.json"));
 
-    const [agent] = await ctx.db
-      .insert(agents)
-      .values(agentSeed)
-      .onConflictDoUpdate({
-        target: agents.slug,
-        set: {
+    // Check if agent already exists in this org
+    const [existing] = await ctx.db
+      .select()
+      .from(agents)
+      .where(
+        and(eq(agents.orgId, ctx.orgId), eq(agents.slug, agentSeed.slug))
+      )
+      .limit(1);
+
+    let agent;
+    if (existing) {
+      [agent] = await ctx.db
+        .update(agents)
+        .set({
           name: agentSeed.name,
           description: agentSeed.description,
           icon: agentSeed.icon,
-        },
-      })
-      .returning();
+        })
+        .where(eq(agents.id, existing.id))
+        .returning();
+    } else {
+      [agent] = await ctx.db
+        .insert(agents)
+        .values({
+          ...agentSeed,
+          orgId: ctx.orgId,
+          isPublic: true,
+        })
+        .returning();
+    }
 
     ctx.agentId = agent.id;
     log("ok", `${agent.name} (${agent.id})`);
+
+    // Make all users owners of the agent
+    logSection("Seeding agent members");
+    const allUsers = await ctx.db.select({ id: users.id }).from(users);
+    await Promise.all(
+      allUsers.map((u) =>
+        ctx.db
+          .insert(agentMembers)
+          .values({ agentId: agent.id, userId: u.id, role: "owner" })
+          .onConflictDoNothing(),
+      ),
+    );
+    log("ok", `${allUsers.length} user(s) added as agent owner`);
   },
 };

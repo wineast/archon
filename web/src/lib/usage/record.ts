@@ -5,6 +5,7 @@ import { getUsage } from "tokenlens";
 export type UsageSource = "chat" | "embed" | "prompt-assist" | "eval";
 
 interface RecordUsageParams {
+  orgId?: string | null;
   agentId?: string | null;
   userId?: string | null;
   sessionId?: string | null;
@@ -20,7 +21,7 @@ interface RecordUsageParams {
 
 export async function recordUsage(params: RecordUsageParams): Promise<void> {
   try {
-    const { agentId, userId, sessionId, modelId, usage, source } = params;
+    const { orgId, agentId, userId, sessionId, modelId, usage, source } = params;
 
     const inputTokens = usage.inputTokens ?? 0;
     const outputTokens = usage.outputTokens ?? 0;
@@ -44,6 +45,7 @@ export async function recordUsage(params: RecordUsageParams): Promise<void> {
     }
 
     await db.insert(usageRecords).values({
+      orgId: orgId ?? null,
       agentId: agentId ?? null,
       userId: userId ?? null,
       sessionId: sessionId ?? null,
