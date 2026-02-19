@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { datasets, wikiDocuments, tools, schemas, schemaIncludes, objectTypes, objectRelations } from "@/db/schema";
 import type { ToolRow, SchemaWithIncludes } from "@/db/schema";
 import { eq, and, asc, inArray, isNull } from "drizzle-orm";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
@@ -39,7 +39,7 @@ export interface TemplateData {
   resolvedVars: Record<string, unknown>;
   docs: WikiDocument[];
   toolRows: ToolRow[];
-  schemaMap: Record<string, ToolParameter[]>;
+  schemaMap: Record<string, SchemaProperty[]>;
   datasetEntries: Record<string, Array<{ value: string }>>;
   /** Datasets by UUID: id → resolved data. For enumDatasetId resolution. */
   datasetsById: Record<string, unknown>;
@@ -102,7 +102,7 @@ async function getEnabledTools(agentId: string): Promise<ToolRow[]> {
 
 export function buildToolNamespace(
   toolRows: ToolRow[],
-  schemaMap: Record<string, ToolParameter[]> = {}
+  schemaMap: Record<string, SchemaProperty[]> = {}
 ): {
   ns: Record<string, unknown>;
   tool_names: string;
@@ -121,10 +121,10 @@ export function buildToolNamespace(
   }> = [];
 
   for (const row of toolRows) {
-    const rawParams: ToolParameter[] = row.parametersSchemaId
+    const rawParams: SchemaProperty[] = row.parametersSchemaId
       ? (schemaMap[row.parametersSchemaId] ?? [])
       : [];
-    const simpleParams = rawParams.map((p: ToolParameter) => ({
+    const simpleParams = rawParams.map((p: SchemaProperty) => ({
       name: p.name,
       type: p.type,
     }));
@@ -132,8 +132,8 @@ export function buildToolNamespace(
     ns[row.name] = {
       name: row.name,
       description: row.description,
-      params: rawParams.map((p: ToolParameter) => p.name).join(", "),
-      parameters: rawParams.map((p: ToolParameter) => ({
+      params: rawParams.map((p: SchemaProperty) => p.name).join(", "),
+      parameters: rawParams.map((p: SchemaProperty) => ({
         name: p.name,
         type: p.type,
         description: p.description,
@@ -251,7 +251,7 @@ export async function gatherTemplateData(
   );
 
   // Build schemaMap using resolved parameters (strip _source metadata)
-  const schemaMap: Record<string, ToolParameter[]> = {};
+  const schemaMap: Record<string, SchemaProperty[]> = {};
   for (const row of allSchemaRows) {
     const withIncludes = allSchemasMap.get(row.id)!;
     schemaMap[row.id] = resolveParameters(withIncludes, allSchemasMap).map((p) => {

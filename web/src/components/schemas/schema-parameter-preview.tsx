@@ -1,10 +1,10 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
 interface SchemaParameterPreviewProps {
-  parameters: ToolParameter[];
+  parameters: SchemaProperty[];
 }
 
 export function SchemaParameterPreview({ parameters }: SchemaParameterPreviewProps) {
@@ -25,7 +25,7 @@ export function SchemaParameterPreview({ parameters }: SchemaParameterPreviewPro
         >
           <span className="font-mono text-xs">{param.name}</span>
           <Badge variant="outline" className="text-[10px]">
-            {param.isArray ? `${param.type}[]` : param.type}
+            {param.type === "array" && param.items ? `${param.items.type}[]` : param.type}
           </Badge>
           {param.required && (
             <Badge variant="secondary" className="text-[10px]">

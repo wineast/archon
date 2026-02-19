@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { buildInputSchema } from "../schema-builder";
-import type { ToolParameter } from "../types";
+import type { SchemaProperty } from "../types";
 
-function makeParam(overrides: Partial<ToolParameter> = {}): ToolParameter {
+function makeParam(overrides: Partial<SchemaProperty> = {}): SchemaProperty {
   return {
     id: "p-1",
     name: "field",
@@ -60,6 +60,7 @@ describe("schema-builder — enum type", () => {
     it("resolves enumDatasetId from array in datasetsById", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumDatasetId: "ds-1" })],
+        undefined,
         { datasetsById }
       );
       expect(() => schema.parse({ field: "CA" })).not.toThrow();
@@ -69,6 +70,7 @@ describe("schema-builder — enum type", () => {
     it("falls back to enum when enumDatasetId not found in datasetsById", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumDatasetId: "ds-unknown", enum: ["x", "y"] })],
+        undefined,
         { datasetsById }
       );
       expect(() => schema.parse({ field: "x" })).not.toThrow();
@@ -85,6 +87,7 @@ describe("schema-builder — enum type", () => {
     it("resolves enumDatasetId from object via Object.values() when values are strings", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumDatasetId: "ds-income" })],
+        undefined,
         { datasetsById }
       );
       expect(() => schema.parse({ field: "Salary" })).not.toThrow();
@@ -96,6 +99,7 @@ describe("schema-builder — enum type", () => {
     it("resolves enumDatasetId from object via Object.keys() when values are non-strings", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumDatasetId: "ds-nums" })],
+        undefined,
         { datasetsById: { "ds-nums": { a: 1, b: 2, c: 3 } } }
       );
       // Object.keys() → ["a", "b", "c"]
@@ -107,6 +111,7 @@ describe("schema-builder — enum type", () => {
     it("arrays still resolve as arrays, not as objects", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "enum", enumDatasetId: "ds-states" })],
+        undefined,
         { datasetsById }
       );
       expect(() => schema.parse({ field: "CA" })).not.toThrow();
@@ -114,13 +119,24 @@ describe("schema-builder — enum type", () => {
     });
   });
 
-  describe("backward compat: string type with enum still works", () => {
-    it("string type with enum values still uses z.enum", () => {
+  describe("string type no longer handles enum", () => {
+    it("string type with enum values ignores them (just z.string)", () => {
       const schema = buildInputSchema([
         makeParam({ type: "string", enum: ["a", "b"] }),
       ]);
       expect(() => schema.parse({ field: "a" })).not.toThrow();
-      expect(() => schema.parse({ field: "c" })).toThrow();
+      // "c" is accepted because string type doesn't use enum
+      expect(() => schema.parse({ field: "c" })).not.toThrow();
+    });
+
+    it("string type with enumRef ignores it (just z.string)", () => {
+      const schema = buildInputSchema(
+        [makeParam({ type: "string", enumRef: "colors" })],
+        { colors: ["red", "blue"] }
+      );
+      expect(() => schema.parse({ field: "red" })).not.toThrow();
+      // "green" is accepted because string type doesn't resolve enum
+      expect(() => schema.parse({ field: "green" })).not.toThrow();
     });
   });
 });

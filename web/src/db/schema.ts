@@ -12,7 +12,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import type { Assertion, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
 
 /* ─────────── Org Role Constants ─────────── */
@@ -304,7 +304,7 @@ export const schemas = pgTable(
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
-    parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
+    parameters: jsonb("parameters").$type<SchemaProperty[]>().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

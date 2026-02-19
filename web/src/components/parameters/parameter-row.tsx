@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { ToolParameter, ToolParamType } from "@/lib/tools/types";
+import type { SchemaPropertyType } from "@/lib/schemas/types";
 import type { SchemaRow } from "@/db/schema";
 import { BracesIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
@@ -23,12 +23,22 @@ import {
 } from "react-hook-form";
 import { nanoid } from "nanoid";
 
-const PARAM_TYPES: { value: ToolParamType; label: string }[] = [
+const PARAM_TYPES: { value: SchemaPropertyType; label: string }[] = [
   { value: "string", label: "String" },
   { value: "number", label: "Number" },
   { value: "boolean", label: "Boolean" },
   { value: "enum", label: "Enum" },
-  { value: "json", label: "JSON" },
+  { value: "object", label: "Object" },
+  { value: "array", label: "Array" },
+];
+
+/** Item types available when type === "array" */
+const ARRAY_ITEM_TYPES: { value: SchemaPropertyType; label: string }[] = [
+  { value: "string", label: "String" },
+  { value: "number", label: "Number" },
+  { value: "boolean", label: "Boolean" },
+  { value: "enum", label: "Enum" },
+  { value: "object", label: "Object" },
 ];
 
 const MAX_DEPTH = 3;
@@ -52,7 +62,7 @@ interface ParameterRowProps {
 }
 
 type EnumSource = "manual" | "ref";
-type JsonSource = "manual" | "ref";
+type ObjectSource = "manual" | "ref";
 
 /** Nested properties — separated to avoid conditional useFieldArray calls. */
 function NestedProperties({
@@ -150,7 +160,7 @@ function DefaultValueEditor({
   fieldPath,
   enumRefValues,
 }: {
-  type: ToolParamType;
+  type: SchemaPropertyType;
   fieldPath: string;
   enumRefValues: Record<string, string[]>;
 }) {
@@ -213,7 +223,7 @@ function DefaultValueEditor({
     );
   }
 
-  if (type === "json") {
+  if (type === "object" || type === "array") {
     return (
       <div className="pl-[128px] space-y-1">
         <label className="text-xs text-muted-foreground">默认值</label>
@@ -261,7 +271,7 @@ function DefaultValueEditor({
   );
 }
 
-/** Read-only preview of schema parameters for JSON ref mode. */
+/** Read-only preview of schema parameters for object ref mode. */
 function SchemaRefPreview({ schemas, schemaId }: { schemas: SchemaRow[]; schemaId: string }) {
   const schema = schemas.find((s) => s.id === schemaId);
   if (!schema || schema.parameters.length === 0) return null;
@@ -291,18 +301,21 @@ export function ParameterRow({
   const { register, control, setValue, getValues } = useFormContext();
 
   // Only watch fields needed for conditional rendering in this component
-  const type = useWatch({ control, name: `${fieldPath}.type` }) as ToolParamType;
+  const type = useWatch({ control, name: `${fieldPath}.type` }) as SchemaPropertyType;
   const enumDatasetId = useWatch({ control, name: `${fieldPath}.enumDatasetId` }) as string | undefined;
   const schemaId = useWatch({ control, name: `${fieldPath}.schemaId` }) as string | undefined;
+  const itemsType = useWatch({ control, name: `${fieldPath}.items.type` }) as SchemaPropertyType | undefined;
 
   const isEnum = type === "enum";
-  const isJson = type === "json";
-  const canNest = isJson && depth < MAX_DEPTH;
+  const isObject = type === "object";
+  const isArray = type === "array";
+  const canNestObject = isObject && depth < MAX_DEPTH;
+  const canNestArrayItems = isArray && depth < MAX_DEPTH;
 
   const [enumSource, setEnumSource] = useState<EnumSource>(() =>
     enumDatasetId ? "ref" : "manual"
   );
-  const [jsonSource, setJsonSource] = useState<JsonSource>(() =>
+  const [objectSource, setObjectSource] = useState<ObjectSource>(() =>
     schemaId ? "ref" : "manual"
   );
   // Read initial defaultValue once (no subscription) to set initial expand state
@@ -326,15 +339,18 @@ export function ParameterRow({
           render={({ field }) => (
             <Select
               value={field.value}
-              onValueChange={(value: ToolParamType) => {
+              onValueChange={(value: SchemaPropertyType) => {
                 field.onChange(value);
                 if (value !== "enum") {
                   setValue(`${fieldPath}.enum`, undefined);
                   setValue(`${fieldPath}.enumDatasetId`, undefined);
                 }
-                if (value !== "json") {
+                if (value !== "object") {
                   setValue(`${fieldPath}.properties`, undefined);
                   setValue(`${fieldPath}.schemaId`, undefined);
+                }
+                if (value !== "array") {
+                  setValue(`${fieldPath}.items`, undefined);
                 }
               }}
             >
@@ -362,22 +378,6 @@ export function ParameterRow({
             onClick={() => setShowDefault((v) => !v)}
           />
         )}
-        <div className="flex items-center gap-1">
-          <Controller
-            name={`${fieldPath}.isArray`}
-            control={control}
-            render={({ field }) => (
-              <Switch
-                size="sm"
-                checked={field.value ?? false}
-                onCheckedChange={(checked: boolean) =>
-                  field.onChange(checked || undefined)
-                }
-              />
-            )}
-          />
-          <span className="text-[10px] text-muted-foreground w-4">[]</span>
-        </div>
         <div className="flex items-center gap-1">
           <Controller
             name={`${fieldPath}.required`}
@@ -495,13 +495,62 @@ export function ParameterRow({
         </div>
       )}
 
-      {/* JSON: schema ref or manual properties */}
-      {canNest && hasSchemas && (
+      {/* Array: items type selector */}
+      {canNestArrayItems && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0">
+          <span className="text-xs text-muted-foreground shrink-0">元素类型</span>
+          <Controller
+            name={`${fieldPath}.items.type`}
+            control={control}
+            render={({ field }) => (
+              <Select
+                value={field.value ?? "string"}
+                onValueChange={(value: SchemaPropertyType) => {
+                  // Reset items to a minimal object with the new type
+                  setValue(`${fieldPath}.items`, {
+                    id: getValues(`${fieldPath}.items.id`) || nanoid(),
+                    name: "item",
+                    type: value,
+                    description: "",
+                    required: true,
+                  });
+                }}
+              >
+                <SelectTrigger className="w-[100px]" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ARRAY_ITEM_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+      )}
+
+      {/* Array items: object nested properties */}
+      {canNestArrayItems && itemsType === "object" && (
+        <NestedProperties
+          fieldPath={`${fieldPath}.items`}
+          enumRefOptions={enumRefOptions}
+          enumRefValues={enumRefValues}
+          hideDefault={hideDefault}
+          depth={depth + 1}
+          schemas={schemas}
+        />
+      )}
+
+      {/* Object: schema ref or manual properties */}
+      {canNestObject && hasSchemas && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0">
           <Select
-            value={jsonSource}
-            onValueChange={(value: JsonSource) => {
-              setJsonSource(value);
+            value={objectSource}
+            onValueChange={(value: ObjectSource) => {
+              setObjectSource(value);
               if (value === "manual") {
                 setValue(`${fieldPath}.schemaId`, undefined);
               } else {
@@ -518,7 +567,7 @@ export function ParameterRow({
             </SelectContent>
           </Select>
 
-          {jsonSource === "ref" && (
+          {objectSource === "ref" && (
             <Controller
               name={`${fieldPath}.schemaId`}
               control={control}
@@ -546,13 +595,13 @@ export function ParameterRow({
         </div>
       )}
 
-      {/* JSON ref preview */}
-      {canNest && jsonSource === "ref" && schemaId && (
+      {/* Object ref preview */}
+      {canNestObject && objectSource === "ref" && schemaId && (
         <SchemaRefPreview schemas={schemas} schemaId={schemaId} />
       )}
 
-      {/* JSON manual nested properties */}
-      {canNest && jsonSource === "manual" && (
+      {/* Object manual nested properties */}
+      {canNestObject && objectSource === "manual" && (
         <NestedProperties
           fieldPath={fieldPath}
           enumRefOptions={enumRefOptions}
@@ -563,8 +612,8 @@ export function ParameterRow({
         />
       )}
 
-      {/* JSON without schemas: always show nested properties */}
-      {canNest && !hasSchemas && (
+      {/* Object without schemas: always show nested properties */}
+      {canNestObject && !hasSchemas && (
         <NestedProperties
           fieldPath={fieldPath}
           enumRefOptions={enumRefOptions}

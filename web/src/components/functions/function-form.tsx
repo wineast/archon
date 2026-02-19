@@ -19,7 +19,7 @@ import {
 import { JsEditor } from "@/components/editors/js-editor";
 import { useSchemas } from "@/lib/schemas/hooks";
 import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
 export interface FunctionFormValues {
   name: string;
@@ -51,7 +51,7 @@ interface ParameterSectionProps {
   label: string;
   schemaIdFieldName: "parametersSchemaId" | "returnParametersSchemaId";
   schemaIdValue: string | null | undefined;
-  schemas: { id: string; key: string; name: string; parameters: ToolParameter[] }[];
+  schemas: { id: string; key: string; name: string; parameters: SchemaProperty[] }[];
   form: ReturnType<typeof useForm<FunctionFormValues>>;
 }
 

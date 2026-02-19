@@ -1,7 +1,7 @@
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import type { SchemaWithIncludes } from "@/db/schema";
 
-export interface ResolvedParameter extends ToolParameter {
+export interface ResolvedParameter extends SchemaProperty {
   _source?: string; // 'own' | schema name
 }
 

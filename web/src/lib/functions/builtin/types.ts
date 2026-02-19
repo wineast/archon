@@ -1,4 +1,4 @@
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
 export interface BuiltinTestCase {
   name: string;
@@ -22,9 +22,9 @@ export interface BuiltinFunction {
   /** Example / documentation code shown in the read-only detail view */
   code: string;
   /** Optional parameter definitions for the built-in function */
-  parameters?: ToolParameter[];
+  parameters?: SchemaProperty[];
   /** Optional return value definitions */
-  returnParameters?: ToolParameter[];
+  returnParameters?: SchemaProperty[];
   /** Built-in test cases to demonstrate usage */
   testCases?: BuiltinTestCase[];
 }

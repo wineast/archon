@@ -152,7 +152,7 @@ export function createToolContext(agentId?: string): ToolContext {
     const schemaIds = rows
       .map((r) => r.parametersSchemaId)
       .filter((id): id is string => id != null);
-    const schemaMap = new Map<string, import("@/lib/tools/types").ToolParameter[]>();
+    const schemaMap = new Map<string, import("@/lib/schemas/types").SchemaProperty[]>();
     if (schemaIds.length > 0) {
       const schemaRows = await db
         .select({ id: schemas.id, parameters: schemas.parameters })

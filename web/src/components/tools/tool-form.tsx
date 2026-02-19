@@ -50,7 +50,7 @@ interface ParameterSectionProps {
   label: string;
   schemaIdFieldName: "parametersSchemaId" | "returnParametersSchemaId";
   schemaIdValue: string | null | undefined;
-  schemas: { id: string; key: string; name: string; parameters: import("@/lib/tools/types").ToolParameter[] }[];
+  schemas: { id: string; key: string; name: string; parameters: import("@/lib/schemas/types").SchemaProperty[] }[];
   form: ReturnType<typeof useForm<ToolDefinition>>;
 }
 

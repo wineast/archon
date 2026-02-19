@@ -95,7 +95,7 @@ export async function POST(
     for (const row of enabledRows) {
       if (row.parametersSchemaId) schemaIds.add(row.parametersSchemaId);
     }
-    const schemaMap: Record<string, import("@/lib/tools/types").ToolParameter[]> = {};
+    const schemaMap: Record<string, import("@/lib/schemas/types").SchemaProperty[]> = {};
     if (schemaIds.size > 0) {
       const schemaRows = await db
         .select()

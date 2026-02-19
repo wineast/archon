@@ -2,11 +2,11 @@ import { join } from "path";
 import { eq } from "drizzle-orm";
 import { tools, schemas, toolTestCases } from "../schema";
 import { readJson, toKey, logSection, log } from "../seed-utils";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import type { Seeder } from "./types";
 
 /** Seed-time parameter with optional legacy enumRef. */
-interface SeedToolParameter extends Omit<ToolParameter, "enumRef"> {
+interface SeedToolParameter extends Omit<SchemaProperty, "enumRef"> {
   enumRef?: string;
   properties?: SeedToolParameter[];
 }
@@ -15,7 +15,7 @@ interface SeedToolParameter extends Omit<ToolParameter, "enumRef"> {
 function convertEnumRefs(
   params: SeedToolParameter[],
   datasetKeyToId: Record<string, string>
-): ToolParameter[] {
+): SchemaProperty[] {
   return params.map((p) => {
     const { enumRef, ...rest } = p;
     if (enumRef) {
@@ -32,7 +32,7 @@ function convertEnumRefs(
         datasetKeyToId
       );
     }
-    return rest as ToolParameter;
+    return rest as SchemaProperty;
   });
 }
 

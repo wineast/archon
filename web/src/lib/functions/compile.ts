@@ -14,7 +14,7 @@
 
 import { compileExpression } from "filtrex";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import {
   createFunctionsSandbox,
   type FunctionsSandbox,
@@ -51,7 +51,7 @@ export function inferDeps(code: string, knownKeys: Set<string>): string[] {
 export interface FunctionRecord {
   key: string;
   code: string;
-  parameters: ToolParameter[];
+  parameters: SchemaProperty[];
 }
 
 /**

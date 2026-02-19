@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { buildInputSchema } from "../schema-builder";
-import type { ToolParameter } from "../types";
+import type { SchemaProperty } from "../types";
 
 function makeParam(
-  overrides: Partial<ToolParameter> = {}
-): ToolParameter {
+  overrides: Partial<SchemaProperty> = {}
+): SchemaProperty {
   return {
     id: "p-1",
     name: "field",
@@ -127,10 +127,10 @@ describe("schema-builder", () => {
       });
     });
 
-    describe("enum support", () => {
-      it("uses z.enum when param has enum values", () => {
+    describe("enum support (type: enum)", () => {
+      it("uses z.enum when param type is enum with values", () => {
         const schema = buildInputSchema([
-          makeParam({ enum: ["a", "b", "c"] }),
+          makeParam({ type: "enum", enum: ["a", "b", "c"] }),
         ]);
         expect(() => schema.parse({ field: "a" })).not.toThrow();
         expect(() => schema.parse({ field: "b" })).not.toThrow();
@@ -138,16 +138,28 @@ describe("schema-builder", () => {
 
       it("rejects values not in enum", () => {
         const schema = buildInputSchema([
-          makeParam({ enum: ["a", "b", "c"] }),
+          makeParam({ type: "enum", enum: ["a", "b", "c"] }),
         ]);
         expect(() => schema.parse({ field: "d" })).toThrow();
       });
 
-      it("ignores enum for non-string types", () => {
+      it("works with optional enum param", () => {
         const schema = buildInputSchema([
-          makeParam({ type: "number", enum: ["a", "b"] }),
+          makeParam({ type: "enum", required: false, enum: ["x", "y"] }),
         ]);
-        expect(() => schema.parse({ field: 42 })).not.toThrow();
+        expect(() => schema.parse({})).not.toThrow();
+        expect(() => schema.parse({ field: "x" })).not.toThrow();
+        expect(() => schema.parse({ field: "z" })).toThrow();
+      });
+    });
+
+    describe("string type no longer resolves enum", () => {
+      it("string with enum values ignores enum (just z.string)", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", enum: ["a", "b", "c"] }),
+        ]);
+        // "d" is accepted because string type doesn't use enum
+        expect(() => schema.parse({ field: "d" })).not.toThrow();
       });
 
       it("treats empty enum array as regular string", () => {
@@ -157,13 +169,264 @@ describe("schema-builder", () => {
         expect(() => schema.parse({ field: "anything" })).not.toThrow();
       });
 
-      it("works with optional enum param", () => {
+      it("ignores enum for non-string types", () => {
         const schema = buildInputSchema([
-          makeParam({ required: false, enum: ["x", "y"] }),
+          makeParam({ type: "number", enum: ["a", "b"] }),
         ]);
-        expect(() => schema.parse({})).not.toThrow();
-        expect(() => schema.parse({ field: "x" })).not.toThrow();
-        expect(() => schema.parse({ field: "z" })).toThrow();
+        expect(() => schema.parse({ field: 42 })).not.toThrow();
+      });
+    });
+
+    describe("enum fallback warning", () => {
+      it("falls back to z.string when enum type has no values", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const schema = buildInputSchema([
+          makeParam({ type: "enum" }),
+        ]);
+        expect(() => schema.parse({ field: "anything" })).not.toThrow();
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining("no values")
+        );
+        warn.mockRestore();
+      });
+    });
+
+    describe("object type (replaces json)", () => {
+      it("accepts object with nested properties", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "object",
+            properties: [
+              makeParam({ id: "c1", name: "name", type: "string", required: true }),
+              makeParam({ id: "c2", name: "age", type: "number", required: false }),
+            ],
+          }),
+        ]);
+        expect(() =>
+          schema.parse({ field: { name: "Alice" } })
+        ).not.toThrow();
+        expect(() =>
+          schema.parse({ field: { name: "Alice", age: 30 } })
+        ).not.toThrow();
+      });
+
+      it("validates nested child types", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "object",
+            properties: [
+              makeParam({ id: "c1", name: "count", type: "number", required: true }),
+            ],
+          }),
+        ]);
+        expect(() =>
+          schema.parse({ field: { count: "not a number" } })
+        ).toThrow();
+      });
+
+      it("accepts z.unknown when no properties", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "object" }),
+        ]);
+        expect(() => schema.parse({ field: { any: "data" } })).not.toThrow();
+        expect(() => schema.parse({ field: 42 })).not.toThrow();
+      });
+    });
+
+    describe("array type", () => {
+      it("accepts array of items", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "array",
+            items: makeParam({ id: "item", name: "item", type: "string" }),
+          }),
+        ]);
+        expect(() =>
+          schema.parse({ field: ["a", "b", "c"] })
+        ).not.toThrow();
+      });
+
+      it("validates item types", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "array",
+            items: makeParam({ id: "item", name: "item", type: "number" }),
+          }),
+        ]);
+        expect(() =>
+          schema.parse({ field: [1, 2, 3] })
+        ).not.toThrow();
+        expect(() =>
+          schema.parse({ field: ["a", "b"] })
+        ).toThrow();
+      });
+
+      it("accepts array of objects", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "array",
+            items: makeParam({
+              id: "item",
+              name: "item",
+              type: "object",
+              properties: [
+                makeParam({ id: "c1", name: "name", type: "string", required: true }),
+              ],
+            }),
+          }),
+        ]);
+        expect(() =>
+          schema.parse({ field: [{ name: "Alice" }, { name: "Bob" }] })
+        ).not.toThrow();
+      });
+
+      it("accepts z.unknown array when no items", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "array" }),
+        ]);
+        expect(() =>
+          schema.parse({ field: [1, "two", true] })
+        ).not.toThrow();
+      });
+
+      it("enforces minItems", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "array",
+            items: makeParam({ id: "item", name: "item", type: "string" }),
+            minItems: 2,
+          }),
+        ]);
+        expect(() => schema.parse({ field: ["a"] })).toThrow();
+        expect(() => schema.parse({ field: ["a", "b"] })).not.toThrow();
+      });
+
+      it("enforces maxItems", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "array",
+            items: makeParam({ id: "item", name: "item", type: "string" }),
+            maxItems: 2,
+          }),
+        ]);
+        expect(() => schema.parse({ field: ["a", "b"] })).not.toThrow();
+        expect(() => schema.parse({ field: ["a", "b", "c"] })).toThrow();
+      });
+    });
+
+    describe("string constraints", () => {
+      it("enforces minLength", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", minLength: 3 }),
+        ]);
+        expect(() => schema.parse({ field: "ab" })).toThrow();
+        expect(() => schema.parse({ field: "abc" })).not.toThrow();
+      });
+
+      it("enforces maxLength", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", maxLength: 5 }),
+        ]);
+        expect(() => schema.parse({ field: "12345" })).not.toThrow();
+        expect(() => schema.parse({ field: "123456" })).toThrow();
+      });
+
+      it("enforces pattern", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", pattern: "^[A-Z]+$" }),
+        ]);
+        expect(() => schema.parse({ field: "ABC" })).not.toThrow();
+        expect(() => schema.parse({ field: "abc" })).toThrow();
+      });
+
+      it("validates email format", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", format: "email" }),
+        ]);
+        expect(() => schema.parse({ field: "test@example.com" })).not.toThrow();
+        expect(() => schema.parse({ field: "not-an-email" })).toThrow();
+      });
+
+      it("validates url format", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", format: "url" }),
+        ]);
+        expect(() => schema.parse({ field: "https://example.com" })).not.toThrow();
+        expect(() => schema.parse({ field: "not-a-url" })).toThrow();
+      });
+
+      it("validates uuid format", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", format: "uuid" }),
+        ]);
+        expect(() => schema.parse({ field: "550e8400-e29b-41d4-a716-446655440000" })).not.toThrow();
+        expect(() => schema.parse({ field: "not-a-uuid" })).toThrow();
+      });
+
+      it("validates date format", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", format: "date" }),
+        ]);
+        expect(() => schema.parse({ field: "2024-01-15" })).not.toThrow();
+        expect(() => schema.parse({ field: "not-a-date" })).toThrow();
+      });
+
+      it("validates date-time format", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", format: "date-time" }),
+        ]);
+        expect(() => schema.parse({ field: "2024-01-15T10:30:00Z" })).not.toThrow();
+        expect(() => schema.parse({ field: "2024-01-15" })).toThrow();
+      });
+    });
+
+    describe("number constraints", () => {
+      it("enforces minimum", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "number", minimum: 10 }),
+        ]);
+        expect(() => schema.parse({ field: 9 })).toThrow();
+        expect(() => schema.parse({ field: 10 })).not.toThrow();
+      });
+
+      it("enforces maximum", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "number", maximum: 100 }),
+        ]);
+        expect(() => schema.parse({ field: 100 })).not.toThrow();
+        expect(() => schema.parse({ field: 101 })).toThrow();
+      });
+
+      it("enforces exclusiveMinimum (gt)", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "number", exclusiveMinimum: 0 }),
+        ]);
+        expect(() => schema.parse({ field: 0 })).toThrow();
+        expect(() => schema.parse({ field: 0.01 })).not.toThrow();
+      });
+
+      it("enforces exclusiveMaximum (lt)", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "number", exclusiveMaximum: 100 }),
+        ]);
+        expect(() => schema.parse({ field: 100 })).toThrow();
+        expect(() => schema.parse({ field: 99.99 })).not.toThrow();
+      });
+
+      it("enforces integer constraint", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "number", integer: true }),
+        ]);
+        expect(() => schema.parse({ field: 42 })).not.toThrow();
+        expect(() => schema.parse({ field: 42.5 })).toThrow();
+      });
+
+      it("enforces multipleOf", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "number", multipleOf: 5 }),
+        ]);
+        expect(() => schema.parse({ field: 10 })).not.toThrow();
+        expect(() => schema.parse({ field: 13 })).toThrow();
       });
     });
 
