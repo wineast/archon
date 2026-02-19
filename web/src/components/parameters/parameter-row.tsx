@@ -532,6 +532,7 @@ export function ParameterRow({
   const isObject = type === "object";
   const isArray = type === "array";
   const isUnion = type === "union";
+  const isConst = type === "const";
   const canNestObject = isObject && depth < MAX_DEPTH;
   const canNestArrayItems = isArray && depth < MAX_DEPTH;
   const canNestUnion = isUnion && depth < MAX_DEPTH;
@@ -725,6 +726,37 @@ export function ParameterRow({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Const value editor */}
+      {isConst && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0">
+          <span className="text-xs text-muted-foreground shrink-0">固定值</span>
+          <Controller
+            name={`${fieldPath}.constValue`}
+            control={control}
+            render={({ field }) => (
+              <Input
+                className="h-8 flex-1 text-xs font-mono"
+                value={field.value != null ? String(field.value) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    field.onChange(undefined);
+                    return;
+                  }
+                  // Try parsing as JSON (number, boolean, null, string)
+                  try {
+                    field.onChange(JSON.parse(raw));
+                  } catch {
+                    field.onChange(raw);
+                  }
+                }}
+                placeholder='值，如 "1.0" 或 42 或 true'
+              />
+            )}
+          />
         </div>
       )}
 

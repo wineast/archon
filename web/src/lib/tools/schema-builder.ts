@@ -38,6 +38,9 @@ function buildParamSchema(
     case "null":
       schema = z.null();
       break;
+    case "const":
+      schema = param.constValue !== undefined ? z.literal(param.constValue as string | number | boolean) : z.unknown();
+      break;
     case "object":
       schema = buildObjectSchema(param, resolvedVars, options, ancestorSchemaIds);
       break;
