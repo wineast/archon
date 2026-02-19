@@ -95,6 +95,8 @@ make wt-list
    claude --dangerously-skip-permissions --permission-mode plan "<用户确认的 prompt>"
    ```
    然后 `chmod +x` 使其可执行。
+
+   **重要**：prompt 中引用的文档路径必须使用**主仓库的绝对路径**（如 `/Users/yarnb/archon/guide/ontology.md`），因为这些文档在主工作区创建但尚未提交，子工作区的工作树中看不到未提交的文件。
 6. **提示用户**：
    - worktree 路径：`.worktrees/<name>`
    - 启动方式：`cd .worktrees/<name> && ./start.sh`
@@ -122,7 +124,7 @@ make wt-sync
 流程：
 
 1. **路径检查**：确认当前工作目录是主仓库（不在 `.worktrees/` 内）。如果当前在 worktree 内，**先 cd 回主仓库**再执行合并命令。
-2. **检查未提交变更**：工作区有未提交修改时，先帮其提交（或提醒用户）。
+2. **自动提交未提交变更**：工作区有未提交修改时，自动 `git add -A && git commit` 提交（不需要询问用户），commit message 描述工作区的改动内容。
 3. **执行合并**：
    ```bash
    make wt-merge NAME=<name>
