@@ -169,8 +169,7 @@ export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
         returnParametersSchemaKey: t.returnParametersSchemaId ? schemaIdToKey.get(t.returnParametersSchemaId) ?? null : null,
         output: t.output,
         handler: t.handler,
-        component: t.component,
-        componentSource: t.componentSource,
+        componentKey: t.componentId ? compIdToKey.get(t.componentId) ?? null : null,
         enabled: t.enabled,
         executionTarget: t.executionTarget,
         testCases: toolTestsByKey.get(t.key) ?? [],
@@ -311,7 +310,43 @@ export async function restoreSnapshot(
     }
   }
 
-  // 3. Rebuild tools + test cases
+  // 3. Rebuild components + test cases (before tools, since tools reference components via FK)
+  const compKeyToNewId = new Map<string, string>();
+  if (snapshot.components.length > 0) {
+    const insertedComponents = await tx
+      .insert(components)
+      .values(
+        snapshot.components.map((c) => ({
+          agentId,
+          key: c.key,
+          name: c.name,
+          description: c.description,
+          componentSource: c.componentSource,
+          inputSchemaId: c.inputSchemaKey ? schemaKeyToNewId.get(c.inputSchemaKey) ?? null : null,
+          outputSchemaId: c.outputSchemaKey ? schemaKeyToNewId.get(c.outputSchemaKey) ?? null : null,
+          generatedCss: c.generatedCss,
+        }))
+      )
+      .returning({ id: components.id, key: components.key });
+
+    for (const c of insertedComponents) {
+      compKeyToNewId.set(c.key, c.id);
+    }
+
+    const compTCs = snapshot.components.flatMap((c) =>
+      c.testCases.map((tc) => ({
+        componentId: compKeyToNewId.get(c.key)!,
+        name: tc.name,
+        tool: tc.tool,
+        tags: tc.tags,
+      }))
+    );
+    if (compTCs.length > 0) {
+      await tx.insert(componentTestCases).values(compTCs);
+    }
+  }
+
+  // 4. Rebuild tools + test cases
   if (snapshot.tools.length > 0) {
     const insertedTools = await tx
       .insert(tools)
@@ -325,8 +360,7 @@ export async function restoreSnapshot(
           returnParametersSchemaId: t.returnParametersSchemaKey ? schemaKeyToNewId.get(t.returnParametersSchemaKey) ?? null : null,
           output: t.output,
           handler: t.handler,
-          component: t.component,
-          componentSource: t.componentSource,
+          componentId: t.componentKey ? compKeyToNewId.get(t.componentKey) ?? null : null,
           enabled: t.enabled,
           executionTarget: t.executionTarget,
         }))
@@ -348,7 +382,7 @@ export async function restoreSnapshot(
     }
   }
 
-  // 4. Rebuild functions + test cases
+  // 5. Rebuild functions + test cases
   if (snapshot.functions.length > 0) {
     const insertedFunctions = await tx
       .insert(functions)
@@ -379,40 +413,6 @@ export async function restoreSnapshot(
     );
     if (funcTCs.length > 0) {
       await tx.insert(functionTestCases).values(funcTCs);
-    }
-  }
-
-  // 5. Rebuild components + test cases
-  if (snapshot.components.length > 0) {
-    const insertedComponents = await tx
-      .insert(components)
-      .values(
-        snapshot.components.map((c) => ({
-          agentId,
-          key: c.key,
-          name: c.name,
-          description: c.description,
-          componentSource: c.componentSource,
-          inputSchemaId: c.inputSchemaKey ? schemaKeyToNewId.get(c.inputSchemaKey) ?? null : null,
-          outputSchemaId: c.outputSchemaKey ? schemaKeyToNewId.get(c.outputSchemaKey) ?? null : null,
-          generatedCss: c.generatedCss,
-        }))
-      )
-      .returning({ id: components.id, key: components.key });
-
-    const compKeyToNewId = new Map(
-      insertedComponents.map((c) => [c.key, c.id])
-    );
-    const compTCs = snapshot.components.flatMap((c) =>
-      c.testCases.map((tc) => ({
-        componentId: compKeyToNewId.get(c.key)!,
-        name: tc.name,
-        tool: tc.tool,
-        tags: tc.tags,
-      }))
-    );
-    if (compTCs.length > 0) {
-      await tx.insert(componentTestCases).values(compTCs);
     }
   }
 

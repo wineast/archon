@@ -29,8 +29,7 @@ export interface ToolDefinition {
   returnParametersSchemaId?: string | null;
   output: string;
   handler: string;
-  component: string;
-  componentSource: string;
+  componentId: string | null;
   enabled: boolean;
   executionTarget: "server" | "client" | "host";
 }

@@ -26,10 +26,11 @@ export async function GET(
       db
         .select({
           name: tools.name,
-          component: tools.component,
-          componentSource: tools.componentSource,
+          componentKey: components.key,
+          componentSource: components.componentSource,
         })
         .from(tools)
+        .leftJoin(components, eq(tools.componentId, components.id))
         .where(eq(tools.agentId, session.agentId)),
       db
         .select({
@@ -41,10 +42,8 @@ export async function GET(
         .where(eq(components.agentId, session.agentId)),
     ]);
 
-    const componentMap = new Map(componentRows.map((c) => [c.key, c.componentSource]));
     for (const r of toolRows) {
-      const source = (r.component && componentMap.get(r.component)) || r.componentSource;
-      if (source) toolComponentSourceMap[r.name] = source;
+      if (r.componentSource) toolComponentSourceMap[r.name] = r.componentSource;
     }
 
     // Collect generated CSS from components
