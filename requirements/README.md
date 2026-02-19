@@ -13,10 +13,24 @@
   - 工作区: `dataset-auto-deps` | 分支: `dev-dataset-auto-deps-20260218`
 - [ ] **独立 Schema 资源管理** — 将 ToolParameter[] 抽象为独立 Schema 资源，tool output 和 component input 通过引用 schema key 保证数据结构一致
   - 工作区: `schema-resource` | 分支: `dev-schema-resource-20260219`
+- [x] **Schema FK 关联迁移** — tools/components 的 schema 引用从字符串 key 改为 UUID 外键，删除 tools 内联 parameters 字段
+  - 工作区: `schema-fk` | 分支: `dev-schema-fk-20260219`
 - [ ] **修复 unique 约束范围** — modelConfigs、evalCases、evalJudgeConfigs 的 name 从全局唯一改为 (agentId, name) 联合唯一
   - 工作区: `fix-unique-constraints` | 分支: `dev-fix-unique-constraints-20260219`
+- [ ] **Schema 组合与引用增强** — Schema includes 组合、json 字段级 schema 引用、enumRef 迁移为 UUID FK
+  - 工作区: `schema-composition` | 分支: `dev-schema-composition-20260219`
 
 ## Agent 配置
+
+### 版本管理
+
+- [ ] **Agent 版本管理系统** — 为 Agent 添加 SemVer 版本号，发布时对所有关联配置做整体快照，支持查看历史版本和回滚
+  - 工作区: `agent-versioning` | 分支: `dev-agent-versioning-20260219`
+
+### 通用
+
+- [x] **创建对话框 + Key 字段** — Model Config、Eval Case、Eval Judge Config 创建时弹出 Dialog 输入 Key+Name，参考 tool-create-dialog 模式，Key 创建后只读
+  - 工作区: `create-dialog-key` | 分支: `dev-create-dialog-key-20260219`
 
 ### Tools
 
@@ -31,8 +45,17 @@
 
 ### Components
 
-- [ ] **组件系统重构** — 组件对齐工具/函数体验，增加 Playground + Test Cases tab，Props 聚合为 tool 对象，增加 schemaRef，去掉 componentMockData
+- [x] **组件系统重构** — 组件对齐工具/函数体验，增加 Playground + Test Cases tab，Props 聚合为 tool 对象，增加 schemaRef，去掉 componentMockData
   - 工作区: `component-refactor` | 分支: `dev-component-refactor-20260219`
+- [ ] **组件系统清理** — Schema Ref 拆为 input/output 两个字段，删除动态渲染器便捷变量，表单展示 generatedCss
+  - 工作区: `component-cleanup` | 分支: `dev-component-cleanup-20260219`
+- [ ] **组件组合复用** — 允许组件在 JSX 中引用其他组件，自动检测 PascalCase 名称映射到 kebab-case key，拓扑排序编译注入
+  - 工作区: `component-composition` | 分支: `dev-component-composition-20260219`
+
+### Files
+
+- [ ] **静态资源上传（Vercel Blob）** — Agent Settings 新增 Files 标签页，集成 @vercel/blob 实现 PDF 上传、列表、删除，元数据存 DB
+  - 工作区: `blob-upload` | 分支: `dev-blob-upload-20260219`
 
 ### Wiki
 
@@ -58,6 +81,11 @@
   - 工作区: `fix-tools-overflow` | 分支: `dev-fix-tools-overflow-20260218`
 - [ ] **JSX 编辑器 Storybook** — JsEditor、ComponentPreviewPanel 独立故事 + 组合 tab 切换预览组件故事
   - 工作区: `jsx-editor-stories` | 分支: `dev-jsx-editor-stories-20260218`
+
+## 嵌入与分发
+
+- [ ] **嵌入式聊天 Widget SDK** — 通过 `<script>` 标签将 Agent 聊天嵌入第三方网站，气泡按钮 + iframe 对话框，embed token 匿名认证
+  - 工作区: `embed-widget` | 分支: `dev-embed-widget-20260219`
 
 ## 用户与权限
 

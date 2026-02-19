@@ -32,9 +32,17 @@
 - **Name**：组件显示名称
 - **Description**：组件用途描述
 
-### Schema Ref
+### Schema Ref（Input / Output）
 
-可选关联一个 Schema，用于描述组件接收的数据结构。下拉选择当前 Agent 已定义的 Schemas。
+可选关联 Schema，用于描述组件接收的工具数据结构。下拉选择当前 Agent 已定义的 Schemas。
+
+- **Input Schema Ref**（可选）：关联一个 Schema，描述 `tool.input` 的数据结构
+- **Output Schema Ref**（可选）：关联一个 Schema，描述 `tool.output` 的数据结构
+
+Schema Ref 的作用：
+- **Playground**：根据关联的 Schema 自动生成模拟数据的模板，方便快速测试
+- **Test Cases**：为测试用例的 input/output 编辑器提供结构参考
+- **文档化**：明确标注组件期望接收的数据结构，方便团队协作
 
 ### 组件源码（Component Source）
 
@@ -60,11 +68,11 @@ function PricingResult({ tool, isLoading }) {
 
 ```jsx
 <div className="p-4">
-  <p>{output.result}</p>
+  <p>{tool.output.result}</p>
 </div>
 ```
 
-片段形式会自动被包装为函数，注入所有可用变量。
+片段形式会自动被包装为函数，注入 `tool`、`state`、`isLoading`、`isComplete`、`isError` 变量。
 
 ### 注入的 Props
 
@@ -79,11 +87,7 @@ function PricingResult({ tool, isLoading }) {
 | `isError` | `boolean` | 工具调用是否出错 |
 
 **JSX 片段中的便捷变量**：在片段形式中，以下变量自动可用，无需从 props 解构：
-- `tool` — 工具对象
-- `toolName` — 等于 `tool.name`
-- `input` — 等于 `tool.input`
-- `output` — 等于 `tool.output`
-- `state`、`isLoading`、`isComplete`、`isError`
+- `tool`、`state`、`isLoading`、`isComplete`、`isError`
 
 典型用法：
 
@@ -183,6 +187,9 @@ Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 1. **保存时编译**：组件保存（创建或编辑）时，服务端使用 `@tailwindcss/node` 从源码中提取所有 Tailwind 类名并编译为 CSS
 2. **入库存储**：编译后的 CSS 存入 `generatedCss` 字段
 3. **运行时注入**：页面加载时将所有组件的 CSS 合并为一个 `<style>` 标签注入到页面
+4. **表单展示**：Edit Tab 中以只读方式展示编译后的 CSS，保存后自动更新
+
+种子数据入库时同样会自动调用 `compileCssForComponent()` 编译 CSS 并写入数据库。
 
 所有项目中已有的 Tailwind 类名和主题变量均可直接使用，包括自定义主题色（`bg-primary`、`text-muted-foreground` 等）。
 

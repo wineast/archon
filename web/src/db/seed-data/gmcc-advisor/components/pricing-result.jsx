@@ -1,6 +1,4 @@
-function Component({ toolName, state, input, output, isLoading, isComplete, isError }) {
-  // loading 状态判断
-  var LOADING_STATES = { "input-streaming": true, "input-available": true };
+function Component({ tool, state, isLoading, isComplete, isError }) {
 
   // ============================================================================
   // Breakdown Tooltip Component
@@ -364,8 +362,8 @@ function Component({ toolName, state, input, output, isLoading, isComplete, isEr
   // Main Render
   // ============================================================================
 
-  var result = output;
-  var args = input;
+  var result = tool.output;
+  var args = tool.input;
 
   if (isLoading || !result) {
     return (

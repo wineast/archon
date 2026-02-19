@@ -149,6 +149,9 @@ export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
   // Wiki: convert parentId to parentKey
   const wikiIdToKey = new Map(wikiRows.map((w) => [w.id, w.key]));
 
+  // Schema: convert id to key for snapshot references
+  const schemaIdToKey = new Map(schemaRows.map((s) => [s.id, s.key]));
+
   return {
     agent: {
       name: agent.name,
@@ -162,10 +165,8 @@ export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
         key: t.key,
         name: t.name,
         description: t.description,
-        parameters: t.parameters,
-        returnParameters: t.returnParameters,
-        parametersSchemaRef: t.parametersSchemaRef,
-        returnParametersSchemaRef: t.returnParametersSchemaRef,
+        parametersSchemaKey: t.parametersSchemaId ? schemaIdToKey.get(t.parametersSchemaId) ?? null : null,
+        returnParametersSchemaKey: t.returnParametersSchemaId ? schemaIdToKey.get(t.returnParametersSchemaId) ?? null : null,
         output: t.output,
         handler: t.handler,
         component: t.component,
@@ -192,7 +193,7 @@ export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
         name: c.name,
         description: c.description,
         componentSource: c.componentSource,
-        schemaRef: c.schemaRef,
+        schemaKey: c.schemaId ? schemaIdToKey.get(c.schemaId) ?? null : null,
         generatedCss: c.generatedCss,
         testCases: compTestsByKey.get(c.key) ?? [],
       })
@@ -289,7 +290,27 @@ export async function restoreSnapshot(
     tx.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.agentId, agentId)),
   ]);
 
-  // 2. Rebuild tools + test cases
+  // 2. Rebuild schemas first (tools/components reference them via FK)
+  const schemaKeyToNewId = new Map<string, string>();
+  if (snapshot.schemas.length > 0) {
+    const insertedSchemas = await tx
+      .insert(schemas)
+      .values(
+        snapshot.schemas.map((s) => ({
+          agentId,
+          key: s.key,
+          name: s.name,
+          description: s.description,
+          parameters: s.parameters,
+        }))
+      )
+      .returning({ id: schemas.id, key: schemas.key });
+    for (const s of insertedSchemas) {
+      schemaKeyToNewId.set(s.key, s.id);
+    }
+  }
+
+  // 3. Rebuild tools + test cases
   if (snapshot.tools.length > 0) {
     const insertedTools = await tx
       .insert(tools)
@@ -299,10 +320,8 @@ export async function restoreSnapshot(
           key: t.key,
           name: t.name,
           description: t.description,
-          parameters: t.parameters,
-          returnParameters: t.returnParameters,
-          parametersSchemaRef: t.parametersSchemaRef,
-          returnParametersSchemaRef: t.returnParametersSchemaRef,
+          parametersSchemaId: t.parametersSchemaKey ? schemaKeyToNewId.get(t.parametersSchemaKey) ?? null : null,
+          returnParametersSchemaId: t.returnParametersSchemaKey ? schemaKeyToNewId.get(t.returnParametersSchemaKey) ?? null : null,
           output: t.output,
           handler: t.handler,
           component: t.component,
@@ -328,7 +347,7 @@ export async function restoreSnapshot(
     }
   }
 
-  // 3. Rebuild functions + test cases
+  // 4. Rebuild functions + test cases
   if (snapshot.functions.length > 0) {
     const insertedFunctions = await tx
       .insert(functions)
@@ -362,7 +381,7 @@ export async function restoreSnapshot(
     }
   }
 
-  // 4. Rebuild components + test cases
+  // 5. Rebuild components + test cases
   if (snapshot.components.length > 0) {
     const insertedComponents = await tx
       .insert(components)
@@ -373,7 +392,7 @@ export async function restoreSnapshot(
           name: c.name,
           description: c.description,
           componentSource: c.componentSource,
-          schemaRef: c.schemaRef,
+          schemaId: c.schemaKey ? schemaKeyToNewId.get(c.schemaKey) ?? null : null,
           generatedCss: c.generatedCss,
         }))
       )
@@ -393,19 +412,6 @@ export async function restoreSnapshot(
     if (compTCs.length > 0) {
       await tx.insert(componentTestCases).values(compTCs);
     }
-  }
-
-  // 5. Rebuild schemas
-  if (snapshot.schemas.length > 0) {
-    await tx.insert(schemas).values(
-      snapshot.schemas.map((s) => ({
-        agentId,
-        key: s.key,
-        name: s.name,
-        description: s.description,
-        parameters: s.parameters,
-      }))
-    );
   }
 
   // 6. Rebuild wiki documents (two-pass for parentKey)

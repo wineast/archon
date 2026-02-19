@@ -7,10 +7,8 @@ export interface ToolSnapshotItem {
   key: string;
   name: string;
   description: string;
-  parameters: ToolParameter[];
-  returnParameters: ToolParameter[];
-  parametersSchemaRef: string | null;
-  returnParametersSchemaRef: string | null;
+  parametersSchemaKey: string | null;
+  returnParametersSchemaKey: string | null;
   output: string | null;
   handler: string | null;
   component: string | null;
@@ -35,7 +33,7 @@ export interface ComponentSnapshotItem {
   name: string;
   description: string;
   componentSource: string;
-  schemaRef: string | null;
+  schemaKey: string | null;
   generatedCss: string;
   testCases: ComponentTestCaseSnapshotItem[];
 }
