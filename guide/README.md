@@ -10,5 +10,6 @@
 - [嵌入式宿主通信](embed-host-communication.md) — Widget 与宿主页面双向通信：上下文注入、宿主工具执行、postMessage 协议
 - [本体](ontology.md) — 领域对象类型、关系、实例：语义层设计与集成方案
 - [Build Chat](build-chat.md) — 对话式 Agent 配置助手：架构、Server Tools、SWR 同步
+- [工具沙盒](tool-sandbox.md) — 两层沙盒方案：QuickJS 轻量沙盒 + Vercel Sandbox 重型沙盒，UX 设计
 - [用量计费](usage-metering.md) — Token 用量统计、费用计算、存储统计、Dashboard 可视化
 - [Git Worktree](worktree.md) — 多任务并行开发：创建、同步、合并、删除工作区

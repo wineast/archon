@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { agents, agentMembers, users, AGENT_ROLE_LEVELS } from "@/db/schema";
-import type { AgentRole, User } from "@/db/schema";
+import { agents, agentMembers, orgMembers, users, AGENT_ROLE_LEVELS, ORG_ROLE_LEVELS } from "@/db/schema";
+import type { AgentRole, OrgRole, User } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { ensureUser } from "./ensure-user";
 
@@ -10,6 +10,38 @@ export interface AuthContext {
   user: User;
   role: AgentRole;
   isSuperAdmin: boolean;
+}
+
+/**
+ * Compute the effective agent role from direct membership and org membership.
+ * Exported as a pure function for testing.
+ */
+export function computeEffectiveRole(
+  directRole: AgentRole | null,
+  orgRole: OrgRole | null,
+  isPublic: boolean
+): AgentRole | null {
+  // Map org role → agent role
+  const orgToAgent: Record<OrgRole, AgentRole> = {
+    owner: "owner",
+    admin: "admin",
+    member: "viewer",
+  };
+
+  const inheritedRole = orgRole ? orgToAgent[orgRole] : null;
+
+  const directLevel = directRole ? AGENT_ROLE_LEVELS[directRole] : -1;
+  const inheritedLevel = inheritedRole ? AGENT_ROLE_LEVELS[inheritedRole] : -1;
+
+  if (directLevel >= 0 || inheritedLevel >= 0) {
+    if (directLevel >= inheritedLevel) return directRole!;
+    return inheritedRole!;
+  }
+
+  // No membership — check public access
+  if (isPublic) return "viewer";
+
+  return null;
 }
 
 /**
@@ -33,33 +65,43 @@ export async function requireAgentRole(
     return { user, role: "owner", isSuperAdmin: true };
   }
 
-  // Check agent membership
-  const [membership] = await db
-    .select()
+  // Get agent info (orgId + isPublic)
+  const [agent] = await db
+    .select({ orgId: agents.orgId, isPublic: agents.isPublic })
+    .from(agents)
+    .where(and(eq(agents.id, agentId), isNull(agents.deletedAt)))
+    .limit(1);
+
+  if (!agent) {
+    return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+  }
+
+  // Check direct agent membership
+  const [directMembership] = await db
+    .select({ role: agentMembers.role })
     .from(agentMembers)
     .where(
       and(eq(agentMembers.agentId, agentId), eq(agentMembers.userId, user.id))
     )
     .limit(1);
 
-  if (membership) {
-    if (AGENT_ROLE_LEVELS[membership.role] >= AGENT_ROLE_LEVELS[minRole]) {
-      return { user, role: membership.role, isSuperAdmin: false };
-    }
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  // Check org membership
+  const [orgMembership] = await db
+    .select({ role: orgMembers.role })
+    .from(orgMembers)
+    .where(
+      and(eq(orgMembers.orgId, agent.orgId), eq(orgMembers.userId, user.id))
+    )
+    .limit(1);
 
-  // Check if agent is public (grants viewer access)
-  if (AGENT_ROLE_LEVELS["viewer"] >= AGENT_ROLE_LEVELS[minRole]) {
-    const [agent] = await db
-      .select({ isPublic: agents.isPublic })
-      .from(agents)
-      .where(and(eq(agents.id, agentId), isNull(agents.deletedAt)))
-      .limit(1);
+  const effectiveRole = computeEffectiveRole(
+    directMembership?.role ?? null,
+    orgMembership?.role ?? null,
+    agent.isPublic
+  );
 
-    if (agent?.isPublic) {
-      return { user, role: "viewer", isSuperAdmin: false };
-    }
+  if (effectiveRole && AGENT_ROLE_LEVELS[effectiveRole] >= AGENT_ROLE_LEVELS[minRole]) {
+    return { user, role: effectiveRole, isSuperAdmin: false };
   }
 
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });

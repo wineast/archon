@@ -33,6 +33,7 @@ interface AgentFormDialogProps {
   onOpenChange: (open: boolean) => void;
   agent?: AgentRow | null;
   mutate: KeyedMutator<AgentWithRole[]>;
+  orgId: string;
 }
 
 export function AgentFormDialog({
@@ -40,6 +41,7 @@ export function AgentFormDialog({
   onOpenChange,
   agent,
   mutate,
+  orgId,
 }: AgentFormDialogProps) {
   const isEdit = !!agent;
 
@@ -116,14 +118,14 @@ export function AgentFormDialog({
             mutate
           );
         } else {
-          await createAgent({ name, slug, description, icon }, mutate);
+          await createAgent({ name, slug, description, icon, orgId }, mutate);
         }
         onOpenChange(false);
       } finally {
         setBusy(false);
       }
     },
-    [name, slug, description, icon, isEdit, agent, mutate, onOpenChange]
+    [name, slug, description, icon, isEdit, agent, mutate, onOpenChange, orgId]
   );
 
   return (

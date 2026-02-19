@@ -1,6 +1,6 @@
 import { generateText, gateway, Output, stepCountIs } from "ai";
 import { db } from "@/db";
-import { evalRuns, evalRunResults, modelConfigs, tools, schemas } from "@/db/schema";
+import { agents as agentsTable, evalRuns, evalRunResults, modelConfigs, tools, schemas } from "@/db/schema";
 import { eq, and, inArray, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
@@ -349,9 +349,21 @@ export async function POST(
     };
   }
 
+  // Fetch orgId from agent for usage recording
+  let evalOrgId: string | null = null;
+  if (run.agentId) {
+    const [agentInfo] = await db
+      .select({ orgId: agentsTable.orgId })
+      .from(agentsTable)
+      .where(eq(agentsTable.id, run.agentId))
+      .limit(1);
+    evalOrgId = agentInfo?.orgId ?? null;
+  }
+
   // Record usage (chat model + judge model separately)
   if (chatUsage.inputTokens > 0 || chatUsage.outputTokens > 0) {
     await recordUsage({
+      orgId: evalOrgId,
       agentId: run.agentId,
       userId: ctx.user.id,
       sessionId: null,
@@ -362,6 +374,7 @@ export async function POST(
   }
   if (judgeUsage.inputTokens > 0 || judgeUsage.outputTokens > 0) {
     await recordUsage({
+      orgId: evalOrgId,
       agentId: run.agentId,
       userId: ctx.user.id,
       sessionId: null,

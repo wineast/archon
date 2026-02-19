@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { ensurePersonalOrg } from "@/lib/orgs/ensure-personal-org";
 
 export async function ensureUser(clerkId: string) {
   const [existing] = await db
@@ -23,6 +24,9 @@ export async function ensureUser(clerkId: string) {
       avatarUrl: clerk?.imageUrl ?? null,
     })
     .returning();
+
+  // Auto-create personal organization
+  await ensurePersonalOrg(created);
 
   return created;
 }

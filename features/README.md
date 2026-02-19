@@ -14,8 +14,12 @@
 
 - [ ] **Agent 软删除** — agents 表增加 deletedAt 字段，删除改为标记而非物理删除，配套回收站 UI 支持恢复
   - 来源：生产环境误删 Agent 会级联清除全部关联数据且不可恢复
-- [ ] **函数/工具沙盒执行** — 用 isolated-vm（V8 Isolate）替代 `new Function()`，实现内存隔离、CPU 超时、零 API 访问的安全沙盒
+- [ ] **工具沙盒执行（两层方案）** — 替代 `new Function()` 裸执行，按工具复杂度分层隔离
   - 来源：FDA/母 Agent 生成的代码不可控，私有化部署需要安全合规
+  - 使用说明：[tool-sandbox.md](../guide/tool-sandbox.md)
+  - [ ] **P1：QuickJS 轻量沙盒** — 复用 Functions 的 quickjs-emscripten 沙盒，asyncify 构建支持 ToolContext 异步调用，覆盖所有 server 端 JS handler（聊天执行 + Playground + 测试用例），兼容 Edge Runtime
+  - [ ] **P2：Vercel Sandbox 重型沙盒** — 通过 `@vercel/sandbox` 在 Firecracker 微虚拟机中执行，支持 npm 包和 HTTP 请求，工具表新增 `sandboxMode` 字段，UI 新增运行时切换
+  - [ ] **P3：工具表单 UX 增强** — 执行环境为「服务端 + 代码」时展示运行时选择器（轻量/完整），Playground 显示沙盒类型标签和执行耗时对比
 - [ ] **本地 Docker 开发数据库** — 用 Docker PostgreSQL 替代 Neon 云数据库，省钱低延迟
   - 使用说明：[local-docker-db.md](../guide/local-docker-db.md)
 - [ ] **Seed 系统模块化** — 将 seed.ts 单体函数拆分为 12 个独立 seeder 模块，统一连接管理，批量插入优化，结构化日志

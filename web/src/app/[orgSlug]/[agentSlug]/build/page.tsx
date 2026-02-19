@@ -87,11 +87,13 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "members", label: "Members", icon: UsersIcon },
 ];
 
-function SettingsContent({ agent }: { agent: AgentRow }) {
+function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "config";
   const { mutate: globalMutate } = useSWRConfig();
+
+  const basePath = `/${orgSlug}/${agent.slug}`;
 
   const {
     canEdit,
@@ -137,23 +139,20 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         params.set("tab", value);
       }
       const qs = params.toString();
-      router.replace(`/${agent.slug}/build${qs ? `?${qs}` : ""}`, {
+      router.replace(`${basePath}/build${qs ? `?${qs}` : ""}`, {
         scroll: false,
       });
     },
-    [searchParams, router, agent.slug]
+    [searchParams, router, basePath]
   );
 
   // Revalidate only resource SWR caches after version switch.
-  // Exclude agent/role/versions/members to avoid full-page re-render.
   const revalidateResources = useCallback(() => {
     const id = agent.id;
     globalMutate(
       (key) => {
         if (typeof key !== "string") return false;
-        // Resource APIs use ?agentId=UUID pattern
         if (key.includes(`agentId=${id}`)) return true;
-        // Skip: /api/agents/UUID, /api/agents/UUID/role, /api/agents/UUID/versions, /api/agents/UUID/members
         return false;
       },
       undefined,
@@ -263,7 +262,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
       {/* Header */}
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
         <Button variant="ghost" size="icon" className="size-8" asChild>
-          <Link href={`/${agent.slug}/chat`}>
+          <Link href={`${basePath}/chat`}>
             <ArrowLeftIcon className="size-4" />
           </Link>
         </Button>
@@ -390,7 +389,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
           </button>
         </div>
 
-        {/* Content — always the normal editable panels */}
+        {/* Content */}
         <div className="min-h-0 flex-1 overflow-hidden relative">
           {switching && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
@@ -441,12 +440,12 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
 export default function AgentSettingsPage({
   params,
 }: {
-  params: Promise<{ agentSlug: string }>;
+  params: Promise<{ orgSlug: string; agentSlug: string }>;
 }) {
-  const { agentSlug } = use(params);
+  const { orgSlug, agentSlug } = use(params);
 
   const { data: agent, isLoading } = useSWR<AgentRow>(
-    `/api/agents/${agentSlug}?by=slug`,
+    `/api/agents/by-slug?org=${orgSlug}&agent=${agentSlug}`,
     fetcher
   );
 
@@ -462,5 +461,5 @@ export default function AgentSettingsPage({
     notFound();
   }
 
-  return <SettingsContent agent={agent} />;
+  return <SettingsContent agent={agent} orgSlug={orgSlug} />;
 }

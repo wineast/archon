@@ -1,5 +1,5 @@
 import { join } from "path";
-import { users, agentMembers } from "../schema";
+import { users } from "../schema";
 import { readJson, logSection, log } from "../seed-utils";
 import type { Seeder } from "./types";
 
@@ -40,18 +40,5 @@ export const seedUsers: Seeder = {
       ),
     );
     log("ok", `${seedUserList.length} users`);
-
-    // Make all users owners of the agent
-    logSection("Seeding agent members");
-    const allUsers = await ctx.db.select({ id: users.id }).from(users);
-    await Promise.all(
-      allUsers.map((u) =>
-        ctx.db
-          .insert(agentMembers)
-          .values({ agentId: ctx.agentId, userId: u.id, role: "owner" })
-          .onConflictDoNothing(),
-      ),
-    );
-    log("ok", `${allUsers.length} user(s) added as owner`);
   },
 };

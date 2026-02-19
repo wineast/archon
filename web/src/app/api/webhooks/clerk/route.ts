@@ -3,6 +3,7 @@ import { Webhook } from "svix";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { ensurePersonalOrg } from "@/lib/orgs/ensure-personal-org";
 
 interface ClerkUserEvent {
   data: {
@@ -55,12 +56,17 @@ export async function POST(req: Request) {
   const name = [data.first_name, data.last_name].filter(Boolean).join(" ");
 
   if (type === "user.created") {
-    await db.insert(users).values({
-      clerkId: data.id,
-      email,
-      nickname: name || null,
-      avatarUrl: data.image_url ?? null,
-    });
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        clerkId: data.id,
+        email,
+        nickname: name || null,
+        avatarUrl: data.image_url ?? null,
+      })
+      .returning();
+
+    await ensurePersonalOrg(newUser);
   }
 
   if (type === "user.updated") {

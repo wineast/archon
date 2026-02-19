@@ -8,7 +8,7 @@ import {
 import { after } from "next/server";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import { db } from "@/db";
-import { tools, modelConfigs } from "@/db/schema";
+import { agents, tools, modelConfigs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
@@ -40,6 +40,14 @@ export async function executeChatStream(
   opts: ExecuteChatStreamOptions
 ): Promise<Response> {
   const { messages, sessionId, agentId, userId, hostContext, registeredHostTools } = opts;
+
+  // Get agent's orgId for usage recording
+  const [agentRow] = await db
+    .select({ orgId: agents.orgId })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+  const orgId = agentRow?.orgId ?? null;
 
   // Validate hostContext size (10KB limit)
   if (hostContext) {
@@ -118,6 +126,7 @@ export async function executeChatStream(
       // Record usage (independent of session persistence)
       after(async () => {
         await recordUsage({
+          orgId,
           agentId,
           userId,
           sessionId: sessionId ?? null,

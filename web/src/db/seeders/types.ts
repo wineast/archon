@@ -3,6 +3,7 @@ import type { SeedDb } from "../seed-utils";
 /** Shared context threaded through all seeders */
 export interface SeedContext {
   db: SeedDb;
+  orgId: string;
   agentId: string;
   agentDir: string;
   /** component key → id */

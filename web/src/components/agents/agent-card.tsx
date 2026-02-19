@@ -26,8 +26,10 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
   const canDelete = level >= AGENT_ROLE_LEVELS.owner;
   const Icon = AGENT_ICON_MAP[agent.icon] ?? AGENT_ICON_MAP["bot"];
 
+  const orgSlug = agent.orgSlug ?? "_";
+
   return (
-    <Link href={`/${agent.slug}/chat`} className="block">
+    <Link href={`/${orgSlug}/${agent.slug}/chat`} className="block">
       <Card className="transition-colors hover:bg-accent/50">
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -67,7 +69,7 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
                     编辑
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={`/${agent.slug}/build`} onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/${orgSlug}/${agent.slug}/build`} onClick={(e) => e.stopPropagation()}>
                       <SettingsIcon className="size-4" />
                       设置
                     </Link>
