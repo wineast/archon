@@ -6,12 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { JsEditor } from "@/components/editors/js-editor";
 import { inferComponentDeps, keyToPascal, type ComponentRecord } from "@/tool-ui";
 import type { ComponentDefinition } from "@/lib/components/types";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { SparklesIcon } from "lucide-react";
 import {
   Controller,
   FormProvider,
   useForm,
 } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { ComponentHelpButton } from "./component-help-dialog";
+import { JsxAssistDialog } from "./jsx-assist-dialog";
 
 export interface ComponentFormHandle {
   getDraft: () => ComponentDefinition;
@@ -31,6 +35,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
   const originalRef = useRef(JSON.stringify(component));
   const currentSource = form.watch("componentSource");
+  const [jsxAssistOpen, setJsxAssistOpen] = useState(false);
 
   // Infer referenced components from JSX source
   const referencedComponents = useMemo(() => {
@@ -97,9 +102,28 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            Component Source (JSX)
-          </label>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              Component Source (JSX)
+            </label>
+            <ComponentHelpButton />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-1.5 text-xs"
+              onClick={() => setJsxAssistOpen(true)}
+            >
+              <SparklesIcon className="size-3" />
+              AI 编辑
+            </Button>
+          </div>
+          <JsxAssistDialog
+            open={jsxAssistOpen}
+            onOpenChange={setJsxAssistOpen}
+            jsxSource={currentSource}
+            onApply={(src) => form.setValue("componentSource", src, { shouldDirty: true })}
+          />
           <Controller
             name="componentSource"
             control={form.control}
@@ -112,12 +136,6 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
               />
             )}
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            两层闭包: function Component({"{ React, useState, DepA }"}) {"{"} return function({"{ tool, state, ... }"}) {"{ ... }"} {"}"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            外层参数: 解构声明所需依赖（React/hooks/UI 组件/自定义组件）；内层 props: tool, state, isLoading, isComplete, isError
-          </p>
           {referencedComponents.length > 0 && (
             <div className="mt-2 flex items-center gap-1.5 flex-wrap">
               <span className="text-xs text-muted-foreground">引用组件:</span>

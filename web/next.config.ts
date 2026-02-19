@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@tailwindcss/node", "lightningcss", "quickjs-emscripten"],
+  webpack(config) {
+    config.module.rules.push({
+      test: /\.md$/,
+      type: "asset/source",
+    });
+    return config;
+  },
   async headers() {
     return [
       {
