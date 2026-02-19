@@ -749,7 +749,6 @@ export const agentVersions = pgTable(
 export type AgentVersionRow = typeof agentVersions.$inferSelect;
 export type NewAgentVersionRow = typeof agentVersions.$inferInsert;
 
-<<<<<<< HEAD
 /* ─────────── Embed Tokens ─────────── */
 
 export const embedTokens = pgTable(
