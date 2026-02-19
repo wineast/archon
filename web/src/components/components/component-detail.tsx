@@ -11,15 +11,17 @@ import { ComponentPlayground } from "./component-playground";
 import { ComponentTestCasesPanel } from "./component-test-cases-panel";
 import type { ComponentRow } from "@/db/schema";
 import type { ComponentDefinition } from "@/lib/components/types";
+import type { ComponentRecord } from "@/tool-ui";
 
 interface ComponentDetailProps {
   component: ComponentRow;
   agentId?: string;
+  allComponents?: ComponentRecord[];
   onSave: (updated: ComponentDefinition) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
-export function ComponentDetail({ component, agentId, onSave, onDelete }: ComponentDetailProps) {
+export function ComponentDetail({ component, agentId, allComponents, onSave, onDelete }: ComponentDetailProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const draftRef = useRef<ComponentFormHandle | null>(null);
@@ -72,6 +74,7 @@ export function ComponentDetail({ component, agentId, onSave, onDelete }: Compon
                 outputSchemaId: component.outputSchemaId ?? null,
               }}
               agentId={agentId}
+              allComponents={allComponents}
               onDraftRef={handleDraftRef}
               onDirtyChange={setDirty}
             />
@@ -132,6 +135,8 @@ export function ComponentDetail({ component, agentId, onSave, onDelete }: Compon
         <ComponentPlayground
           componentId={component.id}
           componentSource={component.componentSource}
+          componentKey={component.key}
+          allComponents={allComponents}
         />
       </TabsContent>
 
@@ -139,6 +144,8 @@ export function ComponentDetail({ component, agentId, onSave, onDelete }: Compon
         <ComponentTestCasesPanel
           componentId={component.id}
           componentSource={component.componentSource}
+          componentKey={component.key}
+          allComponents={allComponents}
         />
       </TabsContent>
     </Tabs>

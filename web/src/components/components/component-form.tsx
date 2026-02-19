@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { JsEditor } from "@/components/editors/js-editor";
 import {
   Select,
@@ -11,8 +12,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSchemas } from "@/lib/schemas/hooks";
+import { inferComponentDeps, keyToPascal, type ComponentRecord } from "@/tool-ui";
 import type { ComponentDefinition } from "@/lib/components/types";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Controller,
   FormProvider,
@@ -28,14 +30,23 @@ export interface ComponentFormHandle {
 interface ComponentFormProps {
   component: ComponentDefinition;
   agentId?: string;
+  allComponents?: ComponentRecord[];
   onDraftRef: (ref: ComponentFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function ComponentForm({ component, agentId, onDraftRef, onDirtyChange }: ComponentFormProps) {
+export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
   const originalRef = useRef(JSON.stringify(component));
   const { schemas } = useSchemas(agentId);
+  const currentSource = form.watch("componentSource");
+
+  // Infer referenced components from JSX source
+  const referencedComponents = useMemo(() => {
+    if (!allComponents?.length || !currentSource) return [];
+    const knownKeys = new Set(allComponents.map((c) => c.key));
+    return inferComponentDeps(currentSource, knownKeys);
+  }, [allComponents, currentSource]);
 
   useEffect(() => {
     onDraftRef({
@@ -170,6 +181,16 @@ export function ComponentForm({ component, agentId, onDraftRef, onDirtyChange }:
           <p className="text-xs text-muted-foreground">
             Props: tool (name/input/output), state, isLoading, isComplete, isError
           </p>
+          {referencedComponents.length > 0 && (
+            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs text-muted-foreground">引用组件:</span>
+              {referencedComponents.map((key) => (
+                <Badge key={key} variant="secondary" className="text-xs font-mono">
+                  {keyToPascal(key)}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </FormProvider>

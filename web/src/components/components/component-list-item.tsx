@@ -8,12 +8,14 @@ interface ComponentListItemProps {
   component: ComponentRow;
   isActive: boolean;
   onSelect: (id: string) => void;
+  usedByCount?: number;
 }
 
 export function ComponentListItem({
   component,
   isActive,
   onSelect,
+  usedByCount = 0,
 }: ComponentListItemProps) {
   const handleSelect = useCallback(() => {
     onSelect(component.id);
@@ -31,6 +33,11 @@ export function ComponentListItem({
       <span className="shrink-0 text-[10px] font-mono text-muted-foreground">
         {component.key}
       </span>
+      {usedByCount > 0 && (
+        <span className="shrink-0 text-[10px] text-muted-foreground" title={`被 ${usedByCount} 个组件引用`}>
+          ×{usedByCount}
+        </span>
+      )}
     </button>
   );
 }

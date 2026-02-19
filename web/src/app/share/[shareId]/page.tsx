@@ -17,7 +17,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon } from "lucide-react";
-import { registerDynamicToolSource } from "@/tool-ui";
+import {
+  registerDynamicToolSource,
+  registerCompiledToolComponent,
+  clearCompiledRegistry,
+  compileComponentGraph,
+  type ComponentRecord,
+} from "@/tool-ui";
 
 interface SharedSession {
   id: string;
@@ -31,6 +37,7 @@ interface SharedSession {
   }>;
   toolComponentSourceMap?: Record<string, string>;
   dynamicComponentCss?: string[];
+  componentRecords?: ComponentRecord[];
 }
 
 export default function SharePage({
@@ -52,7 +59,28 @@ export default function SharePage({
           return;
         }
         const data = await res.json();
-        // Register dynamic component sources
+        // Compile component graph for composition support
+        clearCompiledRegistry();
+        if (data.componentRecords?.length) {
+          try {
+            const compiled = compileComponentGraph(data.componentRecords);
+            // Register compiled components for tools that reference them
+            if (data.toolComponentSourceMap) {
+              for (const [toolName] of Object.entries(data.toolComponentSourceMap)) {
+                // Check if this tool's source matches a compiled component
+                for (const [key, comp] of compiled) {
+                  const rec = data.componentRecords.find((r: ComponentRecord) => r.key === key);
+                  if (rec && data.toolComponentSourceMap[toolName] === rec.source) {
+                    registerCompiledToolComponent(toolName, comp);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error("[component-composition]", e);
+          }
+        }
+        // Register remaining dynamic component sources (fallback)
         if (data.toolComponentSourceMap) {
           for (const [name, source] of Object.entries(data.toolComponentSourceMap)) {
             registerDynamicToolSource(name, source as string);

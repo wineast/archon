@@ -12,6 +12,7 @@ import {
 } from "@/lib/components/hooks";
 import type { ComponentRow } from "@/db/schema";
 import type { ComponentDefinition } from "@/lib/components/types";
+import type { ComponentRecord } from "@/tool-ui";
 import { ComponentsSidebar } from "./components-sidebar";
 import { ComponentDetail } from "./component-detail";
 import { ComponentsEmptyState } from "./components-empty-state";
@@ -31,6 +32,14 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
   const activeComponent = useMemo(
     () => components.find((c) => c.id === activeComponentId) ?? null,
     [components, activeComponentId]
+  );
+
+  const allComponentRecords: ComponentRecord[] = useMemo(
+    () =>
+      components
+        .filter((c) => c.componentSource.trim())
+        .map((c) => ({ key: c.key, source: c.componentSource })),
+    [components]
   );
 
   useEffect(() => {
@@ -109,6 +118,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
               key={activeComponent.id}
               component={activeComponent}
               agentId={agentId}
+              allComponents={allComponentRecords}
               onSave={handleSave}
               onDelete={handleDelete}
             />
@@ -143,6 +153,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
               <ComponentDetail
                 key={activeComponent.id}
                 component={activeComponent}
+                allComponents={allComponentRecords}
                 onSave={handleSave}
                 onDelete={handleDelete}
               />
