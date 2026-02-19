@@ -6,6 +6,8 @@ import {
   ReactFlowProvider,
   Background,
   useReactFlow,
+  applyNodeChanges,
+  type NodeChange,
   type NodeMouseHandler,
   type EdgeMouseHandler,
 } from "@xyflow/react";
@@ -72,6 +74,13 @@ function OntologyGraphInner({
     [onSelectType]
   );
 
+  const onNodesChange = useCallback(
+    (changes: NodeChange<OntologyNode>[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
+    []
+  );
+
   const onEdgeClick: EdgeMouseHandler<OntologyEdge> = useCallback(
     (_event, edge) => {
       if (onSelectRelation) {
@@ -91,11 +100,7 @@ function OntologyGraphInner({
       edgeTypes={edgeTypes}
       onNodeClick={onNodeClick}
       onEdgeClick={onEdgeClick}
-      onNodeDragStop={(_event, node) => {
-        setNodes((prev) =>
-          prev.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
-        );
-      }}
+      onNodesChange={onNodesChange}
       fitView
       panOnScroll
       zoomOnDoubleClick={false}
