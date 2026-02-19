@@ -114,10 +114,9 @@ export function RequestInspectorModal({
     () =>
       allTools
         .filter((t) => t.enabled)
-        .map(({ name, description, parameters, handler }) => ({
+        .map(({ name, description, handler }) => ({
           name,
           description,
-          parameters,
           handler: handler ?? "",
         })),
     [allTools]

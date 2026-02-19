@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { tools, toolTestRuns, toolTestRunResults } from "@/db/schema";
+import { tools, toolTestRuns, toolTestRunResults, schemas } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
@@ -81,11 +81,17 @@ export async function POST(
       throw new Error("Handler must evaluate to a function");
     }
 
-    // Validate input
+    // Validate input against schema parameters
     let validatedInput = input ?? {};
-    if (tool.parameters && tool.parameters.length > 0) {
-      const schema = buildInputSchema(tool.parameters);
-      validatedInput = schema.parse(input ?? {});
+    if (tool.parametersSchemaId) {
+      const [schemaRow] = await db
+        .select()
+        .from(schemas)
+        .where(eq(schemas.id, tool.parametersSchemaId));
+      if (schemaRow && schemaRow.parameters.length > 0) {
+        const inputSchema = buildInputSchema(schemaRow.parameters);
+        validatedInput = inputSchema.parse(input ?? {});
+      }
     }
 
     // Execute

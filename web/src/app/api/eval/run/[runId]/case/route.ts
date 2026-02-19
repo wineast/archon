@@ -1,7 +1,7 @@
 import { generateText, gateway, Output, stepCountIs } from "ai";
 import { db } from "@/db";
-import { evalRuns, evalRunResults, modelConfigs, tools } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { evalRuns, evalRunResults, modelConfigs, tools, schemas } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
 import { gatherTemplateData, renderTemplate } from "@/lib/template/render";
@@ -78,10 +78,24 @@ export async function POST(
       .from(tools)
       .where(eq(tools.enabled, true));
 
+    // Resolve schema parameters
+    const schemaIds = new Set<string>();
+    for (const row of enabledRows) {
+      if (row.parametersSchemaId) schemaIds.add(row.parametersSchemaId);
+    }
+    const schemaMap: Record<string, import("@/lib/tools/types").ToolParameter[]> = {};
+    if (schemaIds.size > 0) {
+      const schemaRows = await db
+        .select()
+        .from(schemas)
+        .where(inArray(schemas.id, [...schemaIds]));
+      for (const s of schemaRows) schemaMap[s.id] = s.parameters;
+    }
+
     const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
       name: row.name,
       description: row.description,
-      parameters: row.parameters,
+      parameters: row.parametersSchemaId ? (schemaMap[row.parametersSchemaId] ?? []) : [],
       handler: row.handler ?? "",
     }));
 

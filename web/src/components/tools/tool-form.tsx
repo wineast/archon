@@ -11,12 +11,8 @@ import {
 } from "@/components/ui/select";
 import { JsEditor } from "@/components/editors/js-editor";
 import type { ToolDefinition } from "@/lib/tools/types";
-import { useDatasets } from "@/lib/datasets/hooks";
 import { useComponents } from "@/lib/components/hooks";
 import { useSchemas } from "@/lib/schemas/hooks";
-import type { EnumRefOption } from "@/components/parameters/parameter-row";
-import { ParameterList } from "@/components/parameters/parameter-list";
-import { ReturnParameterList } from "@/components/parameters/return-parameter-list";
 import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -25,7 +21,7 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
-import { BracesIcon, CodeIcon, GlobeIcon, ListIcon, MonitorIcon, ServerIcon, TypeIcon } from "lucide-react";
+import { CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, TypeIcon } from "lucide-react";
 
 export interface ToolFormHandle {
   getDraft: () => ToolDefinition;
@@ -50,117 +46,55 @@ function detectHandlerMode(handler: string): HandlerMode {
   return "simple";
 }
 
-type ParamMode = "inline" | "ref";
-
 interface ParameterSectionProps {
   label: string;
-  fieldName: "parameters" | "returnParameters";
-  schemaRefFieldName: "parametersSchemaRef" | "returnParametersSchemaRef";
-  schemaRefValue: string | null | undefined;
-  schemas: { key: string; name: string; parameters: import("@/lib/tools/types").ToolParameter[] }[];
+  schemaIdFieldName: "parametersSchemaId" | "returnParametersSchemaId";
+  schemaIdValue: string | null | undefined;
+  schemas: { id: string; key: string; name: string; parameters: import("@/lib/tools/types").ToolParameter[] }[];
   form: ReturnType<typeof useForm<ToolDefinition>>;
-  enumRefOptions?: EnumRefOption[];
-  enumRefValues?: Record<string, string[]>;
 }
 
 function ParameterSection({
   label,
-  fieldName,
-  schemaRefFieldName,
-  schemaRefValue,
+  schemaIdFieldName,
+  schemaIdValue,
   schemas,
   form,
-  enumRefOptions,
-  enumRefValues,
 }: ParameterSectionProps) {
-  const mode: ParamMode = schemaRefValue ? "ref" : "inline";
-  const selectedSchema = schemas.find((s) => s.key === schemaRefValue);
-
-  const setMode = (next: ParamMode) => {
-    if (next === "inline") {
-      form.setValue(schemaRefFieldName, null, { shouldDirty: true });
-    } else {
-      // Switch to ref: pick first schema if available
-      const first = schemas[0]?.key ?? null;
-      form.setValue(schemaRefFieldName, first, { shouldDirty: true });
-    }
-  };
+  const selectedSchema = schemas.find((s) => s.id === schemaIdValue);
 
   return (
     <div>
-      <div className="flex items-center gap-2">
-        <label className="text-xs font-medium text-muted-foreground">
-          {label}
-        </label>
-        {schemas.length > 0 && (
-          <div className="flex items-center rounded-md border border-border p-0.5">
-            <button
-              type="button"
-              onClick={() => setMode("inline")}
-              className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                mode === "inline"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
+      <div className="mt-1 space-y-2">
+        <Controller
+          name={schemaIdFieldName}
+          control={form.control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? "__none__"}
+              onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
             >
-              <ListIcon className="size-3" />
-              内联
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("ref")}
-              className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                mode === "ref"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <BracesIcon className="size-3" />
-              引用
-            </button>
-          </div>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Select a schema..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {schemas.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} ({s.key})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {selectedSchema && (
+          <SchemaParameterPreview parameters={selectedSchema.parameters} />
         )}
       </div>
-
-      {mode === "inline" ? (
-        fieldName === "returnParameters" ? (
-          <ReturnParameterList fieldName={fieldName} label="" />
-        ) : (
-          <ParameterList
-            fieldName={fieldName}
-            label=""
-            enumRefOptions={enumRefOptions}
-            enumRefValues={enumRefValues}
-          />
-        )
-      ) : (
-        <div className="mt-1 space-y-2">
-          <Controller
-            name={schemaRefFieldName}
-            control={form.control}
-            render={({ field }) => (
-              <Select
-                value={field.value ?? ""}
-                onValueChange={field.onChange}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Select a schema..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {schemas.map((s) => (
-                    <SelectItem key={s.key} value={s.key}>
-                      {s.name} ({s.key})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {selectedSchema && (
-            <SchemaParameterPreview parameters={selectedSchema.parameters} />
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -178,14 +112,11 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   const handler = useWatch({ control: form.control, name: "handler" });
   const output = useWatch({ control: form.control, name: "output" });
   const executionTarget = useWatch({ control: form.control, name: "executionTarget" });
-  const parametersSchemaRef = useWatch({ control: form.control, name: "parametersSchemaRef" });
-  const returnParametersSchemaRef = useWatch({ control: form.control, name: "returnParametersSchemaRef" });
+  const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });
+  const returnParametersSchemaId = useWatch({ control: form.control, name: "returnParametersSchemaId" });
 
-  // Fetch schemas for ref mode
+  // Fetch schemas for schema selection
   const { schemas } = useSchemas(agentId);
-
-  // Fetch datasets for enum ref options
-  const { datasets } = useDatasets(agentId);
 
   // Fetch components for component selector
   const { components: componentsList } = useComponents(agentId);
@@ -193,29 +124,6 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
     () => componentsList.map((c) => ({ key: c.key, name: c.name })),
     [componentsList]
   );
-
-  const enumRefOptions = useMemo<EnumRefOption[]>(() => {
-    return datasets
-      .filter((d) => typeof d.data === "object" && d.data !== null)
-      .map((d) => ({ key: d.key, source: "dataset" as const }));
-  }, [datasets]);
-
-  const enumRefValues = useMemo<Record<string, string[]>>(() => {
-    const map: Record<string, string[]> = {};
-    for (const d of datasets) {
-      if (Array.isArray(d.data)) {
-        map[d.key] = (d.data as unknown[]).map(String);
-      } else if (typeof d.data === "object" && d.data !== null) {
-        const vals = Object.values(d.data as Record<string, unknown>);
-        if (vals.every((v) => typeof v === "string")) {
-          map[d.key] = vals as string[];
-        } else {
-          map[d.key] = Object.keys(d.data as Record<string, unknown>);
-        }
-      }
-    }
-    return map;
-  }, [datasets]);
 
   useEffect(() => {
     onDraftRef({
@@ -293,13 +201,10 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
         </div>
         <ParameterSection
           label="Parameters"
-          fieldName="parameters"
-          schemaRefFieldName="parametersSchemaRef"
-          schemaRefValue={parametersSchemaRef}
+          schemaIdFieldName="parametersSchemaId"
+          schemaIdValue={parametersSchemaId}
           schemas={schemas}
           form={form}
-          enumRefOptions={enumRefOptions}
-          enumRefValues={enumRefValues}
         />
         <div>
           <div className="flex items-center gap-2">
@@ -410,9 +315,8 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
         </div>
         <ParameterSection
           label="Return Parameters"
-          fieldName="returnParameters"
-          schemaRefFieldName="returnParametersSchemaRef"
-          schemaRefValue={returnParametersSchemaRef}
+          schemaIdFieldName="returnParametersSchemaId"
+          schemaIdValue={returnParametersSchemaId}
           schemas={schemas}
           form={form}
         />

@@ -16,7 +16,6 @@ vi.mock("@/db/schema", () => ({
   datasets: {
     key: "key",
     name: "name",
-
     data: "data",
     agentId: "agent_id",
   },
@@ -33,7 +32,8 @@ vi.mock("@/db/schema", () => ({
     agentId: "agent_id",
     name: "name",
     description: "description",
-    parameters: "parameters",
+    parametersSchemaId: "parameters_schema_id",
+    returnParametersSchemaId: "return_parameters_schema_id",
     output: "output",
     handler: "handler",
     component: "component",
@@ -41,11 +41,19 @@ vi.mock("@/db/schema", () => ({
     createdAt: "created_at",
     updatedAt: "updated_at",
   },
+  schemas: {
+    id: "id",
+    agentId: "agent_id",
+    key: "key",
+    name: "name",
+    parameters: "parameters",
+  },
 }));
 
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((a, b) => ({ op: "eq", a, b })),
   and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
+  inArray: vi.fn((a, b) => ({ op: "inArray", a, b })),
 }));
 
 // ---------------------------------------------------------------------------
@@ -54,10 +62,11 @@ vi.mock("drizzle-orm", () => ({
 
 /**
  * Build a mock chain for db.select().from().where()...
- * gatherTemplateData issues 3 queries in this order (via Promise.all):
+ * gatherTemplateData issues queries in this order:
  *   [0] datasets rows   — getResolvedDatasets → getDatasets
  *   [1] wiki doc rows    — getWikiDocs
  *   [2] tool rows        — getEnabledTools
+ *   [3] schema rows      — (optional) resolve schema parameters
  */
 function setupDbChain(queries: unknown[][]) {
   let callIdx = 0;
@@ -81,12 +90,13 @@ function setupDbChain(queries: unknown[][]) {
   });
 }
 
-const makeTool = (name: string, description: string, parameters: unknown[] = []) => ({
+const makeTool = (name: string, description: string, schemaId: string | null = null) => ({
   id: `tool-${name}`,
   agentId: "agent-1",
   name,
   description,
-  parameters,
+  parametersSchemaId: schemaId,
+  returnParametersSchemaId: null,
   output: null,
   handler: null,
   component: null,
@@ -514,15 +524,15 @@ describe("tool namespace", () => {
   });
 
   it("resolves tool.NAME.params to comma-separated param names", async () => {
+    const params = [
+      { id: "p1", name: "income", type: "number", description: "Monthly income", required: true },
+      { id: "p2", name: "debts", type: "number", description: "Monthly debts", required: true },
+    ];
     setupDbChain([
       [],
       [],
-      [
-        makeTool("calculate_dti", "Calculate DTI", [
-          { id: "p1", name: "income", type: "number", description: "Monthly income", required: true },
-          { id: "p2", name: "debts", type: "number", description: "Monthly debts", required: true },
-        ]),
-      ],
+      [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
+      [{ id: "schema-dti", parameters: params }],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -540,7 +550,8 @@ describe("tool namespace", () => {
     setupDbChain([
       [],
       [],
-      [makeTool("calc_rate", "Calculate rate", params)],
+      [makeTool("calc_rate", "Calculate rate", "schema-rate")],
+      [{ id: "schema-rate", parameters: params }],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -557,15 +568,15 @@ describe("tool namespace", () => {
   });
 
   it("resolves tool.NAME.parameters for iteration", async () => {
+    const params = [
+      { id: "p1", name: "income", type: "number", description: "Monthly income", required: true },
+      { id: "p2", name: "debts", type: "number", description: "Monthly debts", required: false },
+    ];
     setupDbChain([
       [],
       [],
-      [
-        makeTool("calculate_dti", "Calculate DTI", [
-          { id: "p1", name: "income", type: "number", description: "Monthly income", required: true },
-          { id: "p2", name: "debts", type: "number", description: "Monthly debts", required: false },
-        ]),
-      ],
+      [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
+      [{ id: "schema-dti", parameters: params }],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -577,15 +588,15 @@ describe("tool namespace", () => {
   });
 
   it("tool.NAME.parameters includes description and required", async () => {
+    const params = [
+      { id: "p1", name: "amount", type: "number", description: "Loan amount", required: true },
+      { id: "p2", name: "rate", type: "number", description: "Interest rate", required: false },
+    ];
     setupDbChain([
       [],
       [],
-      [
-        makeTool("calc", "Calculate", [
-          { id: "p1", name: "amount", type: "number", description: "Loan amount", required: true },
-          { id: "p2", name: "rate", type: "number", description: "Interest rate", required: false },
-        ]),
-      ],
+      [makeTool("calc", "Calculate", "schema-calc")],
+      [{ id: "schema-calc", parameters: params }],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -597,14 +608,14 @@ describe("tool namespace", () => {
   });
 
   it("tool.NAME.parameters includes enum when present", async () => {
+    const params = [
+      { id: "p1", name: "type", type: "enum", description: "Product type", required: true, enum: ["A", "B", "C"] },
+    ];
     setupDbChain([
       [],
       [],
-      [
-        makeTool("route", "Route products", [
-          { id: "p1", name: "type", type: "enum", description: "Product type", required: true, enum: ["A", "B", "C"] },
-        ]),
-      ],
+      [makeTool("route", "Route products", "schema-route")],
+      [{ id: "schema-route", parameters: params }],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -652,15 +663,15 @@ describe("tool namespace", () => {
   });
 
   it("tool_entries includes simplified params", async () => {
+    const params = [
+      { id: "p1", name: "x", type: "number", description: "X val", required: true },
+      { id: "p2", name: "y", type: "string", description: "Y val", required: false },
+    ];
     setupDbChain([
       [],
       [],
-      [
-        makeTool("calc", "Calculate", [
-          { id: "p1", name: "x", type: "number", description: "X val", required: true },
-          { id: "p2", name: "y", type: "string", description: "Y val", required: false },
-        ]),
-      ],
+      [makeTool("calc", "Calculate", "schema-calc")],
+      [{ id: "schema-calc", parameters: params }],
     ]);
 
     const { renderSystemPrompt } = await import("../render");

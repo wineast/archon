@@ -66,35 +66,28 @@ export async function POST(req: Request) {
     .from(tools)
     .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true)));
 
-  // Resolve schema references: collect all unique schema keys referenced by tools
-  const schemaRefKeys = new Set<string>();
+  // Resolve schema references: collect all unique schema IDs referenced by tools
+  const schemaIds = new Set<string>();
   for (const row of enabledRows) {
-    if (row.parametersSchemaRef) schemaRefKeys.add(row.parametersSchemaRef);
-    if (row.returnParametersSchemaRef) schemaRefKeys.add(row.returnParametersSchemaRef);
+    if (row.parametersSchemaId) schemaIds.add(row.parametersSchemaId);
+    if (row.returnParametersSchemaId) schemaIds.add(row.returnParametersSchemaId);
   }
 
   const schemaMap: Record<string, import("@/lib/tools/types").ToolParameter[]> = {};
-  if (schemaRefKeys.size > 0) {
+  if (schemaIds.size > 0) {
     const schemaRows = await db
       .select()
       .from(schemas)
-      .where(
-        and(
-          eq(schemas.agentId, agentId),
-          inArray(schemas.key, [...schemaRefKeys])
-        )
-      );
+      .where(inArray(schemas.id, [...schemaIds]));
     for (const s of schemaRows) {
-      schemaMap[s.key] = s.parameters;
+      schemaMap[s.id] = s.parameters;
     }
   }
 
   const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
     name: row.name,
     description: row.description,
-    parameters: (row.parametersSchemaRef && schemaMap[row.parametersSchemaRef])
-      ? schemaMap[row.parametersSchemaRef]
-      : row.parameters,
+    parameters: row.parametersSchemaId ? (schemaMap[row.parametersSchemaId] ?? []) : [],
     handler: row.handler ?? "",
     executionTarget: row.executionTarget ?? "server",
   }));

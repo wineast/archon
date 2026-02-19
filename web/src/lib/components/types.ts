@@ -4,5 +4,5 @@ export interface ComponentDefinition {
   name: string;
   description: string;
   componentSource: string;
-  schemaRef: string | null;
+  schemaId: string | null;
 }

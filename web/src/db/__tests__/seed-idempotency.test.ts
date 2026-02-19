@@ -33,6 +33,7 @@ describe("seed idempotency", () => {
     const result2 = await seed(db);
 
     expect(result2.agentId).toBe(result1.agentId);
+    expect(result2.schemaIds).toEqual(result1.schemaIds);
     expect(result2.toolIds).toEqual(result1.toolIds);
     expect(result2.modelConfigIds).toEqual(result1.modelConfigIds);
     expect(result2.chatConfigId).toBe(result1.chatConfigId);

@@ -246,10 +246,8 @@ export const tools = pgTable(
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull(),
-    parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
-    returnParameters: jsonb("return_parameters").$type<ToolParameter[]>().notNull().default([]),
-    parametersSchemaRef: text("parameters_schema_ref"),
-    returnParametersSchemaRef: text("return_parameters_schema_ref"),
+    parametersSchemaId: uuid("parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
+    returnParametersSchemaId: uuid("return_parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
     output: text("output"),
     handler: text("handler"),
     component: text("component"),
@@ -620,7 +618,7 @@ export const components = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     componentSource: text("component_source").notNull().default(""),
-    schemaRef: text("schema_ref"),
+    schemaId: uuid("schema_id").references(() => schemas.id, { onDelete: "set null" }),
     generatedCss: text("generated_css").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

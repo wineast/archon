@@ -99,7 +99,7 @@ export function ComponentForm({ component, agentId, onDraftRef, onDirtyChange }:
             Schema Ref
           </label>
           <Controller
-            name="schemaRef"
+            name="schemaId"
             control={form.control}
             render={({ field }) => (
               <Select
@@ -112,8 +112,8 @@ export function ComponentForm({ component, agentId, onDraftRef, onDirtyChange }:
                 <SelectContent>
                   <SelectItem value="__none__">None</SelectItem>
                   {schemas.map((s) => (
-                    <SelectItem key={s.key} value={s.key}>
-                      {s.name}
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} ({s.key})
                     </SelectItem>
                   ))}
                 </SelectContent>

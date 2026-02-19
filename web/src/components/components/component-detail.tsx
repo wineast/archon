@@ -68,7 +68,7 @@ export function ComponentDetail({ component, agentId, onSave, onDelete }: Compon
                 name: component.name,
                 description: component.description,
                 componentSource: component.componentSource,
-                schemaRef: component.schemaRef ?? null,
+                schemaId: component.schemaId ?? null,
               }}
               agentId={agentId}
               onDraftRef={handleDraftRef}

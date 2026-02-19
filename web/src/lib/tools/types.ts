@@ -21,10 +21,8 @@ export interface ToolDefinition {
   key: string;
   name: string;
   description: string;
-  parameters: ToolParameter[];
-  returnParameters: ToolParameter[];
-  parametersSchemaRef?: string | null;
-  returnParametersSchemaRef?: string | null;
+  parametersSchemaId?: string | null;
+  returnParametersSchemaId?: string | null;
   output: string;
   handler: string;
   component: string;

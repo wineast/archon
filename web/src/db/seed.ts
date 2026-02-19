@@ -10,6 +10,7 @@ import {
   users,
   chatConfigs,
   components,
+  schemas,
   modelConfigs,
   datasets,
   functions,
@@ -37,6 +38,7 @@ function readJson<T>(path: string): T {
 export interface SeedResult {
   agentId: string;
   toolIds: string[];
+  schemaIds: string[];
   modelConfigIds: string[];
   chatConfigId: string;
   datasetIds: string[];
@@ -179,6 +181,34 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     }>
   >(join(agentDir, "tools.json"));
 
+  // Create schemas for tools that have parameters
+  console.log("Seeding tool parameter schemas...");
+  const schemaIdMap: Record<string, string> = {};
+  const schemaIds: string[] = [];
+  for (const t of toolsSeed) {
+    if (t.parameters.length === 0) continue;
+    const toolKey = t.key ?? t.name.replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
+    const schemaKey = `${toolKey}_params`;
+    const schemaName = `${t.name} Parameters`;
+
+    const [schemaRow] = await db
+      .insert(schemas)
+      .values({
+        agentId,
+        key: schemaKey,
+        name: schemaName,
+        parameters: t.parameters,
+      })
+      .onConflictDoUpdate({
+        target: [schemas.agentId, schemas.key],
+        set: { name: schemaName, parameters: t.parameters },
+      })
+      .returning();
+    schemaIdMap[t.name] = schemaRow.id;
+    schemaIds.push(schemaRow.id);
+    console.log(`  - ${schemaKey} (${schemaRow.id})`);
+  }
+
   const toolIds: string[] = [];
   for (const t of toolsSeed) {
     // Derive key from name if not provided
@@ -186,13 +216,22 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
 
     const [row] = await db
       .insert(tools)
-      .values({ ...t, key, component: t.component ?? null, agentId })
+      .values({
+        agentId,
+        key,
+        name: t.name,
+        description: t.description,
+        parametersSchemaId: schemaIdMap[t.name] ?? null,
+        handler: t.handler ?? null,
+        component: t.component ?? null,
+        enabled: t.enabled,
+      })
       .onConflictDoUpdate({
         target: [tools.agentId, tools.key],
         set: {
           name: t.name,
           description: t.description,
-          parameters: t.parameters,
+          parametersSchemaId: schemaIdMap[t.name] ?? null,
           handler: t.handler ?? null,
           component: t.component ?? null,
           agentId,
@@ -597,6 +636,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   return {
     agentId,
     toolIds,
+    schemaIds,
     modelConfigIds,
     chatConfigId: chatConfig.id,
     datasetIds,

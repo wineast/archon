@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { wikiDocuments, tools } from "@/db/schema";
+import { wikiDocuments, tools, schemas } from "@/db/schema";
 import type { ToolRow } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
+import type { ToolParameter } from "@/lib/tools/types";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
@@ -15,6 +16,7 @@ export interface TemplateData {
   resolvedVars: Record<string, unknown>;
   docs: WikiDocument[];
   toolRows: ToolRow[];
+  schemaMap: Record<string, ToolParameter[]>;
   datasetEntries: Record<string, Array<{ value: string }>>;
 }
 
@@ -72,7 +74,10 @@ async function getEnabledTools(agentId: string): Promise<ToolRow[]> {
     .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true)));
 }
 
-export function buildToolNamespace(toolRows: ToolRow[]): {
+export function buildToolNamespace(
+  toolRows: ToolRow[],
+  schemaMap: Record<string, ToolParameter[]> = {}
+): {
   ns: Record<string, unknown>;
   tool_names: string;
   tool_entries: Array<{
@@ -90,8 +95,10 @@ export function buildToolNamespace(toolRows: ToolRow[]): {
   }> = [];
 
   for (const row of toolRows) {
-    const rawParams = row.parameters ?? [];
-    const simpleParams = rawParams.map((p) => ({
+    const rawParams: ToolParameter[] = row.parametersSchemaId
+      ? (schemaMap[row.parametersSchemaId] ?? [])
+      : [];
+    const simpleParams = rawParams.map((p: ToolParameter) => ({
       name: p.name,
       type: p.type,
     }));
@@ -99,8 +106,8 @@ export function buildToolNamespace(toolRows: ToolRow[]): {
     ns[row.name] = {
       name: row.name,
       description: row.description,
-      params: rawParams.map((p) => p.name).join(", "),
-      parameters: rawParams.map((p) => ({
+      params: rawParams.map((p: ToolParameter) => p.name).join(", "),
+      parameters: rawParams.map((p: ToolParameter) => ({
         name: p.name,
         type: p.type,
         description: p.description,
@@ -140,7 +147,8 @@ async function renderWithData(
   currentDoc: WikiDocument
 ): Promise<string> {
   const { ns: toolNs, tool_names, tool_entries } = buildToolNamespace(
-    data.toolRows
+    data.toolRows,
+    data.schemaMap
   );
   const variables: Record<string, unknown> = {
     ...getBuiltinVars(),
@@ -171,7 +179,7 @@ export async function gatherTemplateData(
   agentId?: string
 ): Promise<TemplateData> {
   if (!agentId) {
-    return { resolvedVars: {}, docs: [], toolRows: [], datasetEntries: {} };
+    return { resolvedVars: {}, docs: [], toolRows: [], schemaMap: {}, datasetEntries: {} };
   }
 
   const [{ resolvedVars, datasetEntries }, docs, toolRows] = await Promise.all([
@@ -180,7 +188,25 @@ export async function gatherTemplateData(
     getEnabledTools(agentId),
   ]);
 
-  return { resolvedVars, docs, toolRows, datasetEntries };
+  // Resolve schema parameters for tools
+  const schemaIds = new Set<string>();
+  for (const row of toolRows) {
+    if (row.parametersSchemaId) schemaIds.add(row.parametersSchemaId);
+    if (row.returnParametersSchemaId) schemaIds.add(row.returnParametersSchemaId);
+  }
+
+  const schemaMap: Record<string, ToolParameter[]> = {};
+  if (schemaIds.size > 0) {
+    const schemaRows = await db
+      .select()
+      .from(schemas)
+      .where(inArray(schemas.id, [...schemaIds]));
+    for (const s of schemaRows) {
+      schemaMap[s.id] = s.parameters;
+    }
+  }
+
+  return { resolvedVars, docs, toolRows, schemaMap, datasetEntries };
 }
 
 /**

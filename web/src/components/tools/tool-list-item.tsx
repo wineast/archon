@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback } from "react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ToolRow } from "@/db/schema";
 
@@ -36,9 +35,6 @@ export function ToolListItem({
         )}
       />
       <span className="min-w-0 flex-1 truncate">{tool.name}</span>
-      <Badge variant="secondary" className="shrink-0 text-[10px]">
-        {tool.parameters.length}p
-      </Badge>
     </button>
   );
 }
