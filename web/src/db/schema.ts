@@ -1114,7 +1114,7 @@ export const usageRecords = pgTable(
     cachedInputTokens: integer("cached_input_tokens").notNull().default(0),
     reasoningTokens: integer("reasoning_tokens").notNull().default(0),
     costUSD: real("cost_usd").notNull().default(0),
-    source: text("source").notNull().$type<"chat" | "embed" | "prompt-assist" | "jsx-assist" | "eval">(),
+    source: text("source").notNull().$type<"chat" | "embed" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "eval">(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

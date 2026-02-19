@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Controller,
   FormProvider,
@@ -16,9 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SparklesIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { JsEditor } from "@/components/editors/js-editor";
 import { useSchemas } from "@/lib/schemas/hooks";
 import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
+import { FunctionCodeAssistDialog } from "./function-code-assist-dialog";
 import type { SchemaProperty } from "@/lib/schemas/types";
 
 export interface FunctionFormValues {
@@ -126,6 +129,21 @@ export function FunctionForm({
 
   const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });
   const returnParametersSchemaId = useWatch({ control: form.control, name: "returnParametersSchemaId" });
+  const currentCode = useWatch({ control: form.control, name: "code" });
+  const [codeAssistOpen, setCodeAssistOpen] = useState(false);
+
+  const codeAssistContext = useMemo(() => {
+    const parts: string[] = [];
+    const paramsSchema = schemas.find((s) => s.id === parametersSchemaId);
+    if (paramsSchema) {
+      parts.push(`### 参数 Schema: ${paramsSchema.name} (${paramsSchema.key})\n\`\`\`json\n${JSON.stringify(paramsSchema.parameters, null, 2)}\n\`\`\``);
+    }
+    const returnSchema = schemas.find((s) => s.id === returnParametersSchemaId);
+    if (returnSchema) {
+      parts.push(`### 返回值 Schema: ${returnSchema.name} (${returnSchema.key})\n\`\`\`json\n${JSON.stringify(returnSchema.parameters, null, 2)}\n\`\`\``);
+    }
+    return parts.length > 0 ? parts.join("\n\n") : undefined;
+  }, [schemas, parametersSchemaId, returnParametersSchemaId]);
 
   // Expose handle to parent
   useEffect(() => {
@@ -204,9 +222,28 @@ export function FunctionForm({
         />
 
         <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            Code (JavaScript)
-          </label>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              Code (JavaScript)
+            </label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-1.5 text-xs"
+              onClick={() => setCodeAssistOpen(true)}
+            >
+              <SparklesIcon className="size-3" />
+              AI 编辑
+            </Button>
+          </div>
+          <FunctionCodeAssistDialog
+            open={codeAssistOpen}
+            onOpenChange={setCodeAssistOpen}
+            code={currentCode}
+            context={codeAssistContext}
+            onApply={(newCode) => form.setValue("code", newCode, { shouldDirty: true })}
+          />
           <div className="mt-1">
             <Controller
               name="code"
