@@ -128,15 +128,5 @@ describe("schema-builder — enum type", () => {
       // "c" is accepted because string type doesn't use enum
       expect(() => schema.parse({ field: "c" })).not.toThrow();
     });
-
-    it("string type with enumRef ignores it (just z.string)", () => {
-      const schema = buildInputSchema(
-        [makeParam({ type: "string", enumRef: "colors" })],
-        { colors: ["red", "blue"] }
-      );
-      expect(() => schema.parse({ field: "red" })).not.toThrow();
-      // "green" is accepted because string type doesn't resolve enum
-      expect(() => schema.parse({ field: "green" })).not.toThrow();
-    });
   });
 });

@@ -4,23 +4,23 @@ import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { nanoid } from "nanoid";
-import type { EnumRefOption } from "./parameter-row";
+import type { EnumDatasetOption } from "./parameter-row";
 import { ParameterRow } from "./parameter-row";
 import type { SchemaRow } from "@/db/schema";
 
 interface ParameterListProps {
   fieldName: string;
   label: string;
-  enumRefOptions?: EnumRefOption[];
-  enumRefValues?: Record<string, string[]>;
+  enumDatasetOptions?: EnumDatasetOption[];
+  enumDatasetValues?: Record<string, string[]>;
   schemas?: SchemaRow[];
 }
 
 export function ParameterList({
   fieldName,
   label,
-  enumRefOptions,
-  enumRefValues,
+  enumDatasetOptions,
+  enumDatasetValues,
   schemas,
 }: ParameterListProps) {
   const { control } = useFormContext();
@@ -40,8 +40,8 @@ export function ParameterList({
             key={field.id}
             fieldPath={`${fieldName}.${index}`}
             onDelete={() => remove(index)}
-            enumRefOptions={enumRefOptions}
-            enumRefValues={enumRefValues}
+            enumDatasetOptions={enumDatasetOptions}
+            enumDatasetValues={enumDatasetValues}
             schemas={schemas}
           />
         ))}

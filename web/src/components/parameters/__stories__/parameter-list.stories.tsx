@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { FormProvider, useForm } from "react-hook-form";
 import { ParameterList } from "../parameter-list";
-import type { EnumRefOption } from "../parameter-row";
+import type { EnumDatasetOption } from "../parameter-row";
 import type { SchemaProperty } from "@/lib/schemas/types";
 
 function FormWrapper({
@@ -75,12 +75,12 @@ const sampleParams: SchemaProperty[] = [
   },
 ];
 
-const enumRefOptions: EnumRefOption[] = [
+const enumDatasetOptions: EnumDatasetOption[] = [
   { id: "ds-us-states", key: "us_states", name: "US States", source: "dataset" },
   { id: "ds-product-categories", key: "product_categories", name: "Product Categories", source: "dataset" },
 ];
 
-const enumRefValues: Record<string, string[]> = {
+const enumDatasetValues: Record<string, string[]> = {
   "ds-us-states": ["CA", "NY", "TX", "FL", "WA"],
   "ds-product-categories": ["Electronics", "Clothing", "Food", "Books"],
 };
@@ -104,13 +104,13 @@ export const WithParameters: Story = {
   ),
 };
 
-export const WithEnumRefOptions: Story = {
+export const WithEnumDatasetOptions: Story = {
   name: "With Enum Ref Options",
   args: {
     fieldName: "parameters",
     label: "Parameters",
-    enumRefOptions,
-    enumRefValues,
+    enumDatasetOptions,
+    enumDatasetValues,
   },
   render: (args) => {
     const params: SchemaProperty[] = [

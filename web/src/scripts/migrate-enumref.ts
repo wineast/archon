@@ -14,14 +14,14 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
 import { schemas, datasets } from "../db/schema";
-import type { ToolParameter } from "../lib/tools/types";
+import type { SchemaProperty } from "../lib/schemas/types";
 
 const client = postgres(process.env.DATABASE_URL!);
 const db = drizzle({ client });
 
-interface LegacyToolParameter extends Omit<ToolParameter, "enumRef"> {
+interface LegacySchemaProperty extends SchemaProperty {
   enumRef?: string;
-  properties?: LegacyToolParameter[];
+  properties?: LegacySchemaProperty[];
 }
 
 async function main() {
@@ -45,10 +45,10 @@ async function main() {
   let convertedFields = 0;
 
   for (const row of allSchemas) {
-    const params = row.parameters as LegacyToolParameter[];
+    const params = row.parameters as LegacySchemaProperty[];
     let changed = false;
 
-    function walk(paramList: LegacyToolParameter[]) {
+    function walk(paramList: LegacySchemaProperty[]) {
       for (const p of paramList) {
         if (p.enumRef) {
           const dsId = datasetMap.get(`${row.agentId}:${p.enumRef}`);
@@ -73,7 +73,7 @@ async function main() {
     if (changed) {
       await db
         .update(schemas)
-        .set({ parameters: params as ToolParameter[] })
+        .set({ parameters: params as SchemaProperty[] })
         .where(eq(schemas.id, row.id));
       updatedRows++;
     }
