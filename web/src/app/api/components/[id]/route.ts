@@ -37,8 +37,6 @@ export async function PATCH(
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.componentSource !== undefined && { componentSource: body.componentSource }),
-      ...(body.inputSchemaId !== undefined && { inputSchemaId: body.inputSchemaId }),
-      ...(body.outputSchemaId !== undefined && { outputSchemaId: body.outputSchemaId }),
       ...(generatedCss !== undefined && { generatedCss }),
     })
     .where(eq(components.id, id))

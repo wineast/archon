@@ -4,14 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { JsEditor } from "@/components/editors/js-editor";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useSchemas } from "@/lib/schemas/hooks";
 import { inferComponentDeps, keyToPascal, type ComponentRecord } from "@/tool-ui";
 import type { ComponentDefinition } from "@/lib/components/types";
 import { useEffect, useMemo, useRef } from "react";
@@ -38,7 +30,6 @@ interface ComponentFormProps {
 export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
   const originalRef = useRef(JSON.stringify(component));
-  const { schemas } = useSchemas(agentId);
   const currentSource = form.watch("componentSource");
 
   // Infer referenced components from JSX source
@@ -107,60 +98,6 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">
-            Input Schema
-          </label>
-          <Controller
-            name="inputSchemaId"
-            control={form.control}
-            render={({ field }) => (
-              <Select
-                value={field.value ?? "__none__"}
-                onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
-              >
-                <SelectTrigger className="mt-1 h-8 text-sm">
-                  <SelectValue placeholder="Select a schema..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {schemas.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name} ({s.key})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            Output Schema
-          </label>
-          <Controller
-            name="outputSchemaId"
-            control={form.control}
-            render={({ field }) => (
-              <Select
-                value={field.value ?? "__none__"}
-                onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
-              >
-                <SelectTrigger className="mt-1 h-8 text-sm">
-                  <SelectValue placeholder="Select a schema..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {schemas.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name} ({s.key})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">
             Component Source (JSX)
           </label>
           <Controller
@@ -176,10 +113,10 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             )}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            完整函数组件: function Component({"{ tool, state, isLoading, ... }"}) {"{ ... }"}
+            两层闭包: function Component(DepA, DepB) {"{"} return function({"{ tool, state, ... }"}) {"{ ... }"} {"}"}
           </p>
           <p className="text-xs text-muted-foreground">
-            Props: tool (name/input/output), state, isLoading, isComplete, isError
+            外层参数: 自定义组件依赖（PascalCase）；内层 props: tool, state, isLoading, isComplete, isError
           </p>
           {referencedComponents.length > 0 && (
             <div className="mt-2 flex items-center gap-1.5 flex-wrap">

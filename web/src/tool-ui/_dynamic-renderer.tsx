@@ -18,28 +18,28 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
   return Comp;
 }
 
-/** Compile a component source with optional extra dependencies merged into INJECTED_DEPS.
+/** Compile a two-layer closure component source.
+ *
+ *  Source format:
+ *  ```
+ *  function Component(DepA, DepB) {          // outer: receives custom component deps
+ *    return function({ tool, state, ... }) {  // inner: render function
+ *      ...
+ *    }
+ *  }
+ *  ```
+ *
+ *  Compilation:
+ *  1. Sucrase transpile (JSX/TS → JS)
+ *  2. `new Function(...INJECTED_DEP_NAMES, code + '\nreturn Component;')` → outer function
+ *  3. `outer(...extraDepValues)` → inner render function
+ *
  *  Does NOT use the source cache (intended for graph compilation). */
 export function compileSourceWithDeps(
   source: string,
   extraDeps?: Record<string, unknown>
 ): ComponentType<ToolRendererProps> {
-  const trimmed = source.trim();
-
-  // Detect whether source is a full function component or a JSX fragment
-  const isFullComponent = /^function\s+\w+/.test(trimmed);
-
-  // Wrap into a module that returns a component
-  const moduleCode = isFullComponent
-    ? `${trimmed}\nreturn Component;`
-    : `return function Component(props) {
-  var tool = props.tool;
-  var state = props.state;
-  var isLoading = props.isLoading;
-  var isComplete = props.isComplete;
-  var isError = props.isError;
-  return (${trimmed});
-};`;
+  const moduleCode = `${source.trim()}\nreturn Component;`;
 
   // Compile JSX/TS → JS using sucrase
   const { code } = transform(moduleCode, {
@@ -48,19 +48,16 @@ export function compileSourceWithDeps(
     production: true,
   });
 
-  // Merge injected deps with extra deps (e.g. composed components)
-  const allDeps = extraDeps
-    ? { ...INJECTED_DEPS, ...extraDeps }
-    : INJECTED_DEPS;
-
-  // Create factory function with injected dependencies
-  const depNames = Object.keys(allDeps);
+  // Step 2: inject INJECTED_DEPS via new Function, get the outer closure
+  const injectedNames = Object.keys(INJECTED_DEPS);
+  const injectedValues = Object.values(INJECTED_DEPS);
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
-  const factory = new Function(...depNames, code);
+  const factory = new Function(...injectedNames, code);
+  const outerFn = factory(...injectedValues);
 
-  // Execute factory to get the component
-  const depValues = Object.values(allDeps);
-  return factory(...depValues) as ComponentType<ToolRendererProps>;
+  // Step 3: call outer closure with custom component deps to get inner render function
+  const extraValues = extraDeps ? Object.values(extraDeps) : [];
+  return outerFn(...extraValues) as ComponentType<ToolRendererProps>;
 }
 
 // ── Public renderer component ──
