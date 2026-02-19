@@ -273,8 +273,16 @@ export function buildInputSchema(
 
 type JsonSchema7 = Record<string, unknown>;
 
+/** Internal context threaded through JSON Schema builders. */
+interface JsonSchemaCtx {
+  options?: BuildSchemaOptions;
+  ancestorSchemaIds: Set<string>;
+  /** Collected $defs from schemaId references (populated during build). */
+  $defs: Record<string, JsonSchema7>;
+}
+
 /** Build a single JSON Schema 7 property from a SchemaProperty. */
-function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
+function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
   switch (param.type) {
     case "string": {
       const s: JsonSchema7 = { type: "string" };
@@ -301,21 +309,21 @@ function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
       return s;
     }
     case "enum": {
-      // enum → JSON Schema: {"type": "string", "enum": [...]}
       const s: JsonSchema7 = { type: "string" };
-      if (param.enum && param.enum.length > 0) {
-        s.enum = param.enum;
+      const resolved = resolveEnumValues(param, undefined, ctx.options);
+      if (resolved && resolved.length > 0) {
+        s.enum = resolved;
       }
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
       return s;
     }
     case "object": {
-      return buildJsonSchemaObject(param);
+      return buildJsonSchemaObject(param, ctx);
     }
     case "array": {
       const s: JsonSchema7 = { type: "array" };
       if (param.items) {
-        s.items = buildJsonSchemaProperty(param.items);
+        s.items = buildJsonSchemaProperty(param.items, ctx);
       }
       if (param.minItems != null) s.minItems = param.minItems;
       if (param.maxItems != null) s.maxItems = param.maxItems;
@@ -323,24 +331,70 @@ function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
       return s;
     }
+    case "union": {
+      return buildJsonSchemaUnion(param, ctx);
+    }
     default:
       return { type: "string" };
   }
 }
 
-/** Build JSON Schema object from an object-type SchemaProperty. */
-function buildJsonSchemaObject(param: SchemaProperty): JsonSchema7 {
-  if (!param.properties || param.properties.length === 0) {
-    const s: JsonSchema7 = { type: "object" };
-    if (param.defaultValue !== undefined) s.default = param.defaultValue;
-    return s;
+/** Build JSON Schema object from an object-type SchemaProperty, with schemaId/$ref and additionalProperties support. */
+function buildJsonSchemaObject(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
+  // --- schemaId reference → $ref + $defs ---
+  if (param.schemaId && ctx.options?.schemaMap?.[param.schemaId]) {
+    // Recursive self-reference → just $ref (def is being built up the stack)
+    if (ctx.ancestorSchemaIds.has(param.schemaId)) {
+      return { $ref: `#/$defs/${param.schemaId}` };
+    }
+
+    // First encounter: build definition, store in $defs, return $ref
+    const nextAncestors = new Set(ctx.ancestorSchemaIds);
+    nextAncestors.add(param.schemaId);
+    const nextCtx: JsonSchemaCtx = { ...ctx, ancestorSchemaIds: nextAncestors };
+
+    const refParams = ctx.options.schemaMap[param.schemaId];
+    const def = buildJsonSchemaNestedObject(refParams, nextCtx);
+
+    if (param.additionalProperties) {
+      def.additionalProperties = buildJsonSchemaProperty(param.additionalProperties, nextCtx);
+    }
+
+    ctx.$defs[param.schemaId] = def;
+    return { $ref: `#/$defs/${param.schemaId}` };
   }
 
+  // --- Inline properties ---
+  if (param.properties && param.properties.length > 0) {
+    const obj = buildJsonSchemaNestedObject(param.properties, ctx);
+    if (param.additionalProperties) {
+      obj.additionalProperties = buildJsonSchemaProperty(param.additionalProperties, ctx);
+    }
+    if (param.defaultValue !== undefined) obj.default = param.defaultValue;
+    return obj;
+  }
+
+  // --- Pure Map/Record: no fixed properties, only additionalProperties ---
+  if (param.additionalProperties) {
+    return {
+      type: "object",
+      additionalProperties: buildJsonSchemaProperty(param.additionalProperties, ctx),
+    };
+  }
+
+  // Fallback: empty object
+  const s: JsonSchema7 = { type: "object" };
+  if (param.defaultValue !== undefined) s.default = param.defaultValue;
+  return s;
+}
+
+/** Build JSON Schema { type: "object", properties, required } from a child list. */
+function buildJsonSchemaNestedObject(children: SchemaProperty[], ctx: JsonSchemaCtx): JsonSchema7 {
   const properties: Record<string, JsonSchema7> = {};
   const required: string[] = [];
 
-  for (const child of param.properties) {
-    const prop = buildJsonSchemaProperty(child);
+  for (const child of children) {
+    const prop = buildJsonSchemaProperty(child, ctx);
     if (child.description) prop.description = child.description;
     properties[child.name] = prop;
     if (child.required) required.push(child.name);
@@ -348,6 +402,23 @@ function buildJsonSchemaObject(param: SchemaProperty): JsonSchema7 {
 
   const s: JsonSchema7 = { type: "object", properties };
   if (required.length > 0) s.required = required;
+  return s;
+}
+
+/** Build JSON Schema oneOf from a union-type SchemaProperty. */
+function buildJsonSchemaUnion(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
+  if (!param.variants || param.variants.length < 2) {
+    return {};
+  }
+
+  const variantSchemas = param.variants.map((variantProps) =>
+    buildJsonSchemaNestedObject(variantProps, ctx)
+  );
+
+  const s: JsonSchema7 = { oneOf: variantSchemas };
+  if (param.discriminator) {
+    s.discriminator = { propertyName: param.discriminator };
+  }
   if (param.defaultValue !== undefined) s.default = param.defaultValue;
   return s;
 }
@@ -356,14 +427,25 @@ function buildJsonSchemaObject(param: SchemaProperty): JsonSchema7 {
  * Build a standard JSON Schema 7 object from a list of SchemaProperty definitions.
  * Generates schema directly without going through Zod.
  *
- * Enum type mapping: {type: "enum", enum: [...]} → {"type": "string", "enum": [...]}
+ * Supports the same features as `buildInputSchema` (Zod path):
+ * - `schemaId` references → `$ref` + `$defs`
+ * - Recursive self-reference detection → `$ref` (no infinite expansion)
+ * - `additionalProperties` → JSON Schema `additionalProperties`
+ * - `union` type → `oneOf` (with optional `discriminator`)
+ * - `enumDatasetId` → resolved enum values from `options.datasetsById`
  */
-export function buildJsonSchema(parameters: SchemaProperty[]): JsonSchema7 {
+export function buildJsonSchema(parameters: SchemaProperty[], options?: BuildSchemaOptions): JsonSchema7 {
+  const ctx: JsonSchemaCtx = {
+    options,
+    ancestorSchemaIds: new Set(),
+    $defs: {},
+  };
+
   const properties: Record<string, JsonSchema7> = {};
   const required: string[] = [];
 
   for (const param of parameters) {
-    const prop = buildJsonSchemaProperty(param);
+    const prop = buildJsonSchemaProperty(param, ctx);
     if (param.description) prop.description = param.description;
     properties[param.name] = prop;
     if (param.required) required.push(param.name);
@@ -371,5 +453,6 @@ export function buildJsonSchema(parameters: SchemaProperty[]): JsonSchema7 {
 
   const schema: JsonSchema7 = { type: "object", properties };
   if (required.length > 0) schema.required = required;
+  if (Object.keys(ctx.$defs).length > 0) schema.$defs = ctx.$defs;
   return schema;
 }

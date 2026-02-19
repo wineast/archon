@@ -328,7 +328,30 @@ AI SDK 的 `tool()` 内部用 `zod-to-json-schema` 将 Zod 自动转为 JSON Sch
 
 代码位于同一文件的 `buildJsonSchema()`。直接从 `SchemaProperty[]` 生成标准 JSON Schema 7 对象，不经过 Zod。
 
+签名：`buildJsonSchema(parameters, options?)`，可选的 `BuildSchemaOptions` 与 Zod 路径共用。
+
 所有字段完整保留：`uniqueItems`、`default`、`format`、`pattern` 等均直接输出对应的 JSON Schema 关键字。适用于 API 文档导出、前端预览、第三方对接等场景。
+
+**对齐清单**（SchemaProperty → JSON Schema 7 映射）：
+
+| SchemaProperty 特性 | JSON Schema 输出 |
+|---------------------|-----------------|
+| `schemaId` 引用 | `$ref: "#/$defs/<schemaId>"` + 顶层 `$defs` |
+| 递归自引用 | `$ref`（相同 key，不无限展开） |
+| `additionalProperties` | `"additionalProperties": {...}` |
+| `union` + `variants` | `"oneOf": [...]` |
+| `union` + `discriminator` | `"discriminator": { "propertyName": "..." }` |
+| `enumDatasetId` | 从 `options.datasetsById` 解析为 `"enum": [...]` |
+
+### JSON Schema 导出
+
+Schema 详情页提供 **JSON Schema** 预览 tab，可查看当前 Schema 的标准 JSON Schema 7 输出：
+
+- **预览**：实时显示格式化 JSON（基于当前 Schema 参数 + schemaMap 生成）
+- **复制**：点击 Copy 按钮复制到剪贴板
+- **导出**：点击 Export 按钮下载为 `.json` 文件（文件名为 Schema key）
+
+组件位于 `web/src/components/schemas/schema-json-preview.tsx`。
 
 ---
 

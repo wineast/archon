@@ -416,4 +416,318 @@ describe("buildJsonSchema", () => {
       });
     });
   });
+
+  describe("schemaId reference", () => {
+    it("resolves schemaId via schemaMap and outputs $ref + $defs", () => {
+      const addressSchemaId = "schema-address-uuid";
+      const schemaMap: Record<string, SchemaProperty[]> = {
+        [addressSchemaId]: [
+          makeParam({ id: "a1", name: "street", type: "string", required: true }),
+          makeParam({ id: "a2", name: "city", type: "string", required: true }),
+        ],
+      };
+
+      const result = buildJsonSchema(
+        [
+          makeParam({
+            name: "address",
+            type: "object",
+            schemaId: addressSchemaId,
+          }),
+        ],
+        { schemaMap }
+      );
+
+      // Top-level property should be a $ref
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.address).toEqual({ $ref: `#/$defs/${addressSchemaId}` });
+
+      // $defs should contain the resolved schema
+      const defs = result.$defs as Record<string, Record<string, unknown>>;
+      expect(defs[addressSchemaId]).toEqual({
+        type: "object",
+        properties: {
+          street: { type: "string" },
+          city: { type: "string" },
+        },
+        required: ["street", "city"],
+      });
+    });
+
+    it("ignores schemaId when schemaMap is not provided", () => {
+      const result = buildJsonSchema([
+        makeParam({ name: "data", type: "object", schemaId: "missing-uuid" }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.data).toEqual({ type: "object" });
+      expect(result.$defs).toBeUndefined();
+    });
+  });
+
+  describe("recursive self-reference", () => {
+    it("outputs $ref for recursive schemaId instead of infinite expansion", () => {
+      const treeSchemaId = "schema-tree-uuid";
+      const schemaMap: Record<string, SchemaProperty[]> = {
+        [treeSchemaId]: [
+          makeParam({ id: "t1", name: "value", type: "string", required: true }),
+          makeParam({
+            id: "t2",
+            name: "children",
+            type: "array",
+            required: false,
+            items: makeParam({
+              id: "t3",
+              name: "child",
+              type: "object",
+              schemaId: treeSchemaId, // recursive self-reference
+            }),
+          }),
+        ],
+      };
+
+      const result = buildJsonSchema(
+        [
+          makeParam({
+            name: "tree",
+            type: "object",
+            schemaId: treeSchemaId,
+          }),
+        ],
+        { schemaMap }
+      );
+
+      // Top-level: $ref
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.tree).toEqual({ $ref: `#/$defs/${treeSchemaId}` });
+
+      // $defs: the tree def should have children.items as $ref (recursive)
+      const defs = result.$defs as Record<string, Record<string, unknown>>;
+      const treeDef = defs[treeSchemaId];
+      expect(treeDef.type).toBe("object");
+
+      const treeProps = treeDef.properties as Record<string, Record<string, unknown>>;
+      expect(treeProps.value).toEqual({ type: "string" });
+
+      const childrenProp = treeProps.children;
+      expect(childrenProp.type).toBe("array");
+      expect(childrenProp.items).toEqual({ $ref: `#/$defs/${treeSchemaId}` });
+    });
+  });
+
+  describe("additionalProperties", () => {
+    it("outputs additionalProperties for pure Map/Record object", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          name: "metadata",
+          type: "object",
+          additionalProperties: makeParam({ id: "ap", name: "val", type: "string" }),
+        }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.metadata).toEqual({
+        type: "object",
+        additionalProperties: { type: "string" },
+      });
+    });
+
+    it("outputs additionalProperties combined with fixed properties", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          name: "config",
+          type: "object",
+          properties: [
+            makeParam({ id: "c1", name: "name", type: "string", required: true }),
+          ],
+          additionalProperties: makeParam({ id: "ap", name: "extra", type: "number" }),
+        }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.config).toEqual({
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
+        additionalProperties: { type: "number" },
+      });
+    });
+
+    it("outputs additionalProperties on schemaId reference", () => {
+      const baseId = "schema-base-uuid";
+      const schemaMap: Record<string, SchemaProperty[]> = {
+        [baseId]: [
+          makeParam({ id: "b1", name: "id", type: "string", required: true }),
+        ],
+      };
+
+      const result = buildJsonSchema(
+        [
+          makeParam({
+            name: "extended",
+            type: "object",
+            schemaId: baseId,
+            additionalProperties: makeParam({ id: "ap", name: "val", type: "string" }),
+          }),
+        ],
+        { schemaMap }
+      );
+
+      const defs = result.$defs as Record<string, Record<string, unknown>>;
+      expect(defs[baseId]).toEqual({
+        type: "object",
+        properties: { id: { type: "string" } },
+        required: ["id"],
+        additionalProperties: { type: "string" },
+      });
+    });
+  });
+
+  describe("union type", () => {
+    it("outputs oneOf for union with variants", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          name: "payment",
+          type: "union",
+          variants: [
+            [
+              makeParam({ id: "v1a", name: "method", type: "string", required: true }),
+              makeParam({ id: "v1b", name: "card_number", type: "string", required: true }),
+            ],
+            [
+              makeParam({ id: "v2a", name: "method", type: "string", required: true }),
+              makeParam({ id: "v2b", name: "account", type: "string", required: true }),
+            ],
+          ],
+        }),
+      ]);
+
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.payment.oneOf).toEqual([
+        {
+          type: "object",
+          properties: {
+            method: { type: "string" },
+            card_number: { type: "string" },
+          },
+          required: ["method", "card_number"],
+        },
+        {
+          type: "object",
+          properties: {
+            method: { type: "string" },
+            account: { type: "string" },
+          },
+          required: ["method", "account"],
+        },
+      ]);
+    });
+
+    it("includes discriminator when specified", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          name: "shape",
+          type: "union",
+          discriminator: "kind",
+          variants: [
+            [
+              makeParam({ id: "v1a", name: "kind", type: "string", required: true }),
+              makeParam({ id: "v1b", name: "radius", type: "number", required: true }),
+            ],
+            [
+              makeParam({ id: "v2a", name: "kind", type: "string", required: true }),
+              makeParam({ id: "v2b", name: "side", type: "number", required: true }),
+            ],
+          ],
+        }),
+      ]);
+
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.shape.discriminator).toEqual({ propertyName: "kind" });
+    });
+
+    it("returns empty object for union with < 2 variants", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          name: "bad",
+          type: "union",
+          variants: [[makeParam({ id: "v1", name: "a", type: "string", required: true })]],
+        }),
+      ]);
+
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.bad).toEqual({});
+    });
+  });
+
+  describe("enumDatasetId resolution", () => {
+    it("resolves enum values from datasetsById array", () => {
+      const datasetId = "ds-states-uuid";
+      const result = buildJsonSchema(
+        [
+          makeParam({
+            type: "enum",
+            enumDatasetId: datasetId,
+          }),
+        ],
+        { datasetsById: { [datasetId]: ["CA", "NY", "TX"] } }
+      );
+
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.enum).toEqual(["CA", "NY", "TX"]);
+    });
+
+    it("resolves enum values from datasetsById object (string values → values)", () => {
+      const datasetId = "ds-income-uuid";
+      const result = buildJsonSchema(
+        [
+          makeParam({
+            type: "enum",
+            enumDatasetId: datasetId,
+          }),
+        ],
+        {
+          datasetsById: {
+            [datasetId]: { w2: "W2 Income", se: "Self Employed" },
+          },
+        }
+      );
+
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.enum).toEqual(["W2 Income", "Self Employed"]);
+    });
+
+    it("resolves enum values from datasetsById object (non-string values → keys)", () => {
+      const datasetId = "ds-codes-uuid";
+      const result = buildJsonSchema(
+        [
+          makeParam({
+            type: "enum",
+            enumDatasetId: datasetId,
+          }),
+        ],
+        {
+          datasetsById: {
+            [datasetId]: { alpha: 1, beta: 2 },
+          },
+        }
+      );
+
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.enum).toEqual(["alpha", "beta"]);
+    });
+
+    it("falls back to inline enum when dataset not found", () => {
+      const result = buildJsonSchema(
+        [
+          makeParam({
+            type: "enum",
+            enumDatasetId: "missing-ds",
+            enum: ["fallback_a", "fallback_b"],
+          }),
+        ],
+        { datasetsById: {} }
+      );
+
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.enum).toEqual(["fallback_a", "fallback_b"]);
+    });
+  });
 });
