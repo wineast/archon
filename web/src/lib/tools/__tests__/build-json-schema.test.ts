@@ -358,6 +358,145 @@ describe("buildJsonSchema", () => {
     });
   });
 
+  describe("null type", () => {
+    it("maps to {type: 'null'}", () => {
+      const result = buildJsonSchema([makeParam({ type: "null" })]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({ type: "null" });
+    });
+  });
+
+  describe("const type", () => {
+    it("maps to {const: value}", () => {
+      const result = buildJsonSchema([
+        makeParam({ type: "const", constValue: "1.0" }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({ const: "1.0" });
+    });
+
+    it("maps numeric const", () => {
+      const result = buildJsonSchema([
+        makeParam({ type: "const", constValue: 42 }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({ const: 42 });
+    });
+
+    it("outputs empty object when no constValue", () => {
+      const result = buildJsonSchema([makeParam({ type: "const" })]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({});
+    });
+  });
+
+  describe("new string formats", () => {
+    it("includes time format", () => {
+      const result = buildJsonSchema([makeParam({ type: "string", format: "time" })]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.format).toBe("time");
+    });
+
+    it("includes ipv4 format", () => {
+      const result = buildJsonSchema([makeParam({ type: "string", format: "ipv4" })]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.format).toBe("ipv4");
+    });
+
+    it("includes ipv6 format", () => {
+      const result = buildJsonSchema([makeParam({ type: "string", format: "ipv6" })]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.format).toBe("ipv6");
+    });
+  });
+
+  describe("union type (oneOf / anyOf)", () => {
+    it("outputs oneOf by default", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          type: "union",
+          variants: [
+            [makeParam({ id: "v1a", name: "x", type: "string", required: true })],
+            [makeParam({ id: "v2a", name: "y", type: "number", required: true })],
+          ],
+        }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.oneOf).toBeDefined();
+      expect(props.field.anyOf).toBeUndefined();
+    });
+
+    it("outputs anyOf when unionMode is anyOf", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          type: "union",
+          unionMode: "anyOf",
+          variants: [
+            [makeParam({ id: "v1a", name: "x", type: "string", required: true })],
+            [makeParam({ id: "v2a", name: "y", type: "number", required: true })],
+          ],
+        }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.anyOf).toBeDefined();
+      expect(props.field.oneOf).toBeUndefined();
+    });
+  });
+
+  describe("tuple (prefixItems)", () => {
+    it("outputs items as array for tuple mode", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          type: "array",
+          tuple: true,
+          prefixItems: [
+            makeParam({ id: "t0", name: "item0", type: "string" }),
+            makeParam({ id: "t1", name: "item1", type: "number" }),
+          ],
+        }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.type).toBe("array");
+      expect(props.field.items).toEqual([
+        { type: "string" },
+        { type: "number" },
+      ]);
+      // No minItems/maxItems in tuple mode
+      expect(props.field.minItems).toBeUndefined();
+      expect(props.field.maxItems).toBeUndefined();
+    });
+  });
+
+  describe("allOf (schemaIds merge)", () => {
+    it("outputs merged properties from multiple schemas", () => {
+      const result = buildJsonSchema(
+        [
+          makeParam({
+            type: "object",
+            schemaIds: ["sa", "sb"],
+          }),
+        ],
+        {
+          schemaMap: {
+            sa: [
+              makeParam({ id: "a1", name: "name", type: "string", required: true }),
+            ],
+            sb: [
+              makeParam({ id: "b1", name: "age", type: "number", required: false }),
+            ],
+          },
+        }
+      );
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      const obj = props.field;
+      expect(obj.type).toBe("object");
+      const nested = obj.properties as Record<string, Record<string, unknown>>;
+      expect(nested.name.type).toBe("string");
+      expect(nested.age.type).toBe("number");
+      expect(obj.required).toEqual(["name"]);
+    });
+  });
+
   describe("full snapshot", () => {
     it("generates complete JSON Schema for a complex tool", () => {
       const result = buildJsonSchema([

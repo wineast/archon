@@ -430,6 +430,85 @@ describe("schema-builder", () => {
       });
     });
 
+    describe("null type", () => {
+      it("accepts null value", () => {
+        const schema = buildInputSchema([makeParam({ type: "null" })]);
+        expect(() => schema.parse({ field: null })).not.toThrow();
+      });
+
+      it("rejects non-null values", () => {
+        const schema = buildInputSchema([makeParam({ type: "null" })]);
+        expect(() => schema.parse({ field: "hello" })).toThrow();
+        expect(() => schema.parse({ field: 0 })).toThrow();
+        expect(() => schema.parse({ field: false })).toThrow();
+      });
+    });
+
+    describe("const type", () => {
+      it("accepts matching literal string", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "const", constValue: "1.0" }),
+        ]);
+        expect(() => schema.parse({ field: "1.0" })).not.toThrow();
+      });
+
+      it("rejects non-matching value", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "const", constValue: "1.0" }),
+        ]);
+        expect(() => schema.parse({ field: "2.0" })).toThrow();
+      });
+
+      it("accepts matching literal number", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "const", constValue: 42 }),
+        ]);
+        expect(() => schema.parse({ field: 42 })).not.toThrow();
+        expect(() => schema.parse({ field: 43 })).toThrow();
+      });
+
+      it("accepts matching literal boolean", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "const", constValue: true }),
+        ]);
+        expect(() => schema.parse({ field: true })).not.toThrow();
+        expect(() => schema.parse({ field: false })).toThrow();
+      });
+
+      it("falls back to z.unknown when no constValue", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "const" }),
+        ]);
+        expect(() => schema.parse({ field: "anything" })).not.toThrow();
+      });
+    });
+
+    describe("new string formats (time, ipv4, ipv6)", () => {
+      it("validates time format", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", format: "time" }),
+        ]);
+        expect(() => schema.parse({ field: "14:30:00" })).not.toThrow();
+        expect(() => schema.parse({ field: "not-a-time" })).toThrow();
+      });
+
+      it("validates ipv4 format", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", format: "ipv4" }),
+        ]);
+        expect(() => schema.parse({ field: "192.168.1.1" })).not.toThrow();
+        expect(() => schema.parse({ field: "not-an-ip" })).toThrow();
+      });
+
+      it("validates ipv6 format", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "string", format: "ipv6" }),
+        ]);
+        expect(() => schema.parse({ field: "::1" })).not.toThrow();
+        expect(() => schema.parse({ field: "not-an-ipv6" })).toThrow();
+      });
+    });
+
     describe("description", () => {
       it("applies description to the schema field", () => {
         const schema = buildInputSchema([
