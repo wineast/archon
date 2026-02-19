@@ -112,7 +112,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         params.set("tab", value);
       }
       const qs = params.toString();
-      router.replace(`/${agent.slug}/settings${qs ? `?${qs}` : ""}`, {
+      router.replace(`/${agent.slug}/build${qs ? `?${qs}` : ""}`, {
         scroll: false,
       });
     },
@@ -228,7 +228,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
       {/* Header */}
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
         <Button variant="ghost" size="icon" className="size-8" asChild>
-          <Link href="/">
+          <Link href={`/${agent.slug}/chat`}>
             <ArrowLeftIcon className="size-4" />
           </Link>
         </Button>
