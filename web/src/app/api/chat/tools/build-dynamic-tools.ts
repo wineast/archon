@@ -92,7 +92,7 @@ export function buildDynamicTools(
       templateData?.resolvedVars
     );
 
-    if (def.executionTarget === "client") {
+    if (def.executionTarget === "client" || def.executionTarget === "host") {
       // Client tools: schema only, no execute → tool call passes through to frontend
       tools[def.name] = tool({ description: def.description, inputSchema });
     } else {

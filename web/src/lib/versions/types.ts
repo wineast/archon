@@ -14,7 +14,7 @@ export interface ToolSnapshotItem {
   component: string | null;
   componentSource: string | null;
   enabled: boolean;
-  executionTarget: "server" | "client";
+  executionTarget: "server" | "client" | "host";
   testCases: ToolTestCaseSnapshotItem[];
 }
 

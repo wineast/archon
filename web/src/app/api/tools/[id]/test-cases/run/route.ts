@@ -44,10 +44,12 @@ export async function POST(
     );
   }
 
-  if (tool.executionTarget === "client") {
+  if (tool.executionTarget === "client" || tool.executionTarget === "host") {
     return NextResponse.json({
       success: false,
-      error: "浏览器端工具无法在服务端测试，请在聊天页面中测试",
+      error: tool.executionTarget === "host"
+        ? "宿主端工具无法在服务端测试，请在嵌入页面中测试"
+        : "浏览器端工具无法在服务端测试，请在聊天页面中测试",
       durationMs: 0,
       passed: false,
     });

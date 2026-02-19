@@ -104,6 +104,66 @@ function EmbedChat({
   const [input, setInput] = useState("");
   const sessionIdRef = useRef<string | null>(getPersistedSessionId(agentId));
 
+  // Host communication state
+  const hostContextRef = useRef<Record<string, unknown>>({});
+  const registeredHostToolsRef = useRef<string[]>([]);
+  const pendingHostCallsRef = useRef<
+    Map<
+      string,
+      {
+        resolve: (value: unknown) => void;
+        reject: (reason: unknown) => void;
+        timeoutId: ReturnType<typeof setTimeout>;
+      }
+    >
+  >(new Map());
+
+  // postMessage listener for host ↔ iframe communication
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      const data = event.data;
+      if (!data || typeof data.type !== "string") return;
+
+      switch (data.type) {
+        case "archon:context":
+          hostContextRef.current = data.payload ?? {};
+          break;
+        case "archon:tools-register":
+          registeredHostToolsRef.current = data.payload ?? [];
+          break;
+        case "archon:tool-result": {
+          const { callId, result } = data.payload ?? {};
+          const pending = pendingHostCallsRef.current.get(callId);
+          if (pending) {
+            clearTimeout(pending.timeoutId);
+            pendingHostCallsRef.current.delete(callId);
+            pending.resolve(result);
+          }
+          break;
+        }
+        case "archon:tool-error": {
+          const { callId, error } = data.payload ?? {};
+          const pending = pendingHostCallsRef.current.get(callId);
+          if (pending) {
+            clearTimeout(pending.timeoutId);
+            pendingHostCallsRef.current.delete(callId);
+            pending.reject(new Error(error ?? "Host tool error"));
+          }
+          break;
+        }
+      }
+    }
+
+    window.addEventListener("message", handleMessage);
+
+    // Signal to host that iframe is ready
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: "archon:ready" }, "*");
+    }
+
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
   // Fetch embed config
   useEffect(() => {
     fetch("/api/embed/config", {
@@ -156,7 +216,11 @@ function EmbedChat({
             sessionIdRef.current = crypto.randomUUID();
             persistSessionId(agentId, sessionIdRef.current);
           }
-          return { sessionId: sessionIdRef.current };
+          return {
+            sessionId: sessionIdRef.current,
+            hostContext: hostContextRef.current,
+            registeredHostTools: registeredHostToolsRef.current,
+          };
         },
       }),
     [agentId, token]
@@ -164,9 +228,65 @@ function EmbedChat({
 
   const { messages, sendMessage, status, addToolOutput } = useChat({
     transport,
-    onToolCall: ({ toolCall }) => {
+    onToolCall: async ({ toolCall }) => {
       if (!config) return;
-      // Build minimal tool-like rows for client executor
+
+      // Find the tool definition to check executionTarget
+      const toolDef = config.tools.find((t) => t.name === toolCall.toolName);
+      const target = toolDef?.executionTarget ?? "server";
+
+      if (target === "host") {
+        // Host tool: delegate to host page via postMessage
+        if (window.parent === window) {
+          addToolOutput({
+            tool: toolCall.toolName,
+            toolCallId: toolCall.toolCallId,
+            output: JSON.stringify({ error: "Not running in iframe" }),
+          });
+          return;
+        }
+
+        try {
+          const result = await new Promise<unknown>((resolve, reject) => {
+            const callId = crypto.randomUUID();
+            const timeoutId = setTimeout(() => {
+              pendingHostCallsRef.current.delete(callId);
+              reject(new Error(`Host tool "${toolCall.toolName}" timed out (30s)`));
+            }, 30000);
+
+            pendingHostCallsRef.current.set(callId, { resolve, reject, timeoutId });
+
+            window.parent.postMessage(
+              {
+                type: "archon:tool-call",
+                payload: {
+                  callId,
+                  toolName: toolCall.toolName,
+                  args: toolCall.input,
+                },
+              },
+              "*"
+            );
+          });
+
+          addToolOutput({
+            tool: toolCall.toolName,
+            toolCallId: toolCall.toolCallId,
+            output: JSON.stringify(result ?? {}),
+          });
+        } catch (err) {
+          addToolOutput({
+            tool: toolCall.toolName,
+            toolCallId: toolCall.toolCallId,
+            output: JSON.stringify({
+              error: err instanceof Error ? err.message : String(err),
+            }),
+          });
+        }
+        return;
+      }
+
+      // Client tool: use existing executor
       const toolRows = config.tools.map((t) => ({
         ...t,
         id: "",
@@ -180,7 +300,7 @@ function EmbedChat({
         component: t.component,
         componentSource: t.componentSource,
         enabled: true,
-        executionTarget: t.executionTarget as "server" | "client",
+        executionTarget: t.executionTarget as "server" | "client" | "host",
         createdAt: new Date(),
         updatedAt: new Date(),
       }));

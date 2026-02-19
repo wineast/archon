@@ -28,7 +28,7 @@ export interface ToolDefinition {
   component: string;
   componentSource: string;
   enabled: boolean;
-  executionTarget: "server" | "client";
+  executionTarget: "server" | "client" | "host";
 }
 
 /** Slim payload sent to the API (no id/enabled). */
@@ -38,5 +38,5 @@ export interface ToolDefinitionPayload {
   parameters: ToolParameter[];
   returnParameters?: ToolParameter[];
   handler: string;
-  executionTarget?: "server" | "client";
+  executionTarget?: "server" | "client" | "host";
 }

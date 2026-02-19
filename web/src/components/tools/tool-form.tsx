@@ -216,7 +216,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                 type="button"
                 onClick={() => form.setValue("executionTarget", "server", { shouldDirty: true })}
                 className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                  executionTarget !== "client"
+                  executionTarget === "server"
                     ? "bg-muted text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -236,83 +236,106 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                 <MonitorIcon className="size-3" />
                 浏览器
               </button>
+              <button
+                type="button"
+                onClick={() => form.setValue("executionTarget", "host", { shouldDirty: true })}
+                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                  executionTarget === "host"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <GlobeIcon className="size-3" />
+                宿主
+              </button>
             </div>
           </div>
         </div>
-        <div>
-          <div className="flex items-center gap-2">
+        {executionTarget === "host" ? (
+          <div>
             <label className="text-xs font-medium text-muted-foreground">
               Handler
             </label>
-            <div className="flex items-center rounded-md border border-border p-0.5">
-              <button
-                type="button"
-                onClick={() => setHandlerMode("simple")}
-                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                  handlerMode === "simple"
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <TypeIcon className="size-3" />
-                简单
-              </button>
-              <button
-                type="button"
-                onClick={() => setHandlerMode("code")}
-                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                  handlerMode === "code"
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <CodeIcon className="size-3" />
-                代码
-              </button>
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Handler 由宿主页面通过 <code className="text-xs bg-muted px-1 py-0.5 rounded">ArchonEmbed.registerTools()</code> 提供
+            </p>
           </div>
+        ) : (
+          <div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                Handler
+              </label>
+              <div className="flex items-center rounded-md border border-border p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setHandlerMode("simple")}
+                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                    handlerMode === "simple"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <TypeIcon className="size-3" />
+                  简单
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHandlerMode("code")}
+                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                    handlerMode === "code"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <CodeIcon className="size-3" />
+                  代码
+                </button>
+              </div>
+            </div>
 
-          {handlerMode === "simple" ? (
-            <>
-              <Input
-                className="mt-1 h-8 text-sm font-mono"
-                {...form.register("handler")}
-                placeholder="填写 URL"
-              />
-              {handlerHint === "remote" && (
-                <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
-                  <GlobeIcon className="size-3" />
-                  远程 API — 调用时将 POST 参数到此 URL
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <Controller
-                name="handler"
-                control={form.control}
-                render={({ field }) => (
-                  <JsEditor
-                    value={field.value}
-                    onChange={field.onChange}
-                    height="300px"
-                    className="mt-1"
-                  />
+            {handlerMode === "simple" ? (
+              <>
+                <Input
+                  className="mt-1 h-8 text-sm font-mono"
+                  {...form.register("handler")}
+                  placeholder="填写 URL"
+                />
+                {handlerHint === "remote" && (
+                  <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
+                    <GlobeIcon className="size-3" />
+                    远程 API — 调用时将 POST 参数到此 URL
+                  </p>
                 )}
-              />
-              <p className="text-xs text-purple-500 mt-1">
-                {executionTarget === "client"
-                  ? "JS 代码 — 在用户浏览器中执行"
-                  : "JS 代码 — 运行时动态执行"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {executionTarget === "client"
-                  ? "浏览器端工具无法访问 wiki、数据集等服务端资源"
-                  : <>可用 context API：wiki.get(id) → {"{meta, content}"}, wiki.findByPrefix(prefix), wiki.search(query)</>}
-              </p>
-            </>
-          )}
-        </div>
+              </>
+            ) : (
+              <>
+                <Controller
+                  name="handler"
+                  control={form.control}
+                  render={({ field }) => (
+                    <JsEditor
+                      value={field.value}
+                      onChange={field.onChange}
+                      height="300px"
+                      className="mt-1"
+                    />
+                  )}
+                />
+                <p className="text-xs text-purple-500 mt-1">
+                  {executionTarget === "client"
+                    ? "JS 代码 — 在用户浏览器中执行"
+                    : "JS 代码 — 运行时动态执行"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {executionTarget === "client"
+                    ? "浏览器端工具无法访问 wiki、数据集等服务端资源"
+                    : <>可用 context API：wiki.get(id) → {"{meta, content}"}, wiki.findByPrefix(prefix), wiki.search(query)</>}
+                </p>
+              </>
+            )}
+          </div>
+        )}
         <ParameterSection
           label="Return Parameters"
           schemaIdFieldName="returnParametersSchemaId"
