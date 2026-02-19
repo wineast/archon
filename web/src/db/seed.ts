@@ -1,6 +1,5 @@
 import { join } from "path";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { withClient, logSection } from "./seed-utils";
+import { withClient, logSection, type SeedDb } from "./seed-utils";
 import { pipeline } from "./seeders";
 import type { SeedContext, SeedResult } from "./seeders/types";
 
@@ -9,8 +8,8 @@ export type { SeedResult } from "./seeders/types";
 
 // ── seed ──
 
-export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
-  const run = async (database: PostgresJsDatabase) => {
+export async function seed(db?: SeedDb): Promise<SeedResult> {
+  const run = async (database: SeedDb) => {
     const ctx: SeedContext = {
       db: database,
       agentId: "",
@@ -54,7 +53,7 @@ const isDirectRun =
   (process.argv[1].endsWith("/seed.ts") || process.argv[1].endsWith("/seed.js"));
 
 if (isDirectRun) {
-  withClient((db) => seed(db)).catch((err) => {
+  seed().catch((err) => {
     console.error("Seed failed:", err);
     process.exit(1);
   });

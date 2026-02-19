@@ -11,7 +11,9 @@ export const seedVersion: Seeder = {
     const allUsers = await ctx.db.select({ id: users.id }).from(users);
 
     const { buildSnapshot } = await import("@/lib/versions/snapshot");
-    const snapshot = await buildSnapshot(ctx.agentId, ctx.db);
+    // buildSnapshot expects `typeof db` which includes `$client`, but our SeedDb
+    // is functionally equivalent for query purposes
+    const snapshot = await buildSnapshot(ctx.agentId, ctx.db as never);
 
     const [initialVersion] = await ctx.db
       .insert(agentVersions)

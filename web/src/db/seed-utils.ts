@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "fs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import * as schema from "./schema";
 
 // ── File helpers ──
 
@@ -63,12 +64,14 @@ export function logSection(title: string): void {
  * Run a callback with a managed postgres client.
  * Automatically creates and closes the connection.
  */
+export type SeedDb = PostgresJsDatabase<typeof schema>;
+
 export async function withClient<T>(
-  fn: (db: PostgresJsDatabase) => Promise<T>,
+  fn: (db: SeedDb) => Promise<T>,
 ): Promise<T> {
   const { createClient } = await import("./client");
   const sql = createClient();
-  const db = drizzle({ client: sql });
+  const db = drizzle({ client: sql, schema });
   try {
     return await fn(db);
   } finally {
