@@ -197,11 +197,11 @@ export type NewDatasetRow = typeof datasets.$inferInsert;
 export const wikiDocuments = pgTable(
   "wiki_documents",
   {
-    id: text("id").primaryKey(),
+    id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
-    parentId: text("parent_id"),
+    parentId: uuid("parent_id"),
     title: text("title").notNull().default(""),
     key: text("key").notNull().default(""),
     content: text("content").notNull().default(""),

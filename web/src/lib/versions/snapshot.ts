@@ -16,7 +16,6 @@ import {
   componentTestCases,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
@@ -420,7 +419,6 @@ export async function restoreSnapshot(
   if (snapshot.wikiDocuments.length > 0) {
     // First pass: insert all with parentId = null
     const wikiValues = snapshot.wikiDocuments.map((w) => ({
-      id: nanoid(),
       agentId,
       key: w.key,
       title: w.title,
@@ -429,10 +427,13 @@ export async function restoreSnapshot(
       parentId: null as string | null,
     }));
 
-    await tx.insert(wikiDocuments).values(wikiValues);
+    const insertedWiki = await tx
+      .insert(wikiDocuments)
+      .values(wikiValues)
+      .returning({ id: wikiDocuments.id, key: wikiDocuments.key });
 
     // Second pass: update parentId for documents with parentKey
-    const wikiKeyToNewId = new Map(wikiValues.map((w) => [w.key, w.id]));
+    const wikiKeyToNewId = new Map(insertedWiki.map((w) => [w.key, w.id]));
     for (const doc of snapshot.wikiDocuments) {
       if (doc.parentKey) {
         const newId = wikiKeyToNewId.get(doc.key);

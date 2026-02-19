@@ -161,7 +161,7 @@ export function createToolContext(agentId?: string): ToolContext {
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
-          .where(like(wikiDocuments.id, `${prefix}%`));
+          .where(like(wikiDocuments.key, `${prefix}%`));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
           return { id: r.id, title: r.title, meta: Object.keys(meta).length > 0 ? meta : null, content };

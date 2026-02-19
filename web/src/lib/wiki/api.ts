@@ -1,4 +1,3 @@
-import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import type { KeyedMutator } from "swr";
 import type { WikiDocument } from "./types";
@@ -23,29 +22,19 @@ export async function createDocument(
   title: string,
   key: string
 ): Promise<string | null> {
-  const id = nanoid();
-  const now = Date.now();
   const order =
     docs.length === 0 ? 0 : Math.max(...docs.map((d) => d.order)) + 1;
-  const doc: WikiDocument = {
-    id,
-    key,
-    title,
-    content: "",
-    order,
-    createdAt: now,
-    updatedAt: now,
-  };
 
   try {
     const res = await fetch("/api/wiki", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, agentId, title, key, content: "", order }),
+      body: JSON.stringify({ agentId, title, key, content: "", order }),
     });
     if (!res.ok) throw new Error("Failed to create document");
-    await mutate([...docs, doc], { revalidate: false });
-    return id;
+    const created: WikiDocument = await res.json();
+    await mutate([...docs, created], { revalidate: false });
+    return created.id;
   } catch (e) {
     console.error("createDocument failed:", e);
     toast.error("Failed to create document");

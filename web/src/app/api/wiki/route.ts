@@ -48,7 +48,6 @@ export async function POST(req: Request) {
   const [row] = await db
     .insert(wikiDocuments)
     .values({
-      id: body.id,
       agentId,
       title: body.title ?? "",
       key: body.key ?? "",
