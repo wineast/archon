@@ -859,6 +859,9 @@ export const objectTypes = pgTable(
     schemaId: uuid("schema_id").references(() => schemas.id, {
       onDelete: "set null",
     }),
+    titleProperty: text("title_property"),
+    source: text("source").notNull().default("internal").$type<"internal" | "external">(),
+    externalConfig: jsonb("external_config").$type<Record<string, unknown>>(),
     order: integer("order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -914,4 +917,69 @@ export const objectRelations = pgTable(
 
 export type ObjectRelationRow = typeof objectRelations.$inferSelect;
 export type NewObjectRelationRow = typeof objectRelations.$inferInsert;
+
+/* ─────────── Object Instances (Ontology) ─────────── */
+
+export const objectInstances = pgTable(
+  "object_instances",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    objectTypeId: uuid("object_type_id")
+      .notNull()
+      .references(() => objectTypes.id, { onDelete: "cascade" }),
+    label: text("label").notNull().default(""),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("object_instances_agent_id_idx").on(t.agentId),
+    index("object_instances_object_type_id_idx").on(t.objectTypeId),
+  ]
+);
+
+export type ObjectInstanceRow = typeof objectInstances.$inferSelect;
+export type NewObjectInstanceRow = typeof objectInstances.$inferInsert;
+
+/* ─────────── Object Links (Ontology) ─────────── */
+
+export const objectLinks = pgTable(
+  "object_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    relationId: uuid("relation_id")
+      .notNull()
+      .references(() => objectRelations.id, { onDelete: "cascade" }),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => objectInstances.id, { onDelete: "cascade" }),
+    targetId: uuid("target_id")
+      .notNull()
+      .references(() => objectInstances.id, { onDelete: "cascade" }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("object_links_relation_id_idx").on(t.relationId),
+    index("object_links_source_id_idx").on(t.sourceId),
+    index("object_links_target_id_idx").on(t.targetId),
+  ]
+);
+
+export type ObjectLinkRow = typeof objectLinks.$inferSelect;
+export type NewObjectLinkRow = typeof objectLinks.$inferInsert;
 

@@ -20,6 +20,9 @@ export interface ObjectTypeFormValues {
   icon: string;
   color: string;
   schemaId: string | null;
+  titleProperty: string | null;
+  source: "internal" | "external";
+  externalConfig: Record<string, unknown> | null;
 }
 
 export interface ObjectTypeFormHandle {
@@ -46,8 +49,17 @@ export function ObjectTypeForm({
   const [color, setColor] = useState(values.color);
   const NONE = "__none__";
   const [schemaId, setSchemaId] = useState(values.schemaId ?? NONE);
+  const [titleProperty, setTitleProperty] = useState(values.titleProperty ?? "");
+  const [source, setSource] = useState<"internal" | "external">(values.source);
+  const [externalConfigJson, setExternalConfigJson] = useState(
+    values.externalConfig ? JSON.stringify(values.externalConfig, null, 2) : ""
+  );
 
   const { schemas } = useSchemas(agentId);
+
+  // Get properties from selected schema for titleProperty dropdown
+  const selectedSchema = schemas.find((s: SchemaRow) => s.id === (schemaId === NONE ? null : schemaId));
+  const schemaProperties = (selectedSchema?.parameters ?? []) as Array<{ name: string }>;
 
   const initialRef = useRef(values);
 
@@ -58,15 +70,27 @@ export function ObjectTypeForm({
       description !== init.description ||
       icon !== init.icon ||
       color !== init.color ||
-      (schemaId === NONE ? null : schemaId) !== init.schemaId
+      (schemaId === NONE ? null : schemaId) !== init.schemaId ||
+      (titleProperty || null) !== (init.titleProperty || null) ||
+      source !== init.source ||
+      externalConfigJson !== (init.externalConfig ? JSON.stringify(init.externalConfig, null, 2) : "")
     );
-  }, [name, description, icon, color, schemaId]);
+  }, [name, description, icon, color, schemaId, titleProperty, source, externalConfigJson]);
 
   useEffect(() => {
     onDirtyChange(isDirty());
   }, [isDirty, onDirtyChange]);
 
   useEffect(() => {
+    let parsedExternalConfig: Record<string, unknown> | null = null;
+    if (externalConfigJson.trim()) {
+      try {
+        parsedExternalConfig = JSON.parse(externalConfigJson);
+      } catch {
+        // keep null if invalid JSON
+      }
+    }
+
     onDraftRef({
       getDraft: () => ({
         key: values.key,
@@ -75,6 +99,9 @@ export function ObjectTypeForm({
         icon,
         color,
         schemaId: schemaId === NONE ? null : schemaId,
+        titleProperty: titleProperty || null,
+        source,
+        externalConfig: parsedExternalConfig,
       }),
       reset: () => {
         setName(values.name);
@@ -82,9 +109,14 @@ export function ObjectTypeForm({
         setIcon(values.icon);
         setColor(values.color);
         setSchemaId(values.schemaId ?? NONE);
+        setTitleProperty(values.titleProperty ?? "");
+        setSource(values.source);
+        setExternalConfigJson(
+          values.externalConfig ? JSON.stringify(values.externalConfig, null, 2) : ""
+        );
       },
     });
-  }, [onDraftRef, values, name, description, icon, color, schemaId]);
+  }, [onDraftRef, values, name, description, icon, color, schemaId, titleProperty, source, externalConfigJson]);
 
   return (
     <div className="space-y-4">
@@ -173,6 +205,63 @@ export function ObjectTypeForm({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Title Property */}
+      {schemaProperties.length > 0 && (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Title Property
+          </label>
+          <Select value={titleProperty || NONE} onValueChange={(v) => setTitleProperty(v === NONE ? "" : v)}>
+            <SelectTrigger className="mt-1 h-8 text-sm">
+              <SelectValue placeholder="None" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>None</SelectItem>
+              {schemaProperties.map((p) => (
+                <SelectItem key={p.name} value={p.name}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Property used as instance display label
+          </p>
+        </div>
+      )}
+
+      {/* Source */}
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">
+          Data Source
+        </label>
+        <Select value={source} onValueChange={(v) => setSource(v as "internal" | "external")}>
+          <SelectTrigger className="mt-1 h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="internal">Internal</SelectItem>
+            <SelectItem value="external">External</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* External Config */}
+      {source === "external" && (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            External Config (JSON)
+          </label>
+          <Textarea
+            className="mt-1 text-sm font-mono"
+            rows={6}
+            value={externalConfigJson}
+            onChange={(e) => setExternalConfigJson(e.target.value)}
+            placeholder='{"baseUrl": "https://api.example.com", "authType": "bearer", "authToken": "..."}'
+          />
+        </div>
+      )}
     </div>
   );
 }

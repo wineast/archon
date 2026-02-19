@@ -72,6 +72,18 @@ const mockContext = {
   async fn(key: string) {
     throw new Error(`Function "${key}" not found`);
   },
+  ontology: {
+    async types() { return []; },
+    async type() { return null; },
+    async query() { return []; },
+    async get() { return null; },
+    async create() { return { id: "", label: "" }; },
+    async update() { return { id: "", label: "" }; },
+    async delete() { return { ok: true }; },
+    async link() { return { id: "" }; },
+    async unlink() { return { ok: true }; },
+    async graph() { return { nodes: [], edges: [] }; },
+  },
 } satisfies ToolContext;
 
 // ── Helper: call real handler, return sorted product keys ──

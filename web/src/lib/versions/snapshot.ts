@@ -282,6 +282,9 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         icon: t.icon,
         color: t.color,
         schemaKey: t.schemaId ? schemaIdToKey.get(t.schemaId) ?? null : null,
+        titleProperty: t.titleProperty,
+        source: t.source,
+        externalConfig: t.externalConfig ?? null,
         order: t.order,
       })
     ),
@@ -360,6 +363,9 @@ export async function restoreSnapshot(
           icon: t.icon,
           color: t.color,
           schemaId: t.schemaKey ? schemaKeyToNewId.get(t.schemaKey) ?? null : null,
+          titleProperty: t.titleProperty ?? null,
+          source: t.source ?? "internal",
+          externalConfig: t.externalConfig ?? null,
           order: t.order,
         }))
       )

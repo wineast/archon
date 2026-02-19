@@ -42,6 +42,9 @@ export async function POST(req: Request) {
       icon: body.icon ?? "box",
       color: body.color ?? "#6366f1",
       schemaId: body.schemaId ?? null,
+      titleProperty: body.titleProperty ?? null,
+      source: body.source ?? "internal",
+      externalConfig: body.externalConfig ?? null,
       order: body.order ?? 0,
     })
     .returning();
