@@ -70,8 +70,6 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
                 name: component.name,
                 description: component.description,
                 componentSource: component.componentSource,
-                inputSchemaId: component.inputSchemaId ?? null,
-                outputSchemaId: component.outputSchemaId ?? null,
               }}
               agentId={agentId}
               allComponents={allComponents}

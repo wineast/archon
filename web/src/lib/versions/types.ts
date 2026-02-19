@@ -32,8 +32,6 @@ export interface ComponentSnapshotItem {
   name: string;
   description: string;
   componentSource: string;
-  inputSchemaKey: string | null;
-  outputSchemaKey: string | null;
   generatedCss: string;
   testCases: ComponentTestCaseSnapshotItem[];
 }

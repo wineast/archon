@@ -4,6 +4,4 @@ export interface ComponentDefinition {
   name: string;
   description: string;
   componentSource: string;
-  inputSchemaId: string | null;
-  outputSchemaId: string | null;
 }

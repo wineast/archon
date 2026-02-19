@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { schemas, tools, components } from "@/db/schema";
+import { schemas, tools } from "@/db/schema";
 import { eq, or, and, not } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveParameters, detectCycle } from "@/lib/schemas/resolve";
@@ -104,7 +104,7 @@ export async function DELETE(
   const ctx = await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  // Check if any tools or components reference this schema
+  // Check if any tools reference this schema
   const referencingTools = await db
     .select({ id: tools.id, name: tools.name })
     .from(tools)
@@ -115,16 +115,8 @@ export async function DELETE(
       )
     );
 
-  const referencingComponents = await db
-    .select({ id: components.id, name: components.name })
-    .from(components)
-    .where(or(eq(components.inputSchemaId, id), eq(components.outputSchemaId, id)));
-
-  if (referencingTools.length > 0 || referencingComponents.length > 0) {
-    const names = [
-      ...referencingTools.map((t) => t.name),
-      ...referencingComponents.map((c) => c.name),
-    ].join(", ");
+  if (referencingTools.length > 0) {
+    const names = referencingTools.map((t) => t.name).join(", ");
     return NextResponse.json(
       {
         error: `Schema is referenced by: ${names}. Remove references before deleting.`,

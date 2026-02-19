@@ -1,5 +1,4 @@
 import type { ComponentType } from "react";
-import { INJECTED_DEPS } from "./_allowed-components";
 import { compileSourceWithDeps } from "./_dynamic-renderer";
 import type { ToolRendererProps } from "./_registry";
 
@@ -21,20 +20,17 @@ export function pascalToKey(name: string): string {
 
 // ── Dependency inference ──
 
-const INJECTED_NAMES = new Set(Object.keys(INJECTED_DEPS));
-
+/** Parse the outer function's parameter names and map PascalCase names to known component keys. */
 export function inferComponentDeps(
   source: string,
   knownKeys: Set<string>,
-  injectedNames: Set<string> = INJECTED_NAMES
 ): string[] {
-  const re = /<([A-Z][a-zA-Z0-9]*)/g;
+  const m = /function\s+\w+\s*\(([^)]*)\)/.exec(source.trim());
+  if (!m || !m[1].trim()) return [];
+  const params = m[1].split(",").map((s) => s.trim()).filter(Boolean);
   const found = new Set<string>();
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(source)) !== null) {
-    const name = m[1];
-    if (injectedNames.has(name)) continue;
-    const key = pascalToKey(name);
+  for (const param of params) {
+    const key = pascalToKey(param);
     if (knownKeys.has(key)) found.add(key);
   }
   return Array.from(found);

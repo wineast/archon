@@ -1,4 +1,5 @@
-function Component({ tool, state, isLoading, isComplete, isError }) {
+function Component() {
+  return function({ tool, state, isLoading, isComplete, isError }) {
 
   // ============================================================================
   // Breakdown Tooltip Component
@@ -441,4 +442,5 @@ function Component({ tool, state, isLoading, isComplete, isError }) {
       />
     </div>
   );
+}
 }

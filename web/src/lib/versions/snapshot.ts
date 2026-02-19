@@ -192,8 +192,6 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         name: c.name,
         description: c.description,
         componentSource: c.componentSource,
-        inputSchemaKey: c.inputSchemaId ? schemaIdToKey.get(c.inputSchemaId) ?? null : null,
-        outputSchemaKey: c.outputSchemaId ? schemaIdToKey.get(c.outputSchemaId) ?? null : null,
         generatedCss: c.generatedCss,
         testCases: compTestsByKey.get(c.key) ?? [],
       })
@@ -322,8 +320,6 @@ export async function restoreSnapshot(
           name: c.name,
           description: c.description,
           componentSource: c.componentSource,
-          inputSchemaId: c.inputSchemaKey ? schemaKeyToNewId.get(c.inputSchemaKey) ?? null : null,
-          outputSchemaId: c.outputSchemaKey ? schemaKeyToNewId.get(c.outputSchemaKey) ?? null : null,
           generatedCss: c.generatedCss,
         }))
       )
