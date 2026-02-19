@@ -3,11 +3,12 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { UserMenu } from "@/components/auth/user-menu";
-import { PlusIcon, ShieldIcon } from "lucide-react";
+import { PlusIcon, ShieldIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { AgentCard } from "@/components/agents/agent-card";
 import { AgentFormDialog } from "@/components/agents/agent-form-dialog";
+import { TrashDialog } from "@/components/agents/trash-dialog";
 import { useAgents, deleteAgent } from "@/lib/agents/hooks";
 import type { AgentWithRole } from "@/lib/agents/hooks";
 import type { AgentRow } from "@/db/schema";
@@ -18,6 +19,7 @@ export default function AgentsPage() {
   const { isSuperAdmin } = useCurrentUser();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentRow | null>(null);
+  const [trashOpen, setTrashOpen] = useState(false);
 
   const handleCreate = useCallback(() => {
     setEditingAgent(null);
@@ -50,6 +52,10 @@ export default function AgentsPage() {
               </Button>
             </Link>
           )}
+          <Button size="sm" variant="outline" onClick={() => setTrashOpen(true)}>
+            <Trash2Icon className="size-4" />
+            回收站
+          </Button>
           <Button size="sm" onClick={handleCreate}>
             <PlusIcon className="size-4" />
             新建 Agent
@@ -92,6 +98,13 @@ export default function AgentsPage() {
         onOpenChange={setSheetOpen}
         agent={editingAgent}
         mutate={mutate}
+      />
+
+      {/* Trash Dialog */}
+      <TrashDialog
+        open={trashOpen}
+        onOpenChange={setTrashOpen}
+        agentsMutate={mutate}
       />
     </div>
   );

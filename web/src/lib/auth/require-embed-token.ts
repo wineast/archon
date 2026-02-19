@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { embedTokens, agents } from "@/db/schema";
 import type { AgentRow } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 
 export interface EmbedAuthContext {
   agent: AgentRow;
@@ -58,7 +58,7 @@ export async function requireEmbedToken(
   const [agent] = await db
     .select()
     .from(agents)
-    .where(eq(agents.id, row.agentId))
+    .where(and(eq(agents.id, row.agentId), isNull(agents.deletedAt)))
     .limit(1);
 
   if (!agent) {

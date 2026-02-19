@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { agents, agentMembers, agentVersions } from "@/db/schema";
-import { desc, eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireAuth } from "@/lib/auth/require-agent-role";
@@ -15,6 +15,7 @@ export async function GET() {
     const rows = await db
       .select()
       .from(agents)
+      .where(isNull(agents.deletedAt))
       .orderBy(desc(agents.updatedAt));
     return NextResponse.json(
       rows.map((r) => ({ ...r, myRole: "owner" as const }))
@@ -41,7 +42,7 @@ export async function GET() {
       agentMembers,
       sql`${agentMembers.agentId} = ${agents.id} AND ${agentMembers.userId} = ${user.id}`
     )
-    .where(or(eq(agentMembers.userId, user.id), eq(agents.isPublic, true)))
+    .where(and(isNull(agents.deletedAt), or(eq(agentMembers.userId, user.id), eq(agents.isPublic, true))))
     .orderBy(desc(agents.updatedAt));
 
   return NextResponse.json(rows);

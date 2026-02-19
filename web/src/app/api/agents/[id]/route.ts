@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { agents } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
@@ -18,13 +18,13 @@ export async function GET(
     [agent] = await db
       .select()
       .from(agents)
-      .where(eq(agents.slug, id))
+      .where(and(eq(agents.slug, id), isNull(agents.deletedAt)))
       .limit(1);
   } else {
     [agent] = await db
       .select()
       .from(agents)
-      .where(eq(agents.id, id))
+      .where(and(eq(agents.id, id), isNull(agents.deletedAt)))
       .limit(1);
   }
 
@@ -88,6 +88,6 @@ export async function DELETE(
   const ctx = await requireAgentRole(id, "owner");
   if (ctx instanceof NextResponse) return ctx;
 
-  await db.delete(agents).where(eq(agents.id, id));
+  await db.update(agents).set({ deletedAt: new Date() }).where(eq(agents.id, id));
   return NextResponse.json({ ok: true });
 }
