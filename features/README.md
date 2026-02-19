@@ -22,6 +22,11 @@
 
 - [ ] **本体（Ontology）** — Agent 下的语义层，定义领域对象类型、关系、实例，将 Schema/Tool/Component/Wiki/Dataset 串成领域模型
   - 使用说明：[ontology.md](../guide/ontology.md)
+  - [ ] **P1：对象实例与 ToolContext CRUD** — object_instances/object_links 表 + ToolContext 内 `context.ontology.*` 读写 API
+  - [ ] **P2：自动 CRUD 工具生成** — 定义 ObjectType 后一键生成 create/query/update/get 四个工具
+  - [ ] **P2：外部数据源对接** — ObjectType 支持 external source，通过 API 调用企业系统获取数据
+  - [ ] **P3：关系图谱可视化** — 交互式图谱展示对象类型之间的关系网络
+  - [ ] **P4：对话式本体构建** — 母 Agent 引导 FDA 通过对话定义业务本体
 - [ ] **统一 JSON 数据模型** — 将码表、对象、模板变量统一为分层 JSON：底层原子值无模板语法，上层可引用底层并使用模板
 - [ ] **数据集自动依赖解析** — 去掉 layer 分层，扫描 Liquid 模板变量自动构建依赖图，Kahn 拓扑排序渲染，保存时检测循环
 - [ ] **独立 Schema 资源管理** — 将 ToolParameter[] 抽象为独立 Schema 资源，tool output 和 component input 通过引用 schema key 保证数据结构一致
