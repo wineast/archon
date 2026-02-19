@@ -842,3 +842,76 @@ export const models = pgTable("models", {
 export type ModelRow = typeof models.$inferSelect;
 export type NewModelRow = typeof models.$inferInsert;
 
+/* ─────────── Object Types (Ontology) ─────────── */
+
+export const objectTypes = pgTable(
+  "object_types",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    icon: text("icon").notNull().default("box"),
+    color: text("color").notNull().default("#6366f1"),
+    schemaId: uuid("schema_id").references(() => schemas.id, {
+      onDelete: "set null",
+    }),
+    order: integer("order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("object_types_agent_id_key_idx").on(t.agentId, t.key),
+  ]
+);
+
+export type ObjectTypeRow = typeof objectTypes.$inferSelect;
+export type NewObjectTypeRow = typeof objectTypes.$inferInsert;
+
+/* ─────────── Object Relations (Ontology) ─────────── */
+
+export const objectRelations = pgTable(
+  "object_relations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    sourceTypeId: uuid("source_type_id")
+      .notNull()
+      .references(() => objectTypes.id, { onDelete: "cascade" }),
+    targetTypeId: uuid("target_type_id")
+      .notNull()
+      .references(() => objectTypes.id, { onDelete: "cascade" }),
+    relationType: text("relation_type")
+      .notNull()
+      .$type<"has_one" | "has_many" | "belongs_to" | "many_to_many">(),
+    inverseName: text("inverse_name").notNull().default(""),
+    order: integer("order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("object_relations_agent_id_key_idx").on(t.agentId, t.key),
+  ]
+);
+
+export type ObjectRelationRow = typeof objectRelations.$inferSelect;
+export type NewObjectRelationRow = typeof objectRelations.$inferInsert;
+

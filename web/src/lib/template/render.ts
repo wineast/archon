@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { datasets, wikiDocuments, tools, schemas } from "@/db/schema";
+import { datasets, wikiDocuments, tools, schemas, objectTypes, objectRelations } from "@/db/schema";
 import type { ToolRow } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { ToolParameter } from "@/lib/tools/types";
@@ -13,6 +13,28 @@ import { resolveParameters } from "@/lib/schemas/resolve";
 // Types
 // ---------------------------------------------------------------------------
 
+export interface OntologyTypeTemplateItem {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  properties: Array<{
+    name: string;
+    type: string;
+    required: boolean;
+    description: string;
+  }>;
+  relations: Array<{
+    key: string;
+    name: string;
+    targetKey: string;
+    targetName: string;
+    relationType: string;
+    inverseName: string;
+  }>;
+}
+
 export interface TemplateData {
   resolvedVars: Record<string, unknown>;
   docs: WikiDocument[];
@@ -21,6 +43,7 @@ export interface TemplateData {
   datasetEntries: Record<string, Array<{ value: string }>>;
   /** Datasets by UUID: id → resolved data. For enumDatasetId resolution. */
   datasetsById: Record<string, unknown>;
+  ontologyTypes: OntologyTypeTemplateItem[];
 }
 
 // ---------------------------------------------------------------------------
@@ -160,6 +183,10 @@ async function renderWithData(
     tool: toolNs,
     tool_names,
     tool_entries,
+    ontology_types: data.ontologyTypes,
+    ontology: Object.fromEntries(
+      data.ontologyTypes.map((t) => [t.key, t])
+    ),
   };
 
   return processTemplate(text, {
@@ -182,14 +209,16 @@ export async function gatherTemplateData(
   agentId?: string
 ): Promise<TemplateData> {
   if (!agentId) {
-    return { resolvedVars: {}, docs: [], toolRows: [], schemaMap: {}, datasetEntries: {}, datasetsById: {} };
+    return { resolvedVars: {}, docs: [], toolRows: [], schemaMap: {}, datasetEntries: {}, datasetsById: {}, ontologyTypes: [] };
   }
 
-  const [{ resolvedVars, datasetEntries }, docs, toolRows, allDatasetRows] = await Promise.all([
+  const [{ resolvedVars, datasetEntries }, docs, toolRows, allDatasetRows, objTypeRows, objRelRows] = await Promise.all([
     getResolvedDatasets(agentId),
     getWikiDocs(agentId),
     getEnabledTools(agentId),
     db.select().from(datasets).where(eq(datasets.agentId, agentId)),
+    db.select().from(objectTypes).where(eq(objectTypes.agentId, agentId)).orderBy(objectTypes.order),
+    db.select().from(objectRelations).where(eq(objectRelations.agentId, agentId)),
   ]);
 
   // Load ALL schemas for this agent and resolve parameters
@@ -218,7 +247,46 @@ export async function gatherTemplateData(
     datasetsById[row.id] = resolvedVars[row.key] ?? row.data;
   }
 
-  return { resolvedVars, docs, toolRows, schemaMap, datasetEntries, datasetsById };
+  // Build ontology template items
+  const objTypeIdToRow = new Map(objTypeRows.map((t) => [t.id, t]));
+  const ontologyTypes: OntologyTypeTemplateItem[] = objTypeRows.map((t) => {
+    // Resolve properties from linked schema
+    const properties: OntologyTypeTemplateItem["properties"] = t.schemaId
+      ? (schemaMap[t.schemaId] ?? []).map((p) => ({
+          name: p.name,
+          type: p.type,
+          required: p.required ?? false,
+          description: p.description ?? "",
+        }))
+      : [];
+
+    // Find relations where this type is source
+    const relations: OntologyTypeTemplateItem["relations"] = objRelRows
+      .filter((r) => r.sourceTypeId === t.id)
+      .map((r) => {
+        const target = objTypeIdToRow.get(r.targetTypeId);
+        return {
+          key: r.key,
+          name: r.name,
+          targetKey: target?.key ?? "",
+          targetName: target?.name ?? "",
+          relationType: r.relationType,
+          inverseName: r.inverseName,
+        };
+      });
+
+    return {
+      key: t.key,
+      name: t.name,
+      description: t.description,
+      icon: t.icon,
+      color: t.color,
+      properties,
+      relations,
+    };
+  });
+
+  return { resolvedVars, docs, toolRows, schemaMap, datasetEntries, datasetsById, ontologyTypes };
 }
 
 /**
