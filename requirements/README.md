@@ -13,17 +13,26 @@
   - 工作区: `dataset-auto-deps` | 分支: `dev-dataset-auto-deps-20260218`
 - [ ] **独立 Schema 资源管理** — 将 ToolParameter[] 抽象为独立 Schema 资源，tool output 和 component input 通过引用 schema key 保证数据结构一致
   - 工作区: `schema-resource` | 分支: `dev-schema-resource-20260219`
+- [ ] **修复 unique 约束范围** — modelConfigs、evalCases、evalJudgeConfigs 的 name 从全局唯一改为 (agentId, name) 联合唯一
+  - 工作区: `fix-unique-constraints` | 分支: `dev-fix-unique-constraints-20260219`
 
 ## Agent 配置
 
 ### Tools
 
+- [ ] **前端工具执行** — 工具支持在浏览器端执行（client-side tool call），类似 prompt-assist 的 onToolCall 机制，含 DB schema、API 改动、前端 onToolCall、工具配置 UI
+  - 工作区: `client-tool-execution` | 分支: `dev-client-tool-execution-20260219`
 - [ ] **Tools Playground & Test Cases** — 为 Tools 添加 Playground 和 Test Cases 功能，参考 Functions 实现，含数据库表、API、UI
   - 工作区: `tools` | 分支: `dev-tools-20260219`
 - [ ] **Tools Key 字段与创建对话框** — tools 表添加 key 字段（agentId+key 联合唯一），去掉 name 全局唯一约束，参考 functions 实现创建对话框
   - 工作区: `tools-key-and-create-dialog` | 分支: `dev-tools-key-and-create-dialog-20260219`
 - [ ] **简化工具 Handler 类型** — 移除本地 Key 注册表模式，只保留 URL、JS 代码、静态输出三种 handler 类型
   - 工作区: `tools-handler-simplify` | 分支: `dev-tools-handler-simplify-20260219`
+
+### Components
+
+- [ ] **组件系统重构** — 组件对齐工具/函数体验，增加 Playground + Test Cases tab，Props 聚合为 tool 对象，增加 schemaRef，去掉 componentMockData
+  - 工作区: `component-refactor` | 分支: `dev-component-refactor-20260219`
 
 ### Wiki
 
