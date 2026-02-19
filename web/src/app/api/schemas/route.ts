@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { tools } from "@/db/schema";
+import { schemas } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
@@ -15,9 +15,9 @@ export async function GET(req: Request) {
 
   const rows = await db
     .select()
-    .from(tools)
-    .where(eq(tools.agentId, agentId))
-    .orderBy(tools.key);
+    .from(schemas)
+    .where(eq(schemas.agentId, agentId))
+    .orderBy(schemas.key);
   return NextResponse.json(rows);
 }
 
@@ -32,21 +32,13 @@ export async function POST(req: Request) {
   if (ctx instanceof NextResponse) return ctx;
 
   const [row] = await db
-    .insert(tools)
+    .insert(schemas)
     .values({
       agentId,
       key: body.key,
       name: body.name,
-      description: body.description,
+      description: body.description ?? "",
       parameters: body.parameters ?? [],
-      parametersSchemaRef: body.parametersSchemaRef ?? null,
-      returnParametersSchemaRef: body.returnParametersSchemaRef ?? null,
-      output: body.output ?? null,
-      handler: body.handler ?? null,
-      component: body.component ?? null,
-      componentSource: body.componentSource ?? null,
-      componentMockData: body.componentMockData ?? null,
-      enabled: body.enabled ?? true,
     })
     .returning();
 

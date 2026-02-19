@@ -8,8 +8,8 @@ import {
 import { after, NextResponse } from "next/server";
 import { buildDynamicTools } from "./tools/build-dynamic-tools";
 import { db } from "@/db";
-import { tools, modelConfigs } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { tools, schemas, modelConfigs } from "@/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
   createSession,
@@ -66,10 +66,35 @@ export async function POST(req: Request) {
     .from(tools)
     .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true)));
 
+  // Resolve schema references: collect all unique schema keys referenced by tools
+  const schemaRefKeys = new Set<string>();
+  for (const row of enabledRows) {
+    if (row.parametersSchemaRef) schemaRefKeys.add(row.parametersSchemaRef);
+    if (row.returnParametersSchemaRef) schemaRefKeys.add(row.returnParametersSchemaRef);
+  }
+
+  const schemaMap: Record<string, import("@/lib/tools/types").ToolParameter[]> = {};
+  if (schemaRefKeys.size > 0) {
+    const schemaRows = await db
+      .select()
+      .from(schemas)
+      .where(
+        and(
+          eq(schemas.agentId, agentId),
+          inArray(schemas.key, [...schemaRefKeys])
+        )
+      );
+    for (const s of schemaRows) {
+      schemaMap[s.key] = s.parameters;
+    }
+  }
+
   const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
     name: row.name,
     description: row.description,
-    parameters: row.parameters,
+    parameters: (row.parametersSchemaRef && schemaMap[row.parametersSchemaRef])
+      ? schemaMap[row.parametersSchemaRef]
+      : row.parameters,
     handler: row.handler ?? "",
   }));
 

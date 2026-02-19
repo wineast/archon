@@ -205,6 +205,37 @@ export const wikiDocuments = pgTable(
 export type WikiDocumentRow = typeof wikiDocuments.$inferSelect;
 export type NewWikiDocumentRow = typeof wikiDocuments.$inferInsert;
 
+/* ─────────── Schemas (reusable parameter definitions) ─────────── */
+
+export const schemas = pgTable(
+  "schemas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    unique("schemas_agent_id_key_idx").on(table.agentId, table.key),
+  ]
+);
+
+export type SchemaRow = typeof schemas.$inferSelect;
+export type NewSchemaRow = typeof schemas.$inferInsert;
+
+/* ─────────── Tools ─────────── */
+
 export const tools = pgTable(
   "tools",
   {
@@ -217,6 +248,9 @@ export const tools = pgTable(
     description: text("description").notNull(),
     parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
     returnParameters: jsonb("return_parameters").$type<ToolParameter[]>().notNull().default([]),
+    parametersSchemaRef: text("parameters_schema_ref"),
+    returnParametersSchemaRef: text("return_parameters_schema_ref"),
+    output: text("output"),
     handler: text("handler"),
     component: text("component"),
     componentSource: text("component_source"),
