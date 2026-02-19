@@ -4,11 +4,11 @@ import {
   detectCycle,
   getReachableSchemaIds,
 } from "../resolve";
-import type { SchemaRow } from "@/db/schema";
+import type { SchemaWithIncludes } from "@/db/schema";
 
 function makeSchema(
-  overrides: Partial<SchemaRow> & { id: string; name: string }
-): SchemaRow {
+  overrides: Partial<SchemaWithIncludes> & { id: string; name: string }
+): SchemaWithIncludes {
   return {
     agentId: "agent-1",
     key: overrides.name.toLowerCase().replace(/\s/g, "_"),

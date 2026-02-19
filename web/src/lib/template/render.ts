@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { datasets, wikiDocuments, tools, schemas, objectTypes, objectRelations } from "@/db/schema";
-import type { ToolRow } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { datasets, wikiDocuments, tools, schemas, schemaIncludes, objectTypes, objectRelations } from "@/db/schema";
+import type { ToolRow, SchemaWithIncludes } from "@/db/schema";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import type { ToolParameter } from "@/lib/tools/types";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
@@ -227,12 +227,34 @@ export async function gatherTemplateData(
     .from(schemas)
     .where(eq(schemas.agentId, agentId));
 
-  const allSchemasMap = new Map(allSchemaRows.map((r) => [r.id, r]));
+  // Load schema includes from junction table
+  let includeRows: { schemaId: string; includeSchemaId: string }[] = [];
+  if (allSchemaRows.length > 0) {
+    includeRows = await db
+      .select({ schemaId: schemaIncludes.schemaId, includeSchemaId: schemaIncludes.includeSchemaId })
+      .from(schemaIncludes)
+      .where(inArray(schemaIncludes.schemaId, allSchemaRows.map((r) => r.id)))
+      .orderBy(asc(schemaIncludes.position));
+  }
+
+  // Build includesBySchemaId map
+  const includesBySchemaId = new Map<string, string[]>();
+  for (const row of includeRows) {
+    const arr = includesBySchemaId.get(row.schemaId) ?? [];
+    arr.push(row.includeSchemaId);
+    includesBySchemaId.set(row.schemaId, arr);
+  }
+
+  // Build allSchemasMap with includeSchemaIds attached
+  const allSchemasMap = new Map<string, SchemaWithIncludes>(
+    allSchemaRows.map((r) => [r.id, { ...r, includeSchemaIds: includesBySchemaId.get(r.id) ?? [] }])
+  );
 
   // Build schemaMap using resolved parameters (strip _source metadata)
   const schemaMap: Record<string, ToolParameter[]> = {};
   for (const row of allSchemaRows) {
-    schemaMap[row.id] = resolveParameters(row, allSchemasMap).map((p) => {
+    const withIncludes = allSchemasMap.get(row.id)!;
+    schemaMap[row.id] = resolveParameters(withIncludes, allSchemasMap).map((p) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { _source, ...param } = p;
       return param;

@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./schema-form";
-import type { SchemaRow } from "@/db/schema";
+import type { SchemaWithIncludes } from "@/db/schema";
 
 interface SchemaDetailProps {
-  schema: SchemaRow;
-  allSchemas: SchemaRow[];
+  schema: SchemaWithIncludes;
+  allSchemas: SchemaWithIncludes[];
   onSave: (id: string, data: Omit<SchemaFormValues, "key">) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }

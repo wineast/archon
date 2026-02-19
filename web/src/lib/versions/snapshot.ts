@@ -5,6 +5,7 @@ import {
   functions,
   components,
   schemas,
+  schemaIncludes,
   wikiDocuments,
   datasets,
   modelConfigs,
@@ -17,7 +18,7 @@ import {
   objectTypes,
   objectRelations,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
@@ -160,6 +161,25 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
   // Schema: convert id to key for snapshot references
   const schemaIdToKey = new Map(schemaRows.map((s) => [s.id, s.key]));
 
+  // Load schema includes for snapshot
+  const schemaIncludeRows = schemaRows.length > 0
+    ? await _db
+        .select()
+        .from(schemaIncludes)
+        .where(inArray(schemaIncludes.schemaId, schemaRows.map((s) => s.id)))
+        .orderBy(asc(schemaIncludes.position))
+    : [];
+
+  // Build includeSchemaKeys by schemaId (ID → key conversion)
+  const schemaIncludeKeysBySchemaId = new Map<string, string[]>();
+  for (const row of schemaIncludeRows) {
+    const key = schemaIdToKey.get(row.includeSchemaId);
+    if (!key) continue;
+    const arr = schemaIncludeKeysBySchemaId.get(row.schemaId) ?? [];
+    arr.push(key);
+    schemaIncludeKeysBySchemaId.set(row.schemaId, arr);
+  }
+
   // ObjectType: convert id to key for relation snapshot references
   const objTypeIdToKey = new Map(objectTypeRows.map((t) => [t.id, t.key]));
 
@@ -213,6 +233,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         name: s.name,
         description: s.description,
         parameters: s.parameters,
+        includeSchemaKeys: schemaIncludeKeysBySchemaId.get(s.id) ?? [],
       })
     ),
     wikiDocuments: wikiRows.map(
@@ -346,6 +367,21 @@ export async function restoreSnapshot(
       .returning({ id: schemas.id, key: schemas.key });
     for (const s of insertedSchemas) {
       schemaKeyToNewId.set(s.key, s.id);
+    }
+
+    // Rebuild schema includes from snapshot
+    const includeValues: { schemaId: string; includeSchemaId: string; position: number }[] = [];
+    for (const s of snapshot.schemas) {
+      const schemaId = schemaKeyToNewId.get(s.key);
+      if (!schemaId) continue;
+      for (const [i, includeKey] of (s.includeSchemaKeys ?? []).entries()) {
+        const includeSchemaId = schemaKeyToNewId.get(includeKey);
+        if (!includeSchemaId) continue;
+        includeValues.push({ schemaId, includeSchemaId, position: i });
+      }
+    }
+    if (includeValues.length > 0) {
+      await tx.insert(schemaIncludes).values(includeValues);
     }
   }
 

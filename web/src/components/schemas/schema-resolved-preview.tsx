@@ -8,12 +8,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronDownIcon } from "lucide-react";
-import type { SchemaRow } from "@/db/schema";
+import type { SchemaWithIncludes } from "@/db/schema";
 import { resolveParameters, type ResolvedParameter } from "@/lib/schemas/resolve";
 
 interface SchemaResolvedPreviewProps {
-  schema: Pick<SchemaRow, "id" | "name" | "parameters" | "includeSchemaIds">;
-  allSchemas: SchemaRow[];
+  schema: Pick<SchemaWithIncludes, "id" | "name" | "parameters" | "includeSchemaIds">;
+  allSchemas: SchemaWithIncludes[];
 }
 
 export function SchemaResolvedPreview({

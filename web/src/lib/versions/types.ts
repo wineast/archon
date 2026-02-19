@@ -41,6 +41,7 @@ export interface SchemaSnapshotItem {
   name: string;
   description: string;
   parameters: ToolParameter[];
+  includeSchemaKeys?: string[];
 }
 
 export interface WikiDocumentSnapshotItem {
