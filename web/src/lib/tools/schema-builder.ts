@@ -45,18 +45,26 @@ function buildParamSchema(
       schema = buildObjectSchema(param, resolvedVars, options, ancestorSchemaIds);
       break;
     case "array": {
-      let itemSchema: z.ZodTypeAny = z.unknown();
-      if (param.items) {
-        itemSchema = buildParamSchema(param.items, resolvedVars, options, ancestorSchemaIds);
-      }
-      schema = z.array(itemSchema);
-      if (param.minItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).min(param.minItems);
-      if (param.maxItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).max(param.maxItems);
-      if (param.uniqueItems) {
-        schema = (schema as z.ZodArray<z.ZodTypeAny>).refine(
-          (arr) => new Set(arr.map((v) => JSON.stringify(v))).size === arr.length,
-          { message: "Array items must be unique" }
+      if (param.tuple && param.prefixItems && param.prefixItems.length > 0) {
+        // Tuple mode: z.tuple([...])
+        const tupleSchemas = param.prefixItems.map((item) =>
+          buildParamSchema(item, resolvedVars, options, ancestorSchemaIds)
         );
+        schema = z.tuple(tupleSchemas as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
+      } else {
+        let itemSchema: z.ZodTypeAny = z.unknown();
+        if (param.items) {
+          itemSchema = buildParamSchema(param.items, resolvedVars, options, ancestorSchemaIds);
+        }
+        schema = z.array(itemSchema);
+        if (param.minItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).min(param.minItems);
+        if (param.maxItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).max(param.maxItems);
+        if (param.uniqueItems) {
+          schema = (schema as z.ZodArray<z.ZodTypeAny>).refine(
+            (arr) => new Set(arr.map((v) => JSON.stringify(v))).size === arr.length,
+            { message: "Array items must be unique" }
+          );
+        }
       }
       break;
     }
@@ -338,12 +346,17 @@ function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
     }
     case "array": {
       const s: JsonSchema7 = { type: "array" };
-      if (param.items) {
-        s.items = buildJsonSchemaProperty(param.items);
+      if (param.tuple && param.prefixItems && param.prefixItems.length > 0) {
+        // Draft 7 tuple: items as array
+        s.items = param.prefixItems.map((item) => buildJsonSchemaProperty(item));
+      } else {
+        if (param.items) {
+          s.items = buildJsonSchemaProperty(param.items);
+        }
+        if (param.minItems != null) s.minItems = param.minItems;
+        if (param.maxItems != null) s.maxItems = param.maxItems;
+        if (param.uniqueItems != null) s.uniqueItems = param.uniqueItems;
       }
-      if (param.minItems != null) s.minItems = param.minItems;
-      if (param.maxItems != null) s.maxItems = param.maxItems;
-      if (param.uniqueItems != null) s.uniqueItems = param.uniqueItems;
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
       return s;
     }

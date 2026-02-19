@@ -341,6 +341,67 @@ function NestedPropertiesForVariant({
   );
 }
 
+/** Tuple prefixItems editor — each position has its own type and constraints. */
+function TuplePrefixItems({
+  fieldPath,
+  enumDatasetOptions,
+  enumDatasetValues,
+  hideDefault,
+  depth,
+  schemas,
+}: {
+  fieldPath: string;
+  enumDatasetOptions: EnumDatasetOption[];
+  enumDatasetValues: Record<string, string[]>;
+  hideDefault: boolean;
+  depth: number;
+  schemas?: SchemaRow[];
+}) {
+  const { control } = useFormContext();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: `${fieldPath}.prefixItems`,
+  });
+
+  return (
+    <div className="border-l-2 border-muted pl-4 ml-2 space-y-1.5 min-w-0">
+      {fields.map((field, index) => (
+        <div key={field.id} className="space-y-1">
+          <span className="text-[10px] text-muted-foreground ml-1">
+            [{index}]
+          </span>
+          <ParameterRow
+            fieldPath={`${fieldPath}.prefixItems.${index}`}
+            onDelete={() => remove(index)}
+            enumDatasetOptions={enumDatasetOptions}
+            enumDatasetValues={enumDatasetValues}
+            hideDefault={hideDefault}
+            depth={depth + 1}
+            schemas={schemas}
+          />
+        </div>
+      ))}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() =>
+          append({
+            id: nanoid(),
+            name: `item${fields.length}`,
+            type: "string",
+            description: "",
+            required: true,
+          })
+        }
+        className="gap-1 text-xs h-7"
+      >
+        <PlusIcon className="size-3" />
+        添加位置
+      </Button>
+    </div>
+  );
+}
+
 /** Union editor: unionMode switch + discriminator + variants. */
 function UnionEditor({
   fieldPath,
@@ -595,6 +656,7 @@ export function ParameterRow({
   const enumDatasetId = useWatch({ control, name: `${fieldPath}.enumDatasetId` }) as string | undefined;
   const schemaId = useWatch({ control, name: `${fieldPath}.schemaId` }) as string | undefined;
   const itemsType = useWatch({ control, name: `${fieldPath}.items.type` }) as SchemaPropertyType | undefined;
+  const isTuple = useWatch({ control, name: `${fieldPath}.tuple` }) as boolean | undefined;
 
   const isString = type === "string";
   const isNumber = type === "number";
@@ -647,6 +709,8 @@ export function ParameterRow({
                 }
                 if (value !== "array") {
                   setValue(`${fieldPath}.items`, undefined);
+                  setValue(`${fieldPath}.tuple`, undefined);
+                  setValue(`${fieldPath}.prefixItems`, undefined);
                 }
                 if (value !== "union") {
                   setValue(`${fieldPath}.discriminator`, undefined);
@@ -933,36 +997,44 @@ export function ParameterRow({
         </div>
       )}
 
-      {/* Array: items type selector */}
+      {/* Array: mode switch (items vs tuple) */}
       {canNestArrayItems && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0">
-          <span className="text-xs text-muted-foreground shrink-0">元素类型</span>
+          <span className="text-xs text-muted-foreground shrink-0">模式</span>
           <Controller
-            name={`${fieldPath}.items.type`}
+            name={`${fieldPath}.tuple`}
             control={control}
             render={({ field }) => (
               <Select
-                value={field.value ?? "string"}
-                onValueChange={(value: SchemaPropertyType) => {
-                  // Reset items to a minimal object with the new type
-                  setValue(`${fieldPath}.items`, {
-                    id: getValues(`${fieldPath}.items.id`) || nanoid(),
-                    name: "item",
-                    type: value,
-                    description: "",
-                    required: true,
-                  });
+                value={field.value ? "tuple" : "items"}
+                onValueChange={(value: string) => {
+                  const isTupleMode = value === "tuple";
+                  field.onChange(isTupleMode || undefined);
+                  if (isTupleMode) {
+                    setValue(`${fieldPath}.items`, undefined);
+                    setValue(`${fieldPath}.minItems`, undefined);
+                    setValue(`${fieldPath}.maxItems`, undefined);
+                    setValue(`${fieldPath}.uniqueItems`, undefined);
+                    if (!getValues(`${fieldPath}.prefixItems`)?.length) {
+                      setValue(`${fieldPath}.prefixItems`, [{
+                        id: nanoid(),
+                        name: "item0",
+                        type: "string",
+                        description: "",
+                        required: true,
+                      }]);
+                    }
+                  } else {
+                    setValue(`${fieldPath}.prefixItems`, undefined);
+                  }
                 }}
               >
-                <SelectTrigger className="w-[100px]" size="sm">
+                <SelectTrigger className="w-[180px]" size="sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ARRAY_ITEM_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="items">同类型元素 (items)</SelectItem>
+                  <SelectItem value="tuple">固定位置 (tuple)</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -970,48 +1042,94 @@ export function ParameterRow({
         </div>
       )}
 
-      {/* Array constraints */}
-      {canNestArrayItems && (
-        <div className="flex items-center gap-2 pl-[128px] min-w-0">
-          <span className="text-xs text-muted-foreground shrink-0">minItems</span>
-          <Input
-            className="h-8 w-[80px] text-xs font-mono"
-            type="number"
-            placeholder="0"
-            {...register(`${fieldPath}.minItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
-          />
-          <span className="text-xs text-muted-foreground shrink-0">maxItems</span>
-          <Input
-            className="h-8 w-[80px] text-xs font-mono"
-            type="number"
-            placeholder="∞"
-            {...register(`${fieldPath}.maxItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
-          />
-          <Controller
-            name={`${fieldPath}.uniqueItems`}
-            control={control}
-            render={({ field }) => (
-              <Switch
-                size="sm"
-                checked={field.value ?? false}
-                onCheckedChange={(checked: boolean) => {
-                  field.onChange(checked || undefined);
-                }}
-              />
-            )}
-          />
-          <span className="text-xs text-muted-foreground shrink-0">uniqueItems</span>
-        </div>
+      {/* Array items mode: type selector + constraints */}
+      {canNestArrayItems && !isTuple && (
+        <>
+          <div className="flex items-center gap-2 pl-[128px] min-w-0">
+            <span className="text-xs text-muted-foreground shrink-0">元素类型</span>
+            <Controller
+              name={`${fieldPath}.items.type`}
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? "string"}
+                  onValueChange={(value: SchemaPropertyType) => {
+                    setValue(`${fieldPath}.items`, {
+                      id: getValues(`${fieldPath}.items.id`) || nanoid(),
+                      name: "item",
+                      type: value,
+                      description: "",
+                      required: true,
+                    });
+                  }}
+                >
+                  <SelectTrigger className="w-[100px]" size="sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ARRAY_ITEM_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="flex items-center gap-2 pl-[128px] min-w-0">
+            <span className="text-xs text-muted-foreground shrink-0">minItems</span>
+            <Input
+              className="h-8 w-[80px] text-xs font-mono"
+              type="number"
+              placeholder="0"
+              {...register(`${fieldPath}.minItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+            />
+            <span className="text-xs text-muted-foreground shrink-0">maxItems</span>
+            <Input
+              className="h-8 w-[80px] text-xs font-mono"
+              type="number"
+              placeholder="∞"
+              {...register(`${fieldPath}.maxItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+            />
+            <Controller
+              name={`${fieldPath}.uniqueItems`}
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  size="sm"
+                  checked={field.value ?? false}
+                  onCheckedChange={(checked: boolean) => {
+                    field.onChange(checked || undefined);
+                  }}
+                />
+              )}
+            />
+            <span className="text-xs text-muted-foreground shrink-0">uniqueItems</span>
+          </div>
+        </>
       )}
 
-      {/* Array items: object nested properties */}
-      {canNestArrayItems && itemsType === "object" && (
+      {/* Array items mode: object nested properties */}
+      {canNestArrayItems && !isTuple && itemsType === "object" && (
         <NestedProperties
           fieldPath={`${fieldPath}.items`}
           enumDatasetOptions={enumDatasetOptions}
           enumDatasetValues={enumDatasetValues}
           hideDefault={hideDefault}
           depth={depth + 1}
+          schemas={schemas}
+        />
+      )}
+
+      {/* Array tuple mode: prefixItems editor */}
+      {canNestArrayItems && isTuple && (
+        <TuplePrefixItems
+          fieldPath={fieldPath}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
+          hideDefault={hideDefault}
+          depth={depth}
           schemas={schemas}
         />
       )}
