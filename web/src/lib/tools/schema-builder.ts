@@ -10,11 +10,15 @@ export interface BuildSchemaOptions {
 
 /**
  * Build a zod schema for a single SchemaProperty.
+ *
+ * `ancestorSchemaIds` tracks schemaId references up the call stack to detect
+ * self-referencing object types and generate z.lazy() for recursion.
  */
 function buildParamSchema(
   param: SchemaProperty,
   resolvedVars?: Record<string, unknown>,
-  options?: BuildSchemaOptions
+  options?: BuildSchemaOptions,
+  ancestorSchemaIds?: Set<string>
 ): z.ZodTypeAny {
   let schema: z.ZodTypeAny;
 
@@ -32,12 +36,12 @@ function buildParamSchema(
       schema = z.boolean();
       break;
     case "object":
-      schema = buildObjectSchema(param, resolvedVars, options);
+      schema = buildObjectSchema(param, resolvedVars, options, ancestorSchemaIds);
       break;
     case "array": {
       let itemSchema: z.ZodTypeAny = z.unknown();
       if (param.items) {
-        itemSchema = buildParamSchema(param.items, resolvedVars, options);
+        itemSchema = buildParamSchema(param.items, resolvedVars, options, ancestorSchemaIds);
       }
       schema = z.array(itemSchema);
       if (param.minItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).min(param.minItems);
@@ -53,6 +57,10 @@ function buildParamSchema(
         console.warn(`[schema-builder] enum param "${param.name}" has no values, falling back to z.string()`);
         schema = z.string();
       }
+      break;
+    }
+    case "union": {
+      schema = buildUnionSchema(param, resolvedVars, options, ancestorSchemaIds);
       break;
     }
     default: {
@@ -73,19 +81,58 @@ function buildParamSchema(
   return schema;
 }
 
-/** Build z.object schema for "object" type params. */
+/** Build z.object schema for "object" type params, with Map/Record and recursive ref support. */
 function buildObjectSchema(
   param: SchemaProperty,
   resolvedVars?: Record<string, unknown>,
-  options?: BuildSchemaOptions
+  options?: BuildSchemaOptions,
+  ancestorSchemaIds?: Set<string>
 ): z.ZodTypeAny {
+  // --- Recursive self-reference via schemaId ---
   if (param.schemaId && options?.schemaMap?.[param.schemaId]) {
+    if (ancestorSchemaIds?.has(param.schemaId)) {
+      // Self-reference detected → z.lazy() to break recursion
+      return z.lazy(() =>
+        buildObjectSchema(
+          { ...param },
+          resolvedVars,
+          options,
+          new Set() // fresh set — z.lazy defers, so no infinite loop
+        )
+      );
+    }
+
+    const nextAncestors = new Set(ancestorSchemaIds);
+    nextAncestors.add(param.schemaId);
+
     const refParams = options.schemaMap[param.schemaId];
-    return buildNestedObject(refParams, resolvedVars, options);
+    const obj = buildNestedObject(refParams, resolvedVars, options, nextAncestors);
+
+    // additionalProperties on top of referenced schema
+    if (param.additionalProperties) {
+      const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, nextAncestors);
+      return obj.catchall(valSchema);
+    }
+    return obj;
   }
+
+  // --- Inline properties ---
   if (param.properties && param.properties.length > 0) {
-    return buildNestedObject(param.properties, resolvedVars, options);
+    const obj = buildNestedObject(param.properties, resolvedVars, options, ancestorSchemaIds);
+    // Fixed properties + additionalProperties → catchall
+    if (param.additionalProperties) {
+      const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, ancestorSchemaIds);
+      return obj.catchall(valSchema);
+    }
+    return obj;
   }
+
+  // --- Pure Map/Record: no fixed properties, only additionalProperties ---
+  if (param.additionalProperties) {
+    const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, ancestorSchemaIds);
+    return z.record(z.string(), valSchema);
+  }
+
   return z.unknown();
 }
 
@@ -93,11 +140,12 @@ function buildObjectSchema(
 function buildNestedObject(
   children: SchemaProperty[],
   resolvedVars?: Record<string, unknown>,
-  options?: BuildSchemaOptions
+  options?: BuildSchemaOptions,
+  ancestorSchemaIds?: Set<string>
 ): z.ZodObject<Record<string, z.ZodTypeAny>> {
   const nested: Record<string, z.ZodTypeAny> = {};
   for (const child of children) {
-    let childSchema = buildParamSchema(child, resolvedVars, options);
+    let childSchema = buildParamSchema(child, resolvedVars, options, ancestorSchemaIds);
     if (child.description) {
       childSchema = childSchema.describe(child.description);
     }
@@ -107,6 +155,40 @@ function buildNestedObject(
     nested[child.name] = childSchema;
   }
   return z.object(nested).passthrough();
+}
+
+/** Build z.discriminatedUnion or z.union for "union" type params. */
+function buildUnionSchema(
+  param: SchemaProperty,
+  resolvedVars?: Record<string, unknown>,
+  options?: BuildSchemaOptions,
+  ancestorSchemaIds?: Set<string>
+): z.ZodTypeAny {
+  if (!param.variants || param.variants.length < 2) {
+    console.warn(`[schema-builder] union param "${param.name}" needs ≥2 variants, falling back to z.unknown()`);
+    return z.unknown();
+  }
+
+  const variantSchemas = param.variants.map((variantProps) =>
+    buildNestedObject(variantProps, resolvedVars, options, ancestorSchemaIds)
+  );
+
+  // discriminatedUnion requires a discriminator key present as z.literal in each variant
+  if (param.discriminator) {
+    return z.discriminatedUnion(
+      param.discriminator,
+      variantSchemas as [
+        z.ZodObject<Record<string, z.ZodTypeAny>>,
+        z.ZodObject<Record<string, z.ZodTypeAny>>,
+        ...z.ZodObject<Record<string, z.ZodTypeAny>>[],
+      ]
+    );
+  }
+
+  // Fallback: plain union
+  return z.union(
+    variantSchemas as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]
+  );
 }
 
 /** Resolve enum values from datasets / resolvedVars / inline enum. */
