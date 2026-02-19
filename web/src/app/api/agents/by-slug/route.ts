@@ -25,7 +25,6 @@ export async function GET(req: Request) {
       icon: agents.icon,
       slug: agents.slug,
       isPublic: agents.isPublic,
-      version: agents.version,
       editingVersionId: agents.editingVersionId,
       publishedVersionId: agents.publishedVersionId,
       createdAt: agents.createdAt,
