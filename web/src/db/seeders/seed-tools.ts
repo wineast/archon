@@ -2,7 +2,7 @@ import { join } from "path";
 import { eq } from "drizzle-orm";
 import { tools, schemas, toolTestCases } from "../schema";
 import { readJson, toKey, logSection, log } from "../seed-utils";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import type { Seeder } from "./types";
 
 export const seedTools: Seeder = {
@@ -18,7 +18,7 @@ export const seedTools: Seeder = {
         key?: string;
         name: string;
         description: string;
-        parameters: ToolParameter[];
+        parameters: SchemaProperty[];
         handler?: string;
         enabled: boolean;
         component?: string;

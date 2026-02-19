@@ -2,21 +2,23 @@ import { tool, type Tool } from "ai";
 import { z } from "zod";
 import { db } from "@/db";
 import { schemas } from "@/db/schema";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import { eq, and } from "drizzle-orm";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTool = Tool<any, any>;
 
-const parameterSchema = z.object({
+const parameterSchema: z.ZodType<unknown> = z.object({
   id: z.string().optional().default(""),
   name: z.string(),
-  type: z.enum(["string", "number", "boolean", "enum", "json"]),
+  type: z.enum(["string", "number", "boolean", "enum", "object", "array"]),
   description: z.string().optional().default(""),
   required: z.boolean().optional().default(false),
-  isArray: z.boolean().optional(),
   defaultValue: z.unknown().optional(),
   enum: z.array(z.string()).optional(),
+  properties: z.lazy(() => z.array(parameterSchema)).optional(),
+  schemaId: z.string().optional(),
+  items: z.lazy(() => parameterSchema).optional(),
 });
 
 export function buildSchemaTools(agentId: string): Record<string, AnyTool> {
@@ -66,7 +68,7 @@ export function buildSchemaTools(agentId: string): Record<string, AnyTool> {
           .values({
             ...params,
             agentId,
-            parameters: params.parameters as ToolParameter[],
+            parameters: params.parameters as SchemaProperty[],
           })
           .returning();
         return {
@@ -86,14 +88,14 @@ export function buildSchemaTools(agentId: string): Record<string, AnyTool> {
         parameters: z.array(parameterSchema).optional(),
       }),
       execute: async ({ id, ...updates }) => {
+        const setValues: Record<string, unknown> = {};
+        if (updates.key !== undefined) setValues.key = updates.key;
+        if (updates.name !== undefined) setValues.name = updates.name;
+        if (updates.description !== undefined) setValues.description = updates.description;
+        if (updates.parameters) setValues.parameters = updates.parameters as SchemaProperty[];
         const [row] = await db
           .update(schemas)
-          .set({
-            ...updates,
-            ...(updates.parameters
-              ? { parameters: updates.parameters as ToolParameter[] }
-              : {}),
-          })
+          .set(setValues)
           .where(and(eq(schemas.id, id), eq(schemas.agentId, agentId)))
           .returning();
         if (!row) return { error: "Schema 不存在" };

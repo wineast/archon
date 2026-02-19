@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
 export async function POST(req: NextRequest) {
   try {
     const { code, parameters, input } = (await req.json()) as {
       code: string;
-      parameters?: ToolParameter[];
+      parameters?: SchemaProperty[];
       input?: unknown;
     };
 

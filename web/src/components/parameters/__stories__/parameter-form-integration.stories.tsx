@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ParameterList } from "../parameter-list";
 import { ReturnParameterList } from "../return-parameter-list";
 import type { EnumRefOption } from "../parameter-row";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
 // ---------------------------------------------------------------------------
 // Form values type (mirrors FunctionFormValues)
@@ -15,8 +15,8 @@ import type { ToolParameter } from "@/lib/tools/types";
 interface DemoFormValues {
   name: string;
   description: string;
-  parameters: ToolParameter[];
-  returnParameters: ToolParameter[];
+  parameters: SchemaProperty[];
+  returnParameters: SchemaProperty[];
 }
 
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ type Story = StoryObj<typeof meta>;
 // Sample data
 // ---------------------------------------------------------------------------
 
-const sampleParams: ToolParameter[] = [
+const sampleParams: SchemaProperty[] = [
   {
     id: "p1",
     name: "query",
@@ -160,18 +160,18 @@ const sampleParams: ToolParameter[] = [
   {
     id: "p5",
     name: "options",
-    type: "json",
+    type: "object",
     description: "Advanced options",
     required: false,
     defaultValue: { sort: "asc", page: 1 },
   },
 ];
 
-const sampleReturnParams: ToolParameter[] = [
+const sampleReturnParams: SchemaProperty[] = [
   {
     id: "r1",
     name: "results",
-    type: "json",
+    type: "object",
     description: "Array of matching items",
     required: true,
   },
@@ -250,7 +250,7 @@ export const WithEnumRef: Story = {
         {
           id: "r1",
           name: "data",
-          type: "json",
+          type: "object",
           description: "State information",
           required: true,
         },

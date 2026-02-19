@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { eq } from "drizzle-orm";
 import { functions, schemas, functionTestCases } from "../schema";
 import { readJson, readDirSafe, fileNameToKey, keyToName, logSection, log } from "../seed-utils";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import type { Seeder } from "./types";
 
 export const seedFunctions: Seeder = {
@@ -33,7 +33,7 @@ export const seedFunctions: Seeder = {
       // Parameters schema
       const paramsFile = file.replace(/\.js$/, ".params.json");
       try {
-        const parameters = readJson<ToolParameter[]>(join(functionsDir, paramsFile));
+        const parameters = readJson<SchemaProperty[]>(join(functionsDir, paramsFile));
         if (parameters.length > 0) {
           const schemaKey = `${key}_params`;
           const schemaName = `${name} Parameters`;
@@ -56,7 +56,7 @@ export const seedFunctions: Seeder = {
       // Return parameters schema
       const returnParamsFile = file.replace(/\.js$/, ".return-params.json");
       try {
-        const returnParameters = readJson<ToolParameter[]>(join(functionsDir, returnParamsFile));
+        const returnParameters = readJson<SchemaProperty[]>(join(functionsDir, returnParamsFile));
         if (returnParameters.length > 0) {
           const schemaKey = `${key}_return_params`;
           const schemaName = `${name} Return Parameters`;

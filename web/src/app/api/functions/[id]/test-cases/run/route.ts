@@ -4,7 +4,7 @@ import { functions, schemas } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
 /** Stable JSON stringify with sorted keys for deep equality comparison.
  *  Skips keys whose value is `undefined` (matching JSON.stringify behaviour). */
@@ -54,7 +54,7 @@ export async function POST(
   const start = Date.now();
 
   // Resolve parameters from schema FK
-  let parameters: ToolParameter[] = [];
+  let parameters: SchemaProperty[] = [];
   if (fn.parametersSchemaId) {
     const [schemaRow] = await db.select().from(schemas).where(eq(schemas.id, fn.parametersSchemaId));
     if (schemaRow) parameters = schemaRow.parameters;

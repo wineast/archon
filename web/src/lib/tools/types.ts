@@ -1,24 +1,12 @@
-export type ToolParamType = "string" | "number" | "boolean" | "enum" | "json";
+import type { SchemaProperty, SchemaPropertyType } from "@/lib/schemas/types";
 
-export interface ToolParameter {
-  id: string;
-  name: string;
-  type: ToolParamType;
-  description: string;
-  required: boolean;
-  /** Whether this field is an array of the given type. */
-  isArray?: boolean;
-  /** Default value for this parameter. */
-  defaultValue?: unknown;
-  enum?: string[];
-  enumRef?: string;
-  /** Dataset UUID for enum resolution. Mutually exclusive with enum[]. */
-  enumDatasetId?: string;
-  /** Nested fields when type === "json". */
-  properties?: ToolParameter[];
-  /** Schema UUID for json type. Mutually exclusive with manual properties. */
-  schemaId?: string;
-}
+/** @deprecated Use SchemaProperty from "@/lib/schemas/types" */
+export type ToolParameter = SchemaProperty;
+/** @deprecated Use SchemaPropertyType from "@/lib/schemas/types" */
+export type ToolParamType = SchemaPropertyType;
+
+// Also re-export new names for consumers still importing from here
+export type { SchemaProperty, SchemaPropertyType } from "@/lib/schemas/types";
 
 export interface ToolDefinition {
   id: string;
@@ -39,8 +27,8 @@ export interface ToolDefinition {
 export interface ToolDefinitionPayload {
   name: string;
   description: string;
-  parameters: ToolParameter[];
-  returnParameters?: ToolParameter[];
+  parameters: SchemaProperty[];
+  returnParameters?: SchemaProperty[];
   handler: string;
   executionTarget?: "server" | "client" | "host";
   sandboxMode?: "light" | "full";

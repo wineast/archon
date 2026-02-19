@@ -2,13 +2,13 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { FormProvider, useForm } from "react-hook-form";
 import { ParameterList } from "../parameter-list";
 import type { EnumRefOption } from "../parameter-row";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
 function FormWrapper({
   parameters = [],
   children,
 }: {
-  parameters?: ToolParameter[];
+  parameters?: SchemaProperty[];
   children: React.ReactNode;
 }) {
   const form = useForm({ defaultValues: { parameters } });
@@ -31,7 +31,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const sampleParams: ToolParameter[] = [
+const sampleParams: SchemaProperty[] = [
   {
     id: "p1",
     name: "query",
@@ -68,7 +68,7 @@ const sampleParams: ToolParameter[] = [
   {
     id: "p5",
     name: "options",
-    type: "json",
+    type: "object",
     description: "Advanced options",
     required: false,
     defaultValue: { sort: "asc", page: 1 },
@@ -113,7 +113,7 @@ export const WithEnumRefOptions: Story = {
     enumRefValues,
   },
   render: (args) => {
-    const params: ToolParameter[] = [
+    const params: SchemaProperty[] = [
       {
         id: "e1",
         name: "state",

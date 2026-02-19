@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { buildInputSchema } from "../schema-builder";
-import type { ToolParameter } from "../types";
+import type { SchemaProperty } from "../types";
 
-function makeParam(overrides: Partial<ToolParameter> = {}): ToolParameter {
+function makeParam(overrides: Partial<SchemaProperty> = {}): SchemaProperty {
   return {
     id: "p-1",
     name: "field",
@@ -146,22 +146,24 @@ describe("schema-builder — enum type", () => {
     });
   });
 
-  describe("backward compat: string type with enum/enumRef still works", () => {
-    it("string type with enum values still uses z.enum", () => {
+  describe("string type no longer handles enum", () => {
+    it("string type with enum values ignores them (just z.string)", () => {
       const schema = buildInputSchema([
         makeParam({ type: "string", enum: ["a", "b"] }),
       ]);
       expect(() => schema.parse({ field: "a" })).not.toThrow();
-      expect(() => schema.parse({ field: "c" })).toThrow();
+      // "c" is accepted because string type doesn't use enum
+      expect(() => schema.parse({ field: "c" })).not.toThrow();
     });
 
-    it("string type with enumRef resolves from resolvedVars", () => {
+    it("string type with enumRef ignores it (just z.string)", () => {
       const schema = buildInputSchema(
         [makeParam({ type: "string", enumRef: "colors" })],
         { colors: ["red", "blue"] }
       );
       expect(() => schema.parse({ field: "red" })).not.toThrow();
-      expect(() => schema.parse({ field: "green" })).toThrow();
+      // "green" is accepted because string type doesn't resolve enum
+      expect(() => schema.parse({ field: "green" })).not.toThrow();
     });
   });
 });

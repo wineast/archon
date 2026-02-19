@@ -17,7 +17,7 @@ const builtinCompileExpression: BuiltinFunction = {
     {
       id: "data",
       name: "data",
-      type: "json",
+      type: "object",
       description: "An object whose keys are the variable names used in the expression",
       required: true,
     },
@@ -26,7 +26,7 @@ const builtinCompileExpression: BuiltinFunction = {
     {
       id: "result",
       name: "result",
-      type: "json",
+      type: "object",
       description: "The evaluation result. Type depends on the expression: number for arithmetic, boolean for comparisons/logical.",
       required: true,
     },

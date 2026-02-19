@@ -1,4 +1,4 @@
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
 
 /* ─────────── Snapshot Item Types (no id/agentId/createdAt/updatedAt) ─────────── */
@@ -40,7 +40,7 @@ export interface SchemaSnapshotItem {
   key: string;
   name: string;
   description: string;
-  parameters: ToolParameter[];
+  parameters: SchemaProperty[];
   includeSchemaKeys?: string[];
 }
 

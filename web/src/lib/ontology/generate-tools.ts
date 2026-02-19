@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { objectTypes, schemas, tools } from "@/db/schema";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 import { eq, and, isNull } from "drizzle-orm";
 
 interface GenerateResult {
@@ -69,7 +69,7 @@ export async function generateCrudToolsForType(
       toolDescription: `Query ${objType.name} instances with optional filters.`,
       schemaKey: `_auto_${typeKey}_query`,
       schemaParams: schema.parameters.map(
-        (p): ToolParameter => ({
+        (p): SchemaProperty => ({
           ...p,
           required: false,
         })
@@ -90,7 +90,7 @@ export async function generateCrudToolsForType(
           required: true,
         },
         ...schema.parameters.map(
-          (p): ToolParameter => ({
+          (p): SchemaProperty => ({
             ...p,
             required: false,
           })

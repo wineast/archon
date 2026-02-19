@@ -6,9 +6,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { ParameterRow, type EnumRefOption } from "../parameter-row";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
-function makeParam(overrides: Partial<ToolParameter> = {}): ToolParameter {
+function makeParam(overrides: Partial<SchemaProperty> = {}): SchemaProperty {
   return {
     id: "p-1",
     name: "state",
@@ -29,7 +29,7 @@ function FormWrapper({
   defaultParam,
   children,
 }: {
-  defaultParam: ToolParameter;
+  defaultParam: SchemaProperty;
   children: React.ReactNode;
 }) {
   const form = useForm({ defaultValues: { items: [defaultParam] } });
@@ -37,7 +37,7 @@ function FormWrapper({
 }
 
 function renderRow(
-  paramOverrides: Partial<ToolParameter> = {},
+  paramOverrides: Partial<SchemaProperty> = {},
   propsOverrides: Partial<
     Omit<React.ComponentProps<typeof ParameterRow>, "fieldPath" | "onDelete">
   > = {}
@@ -101,7 +101,7 @@ describe("ParameterRow", () => {
 
   it("clears enum fields when switching from enum to other type", () => {
     const param = makeParam({ type: "enum", enum: ["CA"], enumRef: "states" });
-    const updated: ToolParameter = { ...param, type: "string" };
+    const updated: SchemaProperty = { ...param, type: "string" };
     delete updated.enum;
     delete updated.enumRef;
 

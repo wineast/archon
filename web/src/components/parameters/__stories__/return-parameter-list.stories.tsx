@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { FormProvider, useForm } from "react-hook-form";
 import { ReturnParameterList } from "../return-parameter-list";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaProperty } from "@/lib/schemas/types";
 
 function FormWrapper({
   returnParameters = [],
   children,
 }: {
-  returnParameters?: ToolParameter[];
+  returnParameters?: SchemaProperty[];
   children: React.ReactNode;
 }) {
   const form = useForm({ defaultValues: { returnParameters } });
@@ -30,11 +30,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const sampleReturnParams: ToolParameter[] = [
+const sampleReturnParams: SchemaProperty[] = [
   {
     id: "r1",
     name: "results",
-    type: "json",
+    type: "object",
     description: "Array of matching items",
     required: true,
   },
