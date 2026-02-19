@@ -12,9 +12,11 @@
 
 ## 基础设施
 
-- [ ] **Agent 软删除** — agents 表增加 deletedAt 字段，删除改为标记而非物理删除，配套回收站 UI 支持恢复
+- [x] **Agent 软删除** — agents 表增加 deletedAt 字段，删除改为标记而非物理删除，配套回收站 UI 支持恢复
   - 来源：生产环境误删 Agent 会级联清除全部关联数据且不可恢复
-- [ ] **工具沙盒执行（两层方案）** — 替代 `new Function()` 裸执行，按工具复杂度分层隔离
+- [ ] **全资源软删除 + 统一回收站** — 所有 Agent 子资源（tools、functions、components、schemas、datasets、wiki、modelConfigs、evalCases、evalJudgeConfigs、objectTypes、objectRelations）加 deletedAt 字段，Agent 内统一回收站页面按资源类型分组，支持恢复和永久删除
+- [ ] **配置变更审计日志** — 记录 Agent 配置资源的创建/更新/删除操作（谁+什么时间+哪个资源+什么操作），Agent Build 页面「操作记录」时间线 UI
+- [ ] **函数/工具沙盒执行** — 用 isolated-vm（V8 Isolate）替代 `new Function()`，实现内存隔离、CPU 超时、零 API 访问的安全沙盒
   - 来源：FDA/母 Agent 生成的代码不可控，私有化部署需要安全合规
   - 使用说明：[tool-sandbox.md](../guide/tool-sandbox.md)
   - [ ] **P1：QuickJS 轻量沙盒** — 复用 Functions 的 quickjs-emscripten 沙盒，asyncify 构建支持 ToolContext 异步调用，覆盖所有 server 端 JS handler（聊天执行 + Playground + 测试用例），兼容 Edge Runtime
@@ -46,6 +48,7 @@
 - [x] **Tools 组件字段改为 FK** — tools 表去掉 component/componentSource 内联字段，改为 componentId FK 引用 components 表
 - [x] **Wiki 主键迁移为 UUID** — wikiDocuments 的 PK 从 text 改为 uuid，统一全库主键类型
 - [ ] **Wiki schema 清理** — 去掉 key/title 的 `.default("")` 历史遗留（对齐其他资源表），parentId 加 self-referencing FK 约束
+- [ ] **去掉 agents.version 冗余字段** — 删除 agents 表的 version 字段，版本号统一从 publishedVersionId join agentVersions 获取
 
 ## Agent 配置
 
@@ -115,6 +118,13 @@
 - [ ] **Tools 设置页溢出修复** — 修复工具详情区域内容水平溢出，flex 布局链补充 min-w-0
 - [ ] **JSX 编辑器 Storybook** — JsEditor、ComponentPreviewPanel 独立故事 + 组合 tab 切换预览
 
+## 聊天与多模态
+
+- [ ] **多模态聊天输入** — 聊天支持图片上传和语音输入，覆盖 chat 页面和 embed 页面
+  - [ ] 图片/文件上传：附件按钮、拖拽粘贴、缩略图预览、发送给 LLM
+  - [ ] 语音输入：Web Speech API 语音转文字，追加到输入框
+  - [ ] 用户消息渲染文件附件
+
 ## 嵌入与分发
 
 - [x] **嵌入式聊天 Widget SDK** — 通过 `<script>` 标签将 Agent 聊天嵌入第三方网站，气泡按钮 + iframe + embed token 匿名认证
@@ -127,6 +137,12 @@
 
 - [ ] **用量计费系统** — 统计每次 LLM 调用的 token 用量和费用，按 Agent/用户/模型维度聚合，含 Blob 存储统计，提供 Dashboard 可视化
   - 使用说明：[usage-metering.md](../guide/usage-metering.md)
+
+## 组织与租户
+
+- [ ] **组织/租户体系** — 新增 Organization 层，所有 Agent 必须归属组织，组织成员权限自动继承到 Agent，支持 org 级用量聚合
+  - 来源：B2B 商业模式需要企业级数据隔离、统一计费、FDA 管理多客户
+  - 使用说明：[org-tenant.md](../guide/org-tenant.md)
 
 ## 用户与权限
 
