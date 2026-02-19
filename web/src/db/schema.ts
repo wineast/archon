@@ -1194,6 +1194,7 @@ export const runtimeEventTypes = [
   "tool_call",
   "tool_error",
   "tool_timeout",
+  "tool_output_validation",
   "stream_error",
 ] as const;
 export type RuntimeEventType = (typeof runtimeEventTypes)[number];

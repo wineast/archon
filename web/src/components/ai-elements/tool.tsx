@@ -143,14 +143,29 @@ export const ToolOutput = ({
     return null;
   }
 
-  let Output = <div>{output as ReactNode}</div>;
+  // Extract _outputValidationWarning if present
+  let validationWarning: string | undefined;
+  let displayOutput = output;
+  if (
+    typeof output === "object" &&
+    output !== null &&
+    !isValidElement(output) &&
+    !Array.isArray(output) &&
+    "_outputValidationWarning" in (output as Record<string, unknown>)
+  ) {
+    const { _outputValidationWarning, ...rest } = output as Record<string, unknown>;
+    validationWarning = String(_outputValidationWarning);
+    displayOutput = rest;
+  }
 
-  if (typeof output === "object" && !isValidElement(output)) {
+  let Output = <div>{displayOutput as ReactNode}</div>;
+
+  if (typeof displayOutput === "object" && !isValidElement(displayOutput)) {
     Output = (
-      <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
+      <CodeBlock code={JSON.stringify(displayOutput, null, 2)} language="json" />
     );
-  } else if (typeof output === "string") {
-    Output = <CodeBlock code={output} language="json" />;
+  } else if (typeof displayOutput === "string") {
+    Output = <CodeBlock code={displayOutput} language="json" />;
   }
 
   return (
@@ -158,6 +173,11 @@ export const ToolOutput = ({
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {errorText ? "Error" : "Result"}
       </h4>
+      {validationWarning && (
+        <div className="rounded-md bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+          输出校验警告：{validationWarning}
+        </div>
+      )}
       <div
         className={cn(
           "overflow-x-auto rounded-md text-xs [&_table]:w-full",

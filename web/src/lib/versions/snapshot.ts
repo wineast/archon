@@ -41,12 +41,37 @@ import type {
   ObjectTypeSnapshotItem,
   ObjectRelationSnapshotItem,
 } from "./types";
+import type { ToolParameter } from "@/lib/tools/types";
 
 type Tx = PgTransaction<
   PostgresJsQueryResultHKT,
   typeof schema,
   ExtractTablesWithRelations<typeof schema>
 >;
+
+/**
+ * Recursively remap `schemaId` and `enumDatasetId` references in ToolParameter[].
+ * Used by buildSnapshot (UUID→key) and restoreSnapshot (key→newUUID).
+ */
+export function remapParameterRefs(
+  params: ToolParameter[],
+  schemaMap: Map<string, string>,
+  datasetMap: Map<string, string>
+): ToolParameter[] {
+  return params.map((p) => {
+    const mapped = { ...p };
+    if (mapped.schemaId) {
+      mapped.schemaId = schemaMap.get(mapped.schemaId) ?? mapped.schemaId;
+    }
+    if (mapped.enumDatasetId) {
+      mapped.enumDatasetId = datasetMap.get(mapped.enumDatasetId) ?? mapped.enumDatasetId;
+    }
+    if (mapped.properties && mapped.properties.length > 0) {
+      mapped.properties = remapParameterRefs(mapped.properties, schemaMap, datasetMap);
+    }
+    return mapped;
+  });
+}
 
 /* ═══════════════════════════════════════════════
    Build Snapshot
@@ -161,6 +186,9 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
   // Schema: convert id to key for snapshot references
   const schemaIdToKey = new Map(schemaRows.map((s) => [s.id, s.key]));
 
+  // Dataset: convert id to key for parameter refs
+  const datasetIdToKey = new Map(datasetRows.map((d) => [d.id, d.key]));
+
   // Load schema includes for snapshot
   const schemaIncludeRows = schemaRows.length > 0
     ? await _db
@@ -232,7 +260,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         key: s.key,
         name: s.name,
         description: s.description,
-        parameters: s.parameters,
+        parameters: remapParameterRefs(s.parameters, schemaIdToKey, datasetIdToKey),
         includeSchemaKeys: schemaIncludeKeysBySchemaId.get(s.id) ?? [],
       })
     ),
@@ -350,9 +378,31 @@ export async function restoreSnapshot(
     tx.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.agentId, agentId)),
   ]);
 
-  // 2. Rebuild schemas first (tools/components reference them via FK)
+  // 2a. Rebuild datasets first (schemas may reference them via enumDatasetId in parameters)
+  const datasetKeyToNewId = new Map<string, string>();
+  if (snapshot.datasets.length > 0) {
+    const insertedDatasets = await tx
+      .insert(datasets)
+      .values(
+        snapshot.datasets.map((d) => ({
+          agentId,
+          key: d.key,
+          name: d.name,
+          description: d.description,
+          data: d.data,
+        }))
+      )
+      .returning({ id: datasets.id, key: datasets.key });
+    for (const d of insertedDatasets) {
+      datasetKeyToNewId.set(d.key, d.id);
+    }
+  }
+
+  // 2b. Rebuild schemas (tools/components reference them via FK)
+  // Two-step: insert with key refs, then update with new UUIDs
   const schemaKeyToNewId = new Map<string, string>();
   if (snapshot.schemas.length > 0) {
+    // Step 1: Insert schemas (parameters still contain key references)
     const insertedSchemas = await tx
       .insert(schemas)
       .values(
@@ -367,6 +417,17 @@ export async function restoreSnapshot(
       .returning({ id: schemas.id, key: schemas.key });
     for (const s of insertedSchemas) {
       schemaKeyToNewId.set(s.key, s.id);
+    }
+
+    // Step 2: Remap key→newUUID in parameters and update each schema
+    for (const s of snapshot.schemas) {
+      const schemaId = schemaKeyToNewId.get(s.key);
+      if (!schemaId) continue;
+      const remapped = remapParameterRefs(s.parameters, schemaKeyToNewId, datasetKeyToNewId);
+      await tx
+        .update(schemas)
+        .set({ parameters: remapped })
+        .where(eq(schemas.id, schemaId));
     }
 
     // Rebuild schema includes from snapshot
@@ -565,18 +626,7 @@ export async function restoreSnapshot(
     }
   }
 
-  // 7. Rebuild datasets
-  if (snapshot.datasets.length > 0) {
-    await tx.insert(datasets).values(
-      snapshot.datasets.map((d) => ({
-        agentId,
-        key: d.key,
-        name: d.name,
-        description: d.description,
-        data: d.data,
-      }))
-    );
-  }
+  // 7. (Datasets already rebuilt in step 2a above)
 
   // 8. Rebuild model configs
   if (snapshot.modelConfigs.length > 0) {

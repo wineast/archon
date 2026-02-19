@@ -100,6 +100,9 @@ export async function executeChatStream(
       name: row.name,
       description: row.description,
       parameters: row.parametersSchemaId ? (templateData.schemaMap[row.parametersSchemaId] ?? []) : [],
+      returnParameters: row.returnParametersSchemaId
+        ? (templateData.schemaMap[row.returnParametersSchemaId] ?? undefined)
+        : undefined,
       handler: row.handler ?? "",
       executionTarget: row.executionTarget ?? "server",
       sandboxMode: row.sandboxMode ?? "light",

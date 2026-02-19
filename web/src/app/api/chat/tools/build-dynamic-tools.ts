@@ -1,4 +1,5 @@
 import { tool, type Tool } from "ai";
+import type { z } from "zod";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
@@ -137,6 +138,56 @@ function wrapExecutorWithTiming(
 }
 
 /**
+ * Wrap an executor with output schema validation.
+ * On mismatch, injects `_outputValidationWarning` and records a runtime event.
+ */
+export function wrapWithOutputValidation(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  executor: (args: any) => Promise<any>,
+  toolName: string,
+  outputSchema: z.ZodObject<z.ZodRawShape>,
+  agentId: string,
+  collector: RuntimeEventInput[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): (args: any) => Promise<any> {
+  return async (args) => {
+    const result = await executor(args);
+
+    // Skip validation for non-validatable results
+    if (
+      result == null ||
+      typeof result !== "object" ||
+      Array.isArray(result) ||
+      ("error" in result && typeof result.error === "string")
+    ) {
+      return result;
+    }
+
+    const parsed = outputSchema.passthrough().safeParse(result);
+    if (!parsed.success) {
+      const warning = parsed.error.issues
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("; ");
+      console.warn(
+        `[output-validation] Tool "${toolName}" output mismatch: ${warning}`
+      );
+      collector.push({
+        agentId,
+        eventType: "tool_output_validation",
+        severity: "warning",
+        metadata: {
+          toolName,
+          issues: warning.slice(0, 500),
+        },
+      });
+      return { ...result, _outputValidationWarning: warning };
+    }
+
+    return result;
+  };
+}
+
+/**
  * Convert UI-defined tool payloads into AI SDK tool objects.
  */
 export function buildDynamicTools(
@@ -164,10 +215,24 @@ export function buildDynamicTools(
       tools[def.name] = tool({ description: def.description, inputSchema });
     } else {
       const executor = resolveExecutor(def, agentId);
-      const execute =
+      let execute =
         collector && agentId
           ? wrapExecutorWithTiming(executor, def.name, agentId, collector)
           : executor;
+
+      // Chain output validation if returnParameters are defined
+      if (def.returnParameters && def.returnParameters.length > 0 && collector && agentId) {
+        const outputSchema = buildInputSchema(
+          def.returnParameters,
+          templateData?.resolvedVars,
+          {
+            datasetsById: templateData?.datasetsById,
+            schemaMap: templateData?.schemaMap,
+          }
+        );
+        execute = wrapWithOutputValidation(execute, def.name, outputSchema, agentId, collector);
+      }
+
       tools[def.name] = tool({
         description: def.description,
         inputSchema,
