@@ -58,7 +58,7 @@ issues/
 2. 分析 issue 间的关联和依赖，合理分组
 3. 向用户展示分组方案（哪些 issue 放在一个工作区）
 4. 确认后，调用 `/worktree` 技能为每组创建工作区
-5. 将对应 issue 文件移动到 `issues/in-progress/`
+5. 将对应 issue 文件移动到 `issues/in-progress/`，并在文件中添加 `- **工作区**: {name}` 字段
 
 ## Issue 文件规范
 
@@ -73,6 +73,7 @@ issues/
 
 - **优先级**: low | medium | high | critical
 - **发现日期**: YYYY-MM-DD
+- **工作区**: {worktree 名称，创建工作区时填入，新建 issue 时留空不写此行}
 
 ## 描述
 
@@ -91,6 +92,7 @@ issues/
 - 截图：如果用户提供了截图，在描述中注明"见对话中截图"
 - 分析：引用具体文件路径和行号，尽量具体
 - 修复方向：简要说明修复思路，不需要详细实现步骤
+- 工作区：新建 issue 时不写此字段；分配工作区时添加，格式为工作区名称（如 `cleanup-dead-code`）
 
 ## 其他操作
 

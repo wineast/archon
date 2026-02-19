@@ -2,6 +2,7 @@
 
 - **优先级**: medium
 - **发现日期**: 2026-02-19
+- **工作区**: fix-build-model-default
 
 ## 描述
 

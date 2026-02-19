@@ -2,6 +2,7 @@
 
 - **优先级**: low
 - **发现日期**: 2026-02-19
+- **工作区**: component-editor-enhance
 
 ## 描述
 

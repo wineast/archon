@@ -140,6 +140,10 @@ make wt-sync
    make test
    ```
 6. **依赖检测**：合并后自动检测 `package.json` / `package-lock.json` 是否有变更，有则自动执行 `make deps`
+7. **归档关联 issue**：用 `Grep` 在 `issues/in-progress/` 中搜索 `**工作区**: <name>`，将匹配的 issue 文件移动到 `issues/archived/`：
+   ```bash
+   grep -rl "**工作区**: <name>" issues/in-progress/ | xargs -I{} mv {} issues/archived/
+   ```
 
 ### 删除 worktree（`delete`）
 
