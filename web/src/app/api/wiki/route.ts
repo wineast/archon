@@ -45,12 +45,19 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  if (!body.title || !body.key) {
+    return NextResponse.json(
+      { error: "title and key are required" },
+      { status: 400 },
+    );
+  }
+
   const [row] = await db
     .insert(wikiDocuments)
     .values({
       agentId,
-      title: body.title ?? "",
-      key: body.key ?? "",
+      title: body.title,
+      key: body.key,
       content: body.content,
       order: body.order,
     })

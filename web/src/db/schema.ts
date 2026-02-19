@@ -201,9 +201,11 @@ export const wikiDocuments = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
-    parentId: uuid("parent_id"),
-    title: text("title").notNull().default(""),
-    key: text("key").notNull().default(""),
+    parentId: uuid("parent_id").references(() => wikiDocuments.id, {
+      onDelete: "set null",
+    }),
+    title: text("title").notNull(),
+    key: text("key").notNull(),
     content: text("content").notNull().default(""),
     order: integer("order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
