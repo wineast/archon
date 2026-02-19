@@ -7,6 +7,7 @@ import useSWR, { useSWRConfig } from "swr";
 import { UserButton } from "@clerk/nextjs";
 import {
   ArrowLeftIcon,
+  BarChart3Icon,
   BookOpenIcon,
   BracesIcon,
   CodeIcon,
@@ -35,6 +36,7 @@ import { ModelConfigPanel } from "@/components/model-config/model-config-panel";
 import { ComponentsPanel } from "@/components/components/components-panel";
 import { MembersPanel } from "@/components/members/members-panel";
 import { OntologyPanel } from "@/components/ontology/ontology-panel";
+import { UsagePanel } from "@/components/usage/usage-panel";
 import { VersionsSidebar } from "@/components/versions/versions-sidebar";
 import { VersionCreateDialog } from "@/components/versions/version-create-dialog";
 import { VersionDetailSheet } from "@/components/versions/version-detail-sheet";
@@ -72,6 +74,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
   { value: "model-config", label: "Model Config", icon: SettingsIcon },
   { value: "embed", label: "Embed", icon: CodeIcon },
+  { value: "usage", label: "Usage", icon: BarChart3Icon },
   { value: "members", label: "Members", icon: UsersIcon },
 ];
 
@@ -106,7 +109,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
   const visibleTabs = useMemo(
     () =>
       SETTINGS_TABS.filter((t) => {
-        if (t.value === "members") return canManageMembers;
+        if (t.value === "members" || t.value === "usage") return canManageMembers;
         return true;
       }),
     [canManageMembers]
@@ -229,6 +232,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         return <ModelConfigPanel agentId={agent.id} />;
       case "embed":
         return <EmbedTokensPanel agentId={agent.id} />;
+      case "usage":
+        return canManageMembers ? <UsagePanel agentId={agent.id} /> : null;
       case "members":
         return canManageMembers ? (
           <MembersPanel agentId={agent.id} isPublic={agent.isPublic} />

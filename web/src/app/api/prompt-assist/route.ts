@@ -6,8 +6,10 @@ import {
   convertToModelMessages,
 } from "ai";
 import { z } from "zod";
+import { after } from "next/server";
 import { requireAuth } from "@/lib/auth/require-agent-role";
 import { NextResponse } from "next/server";
+import { recordUsage } from "@/lib/usage/record";
 
 export const maxDuration = 30;
 
@@ -23,9 +25,28 @@ export async function POST(req: Request) {
     currentPrompt: string;
   } = await req.json();
 
+  const currentUserId = authResult.id;
+
   const result = streamText({
     model: gateway("claude-sonnet-4-20250514"),
     messages: await convertToModelMessages(messages),
+    onFinish: ({ totalUsage }) => {
+      after(async () => {
+        await recordUsage({
+          agentId: null,
+          userId: currentUserId,
+          sessionId: null,
+          modelId: "claude-sonnet-4-20250514",
+          usage: {
+            inputTokens: totalUsage.inputTokens,
+            outputTokens: totalUsage.outputTokens,
+            cachedInputTokens: totalUsage.cachedInputTokens,
+            reasoningTokens: totalUsage.reasoningTokens,
+          },
+          source: "prompt-assist",
+        });
+      });
+    },
     system: `你是一位专业的提示词工程师（Prompt Engineer）。你的任务是帮助用户优化和编辑 AI 系统提示词（System Prompt）。
 
 当前编辑器中的提示词内容如下：
