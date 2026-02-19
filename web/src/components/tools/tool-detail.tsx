@@ -91,6 +91,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
                 componentSource: tool.componentSource ?? "",
                 componentMockData: tool.componentMockData ?? "",
                 enabled: tool.enabled,
+                executionTarget: tool.executionTarget ?? "server",
               }}
               agentId={agentId}
               onDraftRef={handleDraftRef}

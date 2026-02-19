@@ -96,6 +96,7 @@ export async function POST(req: Request) {
       ? schemaMap[row.parametersSchemaRef]
       : row.parameters,
     handler: row.handler ?? "",
+    executionTarget: row.executionTarget ?? "server",
   }));
 
   // Gather template data once for system prompt rendering and tool input schema

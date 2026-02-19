@@ -25,7 +25,7 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
-import { BracesIcon, CodeIcon, GlobeIcon, ListIcon, TypeIcon } from "lucide-react";
+import { BracesIcon, CodeIcon, GlobeIcon, ListIcon, MonitorIcon, ServerIcon, TypeIcon } from "lucide-react";
 
 export interface ToolFormHandle {
   getDraft: () => ToolDefinition;
@@ -177,6 +177,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   const name = useWatch({ control: form.control, name: "name" });
   const handler = useWatch({ control: form.control, name: "handler" });
   const output = useWatch({ control: form.control, name: "output" });
+  const executionTarget = useWatch({ control: form.control, name: "executionTarget" });
   const parametersSchemaRef = useWatch({ control: form.control, name: "parametersSchemaRef" });
   const returnParametersSchemaRef = useWatch({ control: form.control, name: "returnParametersSchemaRef" });
 
@@ -303,6 +304,39 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
         <div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">
+              执行环境
+            </label>
+            <div className="flex items-center rounded-md border border-border p-0.5">
+              <button
+                type="button"
+                onClick={() => form.setValue("executionTarget", "server", { shouldDirty: true })}
+                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                  executionTarget !== "client"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <ServerIcon className="size-3" />
+                服务端
+              </button>
+              <button
+                type="button"
+                onClick={() => form.setValue("executionTarget", "client", { shouldDirty: true })}
+                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                  executionTarget === "client"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <MonitorIcon className="size-3" />
+                浏览器
+              </button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-muted-foreground">
               Handler
             </label>
             <div className="flex items-center rounded-md border border-border p-0.5">
@@ -362,11 +396,14 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                 )}
               />
               <p className="text-xs text-purple-500 mt-1">
-                JS 代码 — 运行时动态执行
+                {executionTarget === "client"
+                  ? "JS 代码 — 在用户浏览器中执行"
+                  : "JS 代码 — 运行时动态执行"}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                可用 context API：wiki.get(id) → {"{meta, content}"},
-                wiki.findByPrefix(prefix), wiki.search(query)
+                {executionTarget === "client"
+                  ? "浏览器端工具无法访问 wiki、数据集等服务端资源"
+                  : <>可用 context API：wiki.get(id) → {"{meta, content}"}, wiki.findByPrefix(prefix), wiki.search(query)</>}
               </p>
             </>
           )}

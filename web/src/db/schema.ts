@@ -256,6 +256,7 @@ export const tools = pgTable(
     componentSource: text("component_source"),
     componentMockData: text("component_mock_data"),
     enabled: boolean("enabled").notNull().default(true),
+    executionTarget: text("execution_target").notNull().default("server").$type<"server" | "client">(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

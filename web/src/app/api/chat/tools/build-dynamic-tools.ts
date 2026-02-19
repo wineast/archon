@@ -92,11 +92,16 @@ export function buildDynamicTools(
       templateData?.resolvedVars
     );
 
-    tools[def.name] = tool({
-      description: def.description,
-      inputSchema,
-      execute: resolveExecutor(def, agentId),
-    });
+    if (def.executionTarget === "client") {
+      // Client tools: schema only, no execute → tool call passes through to frontend
+      tools[def.name] = tool({ description: def.description, inputSchema });
+    } else {
+      tools[def.name] = tool({
+        description: def.description,
+        inputSchema,
+        execute: resolveExecutor(def, agentId),
+      });
+    }
   }
 
   return tools;
