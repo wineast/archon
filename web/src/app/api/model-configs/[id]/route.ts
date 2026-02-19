@@ -30,6 +30,7 @@ export async function PUT(
   const [updated] = await db
     .update(modelConfigs)
     .set({
+      ...(body.key !== undefined && { key: body.key }),
       ...(body.name !== undefined && { name: body.name }),
       ...(body.modelId !== undefined && { modelId: body.modelId }),
       ...(body.systemPrompt !== undefined && {

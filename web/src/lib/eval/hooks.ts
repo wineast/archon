@@ -66,6 +66,7 @@ export function useDefaultJudgeConfig(agentId?: string, shouldFetch?: boolean) {
 export async function createEvalCase(
   data: {
     agentId: string;
+    key: string;
     name: string;
     input: string;
     expectedOutput?: string;
@@ -133,6 +134,7 @@ export async function deleteEvalCase(
 export async function createJudgeConfig(
   data: {
     agentId: string;
+    key: string;
     name: string;
     model: string;
     systemPrompt: string;

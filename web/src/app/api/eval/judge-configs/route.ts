@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     .insert(evalJudgeConfigs)
     .values({
       agentId,
+      key: body.key,
       name: body.name,
       model: body.model,
       systemPrompt: body.systemPrompt,

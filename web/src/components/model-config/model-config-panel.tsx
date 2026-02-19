@@ -48,6 +48,7 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
     const result = await createModelConfig(
       {
         agentId,
+        key: `new_config_${Date.now()}`,
         name: "New Config",
         systemPrompt: "",
         temperature: 0.7,

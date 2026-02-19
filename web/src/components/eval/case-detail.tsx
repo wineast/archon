@@ -166,6 +166,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     const judgeConfig = toJudgeConfig(defaultJudge);
     const currentCase: EvalCase = {
       id: evalCase.id,
+      key: evalCase.key,
       name,
       input,
       assertions,
@@ -298,6 +299,16 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     <div className="flex h-full flex-col">
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-3 p-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              Key
+            </label>
+            <Input
+              className="mt-1 h-8 text-sm font-mono bg-muted"
+              value={evalCase.key}
+              readOnly
+            />
+          </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">
               Case Name

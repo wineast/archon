@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     .insert(evalCases)
     .values({
       agentId,
+      key: body.key,
       name: body.name,
       input: body.input,
       expectedOutput: body.expectedOutput ?? null,

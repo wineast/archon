@@ -65,6 +65,7 @@ export function EvalPanel({ agentId }: { agentId: string }) {
     const result = await createEvalCase(
       {
         agentId,
+        key: `new_case_${Date.now()}`,
         name: "New Case",
         input: "",
         expectedOutput: "",
@@ -98,6 +99,7 @@ export function EvalPanel({ agentId }: { agentId: string }) {
     const result = await createJudgeConfig(
       {
         agentId,
+        key: `new_judge_${Date.now()}`,
         name: "New Judge",
         model: DEFAULT_JUDGE_CONFIG.model,
         systemPrompt: DEFAULT_JUDGE_CONFIG.systemPrompt,

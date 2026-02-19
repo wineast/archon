@@ -105,6 +105,7 @@ vi.mock("@/lib/eval/eval-run-context", () => ({
 const baseCase: EvalCaseRow = {
   id: "case-1",
   agentId: "agent-1",
+  key: "test_case",
   name: "Test Case",
   input: "Hello, how are you?",
   expectedOutput: "I am fine",

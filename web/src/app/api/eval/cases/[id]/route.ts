@@ -27,6 +27,7 @@ export async function PUT(
   const [updated] = await db
     .update(evalCases)
     .set({
+      ...(body.key !== undefined && { key: body.key }),
       ...(body.name !== undefined && { name: body.name }),
       ...(body.input !== undefined && { input: body.input }),
       ...(body.expectedOutput !== undefined && {

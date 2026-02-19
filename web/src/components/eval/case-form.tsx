@@ -50,6 +50,16 @@ export function CaseForm({ evalCase, onSave, onDelete, onCancel }: CaseFormProps
     <div className="space-y-3">
       <div>
         <label className="text-xs font-medium text-muted-foreground">
+          Key
+        </label>
+        <Input
+          className="mt-1 h-8 text-sm font-mono bg-muted"
+          value={draft.key}
+          readOnly
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">
           Case Name
         </label>
         <Input

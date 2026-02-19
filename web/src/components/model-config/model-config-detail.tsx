@@ -176,6 +176,14 @@ export function ModelConfigDetail({
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-4 p-4">
           <div>
+            <label className="text-sm font-medium">Key</label>
+            <Input
+              className="mt-1.5 h-8 text-sm font-mono bg-muted"
+              value={config.key}
+              readOnly
+            />
+          </div>
+          <div>
             <label className="text-sm font-medium">Name</label>
             <Input
               className="mt-1.5 h-8 text-sm"

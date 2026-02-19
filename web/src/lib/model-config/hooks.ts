@@ -45,6 +45,7 @@ export function useActiveModelConfig(agentId?: string) {
 export async function createModelConfig(
   data: {
     agentId: string;
+    key: string;
     name: string;
     systemPrompt?: string;
     temperature?: number;

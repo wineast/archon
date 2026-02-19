@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     .insert(modelConfigs)
     .values({
       agentId,
+      key: body.key,
       name: body.name,
       modelId: body.modelId ?? "",
       systemPrompt: body.systemPrompt ?? "",

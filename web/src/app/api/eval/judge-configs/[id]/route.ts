@@ -30,6 +30,7 @@ export async function PUT(
   const [updated] = await db
     .update(evalJudgeConfigs)
     .set({
+      ...(body.key !== undefined && { key: body.key }),
       ...(body.name !== undefined && { name: body.name }),
       ...(body.model !== undefined && { model: body.model }),
       ...(body.systemPrompt !== undefined && {

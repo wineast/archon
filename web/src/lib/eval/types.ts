@@ -20,6 +20,7 @@ export interface AssertionResult {
 
 export interface EvalCase {
   id: string;
+  key: string;
   name: string;
   input: string;
   assertions: Assertion[];
@@ -74,6 +75,7 @@ import type { EvalCaseRow, EvalJudgeConfigRow, EvalRunRow, EvalRunResultRow } fr
 export function toEvalCase(row: EvalCaseRow): EvalCase {
   return {
     id: row.id,
+    key: row.key,
     name: row.name,
     input: row.input,
     assertions: row.assertions,

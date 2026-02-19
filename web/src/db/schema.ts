@@ -298,24 +298,31 @@ export const messages = pgTable(
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 
-export const modelConfigs = pgTable("model_configs", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  agentId: uuid("agent_id").references(() => agents.id, {
-    onDelete: "cascade",
-  }),
-  name: text("name").notNull().unique(),
-  modelId: text("model_id").notNull().default(""),
-  systemPrompt: text("system_prompt").notNull().default(""),
-  temperature: real("temperature").notNull().default(0.7),
-  isActive: boolean("is_active").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const modelConfigs = pgTable(
+  "model_configs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    modelId: text("model_id").notNull().default(""),
+    systemPrompt: text("system_prompt").notNull().default(""),
+    temperature: real("temperature").notNull().default(0.7),
+    isActive: boolean("is_active").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("model_configs_agent_id_key_idx").on(t.agentId, t.key),
+  ]
+);
 
 export type ModelConfigRow = typeof modelConfigs.$inferSelect;
 export type NewModelConfigRow = typeof modelConfigs.$inferInsert;
@@ -343,47 +350,61 @@ export const chatConfigs = pgTable("chat_configs", {
 export type ChatConfigRow = typeof chatConfigs.$inferSelect;
 export type NewChatConfigRow = typeof chatConfigs.$inferInsert;
 
-export const evalCases = pgTable("eval_cases", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  agentId: uuid("agent_id").references(() => agents.id, {
-    onDelete: "cascade",
-  }),
-  name: text("name").notNull().unique(),
-  input: text("input").notNull(),
-  expectedOutput: text("expected_output"),
-  assertions: jsonb("assertions").$type<Assertion[]>().notNull().default([]),
-  tags: text("tags").array().notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const evalCases = pgTable(
+  "eval_cases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    input: text("input").notNull(),
+    expectedOutput: text("expected_output"),
+    assertions: jsonb("assertions").$type<Assertion[]>().notNull().default([]),
+    tags: text("tags").array().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("eval_cases_agent_id_key_idx").on(t.agentId, t.key),
+  ]
+);
 
 export type EvalCaseRow = typeof evalCases.$inferSelect;
 export type NewEvalCaseRow = typeof evalCases.$inferInsert;
 
-export const evalJudgeConfigs = pgTable("eval_judge_configs", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  agentId: uuid("agent_id").references(() => agents.id, {
-    onDelete: "cascade",
-  }),
-  name: text("name").notNull().unique(),
-  model: text("model").notNull(),
-  systemPrompt: text("system_prompt").notNull(),
-  temperature: real("temperature").notNull(),
-  dimensions: jsonb("dimensions").$type<Dimension[]>().notNull().default([]),
-  isDefault: boolean("is_default").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const evalJudgeConfigs = pgTable(
+  "eval_judge_configs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    model: text("model").notNull(),
+    systemPrompt: text("system_prompt").notNull(),
+    temperature: real("temperature").notNull(),
+    dimensions: jsonb("dimensions").$type<Dimension[]>().notNull().default([]),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("eval_judge_configs_agent_id_key_idx").on(t.agentId, t.key),
+  ]
+);
 
 export type EvalJudgeConfigRow = typeof evalJudgeConfigs.$inferSelect;
 export type NewEvalJudgeConfigRow = typeof evalJudgeConfigs.$inferInsert;

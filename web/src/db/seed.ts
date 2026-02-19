@@ -288,6 +288,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
 
   const modelConfigSeed = readJson<
     Array<{
+      key?: string;
       name: string;
       modelId?: string;
       systemPrompt: string;
@@ -298,22 +299,23 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
 
   const modelConfigIds: string[] = [];
   for (const cfg of modelConfigSeed) {
+    const key = cfg.key ?? cfg.name.replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
     const [row] = await db
       .insert(modelConfigs)
-      .values({ ...cfg, agentId })
+      .values({ ...cfg, key, agentId })
       .onConflictDoUpdate({
-        target: modelConfigs.name,
+        target: [modelConfigs.agentId, modelConfigs.key],
         set: {
+          name: cfg.name,
           modelId: cfg.modelId ?? "",
           systemPrompt: cfg.systemPrompt,
           temperature: cfg.temperature,
           isActive: cfg.isActive,
-          agentId,
         },
       })
       .returning();
     modelConfigIds.push(row.id);
-    console.log(`  - ${row.name} (${row.id})${row.isActive ? " [active]" : ""}`);
+    console.log(`  - ${row.key} (${row.id})${row.isActive ? " [active]" : ""}`);
   }
 
   // Seed chat config
@@ -518,6 +520,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   console.log("Seeding eval judge configs...");
 
   const judgeConfigSeed = readJson<{
+    key?: string;
     name: string;
     model: string;
     systemPrompt: string;
@@ -526,22 +529,23 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     isDefault: boolean;
   }>(join(agentDir, "eval-judge-config.json"));
 
+  const judgeKey = judgeConfigSeed.key ?? judgeConfigSeed.name.replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
   const [judgeConfig] = await db
     .insert(evalJudgeConfigs)
-    .values({ ...judgeConfigSeed, dimensions: judgeConfigSeed.dimensions ?? [], agentId })
+    .values({ ...judgeConfigSeed, key: judgeKey, dimensions: judgeConfigSeed.dimensions ?? [], agentId })
     .onConflictDoUpdate({
-      target: evalJudgeConfigs.name,
+      target: [evalJudgeConfigs.agentId, evalJudgeConfigs.key],
       set: {
+        name: judgeConfigSeed.name,
         model: judgeConfigSeed.model,
         systemPrompt: judgeConfigSeed.systemPrompt,
         temperature: judgeConfigSeed.temperature,
         dimensions: judgeConfigSeed.dimensions ?? [],
         isDefault: judgeConfigSeed.isDefault,
-        agentId,
       },
     })
     .returning();
-  console.log(`  - ${judgeConfig.name} (${judgeConfig.id})`);
+  console.log(`  - ${judgeConfig.key} (${judgeConfig.id})`);
 
   // Clear eval runs
   console.log("Clearing eval runs...");
@@ -553,6 +557,7 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
 
   const evalCasesSeed = readJson<
     Array<{
+      key?: string;
       name: string;
       input: string;
       expectedOutput: string;
@@ -563,9 +568,11 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
 
   const evalCaseIds: string[] = [];
   for (const c of evalCasesSeed) {
+    const key = c.key ?? c.name.replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
     const [row] = await db
       .insert(evalCases)
       .values({
+        key,
         name: c.name,
         input: c.input,
         expectedOutput: c.expectedOutput || null,
@@ -574,13 +581,13 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
         agentId,
       })
       .onConflictDoUpdate({
-        target: evalCases.name,
+        target: [evalCases.agentId, evalCases.key],
         set: {
+          name: c.name,
           input: c.input,
           expectedOutput: c.expectedOutput || null,
           assertions: c.assertions.map((a): Assertion => ({ ...a, id: nanoid() })),
           tags: c.tags,
-          agentId,
         },
       })
       .returning();
