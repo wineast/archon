@@ -19,6 +19,8 @@ import {
 } from "@/db/chat-persistence";
 import { renderTemplate, gatherTemplateData } from "@/lib/template/render";
 import { recordUsage } from "@/lib/usage/record";
+import type { RuntimeEventInput } from "@/lib/runtime-events/record";
+import { recordRuntimeEvents } from "@/lib/runtime-events/record";
 
 export interface ExecuteChatStreamOptions {
   messages: UIMessage[];
@@ -103,8 +105,12 @@ export async function executeChatStream(
       sandboxMode: row.sandboxMode ?? "light",
     }));
 
+  // Runtime event collector
+  const eventCollector: RuntimeEventInput[] = [];
+  const streamStartTime = performance.now();
+
   const allTools = toolPayloads.length
-    ? buildDynamicTools(toolPayloads, templateData, agentId)
+    ? buildDynamicTools(toolPayloads, templateData, agentId, eventCollector)
     : {};
 
   // The last message is the new user message
@@ -116,83 +122,127 @@ export async function executeChatStream(
     hostContext ? { host: hostContext } : undefined
   );
 
-  const result = streamText({
-    model: gateway(activeConfig.modelId),
-    messages: await convertToModelMessages(messages),
-    system: systemPrompt,
-    temperature: activeConfig.temperature ?? 0.7,
-    tools: allTools,
-    stopWhen: stepCountIs(5),
-    onFinish: ({ response, totalUsage }) => {
-      // Record usage (independent of session persistence)
-      after(async () => {
-        await recordUsage({
-          orgId,
+  try {
+    const result = streamText({
+      model: gateway(activeConfig.modelId),
+      messages: await convertToModelMessages(messages),
+      system: systemPrompt,
+      temperature: activeConfig.temperature ?? 0.7,
+      tools: allTools,
+      stopWhen: stepCountIs(5),
+      onFinish: ({ response, totalUsage, steps }) => {
+        // Record usage (independent of session persistence)
+        after(async () => {
+          await recordUsage({
+            orgId,
+            agentId,
+            userId,
+            sessionId: sessionId ?? null,
+            modelId: activeConfig.modelId,
+            usage: {
+              inputTokens: totalUsage.inputTokens,
+              outputTokens: totalUsage.outputTokens,
+              cachedInputTokens: totalUsage.cachedInputTokens,
+              reasoningTokens: totalUsage.reasoningTokens,
+            },
+            source: userId ? "chat" : "embed",
+          });
+        });
+
+        // Collect llm_call event
+        const toolCallCount = steps.reduce(
+          (sum, step) => sum + (step.toolCalls?.length ?? 0),
+          0
+        );
+        eventCollector.push({
           agentId,
-          userId,
-          sessionId: sessionId ?? null,
-          modelId: activeConfig.modelId,
-          usage: {
+          eventType: "llm_call",
+          severity: "info",
+          durationMs: Math.round(performance.now() - streamStartTime),
+          metadata: {
+            modelId: activeConfig.modelId,
             inputTokens: totalUsage.inputTokens,
             outputTokens: totalUsage.outputTokens,
-            cachedInputTokens: totalUsage.cachedInputTokens,
-            reasoningTokens: totalUsage.reasoningTokens,
+            toolCallCount,
+            stepCount: steps.length,
           },
-          source: userId ? "chat" : "embed",
         });
-      });
 
-      if (!sessionId || !userMessage) return;
-      after(async () => {
-        try {
-          // 1. Ensure session exists
-          if (messages.length === 1) {
-            const title =
-              extractTextContent(userMessage.parts as unknown[]).slice(
-                0,
-                100
-              ) || "New Chat";
-            await createSession({
-              id: sessionId,
-              title,
-              model: activeConfig.modelId,
-              systemPrompt: activeConfig.systemPrompt,
-              agentId,
-              userId: userId ?? undefined,
-            });
+        // Flush runtime events
+        after(async () => {
+          // Back-fill sessionId into all events
+          for (const evt of eventCollector) {
+            evt.sessionId = sessionId ?? null;
           }
-          // 2. Save user message
-          await saveMessage({
-            id: crypto.randomUUID(),
-            sessionId,
-            role: userMessage.role as "user" | "assistant" | "system",
-            parts: userMessage.parts as unknown[],
-          });
-          // 3. Save assistant response
-          const uiParts = responseMessagesToUIParts(response.messages);
-          if (uiParts.length > 0) {
+          await recordRuntimeEvents(eventCollector);
+        });
+
+        if (!sessionId || !userMessage) return;
+        after(async () => {
+          try {
+            // 1. Ensure session exists
+            if (messages.length === 1) {
+              const title =
+                extractTextContent(userMessage.parts as unknown[]).slice(
+                  0,
+                  100
+                ) || "New Chat";
+              await createSession({
+                id: sessionId,
+                title,
+                model: activeConfig.modelId,
+                systemPrompt: activeConfig.systemPrompt,
+                agentId,
+                userId: userId ?? undefined,
+              });
+            }
+            // 2. Save user message
             await saveMessage({
               id: crypto.randomUUID(),
               sessionId,
-              role: "assistant",
-              parts: uiParts,
+              role: userMessage.role as "user" | "assistant" | "system",
+              parts: userMessage.parts as unknown[],
             });
+            // 3. Save assistant response
+            const uiParts = responseMessagesToUIParts(response.messages);
+            if (uiParts.length > 0) {
+              await saveMessage({
+                id: crypto.randomUUID(),
+                sessionId,
+                role: "assistant",
+                parts: uiParts,
+              });
+            }
+          } catch (e) {
+            console.error("[chat] failed to save messages:", e);
           }
-        } catch (e) {
-          console.error("[chat] failed to save messages:", e);
-        }
-      });
-    },
-  });
+        });
+      },
+    });
 
-  const response = result.toUIMessageStreamResponse({
-    sendSources: true,
-    sendReasoning: true,
-  });
+    const response = result.toUIMessageStreamResponse({
+      sendSources: true,
+      sendReasoning: true,
+    });
 
-  if (sessionId) {
-    response.headers.set("X-Session-Id", sessionId);
+    if (sessionId) {
+      response.headers.set("X-Session-Id", sessionId);
+    }
+
+    return response;
+  } catch (e) {
+    // Capture stream initialization errors
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    eventCollector.push({
+      agentId,
+      sessionId: sessionId ?? null,
+      eventType: "stream_error",
+      severity: "error",
+      durationMs: Math.round(performance.now() - streamStartTime),
+      metadata: { error: errorMsg.slice(0, 500) },
+    });
+    // Best-effort flush
+    recordRuntimeEvents(eventCollector).catch(() => {});
+    throw e;
   }
-
-  return response;
 }

@@ -1187,3 +1187,45 @@ export const auditLogs = pgTable(
 export type AuditLogRow = typeof auditLogs.$inferSelect;
 export type NewAuditLogRow = typeof auditLogs.$inferInsert;
 
+/* ─────────── Runtime Events ─────────── */
+
+export const runtimeEventTypes = [
+  "llm_call",
+  "tool_call",
+  "tool_error",
+  "tool_timeout",
+  "stream_error",
+] as const;
+export type RuntimeEventType = (typeof runtimeEventTypes)[number];
+
+export const runtimeEventSeverities = ["info", "warning", "error"] as const;
+export type RuntimeEventSeverity = (typeof runtimeEventSeverities)[number];
+
+export const runtimeEvents = pgTable(
+  "runtime_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id").references(() => chatSessions.id, {
+      onDelete: "set null",
+    }),
+    eventType: text("event_type").notNull().$type<RuntimeEventType>(),
+    severity: text("severity").notNull().$type<RuntimeEventSeverity>(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    durationMs: integer("duration_ms"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("runtime_events_agent_id_created_at_idx").on(t.agentId, t.createdAt),
+    index("runtime_events_session_id_idx").on(t.sessionId),
+    index("runtime_events_agent_id_event_type_idx").on(t.agentId, t.eventType),
+  ]
+);
+
+export type RuntimeEventRow = typeof runtimeEvents.$inferSelect;
+export type NewRuntimeEventRow = typeof runtimeEvents.$inferInsert;
+
