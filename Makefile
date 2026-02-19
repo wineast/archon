@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini
 
 # ============================================================
 # Setup
@@ -40,8 +40,8 @@ teardown:
 # Development
 # ============================================================
 
-## 启动所有开发服务（dev + storybook + db-studio）
-up:
+## 启动所有开发服务（db + dev + storybook + db-studio）
+up: db-up
 	@if [ -f .worktree/meta.json ]; then \
 		DEV_PORT=$$(node -p "require('./.worktree/meta.json').dev") && \
 		SB_PORT=$$(node -p "require('./.worktree/meta.json').storybook") && \
@@ -114,6 +114,18 @@ storybook:
 		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
 		cd web && npm run storybook; \
 	fi
+
+## 重启所有开发服务
+restart: down up
+
+## 重启 dev server
+restart-dev: dev
+
+## 重启 storybook
+restart-storybook: storybook
+
+## 重启 drizzle studio
+restart-studio: db-studio
 
 clean:
 	rm -rf web/.next web/node_modules
