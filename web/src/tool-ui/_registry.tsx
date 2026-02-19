@@ -1,8 +1,6 @@
 export interface ToolRendererProps {
-  toolName: string;
+  tool: { name: string; input: unknown; output: unknown };
   state: string;
-  input: unknown;
-  output: unknown;
   isLoading?: boolean;
   isComplete?: boolean;
   isError?: boolean;

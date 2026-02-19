@@ -35,7 +35,6 @@ export async function PATCH(
       ...(body.parametersSchemaRef !== undefined && { parametersSchemaRef: body.parametersSchemaRef }),
       ...(body.returnParametersSchemaRef !== undefined && { returnParametersSchemaRef: body.returnParametersSchemaRef }),
       ...(body.componentSource !== undefined && { componentSource: body.componentSource }),
-      ...(body.componentMockData !== undefined && { componentMockData: body.componentMockData }),
       ...(typeof body.enabled === "boolean" && { enabled: body.enabled }),
       ...(body.executionTarget !== undefined && { executionTarget: body.executionTarget }),
     })

@@ -70,7 +70,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
           name: updated.name,
           description: updated.description,
           componentSource: updated.componentSource,
-          componentMockData: updated.componentMockData,
+          schemaRef: updated.schemaRef,
         },
         mutate
       );
@@ -107,6 +107,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
             <ComponentDetail
               key={activeComponent.id}
               component={activeComponent}
+              agentId={agentId}
               onSave={handleSave}
               onDelete={handleDelete}
             />

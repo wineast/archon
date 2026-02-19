@@ -89,7 +89,6 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
                 handler: tool.handler ?? "",
                 component: tool.component ?? "",
                 componentSource: tool.componentSource ?? "",
-                componentMockData: tool.componentMockData ?? "",
                 enabled: tool.enabled,
                 executionTarget: tool.executionTarget ?? "server",
               }}

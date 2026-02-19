@@ -73,10 +73,8 @@ export function ComponentPreviewPanel({
           fallbackToolName="preview"
         >
           <DynamicToolRenderer
-            toolName="preview"
+            tool={{ name: "preview", input: {}, output: parsedMock }}
             state="output-available"
-            input={{}}
-            output={parsedMock}
             source={componentSource}
           />
         </DynamicComponentErrorBoundary>

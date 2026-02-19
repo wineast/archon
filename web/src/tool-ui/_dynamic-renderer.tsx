@@ -22,10 +22,11 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
   const moduleCode = isFullComponent
     ? `${trimmed}\nreturn Component;`
     : `return function Component(props) {
-  var toolName = props.toolName;
+  var tool = props.tool;
+  var toolName = tool.name;
+  var input = tool.input;
+  var output = tool.output;
   var state = props.state;
-  var input = props.input;
-  var output = props.output;
   var isLoading = props.isLoading;
   var isComplete = props.isComplete;
   var isError = props.isError;
@@ -54,15 +55,15 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
 
 // ── Public renderer component ──
 
-interface DynamicToolRendererProps extends ToolRendererProps {
+interface DynamicToolRendererProps {
+  tool: { name: string; input: unknown; output: unknown };
+  state: string;
   source: string;
 }
 
 export const DynamicToolRenderer = memo(function DynamicToolRenderer({
-  toolName,
+  tool,
   state,
-  input,
-  output,
   source,
 }: DynamicToolRendererProps) {
   const isLoading = state === "input-streaming" || state === "input-available";
@@ -73,10 +74,8 @@ export const DynamicToolRenderer = memo(function DynamicToolRenderer({
 
   return (
     <Component
-      toolName={toolName}
+      tool={tool}
       state={state}
-      input={input}
-      output={output}
       isLoading={isLoading}
       isComplete={isComplete}
       isError={isError}

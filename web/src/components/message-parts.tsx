@@ -76,10 +76,8 @@ export function MessageParts({
             return (
               <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackToolName={toolName}>
                 <DynamicToolRenderer
-                  toolName={toolName}
+                  tool={{ name: toolName, input: part.input, output: part.output }}
                   state={part.state}
-                  input={part.input}
-                  output={part.output}
                   source={dynamicSource}
                 />
               </DynamicComponentErrorBoundary>

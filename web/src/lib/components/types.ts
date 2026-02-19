@@ -4,5 +4,5 @@ export interface ComponentDefinition {
   name: string;
   description: string;
   componentSource: string;
-  componentMockData: string;
+  schemaRef: string | null;
 }
