@@ -20,6 +20,7 @@ export async function GET(
   // Build toolComponentSourceMap for dynamic tool UIs
   const toolComponentSourceMap: Record<string, string> = {};
   const dynamicComponentCss: string[] = [];
+  let componentRecords: Array<{ key: string; source: string }> = [];
   if (session.agentId) {
     const [toolRows, componentRows] = await Promise.all([
       db
@@ -50,6 +51,11 @@ export async function GET(
     for (const c of componentRows) {
       if (c.generatedCss) dynamicComponentCss.push(c.generatedCss);
     }
+
+    // Build componentRecords for composition support
+    componentRecords = componentRows
+      .filter((c) => c.componentSource.trim())
+      .map((c) => ({ key: c.key, source: c.componentSource }));
   }
 
   return NextResponse.json({
@@ -60,5 +66,6 @@ export async function GET(
     messages: session.messages,
     toolComponentSourceMap,
     dynamicComponentCss,
+    componentRecords,
   });
 }

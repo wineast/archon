@@ -45,7 +45,13 @@ import { useActiveModelConfig } from "@/lib/model-config/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { executeClientTool } from "@/lib/tools/client-executor";
 import { useComponents } from "@/lib/components/hooks";
-import { registerDynamicToolSource } from "@/tool-ui";
+import {
+  registerDynamicToolSource,
+  registerCompiledToolComponent,
+  clearCompiledRegistry,
+  compileComponentGraph,
+  type ComponentRecord,
+} from "@/tool-ui";
 import { SessionHistory } from "@/components/session-history";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -95,12 +101,35 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
   const { activeConfig } = useActiveModelConfig(agent.id);
   const { tools: toolsList } = useTools(agent.id);
   const { components: componentsList } = useComponents(agent.id);
-  // Register dynamic component sources + inject generated CSS
+  // Register dynamic component sources with composition support
   useMemo(() => {
+    clearCompiledRegistry();
     const componentMap = new Map(componentsList.map((c) => [c.key, c.componentSource]));
+
+    // Build component records for graph compilation
+    const records: ComponentRecord[] = componentsList
+      .filter((c) => c.componentSource.trim())
+      .map((c) => ({ key: c.key, source: c.componentSource }));
+
+    // Try to compile the full component graph (supports cross-component references)
+    let compiled: ReturnType<typeof compileComponentGraph> = new Map();
+    try {
+      compiled = compileComponentGraph(records);
+    } catch (e) {
+      console.error("[component-composition]", e);
+    }
+
     for (const t of toolsList) {
-      const source = (t.component && componentMap.get(t.component)) || t.componentSource;
-      if (source) registerDynamicToolSource(t.name, source);
+      const compKey = t.component;
+      const compiledComp = compKey ? compiled.get(compKey) : undefined;
+      if (compiledComp) {
+        // Use pre-compiled component (with composition deps resolved)
+        registerCompiledToolComponent(t.name, compiledComp);
+      } else {
+        // Fallback: inline source without composition
+        const source = (compKey && componentMap.get(compKey)) || t.componentSource;
+        if (source) registerDynamicToolSource(t.name, source);
+      }
     }
   }, [toolsList, componentsList]);
 

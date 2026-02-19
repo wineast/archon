@@ -28,53 +28,29 @@ import { ComponentTestCaseCreateForm } from "./component-test-case-create-form";
 import { ComponentRunResultCard } from "./component-run-result-card";
 import { ComponentRunHistoryItem } from "./component-run-history-item";
 import type { ComponentTestRunResultRow } from "@/db/schema";
+import { compileComponentGraph, keyToPascal, type ComponentRecord } from "@/tool-ui";
 
 interface ComponentTestCasesPanelProps {
   componentId: string;
   componentSource: string;
+  componentKey?: string;
+  allComponents?: ComponentRecord[];
 }
 
 /** Execute a component render test on the client side. */
 async function executeRenderTest(
   componentSource: string,
-  tool: { name: string; input: unknown; output: unknown }
+  tool: { name: string; input: unknown; output: unknown },
+  extraDeps?: Record<string, unknown>
 ): Promise<ComponentTestRunResult> {
   const start = performance.now();
   try {
     // Dynamically import compile and render utilities
     const { createElement } = await import("react");
     const { renderToStaticMarkup } = await import("react-dom/server");
-    const { transform } = await import("sucrase");
-    const { INJECTED_DEPS } = await import("@/tool-ui/_allowed-components");
+    const { compileSourceWithDeps } = await import("@/tool-ui/_dynamic-renderer");
 
-    const trimmed = componentSource.trim();
-    const isFullComponent = /^function\s+\w+/.test(trimmed);
-
-    const moduleCode = isFullComponent
-      ? `${trimmed}\nreturn Component;`
-      : `return function Component(props) {
-  var tool = props.tool;
-  var toolName = tool.name;
-  var input = tool.input;
-  var output = tool.output;
-  var state = props.state;
-  var isLoading = props.isLoading;
-  var isComplete = props.isComplete;
-  var isError = props.isError;
-  return (${trimmed});
-};`;
-
-    const { code } = transform(moduleCode, {
-      transforms: ["jsx", "typescript"],
-      jsxRuntime: "classic",
-      production: true,
-    });
-
-    const depNames = Object.keys(INJECTED_DEPS);
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const factory = new Function(...depNames, code);
-    const depValues = Object.values(INJECTED_DEPS);
-    const Comp = factory(...depValues);
+    const Comp = compileSourceWithDeps(componentSource, extraDeps);
 
     // Render to string to check for errors
     renderToStaticMarkup(
@@ -99,6 +75,8 @@ async function executeRenderTest(
 export function ComponentTestCasesPanel({
   componentId,
   componentSource,
+  componentKey,
+  allComponents,
 }: ComponentTestCasesPanelProps) {
   const { testCases, mutate: mutateCases } =
     useComponentTestCases(componentId);
@@ -122,6 +100,23 @@ export function ComponentTestCasesPanel({
   >({});
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
+
+  // Compute extra deps from component graph for composition
+  const compositionDeps = useMemo(() => {
+    if (!componentKey || !allComponents?.length) return undefined;
+    try {
+      const compiled = compileComponentGraph(allComponents);
+      const deps: Record<string, unknown> = {};
+      for (const [key, comp] of compiled) {
+        if (key !== componentKey) {
+          deps[keyToPascal(key)] = comp;
+        }
+      }
+      return Object.keys(deps).length > 0 ? deps : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [componentKey, allComponents]);
 
   // All unique tags
   const allTags = useMemo(() => {
@@ -180,9 +175,9 @@ export function ComponentTestCasesPanel({
     async (
       tool: { name: string; input: unknown; output: unknown }
     ): Promise<ComponentTestRunResult> => {
-      return executeRenderTest(componentSource, tool);
+      return executeRenderTest(componentSource, tool, compositionDeps);
     },
-    [componentSource]
+    [componentSource, compositionDeps]
   );
 
   // ── Run All ──
@@ -213,7 +208,7 @@ export function ComponentTestCasesPanel({
       let passed = 0;
       for (let i = 0; i < filteredCases.length; i++) {
         const tc = filteredCases[i];
-        const result = await executeRenderTest(componentSource, tc.tool);
+        const result = await executeRenderTest(componentSource, tc.tool, compositionDeps);
         if (result.passed) passed++;
 
         // 3. Save result
@@ -250,7 +245,7 @@ export function ComponentTestCasesPanel({
     } finally {
       setRunAllRunning(false);
     }
-  }, [filteredCases, componentId, componentSource, selectedTag, mutateRuns]);
+  }, [filteredCases, componentId, componentSource, selectedTag, mutateRuns, compositionDeps]);
 
   // ── Run history handlers ──
 

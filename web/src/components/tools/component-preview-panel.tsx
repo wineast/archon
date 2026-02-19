@@ -9,8 +9,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { JsonEditor } from "@/components/editors/json-editor";
-import { DynamicToolRenderer } from "@/tool-ui";
-import { DynamicComponentErrorBoundary } from "@/tool-ui";
+import {
+  DynamicToolRenderer,
+  DynamicComponentErrorBoundary,
+  compileComponentGraph,
+  type ComponentRecord,
+} from "@/tool-ui";
 
 interface ComponentPreviewPanelProps {
   componentSource: string;
@@ -18,6 +22,8 @@ interface ComponentPreviewPanelProps {
   onMockDataChange: (value: string) => void;
   /** When false, renders preview directly without collapsible wrapper. Default true. */
   collapsible?: boolean;
+  componentKey?: string;
+  allComponents?: ComponentRecord[];
 }
 
 export function ComponentPreviewPanel({
@@ -25,6 +31,8 @@ export function ComponentPreviewPanel({
   mockData,
   onMockDataChange,
   collapsible = true,
+  componentKey,
+  allComponents,
 }: ComponentPreviewPanelProps) {
   const [open, setOpen] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
@@ -36,6 +44,21 @@ export function ComponentPreviewPanel({
       return {};
     }
   }, [mockData]);
+
+  // Compile component graph for composition support
+  const compiledComponent = useMemo(() => {
+    if (!componentKey || !allComponents?.length || !componentSource.trim()) return undefined;
+    try {
+      const records = allComponents.map((r) =>
+        r.key === componentKey ? { ...r, source: componentSource } : r
+      );
+      const compiled = compileComponentGraph(records);
+      return compiled.get(componentKey);
+    } catch (e) {
+      console.error("[preview-composition]", e);
+      return undefined;
+    }
+  }, [componentKey, allComponents, componentSource]);
 
   const handleRefresh = useCallback(() => {
     setPreviewKey((k) => k + 1);
@@ -75,7 +98,8 @@ export function ComponentPreviewPanel({
           <DynamicToolRenderer
             tool={{ name: "preview", input: {}, output: parsedMock }}
             state="output-available"
-            source={componentSource}
+            source={compiledComponent ? undefined : componentSource}
+            compiledComponent={compiledComponent}
           />
         </DynamicComponentErrorBoundary>
       </div>

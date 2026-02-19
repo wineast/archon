@@ -12,17 +12,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DynamicToolRenderer, DynamicComponentErrorBoundary } from "@/tool-ui";
+import {
+  DynamicToolRenderer,
+  DynamicComponentErrorBoundary,
+  compileComponentGraph,
+  type ComponentRecord,
+} from "@/tool-ui";
 import { useComponentTestCases } from "@/lib/components/test-case-hooks";
 
 interface ComponentPlaygroundProps {
   componentId: string;
   componentSource: string;
+  componentKey?: string;
+  allComponents?: ComponentRecord[];
 }
 
 export function ComponentPlayground({
   componentId,
   componentSource,
+  componentKey,
+  allComponents,
 }: ComponentPlaygroundProps) {
   const [toolName, setToolName] = useState("");
   const [inputValue, setInputValue] = useState("{}");
@@ -46,6 +55,22 @@ export function ComponentPlayground({
       return {};
     }
   }, [outputValue]);
+
+  // Compile component graph to resolve cross-component references
+  const compiledComponent = useMemo(() => {
+    if (!componentKey || !allComponents?.length || !componentSource.trim()) return undefined;
+    try {
+      // Replace current component's source with latest (unsaved) version
+      const records = allComponents.map((r) =>
+        r.key === componentKey ? { ...r, source: componentSource } : r
+      );
+      const compiled = compileComponentGraph(records);
+      return compiled.get(componentKey);
+    } catch (e) {
+      console.error("[playground-composition]", e);
+      return undefined;
+    }
+  }, [componentKey, allComponents, componentSource]);
 
   const handleRefresh = useCallback(() => {
     setPreviewKey((k) => k + 1);
@@ -148,7 +173,8 @@ export function ComponentPlayground({
                       output: parsedOutput,
                     }}
                     state="output-available"
-                    source={componentSource}
+                    source={compiledComponent ? undefined : componentSource}
+                    compiledComponent={compiledComponent}
                   />
                 </DynamicComponentErrorBoundary>
               </div>

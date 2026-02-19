@@ -13,6 +13,17 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
   const cached = cache.get(source);
   if (cached) return cached;
 
+  const Comp = compileSourceWithDeps(source);
+  cache.set(source, Comp);
+  return Comp;
+}
+
+/** Compile a component source with optional extra dependencies merged into INJECTED_DEPS.
+ *  Does NOT use the source cache (intended for graph compilation). */
+export function compileSourceWithDeps(
+  source: string,
+  extraDeps?: Record<string, unknown>
+): ComponentType<ToolRendererProps> {
   const trimmed = source.trim();
 
   // Detect whether source is a full function component or a JSX fragment
@@ -40,17 +51,19 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
     production: true,
   });
 
+  // Merge injected deps with extra deps (e.g. composed components)
+  const allDeps = extraDeps
+    ? { ...INJECTED_DEPS, ...extraDeps }
+    : INJECTED_DEPS;
+
   // Create factory function with injected dependencies
-  const depNames = Object.keys(INJECTED_DEPS);
+  const depNames = Object.keys(allDeps);
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
   const factory = new Function(...depNames, code);
 
   // Execute factory to get the component
-  const depValues = Object.values(INJECTED_DEPS);
-  const Comp = factory(...depValues) as ComponentType<ToolRendererProps>;
-
-  cache.set(source, Comp);
-  return Comp;
+  const depValues = Object.values(allDeps);
+  return factory(...depValues) as ComponentType<ToolRendererProps>;
 }
 
 // ── Public renderer component ──
@@ -58,19 +71,27 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
 interface DynamicToolRendererProps {
   tool: { name: string; input: unknown; output: unknown };
   state: string;
-  source: string;
+  source?: string;
+  /** Pre-compiled component (from compileComponentGraph). When provided, source is ignored. */
+  compiledComponent?: ComponentType<ToolRendererProps>;
 }
 
 export const DynamicToolRenderer = memo(function DynamicToolRenderer({
   tool,
   state,
   source,
+  compiledComponent,
 }: DynamicToolRendererProps) {
   const isLoading = state === "input-streaming" || state === "input-available";
   const isComplete = state === "output-available";
   const isError = state === "error";
 
-  const Component = useMemo(() => compileSource(source), [source]);
+  const Component = useMemo(
+    () => compiledComponent ?? (source ? compileSource(source) : null),
+    [compiledComponent, source]
+  );
+
+  if (!Component) return null;
 
   return (
     <Component

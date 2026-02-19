@@ -25,6 +25,7 @@ import {
   SourcesTrigger,
 } from "@/components/ai-elements/sources";
 import {
+  getCompiledToolComponent,
   getDynamicToolSource,
   DynamicToolRenderer,
   DynamicComponentErrorBoundary,
@@ -70,7 +71,21 @@ export function MessageParts({
             ? (part as { toolName: string }).toolName
             : part.type.split("-").slice(1).join("-");
 
-          // 1) Dynamic component source from DB
+          // 1a) Pre-compiled component (with composition support)
+          const compiledComp = getCompiledToolComponent(toolName);
+          if (compiledComp) {
+            return (
+              <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackToolName={toolName}>
+                <DynamicToolRenderer
+                  tool={{ name: toolName, input: part.input, output: part.output }}
+                  state={part.state}
+                  compiledComponent={compiledComp}
+                />
+              </DynamicComponentErrorBoundary>
+            );
+          }
+
+          // 1b) Dynamic component source from DB (no composition)
           const dynamicSource = getDynamicToolSource(toolName);
           if (dynamicSource) {
             return (
