@@ -749,6 +749,7 @@ export const agentVersions = pgTable(
 export type AgentVersionRow = typeof agentVersions.$inferSelect;
 export type NewAgentVersionRow = typeof agentVersions.$inferInsert;
 
+<<<<<<< HEAD
 /* ─────────── Embed Tokens ─────────── */
 
 export const embedTokens = pgTable(
@@ -808,4 +809,22 @@ export const agentFiles = pgTable(
 
 export type AgentFileRow = typeof agentFiles.$inferSelect;
 export type NewAgentFileRow = typeof agentFiles.$inferInsert;
+
+/* ─────────── Models (global model registry) ─────────── */
+
+export const models = pgTable("models", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  modelId: text("model_id").notNull().unique(),
+  name: text("name").notNull(),
+  provider: text("provider").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export type ModelRow = typeof models.$inferSelect;
+export type NewModelRow = typeof models.$inferInsert;
 
