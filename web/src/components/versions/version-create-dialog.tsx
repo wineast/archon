@@ -18,7 +18,7 @@ interface VersionCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (version: string, changelog: string) => Promise<void>;
-  currentVersion: string;
+  latestVersion: string | null;
 }
 
 function suggestNextPatch(current: string): string {
@@ -33,11 +33,11 @@ export function VersionCreateDialog({
   open,
   onOpenChange,
   onCreate,
-  currentVersion,
+  latestVersion,
 }: VersionCreateDialogProps) {
   const suggested = useMemo(
-    () => suggestNextPatch(currentVersion),
-    [currentVersion]
+    () => (latestVersion ? suggestNextPatch(latestVersion) : "1.0.0"),
+    [latestVersion]
   );
   const [version, setVersion] = useState("");
   const [changelog, setChangelog] = useState("");

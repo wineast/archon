@@ -100,12 +100,12 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
     fetcher
   );
   const currentAgent = agentData ?? agent;
-  const currentVersion = currentAgent.version ?? "0.0.0";
   const editingVersionId = currentAgent.editingVersionId ?? null;
   const publishedVersionId = currentAgent.publishedVersionId ?? null;
 
   // ── Versions ──
   const { versions, mutate: mutateVersions } = useVersions(agent.id);
+  const latestVersion = versions[0]?.version ?? null;
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [sheetVersionId, setSheetVersionId] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
@@ -290,7 +290,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
           <div className="hidden shrink-0 sm:block">
             <VersionsSidebar
               versions={versions}
-              currentVersion={currentVersion}
+              latestVersion={latestVersion}
               editingVersionId={editingVersionId}
               publishedVersionId={publishedVersionId}
               onSelect={handleSwitch}
@@ -361,7 +361,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
           open={createDialogOpen}
           onOpenChange={setCreateDialogOpen}
           onCreate={handleCreate}
-          currentVersion={currentVersion}
+          latestVersion={latestVersion}
         />
       )}
 
