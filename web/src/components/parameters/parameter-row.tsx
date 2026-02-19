@@ -30,6 +30,7 @@ const PARAM_TYPES: { value: SchemaPropertyType; label: string }[] = [
   { value: "enum", label: "Enum" },
   { value: "object", label: "Object" },
   { value: "array", label: "Array" },
+  { value: "union", label: "Union" },
 ];
 
 /** Item types available when type === "array" */
@@ -38,6 +39,14 @@ const ARRAY_ITEM_TYPES: { value: SchemaPropertyType; label: string }[] = [
   { value: "number", label: "Number" },
   { value: "boolean", label: "Boolean" },
   { value: "enum", label: "Enum" },
+  { value: "object", label: "Object" },
+];
+
+/** Value types for additionalProperties (Map/Record) */
+const MAP_VALUE_TYPES: { value: SchemaPropertyType; label: string }[] = [
+  { value: "string", label: "String" },
+  { value: "number", label: "Number" },
+  { value: "boolean", label: "Boolean" },
   { value: "object", label: "Object" },
 ];
 
@@ -92,6 +101,204 @@ function NestedProperties({
         <ParameterRow
           key={field.id}
           fieldPath={`${fieldPath}.properties.${index}`}
+          onDelete={() => remove(index)}
+          enumRefOptions={enumRefOptions}
+          enumRefValues={enumRefValues}
+          hideDefault={hideDefault}
+          depth={depth + 1}
+          schemas={schemas}
+        />
+      ))}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() =>
+          append({
+            id: nanoid(),
+            name: "",
+            type: "string",
+            description: "",
+            required: false,
+          })
+        }
+        className="gap-1 text-xs h-7"
+      >
+        <PlusIcon className="size-3" />
+        添加字段
+      </Button>
+    </div>
+  );
+}
+
+/** additionalProperties toggle + value type selector for Map/Record on object type. */
+function AdditionalPropertiesEditor({
+  fieldPath,
+  depth,
+}: {
+  fieldPath: string;
+  depth: number;
+}) {
+  const { control, setValue, getValues } = useFormContext();
+  const ap = useWatch({ control, name: `${fieldPath}.additionalProperties` }) as
+    | { type?: SchemaPropertyType }
+    | undefined;
+  const enabled = ap != null;
+
+  return (
+    <div className="flex items-center gap-2 pl-[128px] min-w-0">
+      <Switch
+        size="sm"
+        checked={enabled}
+        onCheckedChange={(checked: boolean) => {
+          if (checked) {
+            setValue(`${fieldPath}.additionalProperties`, {
+              id: nanoid(),
+              name: "_value",
+              type: "string",
+              description: "",
+              required: true,
+            });
+          } else {
+            setValue(`${fieldPath}.additionalProperties`, undefined);
+          }
+        }}
+      />
+      <span className="text-xs text-muted-foreground shrink-0">动态 Key</span>
+      {enabled && (
+        <Controller
+          name={`${fieldPath}.additionalProperties.type`}
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? "string"}
+              onValueChange={(value: SchemaPropertyType) => {
+                setValue(`${fieldPath}.additionalProperties`, {
+                  id: getValues(`${fieldPath}.additionalProperties.id`) || nanoid(),
+                  name: "_value",
+                  type: value,
+                  description: "",
+                  required: true,
+                });
+              }}
+            >
+              <SelectTrigger className="w-[100px]" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MAP_VALUE_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Union variant editor — each variant is a list of properties (like an object). */
+function UnionVariants({
+  fieldPath,
+  enumRefOptions,
+  enumRefValues,
+  hideDefault,
+  depth,
+  schemas,
+}: {
+  fieldPath: string;
+  enumRefOptions: EnumRefOption[];
+  enumRefValues: Record<string, string[]>;
+  hideDefault: boolean;
+  depth: number;
+  schemas?: SchemaRow[];
+}) {
+  const { control, setValue, getValues } = useFormContext();
+  const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
+    control,
+    name: `${fieldPath}.variants`,
+  });
+
+  return (
+    <div className="border-l-2 border-muted pl-4 ml-2 space-y-3 min-w-0">
+      {variantFields.map((vf, vIndex) => (
+        <div key={vf.id} className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              变体 {vIndex + 1}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeVariant(vIndex)}
+              className="size-6 p-0"
+            >
+              <Trash2Icon className="size-3" />
+            </Button>
+          </div>
+          <NestedPropertiesForVariant
+            fieldPath={`${fieldPath}.variants.${vIndex}`}
+            enumRefOptions={enumRefOptions}
+            enumRefValues={enumRefValues}
+            hideDefault={hideDefault}
+            depth={depth}
+            schemas={schemas}
+          />
+        </div>
+      ))}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => appendVariant([{
+          id: nanoid(),
+          name: "",
+          type: "string" as const,
+          description: "",
+          required: false,
+        }])}
+        className="gap-1 text-xs h-7"
+      >
+        <PlusIcon className="size-3" />
+        添加变体
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Variant-level nested properties editor.
+ * Variants are stored as SchemaProperty[][] — each variant is an array of properties.
+ * The fieldPath points to `variants.N` which is an array.
+ */
+function NestedPropertiesForVariant({
+  fieldPath,
+  enumRefOptions,
+  enumRefValues,
+  hideDefault,
+  depth,
+  schemas,
+}: {
+  fieldPath: string;
+  enumRefOptions: EnumRefOption[];
+  enumRefValues: Record<string, string[]>;
+  hideDefault: boolean;
+  depth: number;
+  schemas?: SchemaRow[];
+}) {
+  const { control } = useFormContext();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: fieldPath,
+  });
+
+  return (
+    <div className="border-l-2 border-muted/50 pl-3 ml-1 space-y-1.5 min-w-0">
+      {fields.map((field, index) => (
+        <ParameterRow
+          key={field.id}
+          fieldPath={`${fieldPath}.${index}`}
           onDelete={() => remove(index)}
           enumRefOptions={enumRefOptions}
           enumRefValues={enumRefValues}
@@ -309,8 +516,10 @@ export function ParameterRow({
   const isEnum = type === "enum";
   const isObject = type === "object";
   const isArray = type === "array";
+  const isUnion = type === "union";
   const canNestObject = isObject && depth < MAX_DEPTH;
   const canNestArrayItems = isArray && depth < MAX_DEPTH;
+  const canNestUnion = isUnion && depth < MAX_DEPTH;
 
   const [enumSource, setEnumSource] = useState<EnumSource>(() =>
     enumDatasetId ? "ref" : "manual"
@@ -348,9 +557,14 @@ export function ParameterRow({
                 if (value !== "object") {
                   setValue(`${fieldPath}.properties`, undefined);
                   setValue(`${fieldPath}.schemaId`, undefined);
+                  setValue(`${fieldPath}.additionalProperties`, undefined);
                 }
                 if (value !== "array") {
                   setValue(`${fieldPath}.items`, undefined);
+                }
+                if (value !== "union") {
+                  setValue(`${fieldPath}.discriminator`, undefined);
+                  setValue(`${fieldPath}.variants`, undefined);
                 }
               }}
             >
@@ -621,6 +835,36 @@ export function ParameterRow({
           hideDefault={hideDefault}
           depth={depth}
         />
+      )}
+
+      {/* Object: additionalProperties (Map/Record value type) */}
+      {canNestObject && (
+        <AdditionalPropertiesEditor
+          fieldPath={fieldPath}
+          depth={depth}
+        />
+      )}
+
+      {/* Union: discriminator + variants */}
+      {canNestUnion && (
+        <>
+          <div className="flex items-center gap-2 pl-[128px] min-w-0">
+            <span className="text-xs text-muted-foreground shrink-0">判别字段</span>
+            <Input
+              className="h-8 w-[160px] text-sm"
+              {...register(`${fieldPath}.discriminator`)}
+              placeholder="type (可选)"
+            />
+          </div>
+          <UnionVariants
+            fieldPath={fieldPath}
+            enumRefOptions={enumRefOptions}
+            enumRefValues={enumRefValues}
+            hideDefault={hideDefault}
+            depth={depth}
+            schemas={schemas}
+          />
+        </>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-export type SchemaPropertyType = "string" | "number" | "boolean" | "enum" | "object" | "array";
+export type SchemaPropertyType = "string" | "number" | "boolean" | "enum" | "object" | "array" | "union";
 
 export interface SchemaProperty {
   id: string;
@@ -16,6 +16,12 @@ export interface SchemaProperty {
   // object（原 json）
   properties?: SchemaProperty[];
   schemaId?: string;
+  /** Map/Record: value type for dynamic keys (additionalProperties in JSON Schema). */
+  additionalProperties?: SchemaProperty;
+
+  // union
+  discriminator?: string;
+  variants?: SchemaProperty[][];
 
   // array
   items?: SchemaProperty;
