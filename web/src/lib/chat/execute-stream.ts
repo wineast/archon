@@ -18,6 +18,7 @@ import {
   responseMessagesToUIParts,
 } from "@/db/chat-persistence";
 import { renderTemplate, gatherTemplateData } from "@/lib/template/render";
+import { recordUsage } from "@/lib/usage/record";
 
 export interface ExecuteChatStreamOptions {
   messages: UIMessage[];
@@ -113,7 +114,24 @@ export async function executeChatStream(
     temperature: activeConfig.temperature ?? 0.7,
     tools: allTools,
     stopWhen: stepCountIs(5),
-    onFinish: ({ response }) => {
+    onFinish: ({ response, totalUsage }) => {
+      // Record usage (independent of session persistence)
+      after(async () => {
+        await recordUsage({
+          agentId,
+          userId,
+          sessionId: sessionId ?? null,
+          modelId: activeConfig.modelId,
+          usage: {
+            inputTokens: totalUsage.inputTokens,
+            outputTokens: totalUsage.outputTokens,
+            cachedInputTokens: totalUsage.cachedInputTokens,
+            reasoningTokens: totalUsage.reasoningTokens,
+          },
+          source: userId ? "chat" : "embed",
+        });
+      });
+
       if (!sessionId || !userMessage) return;
       after(async () => {
         try {

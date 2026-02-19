@@ -983,3 +983,40 @@ export const objectLinks = pgTable(
 export type ObjectLinkRow = typeof objectLinks.$inferSelect;
 export type NewObjectLinkRow = typeof objectLinks.$inferInsert;
 
+/* ─────────── Usage Records (LLM usage metering) ─────────── */
+
+export const usageRecords = pgTable(
+  "usage_records",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "set null",
+    }),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    sessionId: uuid("session_id").references(() => chatSessions.id, {
+      onDelete: "set null",
+    }),
+    modelId: text("model_id").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    cachedInputTokens: integer("cached_input_tokens").notNull().default(0),
+    reasoningTokens: integer("reasoning_tokens").notNull().default(0),
+    costUSD: real("cost_usd").notNull().default(0),
+    source: text("source").notNull().$type<"chat" | "embed" | "prompt-assist" | "eval">(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("usage_records_agent_id_idx").on(t.agentId),
+    index("usage_records_agent_id_created_at_idx").on(t.agentId, t.createdAt),
+    index("usage_records_user_id_idx").on(t.userId),
+    index("usage_records_source_idx").on(t.source),
+  ]
+);
+
+export type UsageRecordRow = typeof usageRecords.$inferSelect;
+export type NewUsageRecordRow = typeof usageRecords.$inferInsert;
+

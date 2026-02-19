@@ -51,7 +51,7 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 vi.mock("@/lib/auth/require-agent-role", () => ({
-  requireAgentRole: vi.fn().mockResolvedValue({ agentId: "agent-1" }),
+  requireAgentRole: vi.fn().mockResolvedValue({ user: { id: "user-1" }, role: "admin", isSuperAdmin: false }),
 }));
 
 // Mock AI SDK
@@ -85,6 +85,11 @@ vi.mock("@/lib/template/render", () => ({
 const mockBuildDynamicTools = vi.fn().mockReturnValue({});
 vi.mock("@/app/api/chat/tools/build-dynamic-tools", () => ({
   buildDynamicTools: (...args: unknown[]) => mockBuildDynamicTools(...args),
+}));
+
+// Mock usage recording
+vi.mock("@/lib/usage/record", () => ({
+  recordUsage: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock judge dimensions
@@ -160,9 +165,10 @@ describe("POST /api/eval/run/[runId]/case", () => {
 
   it("executes a single mode case and returns result with all assertions passed", async () => {
     mockGenerateText
-      .mockResolvedValueOnce({ text: "Hello world response" }) // chat
+      .mockResolvedValueOnce({ text: "Hello world response", usage: { inputTokens: 100, outputTokens: 50 } }) // chat
       .mockResolvedValueOnce({
         output: { quality: { score: 8, reason: "good" } },
+        usage: { inputTokens: 300, outputTokens: 50 },
       }); // judge
 
     mockRunAllAssertions.mockReturnValue([
@@ -189,7 +195,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
   });
 
   it("skips judge when assertions fail", async () => {
-    mockGenerateText.mockResolvedValueOnce({ text: "No match" }); // chat only
+    mockGenerateText.mockResolvedValueOnce({ text: "No match", usage: { inputTokens: 80, outputTokens: 30 } }); // chat only
 
     mockRunAllAssertions.mockReturnValue([
       {
@@ -209,7 +215,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
   });
 
   it("saves result to evalRunResults with new fields", async () => {
-    mockGenerateText.mockResolvedValueOnce({ text: "response" });
+    mockGenerateText.mockResolvedValueOnce({ text: "response", usage: { inputTokens: 50, outputTokens: 20 } });
     mockRunAllAssertions.mockReturnValue([]);
 
     await POST(makeRequest(baseBody), { params });
@@ -239,7 +245,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
       },
     ];
 
-    mockGenerateText.mockResolvedValueOnce({ text: "response" });
+    mockGenerateText.mockResolvedValueOnce({ text: "response", usage: { inputTokens: 50, outputTokens: 20 } });
     mockRunAllAssertions.mockReturnValue([]);
 
     await POST(makeRequest(baseBody), { params });
@@ -270,8 +276,8 @@ describe("POST /api/eval/run/[runId]/case", () => {
 
   it("executes injected mode with single LLM call", async () => {
     mockGenerateText
-      .mockResolvedValueOnce({ text: "Detailed analysis" }) // chat
-      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } } }); // judge
+      .mockResolvedValueOnce({ text: "Detailed analysis", usage: { inputTokens: 200, outputTokens: 100 } }) // chat
+      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } }, usage: { inputTokens: 300, outputTokens: 50 } }); // judge
     mockRunAllAssertions.mockReturnValue([]);
 
     const injectedBody = {
@@ -302,9 +308,9 @@ describe("POST /api/eval/run/[runId]/case", () => {
 
   it("executes sequential mode with multiple LLM calls", async () => {
     mockGenerateText
-      .mockResolvedValueOnce({ text: "Products: Universe, Ocean" }) // chat turn 1
-      .mockResolvedValueOnce({ text: "Max LTV is 75%" }) // chat turn 2
-      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } } }); // judge
+      .mockResolvedValueOnce({ text: "Products: Universe, Ocean", usage: { inputTokens: 150, outputTokens: 60 } }) // chat turn 1
+      .mockResolvedValueOnce({ text: "Max LTV is 75%", usage: { inputTokens: 200, outputTokens: 80 } }) // chat turn 2
+      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } }, usage: { inputTokens: 300, outputTokens: 50 } }); // judge
     mockRunAllAssertions.mockReturnValue([]);
 
     const sequentialBody = {

@@ -10,6 +10,7 @@ import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResu
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { recordUsage } from "@/lib/usage/record";
 
 export const maxDuration = 120;
 
@@ -63,6 +64,17 @@ export async function POST(
 
   const start = Date.now();
   let result: EvalResult;
+
+  // ── Usage accumulators (separate for chat model and judge model) ──
+  const chatUsage = { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0 };
+  const judgeUsage = { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0 };
+
+  const accumulateUsage = (acc: typeof chatUsage, usage: { inputTokens?: number; outputTokens?: number; cachedInputTokens?: number; reasoningTokens?: number }) => {
+    acc.inputTokens += usage.inputTokens ?? 0;
+    acc.outputTokens += usage.outputTokens ?? 0;
+    acc.cachedInputTokens += usage.cachedInputTokens ?? 0;
+    acc.reasoningTokens += usage.reasoningTokens ?? 0;
+  };
 
   try {
     // Resolve template variables in system prompt
@@ -125,6 +137,7 @@ export async function POST(
         stopWhen: stepCountIs(5),
       });
       chatResponse = chatResult.text;
+      accumulateUsage(chatUsage, chatResult.usage);
 
       chatMessages.push({ role: "user", content: userContent });
       chatMessages.push({ role: "assistant", content: chatResponse });
@@ -169,6 +182,7 @@ export async function POST(
         stopWhen: stepCountIs(5),
       });
       chatResponse = chatResult.text;
+      accumulateUsage(chatUsage, chatResult.usage);
 
       chatMessages.push({ role: "assistant", content: chatResponse });
 
@@ -196,6 +210,7 @@ export async function POST(
             tools: allTools,
             stopWhen: stepCountIs(5),
           });
+          accumulateUsage(chatUsage, chatResult.usage);
           const assistantResponse = chatResult.text;
           chatResponse = assistantResponse; // Last response
 
@@ -240,6 +255,7 @@ export async function POST(
               temperature: judgeConfig.temperature ?? 0.1,
               output: Output.object({ schema: judgeSchema }),
             });
+            accumulateUsage(judgeUsage, judgeGenResult.usage);
 
             const raw = judgeGenResult.output as Record<string, { score: number; reason: string }>;
             const perTurnJudge = toJudgeResult(raw, dimensions);
@@ -295,6 +311,7 @@ export async function POST(
         temperature: judgeConfig.temperature ?? 0.1,
         output: Output.object({ schema: judgeSchema }),
       });
+      accumulateUsage(judgeUsage, judgeGenResult.usage);
 
       const raw = judgeGenResult.output as Record<string, { score: number; reason: string }>;
       judgeResult = toJudgeResult(raw, dimensions);
@@ -330,6 +347,28 @@ export async function POST(
       durationMs: Date.now() - start,
       error: err instanceof Error ? err.message : String(err),
     };
+  }
+
+  // Record usage (chat model + judge model separately)
+  if (chatUsage.inputTokens > 0 || chatUsage.outputTokens > 0) {
+    await recordUsage({
+      agentId: run.agentId,
+      userId: ctx.user.id,
+      sessionId: null,
+      modelId: chatModel,
+      usage: chatUsage,
+      source: "eval",
+    });
+  }
+  if (judgeUsage.inputTokens > 0 || judgeUsage.outputTokens > 0) {
+    await recordUsage({
+      agentId: run.agentId,
+      userId: ctx.user.id,
+      sessionId: null,
+      modelId: judgeConfig.model,
+      usage: judgeUsage,
+      source: "eval",
+    });
   }
 
   // Save result to DB
