@@ -341,6 +341,76 @@ function NestedPropertiesForVariant({
   );
 }
 
+/** Union editor: unionMode switch + discriminator + variants. */
+function UnionEditor({
+  fieldPath,
+  enumDatasetOptions,
+  enumDatasetValues,
+  hideDefault,
+  depth,
+  schemas,
+}: {
+  fieldPath: string;
+  enumDatasetOptions: EnumDatasetOption[];
+  enumDatasetValues: Record<string, string[]>;
+  hideDefault: boolean;
+  depth: number;
+  schemas?: SchemaRow[];
+}) {
+  const { register, control, setValue } = useFormContext();
+  const unionMode = useWatch({ control, name: `${fieldPath}.unionMode` }) as string | undefined;
+  const isAnyOf = unionMode === "anyOf";
+
+  return (
+    <>
+      <div className="flex items-center gap-2 pl-[128px] min-w-0">
+        <span className="text-xs text-muted-foreground shrink-0">匹配规则</span>
+        <Controller
+          name={`${fieldPath}.unionMode`}
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? "oneOf"}
+              onValueChange={(value: string) => {
+                field.onChange(value === "oneOf" ? undefined : value);
+                if (value === "anyOf") {
+                  setValue(`${fieldPath}.discriminator`, undefined);
+                }
+              }}
+            >
+              <SelectTrigger className="w-[160px]" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="oneOf">恰好一个 (oneOf)</SelectItem>
+                <SelectItem value="anyOf">至少一个 (anyOf)</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+      {!isAnyOf && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0">
+          <span className="text-xs text-muted-foreground shrink-0">判别字段</span>
+          <Input
+            className="h-8 w-[160px] text-sm"
+            {...register(`${fieldPath}.discriminator`)}
+            placeholder="type (可选)"
+          />
+        </div>
+      )}
+      <UnionVariants
+        fieldPath={fieldPath}
+        enumDatasetOptions={enumDatasetOptions}
+        enumDatasetValues={enumDatasetValues}
+        hideDefault={hideDefault}
+        depth={depth}
+        schemas={schemas}
+      />
+    </>
+  );
+}
+
 /** Only re-renders when `required` changes. */
 function RequiredLabel({ fieldPath }: { fieldPath: string }) {
   const { control } = useFormContext();
@@ -1033,26 +1103,16 @@ export function ParameterRow({
         />
       )}
 
-      {/* Union: discriminator + variants */}
+      {/* Union: unionMode + discriminator + variants */}
       {canNestUnion && (
-        <>
-          <div className="flex items-center gap-2 pl-[128px] min-w-0">
-            <span className="text-xs text-muted-foreground shrink-0">判别字段</span>
-            <Input
-              className="h-8 w-[160px] text-sm"
-              {...register(`${fieldPath}.discriminator`)}
-              placeholder="type (可选)"
-            />
-          </div>
-          <UnionVariants
-            fieldPath={fieldPath}
-            enumDatasetOptions={enumDatasetOptions}
-            enumDatasetValues={enumDatasetValues}
-            hideDefault={hideDefault}
-            depth={depth}
-            schemas={schemas}
-          />
-        </>
+        <UnionEditor
+          fieldPath={fieldPath}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
+          hideDefault={hideDefault}
+          depth={depth}
+          schemas={schemas}
+        />
       )}
     </div>
   );

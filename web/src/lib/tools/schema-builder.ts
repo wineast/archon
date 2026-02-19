@@ -192,7 +192,14 @@ function buildUnionSchema(
     buildNestedObject(variantProps, resolvedVars, options, ancestorSchemaIds)
   );
 
-  // discriminatedUnion requires a discriminator key present as z.literal in each variant
+  // anyOf mode: always use z.union (anyOf semantics = try in order)
+  if (param.unionMode === "anyOf") {
+    return z.union(
+      variantSchemas as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]
+    );
+  }
+
+  // oneOf (default): discriminatedUnion when discriminator is set
   if (param.discriminator) {
     return z.discriminatedUnion(
       param.discriminator,
@@ -339,6 +346,26 @@ function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
       if (param.uniqueItems != null) s.uniqueItems = param.uniqueItems;
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
       return s;
+    }
+    case "union": {
+      if (param.variants && param.variants.length >= 2) {
+        const variantSchemas = param.variants.map((variantProps) => {
+          const properties: Record<string, JsonSchema7> = {};
+          const required: string[] = [];
+          for (const child of variantProps) {
+            const prop = buildJsonSchemaProperty(child);
+            if (child.description) prop.description = child.description;
+            properties[child.name] = prop;
+            if (child.required) required.push(child.name);
+          }
+          const vs: JsonSchema7 = { type: "object", properties };
+          if (required.length > 0) vs.required = required;
+          return vs;
+        });
+        const keyword = param.unionMode === "anyOf" ? "anyOf" : "oneOf";
+        return { [keyword]: variantSchemas };
+      }
+      return {};
     }
     default:
       return { type: "string" };
