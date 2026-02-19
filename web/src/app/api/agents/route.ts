@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { agents, agentMembers } from "@/db/schema";
+import { agents, agentMembers, agentVersions } from "@/db/schema";
 import { desc, eq, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
@@ -83,5 +83,30 @@ export async function POST(req: Request) {
     role: "owner",
   });
 
-  return NextResponse.json({ ...agent, myRole: "owner" as const }, { status: 201 });
+  // Auto-create initial version 0.1.0
+  const { buildSnapshot } = await import("@/lib/versions/snapshot");
+  const snapshot = await buildSnapshot(agent.id);
+  const [initialVersion] = await db
+    .insert(agentVersions)
+    .values({
+      agentId: agent.id,
+      version: "0.1.0",
+      changelog: "Initial version",
+      snapshot,
+      createdBy: user.id,
+    })
+    .returning();
+
+  const updatedAgent = await db
+    .update(agents)
+    .set({
+      version: "0.1.0",
+      editingVersionId: initialVersion.id,
+      publishedVersionId: initialVersion.id,
+    })
+    .where(eq(agents.id, agent.id))
+    .returning()
+    .then((rows) => rows[0]);
+
+  return NextResponse.json({ ...(updatedAgent ?? agent), myRole: "owner" as const }, { status: 201 });
 }

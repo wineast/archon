@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useCallback, useMemo } from "react";
+import { use, useCallback, useMemo, useState } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { UserButton } from "@clerk/nextjs";
 import {
   ArrowLeftIcon,
@@ -31,6 +31,16 @@ import { EvalPanel } from "@/components/eval/eval-panel";
 import { ModelConfigPanel } from "@/components/model-config/model-config-panel";
 import { ComponentsPanel } from "@/components/components/components-panel";
 import { MembersPanel } from "@/components/members/members-panel";
+import { VersionsSidebar } from "@/components/versions/versions-sidebar";
+import { VersionCreateDialog } from "@/components/versions/version-create-dialog";
+import { VersionDetailSheet } from "@/components/versions/version-detail-sheet";
+import {
+  useVersions,
+  createVersion,
+  switchVersion,
+  publishVersion,
+  deleteVersion,
+} from "@/lib/versions/hooks";
 import { useAgentRole } from "@/lib/auth/hooks";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
@@ -60,8 +70,29 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "config";
+  const { mutate: globalMutate } = useSWRConfig();
 
-  const { canEdit, canManageMembers, isLoading: roleLoading } = useAgentRole(agent.id);
+  const {
+    canEdit,
+    canManageMembers,
+    isLoading: roleLoading,
+  } = useAgentRole(agent.id);
+
+  // ── Agent data (refreshable) ──
+  const { data: agentData, mutate: mutateAgent } = useSWR<AgentRow>(
+    `/api/agents/${agent.id}`,
+    fetcher
+  );
+  const currentAgent = agentData ?? agent;
+  const currentVersion = currentAgent.version ?? "0.0.0";
+  const editingVersionId = currentAgent.editingVersionId ?? null;
+  const publishedVersionId = currentAgent.publishedVersionId ?? null;
+
+  // ── Versions ──
+  const { versions, mutate: mutateVersions } = useVersions(agent.id);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [sheetVersionId, setSheetVersionId] = useState<string | null>(null);
+  const [switching, setSwitching] = useState(false);
 
   const visibleTabs = useMemo(
     () =>
@@ -88,6 +119,69 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
     [searchParams, router, agent.slug]
   );
 
+  // Revalidate only resource SWR caches after version switch.
+  // Exclude agent/role/versions/members to avoid full-page re-render.
+  const revalidateResources = useCallback(() => {
+    const id = agent.id;
+    globalMutate(
+      (key) => {
+        if (typeof key !== "string") return false;
+        // Resource APIs use ?agentId=UUID pattern
+        if (key.includes(`agentId=${id}`)) return true;
+        // Skip: /api/agents/UUID, /api/agents/UUID/role, /api/agents/UUID/versions, /api/agents/UUID/members
+        return false;
+      },
+      undefined,
+      { revalidate: true }
+    );
+  }, [globalMutate, agent.id]);
+
+  // ── Version callbacks ──
+
+  const handleCreate = useCallback(
+    async (version: string, changelog: string) => {
+      const result = await createVersion(
+        agent.id,
+        { version, changelog },
+        mutateVersions
+      );
+      if (result?.id) {
+        setCreateDialogOpen(false);
+        mutateAgent();
+      }
+    },
+    [agent.id, mutateVersions, mutateAgent]
+  );
+
+  const handleSwitch = useCallback(
+    async (versionId: string) => {
+      if (switching || editingVersionId === versionId) return;
+      setSwitching(true);
+      const ok = await switchVersion(agent.id, versionId, revalidateResources);
+      if (ok) {
+        mutateAgent();
+      }
+      setSwitching(false);
+    },
+    [agent.id, editingVersionId, switching, revalidateResources, mutateAgent]
+  );
+
+  const handlePublish = useCallback(
+    async (versionId: string) => {
+      await publishVersion(agent.id, versionId, mutateVersions);
+      mutateAgent();
+    },
+    [agent.id, mutateVersions, mutateAgent]
+  );
+
+  const handleDelete = useCallback(
+    async (versionId: string) => {
+      await deleteVersion(agent.id, versionId, mutateVersions);
+      if (sheetVersionId === versionId) setSheetVersionId(null);
+    },
+    [agent.id, mutateVersions, sheetVersionId]
+  );
+
   if (roleLoading) {
     return (
       <div className="flex h-svh items-center justify-center">
@@ -110,7 +204,6 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         return <ComponentsPanel agentId={agent.id} />;
       case "schemas":
         return <SchemasPanel agentId={agent.id} />;
-
       case "wiki":
         return <WikiPanel agentId={agent.id} />;
       case "datasets":
@@ -150,7 +243,25 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
 
       {/* Body */}
       <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
-        {/* Desktop sidebar */}
+        {/* Versions sidebar — far left, admin+ only */}
+        {canManageMembers && (
+          <div className="hidden shrink-0 sm:block">
+            <VersionsSidebar
+              versions={versions}
+              currentVersion={currentVersion}
+              editingVersionId={editingVersionId}
+              publishedVersionId={publishedVersionId}
+              onSelect={handleSwitch}
+              onCreate={() => setCreateDialogOpen(true)}
+              onViewDetail={(id) => setSheetVersionId(id)}
+              onPublish={handlePublish}
+              onRollback={() => {}}
+              onDelete={handleDelete}
+            />
+          </div>
+        )}
+
+        {/* Desktop settings nav */}
         <nav className="hidden w-48 shrink-0 flex-col gap-1 border-r p-2 sm:flex">
           {visibleTabs.map((t) => {
             const isActive = t.value === activeTab;
@@ -190,11 +301,38 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
           })}
         </div>
 
-        {/* Content */}
-        <div className="min-h-0 flex-1 overflow-hidden">
+        {/* Content — always the normal editable panels */}
+        <div className="min-h-0 flex-1 overflow-hidden relative">
+          {switching && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+              <Spinner className="size-6" />
+            </div>
+          )}
           {renderPanel()}
         </div>
       </div>
+
+      {/* ── Dialogs ── */}
+
+      {canManageMembers && (
+        <VersionCreateDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          onCreate={handleCreate}
+          currentVersion={currentVersion}
+        />
+      )}
+
+      {sheetVersionId && (
+        <VersionDetailSheet
+          agentId={agent.id}
+          versionId={sheetVersionId}
+          open={sheetVersionId !== null}
+          onOpenChange={(open) => {
+            if (!open) setSheetVersionId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   agents,
   agentMembers,
+  agentVersions,
   users,
   chatConfigs,
   components,
@@ -593,6 +594,34 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     evalCaseIds.push(row.id);
   }
   console.log(`Seeded ${evalCasesSeed.length} eval cases`);
+
+  // Create initial version 0.1.0
+  console.log("Creating initial version 0.1.0...");
+  const { buildSnapshot } = await import("@/lib/versions/snapshot");
+  const snapshot = await buildSnapshot(agentId);
+  const [initialVersion] = await db
+    .insert(agentVersions)
+    .values({
+      agentId,
+      version: "0.1.0",
+      changelog: "Initial version",
+      snapshot,
+      createdBy: allUsers[0]?.id ?? null,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  if (initialVersion) {
+    await db
+      .update(agents)
+      .set({
+        version: "0.1.0",
+        editingVersionId: initialVersion.id,
+        publishedVersionId: initialVersion.id,
+      })
+      .where(eq(agents.id, agentId));
+    console.log(`  - v0.1.0 (${initialVersion.id}) [editing + published]`);
+  }
 
   return {
     agentId,
