@@ -23,6 +23,7 @@ import {
   evalJudgeConfigs,
   evalRunResults,
   evalRuns,
+  models,
 } from "./schema";
 import type { ToolParameter } from "@/lib/tools/types";
 import { compileCssForComponent } from "@/lib/components/compile-css";
@@ -56,6 +57,23 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     const sql = createClient();
     db = drizzle({ client: sql });
   }
+
+  // Seed global models
+  console.log("Seeding global models...");
+  const modelsSeed = readJson<
+    Array<{ modelId: string; name: string; provider: string }>
+  >(join(__dirname, "seed-data/models.json"));
+
+  for (const m of modelsSeed) {
+    await db
+      .insert(models)
+      .values(m)
+      .onConflictDoUpdate({
+        target: models.modelId,
+        set: { name: m.name, provider: m.provider },
+      });
+  }
+  console.log(`Seeded ${modelsSeed.length} models`);
 
   const agentDir = join(__dirname, "seed-data/gmcc-advisor");
 

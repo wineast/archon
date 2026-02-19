@@ -20,6 +20,7 @@ import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
+import { ModelCombobox } from "@/components/model-config/model-combobox";
 import type { EvalJudgeConfigRow } from "@/db/schema";
 import type { Dimension } from "@/lib/eval/types";
 
@@ -171,11 +172,10 @@ export function JudgeConfigDetail({
             <label className="text-xs font-medium text-muted-foreground">
               Judge Model ID
             </label>
-            <Input
-              className="mt-1 h-8 text-sm"
+            <ModelCombobox
+              className="mt-1"
               value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder="e.g. deepseek/deepseek-v3.2"
+              onChange={setModel}
             />
           </div>
           <div>

@@ -24,6 +24,7 @@ import { useDatasetVarsMap, useDatasets } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
+import { ModelCombobox } from "./model-combobox";
 import { PromptAssistDialog } from "./prompt-assist-dialog";
 
 interface ModelConfigDetailProps {
@@ -193,11 +194,10 @@ export function ModelConfigDetail({
           </div>
           <div>
             <label className="text-sm font-medium">Model ID</label>
-            <Input
-              className="mt-1.5 h-8 text-sm"
+            <ModelCombobox
+              className="mt-1.5"
               value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
-              placeholder="e.g. claude-sonnet-4-5-20250929"
+              onChange={setModelId}
             />
           </div>
           <div>
