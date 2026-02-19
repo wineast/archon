@@ -1,18 +1,10 @@
 ---
 name: worktree
-description: 管理 git worktree（列出、同步、合并、删除工作区）。当用户说"同步上游"、"合并工作区"、"删除工作区"等类似表述时，应调用此技能。工作区通过 backlog 技能触发创建（基于 web/guide/ 文档变更）。
+description: 管理 git worktree（创建、列出、同步、合并、删除工作区）。当用户说"创建工作区"、"同步上游"、"合并工作区"、"删除工作区"等类似表述时，应调用此技能。
 allowed-tools: Bash, Write, Edit, Read, Grep, Glob, AskUserQuestion
 ---
 
 管理 git worktree 工作区。
-
-## 重要：工作区从 web/guide/ 变更驱动
-
-工作区通过以下路径创建：
-
-用户在记录模式下更新 `web/guide/` 文档 → "创建工作区" → backlog 技能提交文档变更 → 调用 worktree create
-
-如果用户直接说"创建工作区"，应提示用户先通过 backlog 技能的记录模式更新 `web/guide/` 文档。
 
 ## 重要：不要进入规划模式
 
@@ -21,17 +13,17 @@ allowed-tools: Bash, Write, Edit, Read, Grep, Glob, AskUserQuestion
 ## 触发条件
 
 当用户提到以下任意表述时，应调用此技能（`/worktree`）：
+- "创建工作区"、"新建工作区"
 - "列出工作区"、"查看工作区"
 - "删除工作区"
 - "同步上游"、"sync 上游"、"拉取上游更新"
 - "合并工作区"、"合并到上游"、"merge 工作区"
 
-**注意**：用户说"创建工作区"时，应引导到 backlog 技能。
-
 ## 调用方式
 
 ```
 /worktree                    # 列出所有 worktree
+/worktree create <name>      # 创建工作区
 /worktree sync               # 同步上游分支到当前工作区
 /worktree merge <name>       # 合并工作区分支回 base 分支
 /worktree delete <name>      # 删除 worktree
@@ -46,38 +38,24 @@ allowed-tools: Bash, Write, Edit, Read, Grep, Glob, AskUserQuestion
 make wt-list
 ```
 
-### 创建 worktree（内部调用，由 backlog 技能触发）
-
-此流程不由用户直接触发，而是 backlog 技能在"创建工作区"时调用。
+### 创建 worktree（`create`）
 
 参数：
 - `name`（必填）：worktree 名称，如 `fix-ontology-drag`
 - `base`（可选）：基础分支，默认当前分支
-- web/guide/ 变更：backlog 技能传入的 web/guide/ 文件变更列表（哪些文档新增/修改/添加了已知问题）
 
 流程：
 
-1. **理解任务**：读取分配到此工作区的 web/guide/ 文档变更，理解要实现的功能或修复的问题。
+1. **理解任务**：根据用户描述，理解要实现的功能或修复的问题。
 2. **调研代码**：使用 `Explore` agent 或 `Grep`/`Read` 研究相关代码，为 prompt 提供准确的文件路径和实现上下文。
-3. **生成 prompt**：基于 web/guide/ 文档变更和代码调研结果，生成一个清晰、具体的工作区 prompt。向用户确认：
+3. **需求澄清**：根据调研结果，如果发现模糊点、冲突或需要用户决策的地方，向用户追问确认。确认清楚后再进入下一步。如果任务已经足够明确则跳过。
+4. **生成 prompt**：基于任务描述、代码调研和澄清结果，生成一个清晰、具体的工作区 prompt。向用户确认：
    - 展示生成的 prompt
    - 让用户选择：使用此 prompt / 自定义修改
-4. **创建 worktree**：
+5. **创建 worktree**：
    ```bash
    make wt-create NAME=<name> BASE=<base>
    ```
-5. **记录关联文档**：将 backlog 传入的 guide 文件路径写入 `meta.json` 的 `guideDocs` 字段：
-   ```bash
-   # 用 node 往 meta.json 追加 guideDocs 字段
-   node -e "
-     const fs = require('fs');
-     const p = '.worktrees/<name>/.worktree/meta.json';
-     const m = JSON.parse(fs.readFileSync(p));
-     m.guideDocs = ['web/guide/xxx.md'];
-     fs.writeFileSync(p, JSON.stringify(m, null, 2));
-   "
-   ```
-   `guideDocs` 是相对于项目根目录的路径数组，例如 `["web/guide/schemas.md", "web/guide/ontology.md"]`。
 6. **生成 `start.sh`**：在 worktree 根目录创建 `start.sh`，内容为：
    ```bash
    #!/usr/bin/env bash
@@ -85,8 +63,6 @@ make wt-list
    claude --dangerously-skip-permissions --permission-mode plan "<用户确认的 prompt>"
    ```
    然后 `chmod +x` 使其可执行。
-
-   **重要**：prompt 中应引用对应的 web/guide/ 文档路径，让子工作区了解预期行为。如果文档变更已提交到 base 分支，子工作区可以直接读取；如果未提交，使用**主仓库的绝对路径**（如 `/Users/yarnb/archon/web/guide/ontology.md`）。
 7. **提示用户**：
    - worktree 路径：`.worktrees/<name>`
    - 启动方式：`cd .worktrees/<name> && ./start.sh`
@@ -126,14 +102,6 @@ make wt-sync
    make test
    ```
 6. **依赖检测**：合并后自动检测 `package.json` / `package-lock.json` 是否有变更，有则自动执行 `make deps`
-7. **更新使用文档**：读取 `.worktrees/<name>/.worktree/meta.json` 中的 `guideDocs` 字段（合并前读取，因为合并后工作区可能被删除）。如果存在关联文档：
-   - 分析工作区实际的代码变更（`git log --oneline <baseBranch>..HEAD` + `git diff <baseBranch>...HEAD --stat`）
-   - 对每个关联的 guide 文档：
-     - **已修复的「已知问题」**→ 移除对应条目
-     - **新功能描述与实际行为有偏差** → 校准文档（以代码实现为准）
-     - **功能未完全实现** → 保留或新增「已知问题」条目说明现状
-   - 提交文档更新：`git add web/guide/ && git commit -m "docs: update guide after merging <name>"`
-   - 如果文档无需更新（实现完全符合文档描述），跳过此步骤
 
 ### 删除 worktree（`delete`）
 
