@@ -12,6 +12,8 @@
 
 ## 基础设施
 
+- [ ] **函数/工具沙盒执行** — 用 isolated-vm（V8 Isolate）替代 `new Function()`，实现内存隔离、CPU 超时、零 API 访问的安全沙盒
+  - 来源：FDA/母 Agent 生成的代码不可控，私有化部署需要安全合规
 - [ ] **本地 Docker 开发数据库** — 用 Docker PostgreSQL 替代 Neon 云数据库，省钱低延迟
   - 使用说明：[local-docker-db.md](../guide/local-docker-db.md)
 - [ ] **Seed 系统模块化** — 将 seed.ts 单体函数拆分为 12 个独立 seeder 模块，统一连接管理，批量插入优化，结构化日志

@@ -49,6 +49,17 @@ vi.mock("@/db/schema", () => ({
     name: "name",
     parameters: "parameters",
   },
+  objectTypes: {
+    id: "id",
+    agentId: "agent_id",
+    key: "key",
+    name: "name",
+    order: "order",
+  },
+  objectRelations: {
+    id: "id",
+    agentId: "agent_id",
+  },
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -64,17 +75,19 @@ vi.mock("drizzle-orm", () => ({
 /**
  * Build a mock chain for db.select().from().where()...
  * gatherTemplateData issues queries in this order:
- *   [0] datasets rows   — getResolvedDatasets → getDatasets
- *   [1] wiki doc rows    — getWikiDocs
- *   [2] tool rows        — getEnabledTools
- *   [3] all dataset rows — for datasetsById
- *   [4] all schema rows  — for resolveParameters
+ *   [0] datasets rows      — getResolvedDatasets → getDatasets
+ *   [1] wiki doc rows       — getWikiDocs
+ *   [2] tool rows           — getEnabledTools
+ *   [3] all dataset rows    — for datasetsById
+ *   [4] objectTypes rows    — ontology types
+ *   [5] objectRelations rows — ontology relations
+ *   [6] all schema rows     — for resolveParameters
  *
- * For convenience, pass 3 items and the helper fills [3] and [4] with [].
+ * For convenience, pass 3 items and the helper fills the rest with [].
  */
 function setupDbChain(queries: unknown[][]) {
   // Auto-fill missing trailing queries with empty arrays
-  while (queries.length < 5) queries.push([]);
+  while (queries.length < 7) queries.push([]);
   let callIdx = 0;
   mockSelect.mockImplementation(() => {
     const rows = queries[callIdx] ?? [];
@@ -556,6 +569,8 @@ describe("tool namespace", () => {
       [],
       [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
       [],
+      [],
+      [],
       [makeSchemaRow("schema-dti", params)],
     ]);
 
@@ -575,6 +590,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calc_rate", "Calculate rate", "schema-rate")],
+      [],
+      [],
       [],
       [makeSchemaRow("schema-rate", params)],
     ]);
@@ -602,6 +619,8 @@ describe("tool namespace", () => {
       [],
       [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
       [],
+      [],
+      [],
       [makeSchemaRow("schema-dti", params)],
     ]);
 
@@ -623,6 +642,8 @@ describe("tool namespace", () => {
       [],
       [makeTool("calc", "Calculate", "schema-calc")],
       [],
+      [],
+      [],
       [makeSchemaRow("schema-calc", params)],
     ]);
 
@@ -642,6 +663,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("route", "Route products", "schema-route")],
+      [],
+      [],
       [],
       [makeSchemaRow("schema-route", params)],
     ]);
@@ -699,6 +722,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calc", "Calculate", "schema-calc")],
+      [],
+      [],
       [],
       [makeSchemaRow("schema-calc", params)],
     ]);
