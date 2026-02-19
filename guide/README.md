@@ -1,6 +1,7 @@
 # 使用指南
 
 - [本地数据库](local-docker-db.md) — Docker PostgreSQL 开发环境：setup、环境切换、故障排查
+- [Schema](schemas.md) — 可复用参数定义：类型系统、约束、组合（Includes）、三层架构（DB→Zod→JSON Schema）
 - [数据集](datasets.md) — JSON 数据集的创建、编辑、层级设计与模板引用
 - [模板引擎](template-engine.md) — LiquidJS 模板语法与数据源说明
 - [用户权限](user-permissions.md) — 平台角色、Agent 角色、成员管理、访问模式

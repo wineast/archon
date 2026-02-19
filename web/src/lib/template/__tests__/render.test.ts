@@ -278,9 +278,18 @@ describe("renderSystemPrompt", () => {
   });
 
   it("returns original text on rendering failure", async () => {
-    mockSelect.mockImplementation(() => {
-      throw new Error("DB connection failed");
-    });
+    const err = new Error("DB connection failed");
+    function rejectThenable() {
+      const t = {
+        from: () => t,
+        where: () => t,
+        orderBy: () => t,
+        limit: () => t,
+        then: (_res: unknown, rej: (e: Error) => void) => { rej(err); },
+      };
+      return t;
+    }
+    mockSelect.mockImplementation(rejectThenable);
 
     const { renderSystemPrompt } = await import("../render");
     const original = "Hello {{world}}";
@@ -491,9 +500,18 @@ describe("renderWikiContent", () => {
   });
 
   it("returns original content on failure", async () => {
-    mockSelect.mockImplementation(() => {
-      throw new Error("DB error");
-    });
+    const err = new Error("DB error");
+    function rejectThenable() {
+      const t = {
+        from: () => t,
+        where: () => t,
+        orderBy: () => t,
+        limit: () => t,
+        then: (_res: unknown, rej: (e: Error) => void) => { rej(err); },
+      };
+      return t;
+    }
+    mockSelect.mockImplementation(rejectThenable);
 
     const { renderWikiContent } = await import("../render");
     const original = "Some {{content}}";

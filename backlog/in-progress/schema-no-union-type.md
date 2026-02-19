@@ -3,6 +3,7 @@
 - **类型**: cleanup
 - **优先级**: medium
 - **发现日期**: 2026-02-19
+- **工作区**: schema-type-expansion
 
 ## 描述
 

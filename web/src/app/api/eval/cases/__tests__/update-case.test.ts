@@ -29,10 +29,21 @@ vi.mock("@/db/schema", () => ({
 
 vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, val: unknown) => ({ col, val }),
+  and: (...conditions: unknown[]) => conditions,
+  isNull: (col: unknown) => ({ op: "isNull", col }),
 }));
 
 vi.mock("@/lib/auth/require-agent-role", () => ({
-  requireAgentRole: vi.fn().mockResolvedValue({ agentId: "agent-1" }),
+  requireAgentRole: vi.fn().mockResolvedValue({ user: { id: "user-1" }, agentId: "agent-1" }),
+}));
+
+vi.mock("next/server", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("next/server")>();
+  return { ...mod, after: vi.fn() };
+});
+
+vi.mock("@/lib/audit/log", () => ({
+  logAudit: vi.fn(),
 }));
 
 // ── Import handler after mocks are set up ──

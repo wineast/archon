@@ -23,11 +23,14 @@ let selectToolsResult: unknown[] = [];
 // Track which table was queried
 let fromCallIndex = 0;
 const whereSelectMock = vi.fn(() => {
-  // First call => evalRuns, second call => modelConfigs, third call => tools
+  // First call => evalRuns, second call => modelConfigs, third call => tools, fourth call => agents
   const idx = fromCallIndex++;
-  if (idx === 0) return selectRunResult;
-  if (idx === 1) return selectModelResult;
-  return selectToolsResult;
+  const result = idx === 0 ? selectRunResult : idx === 1 ? selectModelResult : idx === 3 ? [{ orgId: "org-1" }] : selectToolsResult;
+  return {
+    limit: vi.fn(() => result),
+    then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(result)),
+    [Symbol.iterator]: function* () { yield* (result as unknown[]); },
+  };
 });
 const fromMock = vi.fn(() => ({ where: whereSelectMock }));
 const selectMock = vi.fn(() => ({ from: fromMock }));
@@ -43,11 +46,16 @@ vi.mock("@/db/schema", () => ({
   evalRuns: { id: "id" },
   evalRunResults: { runId: "run_id" },
   modelConfigs: { id: "id" },
-  tools: { enabled: "enabled" },
+  tools: { enabled: "enabled", deletedAt: "deleted_at" },
+  agents: { id: "id", orgId: "org_id" },
+  schemas: { id: "id", agentId: "agent_id", parameters: "parameters", deletedAt: "deleted_at" },
 }));
 
 vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, val: unknown) => ({ col, val }),
+  and: (...conditions: unknown[]) => conditions,
+  isNull: (col: unknown) => ({ op: "isNull", col }),
+  inArray: (col: unknown, vals: unknown[]) => ({ op: "inArray", col, vals }),
 }));
 
 vi.mock("@/lib/auth/require-agent-role", () => ({

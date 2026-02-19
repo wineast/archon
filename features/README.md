@@ -42,7 +42,7 @@
 - [ ] **修复 unique 约束范围** — modelConfigs、evalCases、evalJudgeConfigs 的 name 从全局唯一改为 (agentId, name) 联合唯一
 - [ ] **Schema includes 改 junction table** — 将 schemas.includeSchemaIds UUID 数组改为独立关联表 schema_includes，利用 FK 约束保证引用完整性
   - 来源：Postgres 无法对数组元素做外键约束，删除被引用 Schema 会导致悬挂 UUID
-- [ ] **Schema 组合与引用增强** — Schema includes 组合、json 字段级 schema 引用、enumRef 迁移为 UUID FK
+- [x] **Schema 组合与引用增强** — Schema includes 组合、json 字段级 schema 引用、enumRef 迁移为 UUID FK
 - [x] **补全缺失索引与 FK** — chatSessions 加 agentId/userId 索引，agents 的 editingVersionId/publishedVersionId 加 FK 约束
 - [x] **Functions 参数迁移到 Schema FK** — functions 表的 parameters/returnParameters 从内联 JSONB 改为引用 schemas 表的 FK，对齐 tools 的实现
 - [x] **Tools 组件字段改为 FK** — tools 表去掉 component/componentSource 内联字段，改为 componentId FK 引用 components 表
@@ -89,6 +89,8 @@
 - [ ] **闭包依赖注入统一为对象解构** — 组件和函数的依赖注入从参数列表改为对象解构，去掉隐式全局注入，所有依赖显式出现在外层函数签名中
 - [ ] **组件编辑器帮助文档** — JSX 编辑器旁增加帮助按钮，弹出 Markdown 渲染的编写规范（闭包结构、注入依赖、props 字段说明、示例）
 - [ ] **组件 JSX 编辑器 AI 辅助** — 参考系统提示词的 AI 编辑功能，为 JSX 编辑器增加 AI 辅助编辑对话框
+- [ ] **函数 AI 辅助编辑** — 为函数 Code (JavaScript) 编辑器添加 AI 辅助编辑对话框，复用组件 AI Assist 的 diff + chat 模式
+  - 来源：[function-code-no-ai-edit.md](../backlog/open/function-code-no-ai-edit.md)
 
 ### Files
 

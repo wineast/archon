@@ -31,6 +31,8 @@ vi.mock("@/db/schema", () => ({
 
 vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, val: unknown) => ({ col, val }),
+  and: (...conditions: unknown[]) => conditions,
+  isNull: (col: unknown) => ({ op: "isNull", col }),
 }));
 
 vi.mock("@/lib/auth/require-agent-role", () => ({

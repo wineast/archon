@@ -268,7 +268,7 @@ export const wikiDocuments = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
-    parentId: uuid("parent_id").references(() => wikiDocuments.id, {
+    parentId: uuid("parent_id").references((): AnyPgColumn => wikiDocuments.id, {
       onDelete: "set null",
     }),
     title: text("title").notNull(),

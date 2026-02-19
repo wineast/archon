@@ -37,14 +37,14 @@ describe("compileAndExecFn", () => {
 
   it("injects host dependencies as globals", async () => {
     const double = (x: number) => x * 2;
-    const code = `function fn(double) { return function(input) { return double(input.value); } }`;
+    const code = `function fn({ double }) { return function(input) { return double(input.value); } }`;
     const result = await compileAndExecFn(code, { value: 21 }, { double });
     expect(result).toBe(42);
   });
 
   it("bridges compileExpression from filtrex", async () => {
     const { compileExpression } = await import("filtrex");
-    const code = `function fn(compileExpression) {
+    const code = `function fn({ compileExpression }) {
       var expr = compileExpression("x + y * 2");
       return function(input) { return expr(input); };
     }`;
@@ -147,7 +147,7 @@ describe("createFunctionsSandbox", () => {
       },
       {
         key: "quadruple",
-        code: `function fn(double) { return function(input) { return double({ value: double({ value: input.value }) }); } }`,
+        code: `function fn({ double }) { return function(input) { return double({ value: double({ value: input.value }) }); } }`,
         depNames: ["double"],
       },
     ]);
@@ -165,7 +165,7 @@ describe("createFunctionsSandbox", () => {
       [
         {
           key: "calc",
-          code: `function fn(triple) { return function(input) { return triple(input.value); } }`,
+          code: `function fn({ triple }) { return function(input) { return triple(input.value); } }`,
           depNames: ["triple"],
         },
       ],

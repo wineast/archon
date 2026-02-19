@@ -40,8 +40,11 @@ teardown:
 # Development
 # ============================================================
 
-## 启动所有开发服务（db + dev + storybook + db-studio）
+LOG_DIR := .logs
+
+## 启动所有开发服务（db + dev + storybook + db-studio），日志输出到 .logs/
 up: db-up
+	@mkdir -p $(LOG_DIR)
 	@if [ -f .worktree/meta.json ]; then \
 		DEV_PORT=$$(node -p "require('./.worktree/meta.json').dev") && \
 		SB_PORT=$$(node -p "require('./.worktree/meta.json').storybook") && \
@@ -50,18 +53,20 @@ up: db-up
 		lsof -ti :$$SB_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$STUDIO_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		echo "🚀 启动服务 (dev=$$DEV_PORT, storybook=$$SB_PORT, studio=$$STUDIO_PORT)" && \
-		(cd web && npm run dev -- --port $$DEV_PORT) & \
-		(cd web && npm run storybook -- -p $$SB_PORT) & \
-		(cd web && npx drizzle-kit studio --port $$STUDIO_PORT) & \
+		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio}.log" && \
+		(cd web && npm run dev -- --port $$DEV_PORT) > $(LOG_DIR)/dev.log 2>&1 & \
+		(cd web && npm run storybook -- -p $$SB_PORT) > $(LOG_DIR)/storybook.log 2>&1 & \
+		(cd web && npx drizzle-kit studio --port $$STUDIO_PORT) > $(LOG_DIR)/studio.log 2>&1 & \
 		wait; \
 	else \
 		lsof -ti :3000 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :4983 2>/dev/null | xargs kill 2>/dev/null || true; \
 		echo "🚀 启动服务 (dev=3000, storybook=6006, studio=4983)" && \
-		(cd web && npm run dev) & \
-		(cd web && npm run storybook) & \
-		(cd web && npm run db:studio) & \
+		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio}.log" && \
+		(cd web && npm run dev) > $(LOG_DIR)/dev.log 2>&1 & \
+		(cd web && npm run storybook) > $(LOG_DIR)/storybook.log 2>&1 & \
+		(cd web && npm run db:studio) > $(LOG_DIR)/studio.log 2>&1 & \
 		wait; \
 	fi
 
