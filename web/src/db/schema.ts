@@ -718,3 +718,34 @@ export type ComponentTestRunResultRow =
 export type NewComponentTestRunResultRow =
   typeof componentTestRunResults.$inferInsert;
 
+/* ─────────── Embed Tokens ─────────── */
+
+export const embedTokens = pgTable(
+  "embed_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    token: text("token").notNull().unique(),
+    allowedOrigins: text("allowed_origins").array().notNull().default([]),
+    isActive: boolean("is_active").notNull().default(true),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("embed_tokens_agent_id_idx").on(table.agentId),
+    index("embed_tokens_token_idx").on(table.token),
+  ]
+);
+
+export type EmbedTokenRow = typeof embedTokens.$inferSelect;
+export type NewEmbedTokenRow = typeof embedTokens.$inferInsert;
+
