@@ -10,7 +10,8 @@ import { requireAgentRole } from "@/lib/auth/require-agent-role";
 function toWikiDocument(row: WikiDocumentRow): WikiDocument {
   return {
     id: row.id,
-    title: resolveTitle(row.content),
+    key: row.key,
+    title: row.title || resolveTitle(row.content),
     content: row.content,
     order: row.order,
     createdAt: row.createdAt.getTime(),
@@ -49,6 +50,8 @@ export async function POST(req: Request) {
     .values({
       id: body.id,
       agentId,
+      title: body.title ?? "",
+      key: body.key ?? "",
       content: body.content,
       order: body.order,
     })

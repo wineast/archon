@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import type { KeyedMutator } from "swr";
-import { resolveTitle } from "./frontmatter";
 import type { WikiDocument } from "./types";
 
 export function wikiApiKey(agentId?: string) {
@@ -20,7 +19,9 @@ export const wikiFetcher = (url: string) =>
 export async function createDocument(
   docs: WikiDocument[],
   mutate: KeyedMutator<WikiDocument[]>,
-  agentId?: string
+  agentId: string,
+  title: string,
+  key: string
 ): Promise<string | null> {
   const id = nanoid();
   const now = Date.now();
@@ -28,7 +29,8 @@ export async function createDocument(
     docs.length === 0 ? 0 : Math.max(...docs.map((d) => d.order)) + 1;
   const doc: WikiDocument = {
     id,
-    title: "Untitled",
+    key,
+    title,
     content: "",
     order,
     createdAt: now,
@@ -39,7 +41,7 @@ export async function createDocument(
     const res = await fetch("/api/wiki", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, agentId, content: "", order }),
+      body: JSON.stringify({ id, agentId, title, key, content: "", order }),
     });
     if (!res.ok) throw new Error("Failed to create document");
     await mutate([...docs, doc], { revalidate: false });
@@ -53,7 +55,7 @@ export async function createDocument(
 
 export async function updateDocument(
   id: string,
-  updates: { content: string },
+  updates: { content: string; title: string },
   docs: WikiDocument[],
   mutate: KeyedMutator<WikiDocument[]>
 ): Promise<boolean> {
@@ -67,7 +69,7 @@ export async function updateDocument(
     await mutate(
       docs.map((d) =>
         d.id === id
-          ? { ...d, ...updates, title: resolveTitle(updates.content), updatedAt: Date.now() }
+          ? { ...d, ...updates, updatedAt: Date.now() }
           : d
       ),
       { revalidate: false }

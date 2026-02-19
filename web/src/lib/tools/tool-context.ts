@@ -1,8 +1,8 @@
 import { db } from "@/db";
 import { wikiDocuments, datasets, functions } from "@/db/schema";
-import { eq, like, ilike } from "drizzle-orm";
+import { eq, and, like, ilike } from "drizzle-orm";
 import { renderWikiContent } from "@/lib/template/render";
-import { parseWikiContent, resolveTitle } from "@/lib/wiki/frontmatter";
+import { parseWikiContent } from "@/lib/wiki/frontmatter";
 import {
   renderField,
   renderObjectField,
@@ -89,8 +89,10 @@ export function createToolContext(agentId?: string): ToolContext {
   return {
     wiki: {
       async get(id: string) {
-        const row = await db
+        // Try by id first
+        let row = await db
           .select({
+            id: wikiDocuments.id,
             content: wikiDocuments.content,
             agentId: wikiDocuments.agentId,
           })
@@ -98,11 +100,29 @@ export function createToolContext(agentId?: string): ToolContext {
           .where(eq(wikiDocuments.id, id))
           .limit(1)
           .then((rows) => rows[0]);
+        // Fallback: try by key
+        if (!row && agentId) {
+          row = await db
+            .select({
+              id: wikiDocuments.id,
+              content: wikiDocuments.content,
+              agentId: wikiDocuments.agentId,
+            })
+            .from(wikiDocuments)
+            .where(
+              and(
+                eq(wikiDocuments.agentId, agentId),
+                eq(wikiDocuments.key, id)
+              )
+            )
+            .limit(1)
+            .then((rows) => rows[0]);
+        }
         if (!row) return null;
         const { meta, content: body } = parseWikiContent(row.content);
         const hasMeta = Object.keys(meta).length > 0 ? meta : null;
         if (row.agentId) {
-          const rendered = await renderWikiContent(row.content, row.agentId, id);
+          const rendered = await renderWikiContent(row.content, row.agentId, row.id);
           return { meta: hasMeta, content: rendered };
         }
         return { meta: hasMeta, content: body };
@@ -112,13 +132,14 @@ export function createToolContext(agentId?: string): ToolContext {
         const rows = await db
           .select({
             id: wikiDocuments.id,
+            title: wikiDocuments.title,
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
           .where(like(wikiDocuments.id, `${prefix}%`));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
-          return { id: r.id, title: resolveTitle(r.content), meta: Object.keys(meta).length > 0 ? meta : null, content };
+          return { id: r.id, title: r.title, meta: Object.keys(meta).length > 0 ? meta : null, content };
         });
       },
 
@@ -126,13 +147,14 @@ export function createToolContext(agentId?: string): ToolContext {
         const rows = await db
           .select({
             id: wikiDocuments.id,
+            title: wikiDocuments.title,
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
           .where(ilike(wikiDocuments.content, `%${query}%`));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
-          return { id: r.id, title: resolveTitle(r.content), meta: Object.keys(meta).length > 0 ? meta : null, content };
+          return { id: r.id, title: r.title, meta: Object.keys(meta).length > 0 ? meta : null, content };
         });
       },
     },

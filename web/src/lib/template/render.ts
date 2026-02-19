@@ -3,7 +3,7 @@ import { wikiDocuments, tools } from "@/db/schema";
 import type { ToolRow } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { processTemplate } from "@/lib/wiki/template";
-import { resolveTitle, stripFrontmatter } from "@/lib/wiki/frontmatter";
+import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import { getResolvedDatasets } from "@/lib/datasets/queries";
 
@@ -26,6 +26,8 @@ async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
   const rows = await db
     .select({
       id: wikiDocuments.id,
+      title: wikiDocuments.title,
+      key: wikiDocuments.key,
       content: wikiDocuments.content,
       order: wikiDocuments.order,
       createdAt: wikiDocuments.createdAt,
@@ -36,7 +38,7 @@ async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
 
   return rows.map((r) => ({
     ...r,
-    title: resolveTitle(r.content),
+    title: r.title,
     createdAt: r.createdAt.getTime(),
     updatedAt: r.updatedAt.getTime(),
   }));
@@ -195,6 +197,7 @@ export async function renderTemplate(
   try {
     const virtualDoc: WikiDocument = {
       id: "__system_prompt__",
+      key: "",
       title: "System Prompt",
       content: text,
       order: 0,
@@ -245,6 +248,7 @@ export async function renderWikiContent(
 
     const currentDoc = data.docs.find((d) => d.id === currentDocId) ?? {
       id: currentDocId,
+      key: "",
       title: "Unknown",
       content: strippedContent,
       order: 0,

@@ -242,13 +242,21 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     const slug = filename.replace(/\.md$/, "");
     const content = readFileSync(join(wikiDir, filename), "utf-8");
     const docId = `wiki-uw-${slug}`;
+    const key = `wiki_uw_${slug}`;
+    // Extract title from frontmatter
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n?/);
+    let title = slug;
+    if (fmMatch) {
+      const titleMatch = fmMatch[1].match(/^title:\s*(.+)/m);
+      if (titleMatch) title = titleMatch[1].trim();
+    }
 
     await db
       .insert(wikiDocuments)
-      .values({ id: docId, content, order: i, agentId })
+      .values({ id: docId, title, key, content, order: i, agentId })
       .onConflictDoUpdate({
         target: wikiDocuments.id,
-        set: { content, order: i, agentId },
+        set: { title, key, content, order: i, agentId },
       });
   }
 

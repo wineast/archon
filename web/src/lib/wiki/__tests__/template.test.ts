@@ -5,6 +5,7 @@ import type { WikiDocument } from "../types";
 function makeDoc(overrides: Partial<WikiDocument> = {}): WikiDocument {
   return {
     id: "doc-1",
+    key: "",
     title: "Test Doc",
     content: "",
     order: 0,
@@ -219,6 +220,25 @@ describe("processTemplate", () => {
         makeCtx(main, [partial, main])
       );
       expect(result).toBe("Doc: partial");
+    });
+
+    it("includes document by key", () => {
+      const header = makeDoc({
+        id: "header",
+        key: "site_header",
+        title: "Header",
+        content: "# Company Wiki",
+      });
+      const main = makeDoc({
+        id: "main",
+        title: "Home",
+        content: "{% include 'site_header' %}\n\nBody content",
+      });
+      const result = processTemplate(
+        main.content,
+        makeCtx(main, [header, main])
+      );
+      expect(result).toBe("# Company Wiki\n\nBody content");
     });
 
     it("strips frontmatter from included document", () => {

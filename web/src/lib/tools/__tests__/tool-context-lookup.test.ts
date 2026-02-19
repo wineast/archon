@@ -17,6 +17,8 @@ vi.mock("@/db/schema", () => ({
   },
   wikiDocuments: {
     id: "id",
+    title: "title",
+    key: "key",
     content: "content",
     agentId: "agent_id",
   },

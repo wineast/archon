@@ -26,6 +26,7 @@ export async function PATCH(
 
   const updates: Record<string, unknown> = {};
   if (body.content !== undefined) updates.content = body.content;
+  if (body.title !== undefined) updates.title = body.title;
   if (body.order !== undefined) updates.order = body.order;
 
   if (Object.keys(updates).length === 0) {

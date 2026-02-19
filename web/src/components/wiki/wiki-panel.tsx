@@ -15,6 +15,7 @@ import {
 import { WikiEditor } from "@/components/editors/wiki-editor";
 import { WikiEmptyState } from "./wiki-empty-state";
 import { WikiSidebar } from "./wiki-sidebar";
+import { WikiCreateDialog } from "./wiki-create-dialog";
 
 export function WikiPanel({ agentId }: { agentId: string }) {
   const { data: documents = [], mutate } = useSWR(
@@ -23,6 +24,7 @@ export function WikiPanel({ agentId }: { agentId: string }) {
   );
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "editor">("sidebar");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const activeDoc = useMemo(
     () => documents.find((d) => d.id === activeDocId) ?? null,
@@ -35,13 +37,19 @@ export function WikiPanel({ agentId }: { agentId: string }) {
     }
   }, [activeDocId]);
 
-  const handleCreate = useCallback(async () => {
-    const id = await createDocument(documents, mutate, agentId);
-    if (id) setActiveDocId(id);
-  }, [documents, mutate, agentId]);
+  const handleCreateDocument = useCallback(
+    async (title: string, key: string) => {
+      const id = await createDocument(documents, mutate, agentId, title, key);
+      if (id) {
+        setActiveDocId(id);
+        setCreateDialogOpen(false);
+      }
+    },
+    [documents, mutate, agentId]
+  );
 
   const handleUpdate = useCallback(
-    async (id: string, updates: { content: string }) => {
+    async (id: string, updates: { title: string; content: string }) => {
       return updateDocument(id, updates, documents, mutate);
     },
     [documents, mutate]
@@ -71,15 +79,20 @@ export function WikiPanel({ agentId }: { agentId: string }) {
           documents={documents}
           activeDocId={activeDocId}
           onSelect={setActiveDocId}
-          onCreate={handleCreate}
+          onCreate={() => setCreateDialogOpen(true)}
           onDelete={handleDelete}
           onReorder={handleReorder}
         />
         <div className="flex-1 overflow-hidden">
           {activeDoc ? (
-            <WikiEditor doc={activeDoc} documents={documents} onUpdate={handleUpdate} />
+            <WikiEditor
+              doc={activeDoc}
+              documents={documents}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+            />
           ) : (
-            <WikiEmptyState onCreate={handleCreate} />
+            <WikiEmptyState onCreate={() => setCreateDialogOpen(true)} />
           )}
         </div>
       </div>
@@ -91,7 +104,7 @@ export function WikiPanel({ agentId }: { agentId: string }) {
             documents={documents}
             activeDocId={activeDocId}
             onSelect={setActiveDocId}
-            onCreate={handleCreate}
+            onCreate={() => setCreateDialogOpen(true)}
             onDelete={handleDelete}
             onReorder={handleReorder}
           />
@@ -108,11 +121,22 @@ export function WikiPanel({ agentId }: { agentId: string }) {
               <span className="text-sm font-medium">Back</span>
             </div>
             <div className="flex-1 overflow-hidden">
-              <WikiEditor doc={activeDoc} documents={documents} onUpdate={handleUpdate} />
+              <WikiEditor
+                doc={activeDoc}
+                documents={documents}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+              />
             </div>
           </>
         )}
       </div>
+
+      <WikiCreateDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onCreate={handleCreateDocument}
+      />
     </div>
   );
 }
