@@ -5,6 +5,37 @@ import { readJson, toKey, logSection, log } from "../seed-utils";
 import type { ToolParameter } from "@/lib/tools/types";
 import type { Seeder } from "./types";
 
+/** Seed-time parameter with optional legacy enumRef. */
+interface SeedToolParameter extends Omit<ToolParameter, "enumRef"> {
+  enumRef?: string;
+  properties?: SeedToolParameter[];
+}
+
+/** Recursively convert enumRef → enumDatasetId using the dataset key→id map. */
+function convertEnumRefs(
+  params: SeedToolParameter[],
+  datasetKeyToId: Record<string, string>
+): ToolParameter[] {
+  return params.map((p) => {
+    const { enumRef, ...rest } = p;
+    if (enumRef) {
+      const dsId = datasetKeyToId[enumRef];
+      if (dsId) {
+        rest.enumDatasetId = dsId;
+      } else {
+        log("warn", `enumRef="${enumRef}" not found in datasetKeyToId, skipping`);
+      }
+    }
+    if (rest.properties) {
+      rest.properties = convertEnumRefs(
+        rest.properties as SeedToolParameter[],
+        datasetKeyToId
+      );
+    }
+    return rest as ToolParameter;
+  });
+}
+
 export const seedTools: Seeder = {
   name: "tools",
   async run(ctx) {
@@ -18,7 +49,7 @@ export const seedTools: Seeder = {
         key?: string;
         name: string;
         description: string;
-        parameters: ToolParameter[];
+        parameters: SeedToolParameter[];
         handler?: string;
         enabled: boolean;
         component?: string;
@@ -28,6 +59,9 @@ export const seedTools: Seeder = {
     const schemaIdMap: Record<string, string> = {};
     for (const t of toolsSeed) {
       if (t.parameters.length === 0) continue;
+      // Convert enumRef → enumDatasetId before inserting
+      const parameters = convertEnumRefs(t.parameters, ctx.datasetKeyToId);
+      t.parameters = parameters as SeedToolParameter[];
       const toolKey = t.key ?? toKey(t.name);
       const schemaKey = `${toolKey}_params`;
       const schemaName = `${t.name} Parameters`;

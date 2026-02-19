@@ -11,7 +11,6 @@ export interface ToolParameter {
   /** Default value for this parameter. */
   defaultValue?: unknown;
   enum?: string[];
-  enumRef?: string;
   /** Dataset UUID for enum resolution. Mutually exclusive with enum[]. */
   enumDatasetId?: string;
   /** Nested fields when type === "json". */

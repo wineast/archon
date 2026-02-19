@@ -197,7 +197,7 @@ export function resolveDatasets(
     }
   }
 
-  // Build entries for enumRef resolution
+  // Build entries for dataset enum resolution (used by UI previews)
   // Array → direct values; Object with string values → Object.values();
   // Object with non-string values → Object.keys()
   const datasetEntries: Record<string, Array<{ value: string }>> = {};

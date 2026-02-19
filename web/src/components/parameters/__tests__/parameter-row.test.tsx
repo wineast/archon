@@ -100,20 +100,12 @@ describe("ParameterRow", () => {
   });
 
   it("clears enum fields when switching from enum to other type", () => {
-    const param = makeParam({ type: "enum", enum: ["CA"], enumRef: "states" });
+    const param = makeParam({ type: "enum", enum: ["CA"] });
     const updated: ToolParameter = { ...param, type: "string" };
     delete updated.enum;
-    delete updated.enumRef;
 
     expect(updated.enum).toBeUndefined();
-    expect(updated.enumRef).toBeUndefined();
     expect(updated.type).toBe("string");
-  });
-
-  it("clears enumRef when switching to manual source", () => {
-    const param = makeParam({ type: "enum", enumRef: "states" });
-    const updated = { ...param, enumRef: undefined };
-    expect(updated.enumRef).toBeUndefined();
   });
 
   it("clears enum when switching to ref source", () => {
