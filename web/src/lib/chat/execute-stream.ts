@@ -25,6 +25,10 @@ export interface ExecuteChatStreamOptions {
   agentId: string;
   /** DB user id. null for anonymous embed users. */
   userId: string | null;
+  /** Host page context injected via ArchonEmbed.setContext(). */
+  hostContext?: Record<string, unknown>;
+  /** Tool names registered by the host page via ArchonEmbed.registerTools(). */
+  registeredHostTools?: string[];
 }
 
 /**
@@ -34,7 +38,18 @@ export interface ExecuteChatStreamOptions {
 export async function executeChatStream(
   opts: ExecuteChatStreamOptions
 ): Promise<Response> {
-  const { messages, sessionId, agentId, userId } = opts;
+  const { messages, sessionId, agentId, userId, hostContext, registeredHostTools } = opts;
+
+  // Validate hostContext size (10KB limit)
+  if (hostContext) {
+    const contextSize = new TextEncoder().encode(JSON.stringify(hostContext)).length;
+    if (contextSize > 10240) {
+      return new Response(
+        JSON.stringify({ error: "hostContext exceeds 10KB limit" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
 
   // Read active model config from DB (scoped to agent)
   const [activeConfig] = await db
@@ -62,13 +77,21 @@ export async function executeChatStream(
   const templateData = await gatherTemplateData(agentId);
 
   // Use resolved schema parameters from templateData.schemaMap
-  const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
-    name: row.name,
-    description: row.description,
-    parameters: row.parametersSchemaId ? (templateData.schemaMap[row.parametersSchemaId] ?? []) : [],
-    handler: row.handler ?? "",
-    executionTarget: row.executionTarget ?? "server",
-  }));
+  const toolPayloads: ToolDefinitionPayload[] = enabledRows
+    .filter((row) => {
+      // Exclude host tools that are not registered by the host page
+      if (row.executionTarget === "host") {
+        return registeredHostTools?.includes(row.name) ?? false;
+      }
+      return true;
+    })
+    .map((row) => ({
+      name: row.name,
+      description: row.description,
+      parameters: row.parametersSchemaId ? (templateData.schemaMap[row.parametersSchemaId] ?? []) : [],
+      handler: row.handler ?? "",
+      executionTarget: row.executionTarget ?? "server",
+    }));
 
   const allTools = toolPayloads.length
     ? buildDynamicTools(toolPayloads, templateData, agentId)
@@ -79,7 +102,8 @@ export async function executeChatStream(
 
   const systemPrompt = await renderTemplate(
     activeConfig.systemPrompt || "",
-    templateData
+    templateData,
+    hostContext ? { host: hostContext } : undefined
   );
 
   const result = streamText({

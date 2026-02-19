@@ -12,9 +12,13 @@ export async function POST(req: Request) {
   const {
     messages,
     sessionId,
+    hostContext,
+    registeredHostTools,
   }: {
     messages: UIMessage[];
     sessionId?: string;
+    hostContext?: Record<string, unknown>;
+    registeredHostTools?: string[];
   } = await req.json();
 
   return executeChatStream({
@@ -22,5 +26,7 @@ export async function POST(req: Request) {
     sessionId,
     agentId: ctx.agent.id,
     userId: null,
+    hostContext,
+    registeredHostTools,
   });
 }
