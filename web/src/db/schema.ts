@@ -921,6 +921,7 @@ export const objectRelations = pgTable(
 export type ObjectRelationRow = typeof objectRelations.$inferSelect;
 export type NewObjectRelationRow = typeof objectRelations.$inferInsert;
 
+<<<<<<< HEAD
 /* ─────────── Object Instances (Ontology) ─────────── */
 
 export const objectInstances = pgTable(
@@ -1022,4 +1023,19 @@ export const usageRecords = pgTable(
 
 export type UsageRecordRow = typeof usageRecords.$inferSelect;
 export type NewUsageRecordRow = typeof usageRecords.$inferInsert;
+
+/* ─────────── Platform Settings (singleton) ─────────── */
+
+export const platformSettings = pgTable("platform_settings", {
+  id: text("id").primaryKey().default("singleton"),
+  buildChatModel: text("build_chat_model").notNull().default("anthropic:claude-sonnet-4-20250514"),
+  buildChatTemperature: real("build_chat_temperature").notNull().default(0.3),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export type PlatformSettingsRow = typeof platformSettings.$inferSelect;
+export type NewPlatformSettingsRow = typeof platformSettings.$inferInsert;
 

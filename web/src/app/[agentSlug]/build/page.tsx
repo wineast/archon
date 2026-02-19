@@ -52,6 +52,7 @@ import {
 import { EmbedTokensPanel } from "@/components/embed-tokens/embed-tokens-panel";
 import { FilesPanel } from "@/components/agent-files/files-panel";
 import { useAgentRole } from "@/lib/auth/hooks";
+import { BuildChatPanel } from "@/components/build-chat/build-chat-panel";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
 
@@ -108,6 +109,7 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [sheetVersionId, setSheetVersionId] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const visibleTabs = useMemo(
     () =>
@@ -261,14 +263,29 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
           {agent.name}
           <span className="text-muted-foreground"> · 设置</span>
         </span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant={chatOpen ? "secondary" : "ghost"}
+            size="icon"
+            className="size-8"
+            onClick={() => setChatOpen((v) => !v)}
+          >
+            <MessageSquareIcon className="size-4" />
+          </Button>
           <UserButton />
         </div>
       </header>
 
       {/* Body */}
       <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
-        {/* Versions sidebar — far left, admin+ only */}
+        {/* Build Chat panel — far left, toggleable */}
+        {chatOpen && (
+          <div className="hidden shrink-0 sm:block">
+            <BuildChatPanel agentId={agent.id} />
+          </div>
+        )}
+
+        {/* Versions sidebar — admin+ only */}
         {canManageMembers && (
           <div className="hidden shrink-0 sm:block">
             <VersionsSidebar
