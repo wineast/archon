@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
@@ -13,7 +13,7 @@ export async function PATCH(
   const [existing] = await db
     .select()
     .from(wikiDocuments)
-    .where(eq(wikiDocuments.id, id));
+    .where(and(eq(wikiDocuments.id, id), isNull(wikiDocuments.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -46,7 +46,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(wikiDocuments)
-    .where(eq(wikiDocuments.id, id));
+    .where(and(eq(wikiDocuments.id, id), isNull(wikiDocuments.deletedAt)));
 
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -55,6 +55,6 @@ export async function DELETE(
   const ctx = await requireAgentRole(existing.agentId!, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  await db.delete(wikiDocuments).where(eq(wikiDocuments.id, id));
+  await db.update(wikiDocuments).set({ deletedAt: new Date() }).where(eq(wikiDocuments.id, id));
   return NextResponse.json({ ok: true });
 }

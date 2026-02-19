@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { evalJudgeConfigs } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function PUT(
@@ -13,7 +13,7 @@ export async function PUT(
   const [existing] = await db
     .select()
     .from(evalJudgeConfigs)
-    .where(eq(evalJudgeConfigs.id, id));
+    .where(and(eq(evalJudgeConfigs.id, id), isNull(evalJudgeConfigs.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(

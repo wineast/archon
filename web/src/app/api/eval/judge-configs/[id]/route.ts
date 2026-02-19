@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { evalJudgeConfigs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 export async function PUT(
@@ -13,7 +13,7 @@ export async function PUT(
   const [existing] = await db
     .select()
     .from(evalJudgeConfigs)
-    .where(eq(evalJudgeConfigs.id, id));
+    .where(and(eq(evalJudgeConfigs.id, id), isNull(evalJudgeConfigs.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(
@@ -55,7 +55,7 @@ export async function DELETE(
   const [existing] = await db
     .select()
     .from(evalJudgeConfigs)
-    .where(eq(evalJudgeConfigs.id, id));
+    .where(and(eq(evalJudgeConfigs.id, id), isNull(evalJudgeConfigs.deletedAt)));
 
   if (!existing) {
     return NextResponse.json(
@@ -74,6 +74,6 @@ export async function DELETE(
     );
   }
 
-  await db.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.id, id));
+  await db.update(evalJudgeConfigs).set({ deletedAt: new Date() }).where(eq(evalJudgeConfigs.id, id));
   return NextResponse.json({ ok: true });
 }

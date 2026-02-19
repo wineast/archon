@@ -1,7 +1,7 @@
 import { getSessionByShareId } from "@/db/chat-persistence";
 import { db } from "@/db";
 import { tools, components } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -31,7 +31,7 @@ export async function GET(
         })
         .from(tools)
         .leftJoin(components, eq(tools.componentId, components.id))
-        .where(eq(tools.agentId, session.agentId)),
+        .where(and(eq(tools.agentId, session.agentId), isNull(tools.deletedAt))),
       db
         .select({
           key: components.key,
@@ -39,7 +39,7 @@ export async function GET(
           generatedCss: components.generatedCss,
         })
         .from(components)
-        .where(eq(components.agentId, session.agentId)),
+        .where(and(eq(components.agentId, session.agentId), isNull(components.deletedAt))),
     ]);
 
     for (const r of toolRows) {

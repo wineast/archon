@@ -53,6 +53,7 @@ const sampleToolRows: ToolRow[] = [
     agentId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
   },
   {
     id: "t2",
@@ -69,6 +70,7 @@ const sampleToolRows: ToolRow[] = [
     agentId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
   },
 ];
 

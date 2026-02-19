@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { evalRuns, modelConfigs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type { CreateEvalRunRequest, CreateEvalRunResponse } from "@/lib/eval/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const [modelConfig] = await db
     .select()
     .from(modelConfigs)
-    .where(eq(modelConfigs.id, modelConfigId));
+    .where(and(eq(modelConfigs.id, modelConfigId), isNull(modelConfigs.deletedAt)));
 
   if (!modelConfig || !modelConfig.modelId) {
     return Response.json(

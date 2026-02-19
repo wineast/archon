@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { schemas } from "@/db/schema";
 import type { SchemaRow } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveParameters, detectCycle } from "@/lib/schemas/resolve";
 
@@ -11,7 +11,7 @@ async function getAllSchemasMap(agentId: string) {
   const rows = await db
     .select()
     .from(schemas)
-    .where(eq(schemas.agentId, agentId))
+    .where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt)))
     .orderBy(schemas.key);
   return { rows, map: new Map(rows.map((r) => [r.id, r])) };
 }
@@ -62,6 +62,7 @@ export async function POST(req: Request) {
       includeSchemaIds,
       createdAt: new Date(),
       updatedAt: new Date(),
+      deletedAt: null,
     };
     map.set(tempId, tempSchema);
     if (detectCycle(tempId, includeSchemaIds, map)) {

@@ -302,6 +302,7 @@ function EmbedChat({
         executionTarget: t.executionTarget as "server" | "client" | "host",
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
       }));
       executeClientTool(toolCall, addToolOutput, toolRows);
     },

@@ -96,6 +96,7 @@ export async function deleteModelConfig(id: string, mutate: () => void) {
     });
     if (!res.ok) throw new Error(await res.text());
     mutate();
+    toast.success("已移至回收站");
     return true;
   } catch (e) {
     console.error("deleteModelConfig failed:", e);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { resolveTitle } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import type { WikiDocumentRow } from "@/db/schema";
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
   const rows = await db
     .select()
     .from(wikiDocuments)
-    .where(eq(wikiDocuments.agentId, agentId));
+    .where(and(eq(wikiDocuments.agentId, agentId), isNull(wikiDocuments.deletedAt)));
   return NextResponse.json(rows.map(toWikiDocument));
 }
 

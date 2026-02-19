@@ -81,6 +81,7 @@ export async function deleteSchema(id: string, mutate: () => void) {
       throw new Error(body?.error || "Delete failed");
     }
     mutate();
+    toast.success("已移至回收站");
     return true;
   } catch (e) {
     console.error("deleteSchema failed:", e);

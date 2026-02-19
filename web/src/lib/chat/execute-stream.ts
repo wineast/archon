@@ -9,7 +9,7 @@ import { after } from "next/server";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import { db } from "@/db";
 import { tools, modelConfigs } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
   createSession,
@@ -57,7 +57,7 @@ export async function executeChatStream(
     .select()
     .from(modelConfigs)
     .where(
-      and(eq(modelConfigs.agentId, agentId), eq(modelConfigs.isActive, true))
+      and(eq(modelConfigs.agentId, agentId), eq(modelConfigs.isActive, true), isNull(modelConfigs.deletedAt))
     )
     .limit(1);
 
@@ -72,7 +72,7 @@ export async function executeChatStream(
   const enabledRows = await db
     .select()
     .from(tools)
-    .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true)));
+    .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true), isNull(tools.deletedAt)));
 
   // Gather template data once (includes resolved schemas and datasetsById)
   const templateData = await gatherTemplateData(agentId);

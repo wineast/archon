@@ -86,6 +86,7 @@ export async function deleteObjectType(id: string, mutate: () => void) {
       throw new Error(body?.error || "Delete failed");
     }
     mutate();
+    toast.success("已移至回收站");
     return true;
   } catch (e) {
     console.error("deleteObjectType failed:", e);
@@ -175,6 +176,7 @@ export async function deleteObjectRelation(id: string, mutate: () => void) {
       throw new Error(body?.error || "Delete failed");
     }
     mutate();
+    toast.success("已移至回收站");
     return true;
   } catch (e) {
     console.error("deleteObjectRelation failed:", e);

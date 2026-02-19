@@ -157,6 +157,7 @@ export const functions = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     unique("functions_agent_id_key_idx").on(table.agentId, table.key),
@@ -186,6 +187,7 @@ export const datasets = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     unique("datasets_agent_id_key_idx").on(table.agentId, table.key),
@@ -216,6 +218,7 @@ export const wikiDocuments = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     unique("wiki_documents_agent_id_key_idx").on(table.agentId, table.key),
@@ -246,6 +249,7 @@ export const schemas = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     unique("schemas_agent_id_key_idx").on(table.agentId, table.key),
@@ -281,6 +285,7 @@ export const tools = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     unique("tools_agent_id_key_idx").on(table.agentId, table.key),
@@ -336,6 +341,7 @@ export const modelConfigs = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     unique("model_configs_agent_id_key_idx").on(t.agentId, t.key),
@@ -389,6 +395,7 @@ export const evalCases = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     unique("eval_cases_agent_id_key_idx").on(t.agentId, t.key),
@@ -419,6 +426,7 @@ export const evalJudgeConfigs = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     unique("eval_judge_configs_agent_id_key_idx").on(t.agentId, t.key),
@@ -650,6 +658,7 @@ export const components = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     unique("components_agent_id_key_idx").on(table.agentId, table.key),
@@ -873,6 +882,7 @@ export const objectTypes = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     unique("object_types_agent_id_key_idx").on(t.agentId, t.key),
@@ -912,6 +922,7 @@ export const objectRelations = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     unique("object_relations_agent_id_key_idx").on(t.agentId, t.key),

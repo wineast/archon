@@ -1,7 +1,7 @@
 import { generateText, gateway, Output, stepCountIs } from "ai";
 import { db } from "@/db";
 import { evalRuns, evalRunResults, modelConfigs, tools, schemas } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
 import { gatherTemplateData, renderTemplate } from "@/lib/template/render";
@@ -45,7 +45,7 @@ export async function POST(
   const [modelConfig] = await db
     .select()
     .from(modelConfigs)
-    .where(eq(modelConfigs.id, modelConfigId));
+    .where(and(eq(modelConfigs.id, modelConfigId), isNull(modelConfigs.deletedAt)));
 
   if (!modelConfig || !modelConfig.modelId) {
     return Response.json(
@@ -88,7 +88,7 @@ export async function POST(
     const enabledRows = await db
       .select()
       .from(tools)
-      .where(eq(tools.enabled, true));
+      .where(and(eq(tools.enabled, true), isNull(tools.deletedAt)));
 
     // Resolve schema parameters
     const schemaIds = new Set<string>();

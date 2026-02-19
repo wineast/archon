@@ -83,6 +83,7 @@ export async function deleteDocument(
       docs.filter((d) => d.id !== id),
       { revalidate: false }
     );
+    toast.success("已移至回收站");
     return true;
   } catch (e) {
     console.error("deleteDocument failed:", e);

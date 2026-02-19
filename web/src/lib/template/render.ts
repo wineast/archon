@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { datasets, wikiDocuments, tools, schemas, objectTypes, objectRelations } from "@/db/schema";
 import type { ToolRow } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import type { ToolParameter } from "@/lib/tools/types";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
@@ -62,7 +62,7 @@ async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
       updatedAt: wikiDocuments.updatedAt,
     })
     .from(wikiDocuments)
-    .where(eq(wikiDocuments.agentId, agentId));
+    .where(and(eq(wikiDocuments.agentId, agentId), isNull(wikiDocuments.deletedAt)));
 
   return rows.map((r) => ({
     ...r,
@@ -97,7 +97,7 @@ async function getEnabledTools(agentId: string): Promise<ToolRow[]> {
   return db
     .select()
     .from(tools)
-    .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true)));
+    .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true), isNull(tools.deletedAt)));
 }
 
 export function buildToolNamespace(
@@ -216,16 +216,16 @@ export async function gatherTemplateData(
     getResolvedDatasets(agentId),
     getWikiDocs(agentId),
     getEnabledTools(agentId),
-    db.select().from(datasets).where(eq(datasets.agentId, agentId)),
-    db.select().from(objectTypes).where(eq(objectTypes.agentId, agentId)).orderBy(objectTypes.order),
-    db.select().from(objectRelations).where(eq(objectRelations.agentId, agentId)),
+    db.select().from(datasets).where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt))),
+    db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))).orderBy(objectTypes.order),
+    db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
   ]);
 
   // Load ALL schemas for this agent and resolve parameters
   const allSchemaRows = await db
     .select()
     .from(schemas)
-    .where(eq(schemas.agentId, agentId));
+    .where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt)));
 
   const allSchemasMap = new Map(allSchemaRows.map((r) => [r.id, r]));
 

@@ -20,6 +20,7 @@ import {
   PuzzleIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
+  Trash2Icon,
   UsersIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -54,6 +55,8 @@ import { FilesPanel } from "@/components/agent-files/files-panel";
 import { useAgentRole } from "@/lib/auth/hooks";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
+import { TrashSheet } from "@/components/trash/trash-sheet";
+import { useTrash } from "@/lib/trash/hooks";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -108,6 +111,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [sheetVersionId, setSheetVersionId] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const { totalCount: trashCount } = useTrash(agent.id);
 
   const visibleTabs = useMemo(
     () =>
@@ -304,6 +309,19 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
               </button>
             );
           })}
+          <div className="flex-1" />
+          <button
+            onClick={() => setTrashOpen(true)}
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Trash2Icon className="size-4" />
+            回收站
+            {trashCount > 0 && (
+              <span className="ml-auto rounded-full bg-muted px-1.5 text-xs">
+                {trashCount}
+              </span>
+            )}
+          </button>
         </nav>
 
         {/* Mobile horizontal tabs */}
@@ -324,6 +342,18 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
               </button>
             );
           })}
+          <button
+            onClick={() => setTrashOpen(true)}
+            className="flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors"
+          >
+            <Trash2Icon className="size-3.5" />
+            回收站
+            {trashCount > 0 && (
+              <span className="ml-1 rounded-full bg-muted px-1.5 text-xs">
+                {trashCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Content — always the normal editable panels */}
@@ -347,6 +377,12 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
           currentVersion={currentVersion}
         />
       )}
+
+      <TrashSheet
+        agentId={agent.id}
+        open={trashOpen}
+        onOpenChange={setTrashOpen}
+      />
 
       {sheetVersionId && (
         <VersionDetailSheet
