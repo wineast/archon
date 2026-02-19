@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, ListIcon, NetworkIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useObjectTypes,
@@ -17,6 +17,9 @@ import { ObjectTypesSidebar } from "./object-types-sidebar";
 import { ObjectTypeDetail } from "./object-type-detail";
 import { OntologyEmptyState } from "./ontology-empty-state";
 import { ObjectTypeCreateDialog } from "./object-type-create-dialog";
+import { OntologyGraph } from "./ontology-graph";
+
+type DesktopViewMode = "list" | "graph";
 
 export function OntologyPanel({ agentId }: { agentId: string }) {
   const { objectTypes, mutate: mutateTypes } = useObjectTypes(agentId);
@@ -25,6 +28,7 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
   const [activeTypeId, setActiveTypeId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<DesktopViewMode>("list");
 
   const activeType = useMemo(
     () => objectTypes.find((t) => t.id === activeTypeId) ?? null,
@@ -94,6 +98,20 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
     [mutateRelations]
   );
 
+  const detailPanel = activeType ? (
+    <ObjectTypeDetail
+      key={activeType.id}
+      agentId={agentId}
+      objectType={activeType}
+      allObjectTypes={objectTypes}
+      relations={objectRelations}
+      onSave={handleSave}
+      onDelete={handleDelete}
+      onCreateRelation={handleCreateRelation}
+      onDeleteRelation={handleDeleteRelation}
+    />
+  ) : null;
+
   return (
     <div className="flex h-full flex-col">
       <ObjectTypeCreateDialog
@@ -103,29 +121,72 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
       />
 
       {/* Desktop layout */}
-      <div className="hidden h-full sm:flex">
-        <ObjectTypesSidebar
-          objectTypes={objectTypes}
-          relations={objectRelations}
-          activeTypeId={activeTypeId}
-          onSelect={setActiveTypeId}
-          onCreate={handleOpenCreateDialog}
-        />
-        <div className="flex-1 min-w-0 overflow-hidden">
-          {activeType ? (
-            <ObjectTypeDetail
-              key={activeType.id}
-              agentId={agentId}
-              objectType={activeType}
-              allObjectTypes={objectTypes}
-              relations={objectRelations}
-              onSave={handleSave}
-              onDelete={handleDelete}
-              onCreateRelation={handleCreateRelation}
-              onDeleteRelation={handleDeleteRelation}
-            />
+      <div className="hidden h-full flex-col sm:flex">
+        {/* Toolbar */}
+        <div className="flex items-center gap-2 border-b px-3 py-1.5">
+          <span className="text-sm font-semibold">Ontology</span>
+          <div className="flex-1" />
+          <div className="flex items-center rounded-md border p-0.5">
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="icon-xs"
+              onClick={() => setViewMode("list")}
+              title="List view"
+            >
+              <ListIcon className="size-3.5" />
+            </Button>
+            <Button
+              variant={viewMode === "graph" ? "secondary" : "ghost"}
+              size="icon-xs"
+              onClick={() => setViewMode("graph")}
+              title="Graph view"
+            >
+              <NetworkIcon className="size-3.5" />
+            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={handleOpenCreateDialog}
+            title="New Object Type"
+          >
+            <PlusIcon className="size-4" />
+          </Button>
+        </div>
+
+        {/* Content area */}
+        <div className="flex flex-1 min-h-0">
+          {viewMode === "list" ? (
+            <>
+              <ObjectTypesSidebar
+                objectTypes={objectTypes}
+                relations={objectRelations}
+                activeTypeId={activeTypeId}
+                onSelect={setActiveTypeId}
+                onCreate={handleOpenCreateDialog}
+              />
+              <div className="flex-1 min-w-0 overflow-hidden">
+                {detailPanel ?? (
+                  <OntologyEmptyState onCreate={handleOpenCreateDialog} />
+                )}
+              </div>
+            </>
           ) : (
-            <OntologyEmptyState onCreate={handleOpenCreateDialog} />
+            <>
+              <div className="flex-1 min-w-0">
+                <OntologyGraph
+                  objectTypes={objectTypes}
+                  objectRelations={objectRelations}
+                  activeTypeId={activeTypeId}
+                  onSelectType={setActiveTypeId}
+                />
+              </div>
+              {activeType && (
+                <div className="w-80 shrink-0 overflow-hidden border-l">
+                  {detailPanel}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
