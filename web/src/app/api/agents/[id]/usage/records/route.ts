@@ -23,7 +23,7 @@ export async function GET(
   const conditions = [eq(usageRecords.agentId, agentId)];
   if (from) conditions.push(gte(usageRecords.createdAt, new Date(from)));
   if (to) conditions.push(lte(usageRecords.createdAt, new Date(to)));
-  if (source) conditions.push(eq(usageRecords.source, source as "chat" | "embed" | "prompt-assist" | "eval"));
+  if (source) conditions.push(eq(usageRecords.source, source as "chat" | "embed" | "prompt-assist" | "jsx-assist" | "eval"));
 
   const where = and(...conditions);
 
