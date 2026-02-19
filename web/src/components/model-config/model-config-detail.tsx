@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   CheckIcon,
-  DownloadIcon,
   PowerIcon,
   RotateCcwIcon,
   SaveIcon,
@@ -36,10 +35,7 @@ interface ModelConfigDetailProps {
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onActivate: (id: string) => Promise<void>;
-  onPull?: () => Promise<ModelConfigRow | null>;
 }
-
-const isDev = process.env.NODE_ENV === "development";
 
 export function ModelConfigDetail({
   config,
@@ -47,7 +43,6 @@ export function ModelConfigDetail({
   onSave,
   onDelete,
   onActivate,
-  onPull,
 }: ModelConfigDetailProps) {
   const [name, setName] = useState(config.name);
   const [modelId, setModelId] = useState(config.modelId);
@@ -57,12 +52,11 @@ export function ModelConfigDetail({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activating, setActivating] = useState(false);
-  const [pulling, setPulling] = useState(false);
   const [previewContent, setPreviewContent] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("edit");
   const [promptAssistOpen, setPromptAssistOpen] = useState(false);
-  const busy = saving || deleting || activating || pulling;
+  const busy = saving || deleting || activating;
 
   const { tools: allTools } = useTools(agentId);
   const { datasetVars } = useDatasetVarsMap(agentId);
@@ -147,23 +141,6 @@ export function ModelConfigDetail({
       setActivating(false);
     }
   }, [config.id, onActivate]);
-
-  const handlePull = useCallback(async () => {
-    if (!onPull) return;
-    setPulling(true);
-    try {
-      const fresh = await onPull();
-      if (fresh) {
-        setName(fresh.name);
-        setModelId(fresh.modelId);
-        setSystemPrompt(fresh.systemPrompt);
-        setTemperature(fresh.temperature);
-      }
-    } finally {
-      setPulling(false);
-    }
-  }, [onPull]);
-
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
@@ -315,21 +292,6 @@ export function ModelConfigDetail({
           <RotateCcwIcon className="mr-1 size-3" />
           Reset
         </Button>
-        {isDev && onPull && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handlePull}
-            disabled={busy}
-          >
-            {pulling ? (
-              <Spinner className="mr-1 size-3" />
-            ) : (
-              <DownloadIcon className="mr-1 size-3" />
-            )}
-            {pulling ? "Pulling..." : "Pull"}
-          </Button>
-        )}
         <div className="flex-1" />
         <Button
           variant="destructive"

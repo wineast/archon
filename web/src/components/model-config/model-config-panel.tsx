@@ -93,12 +93,6 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
     [listMutate, activeMutate]
   );
 
-  const handlePull = useCallback(async () => {
-    const fresh = await listMutate();
-    if (!fresh || !activeConfigId) return null;
-    return fresh.find((c) => c.id === activeConfigId) ?? null;
-  }, [listMutate, activeConfigId]);
-
   const openCreateDialog = useCallback(() => setCreateDialogOpen(true), []);
 
   return (
@@ -120,7 +114,6 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
               onSave={handleSave}
               onDelete={handleDelete}
               onActivate={handleActivate}
-              onPull={handlePull}
             />
           ) : (
             <ModelConfigEmptyState onCreate={openCreateDialog} />
@@ -156,8 +149,7 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
                 onSave={handleSave}
                 onDelete={handleDelete}
                 onActivate={handleActivate}
-                onPull={handlePull}
-              />
+                />
             </div>
           </>
         )}
