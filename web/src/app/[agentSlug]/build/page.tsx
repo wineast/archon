@@ -15,6 +15,7 @@ import {
   FileIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
+  MessageSquareIcon,
   NetworkIcon,
   PuzzleIcon,
   SettingsIcon,
@@ -37,6 +38,7 @@ import { ComponentsPanel } from "@/components/components/components-panel";
 import { MembersPanel } from "@/components/members/members-panel";
 import { OntologyPanel } from "@/components/ontology/ontology-panel";
 import { UsagePanel } from "@/components/usage/usage-panel";
+import { SessionsPanel } from "@/components/sessions/sessions-panel";
 import { VersionsSidebar } from "@/components/versions/versions-sidebar";
 import { VersionCreateDialog } from "@/components/versions/version-create-dialog";
 import { VersionDetailSheet } from "@/components/versions/version-detail-sheet";
@@ -71,6 +73,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "ontology", label: "Ontology", icon: NetworkIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
   { value: "files", label: "Files", icon: FileIcon },
+  { value: "sessions", label: "Sessions", icon: MessageSquareIcon },
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
   { value: "model-config", label: "Model Config", icon: SettingsIcon },
   { value: "embed", label: "Embed", icon: CodeIcon },
@@ -226,6 +229,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         return <FunctionsPanel agentId={agent.id} />;
       case "files":
         return <FilesPanel agentId={agent.id} />;
+      case "sessions":
+        return <SessionsPanel agentId={agent.id} />;
       case "eval":
         return <EvalPanel agentId={agent.id} />;
       case "model-config":
