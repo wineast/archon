@@ -10,7 +10,7 @@
 
 面板采用左右分栏布局：
 - **左侧**：组件列表 + 新建按钮
-- **右侧**：选中组件的详情编辑
+- **右侧**：选中组件的详情（三个 Tab：Edit / Playground / Test Cases）
 
 ---
 
@@ -24,13 +24,17 @@
 
 ---
 
-## 编辑组件
+## 编辑组件（Edit Tab）
 
 ### 基本信息
 
 - **Key**：创建后只读，不可修改
 - **Name**：组件显示名称
 - **Description**：组件用途描述
+
+### Schema Ref
+
+可选关联一个 Schema，用于描述组件接收的数据结构。下拉选择当前 Agent 已定义的 Schemas。
 
 ### 组件源码（Component Source）
 
@@ -39,7 +43,8 @@ JSX 编辑器中编写组件的渲染逻辑。支持两种写法：
 **完整函数形式**（推荐）：
 
 ```jsx
-function PricingResult({ output, isLoading }) {
+function PricingResult({ tool, isLoading }) {
+  const { output } = tool;
   if (isLoading) return <Spinner className="size-4" />;
 
   return (
@@ -59,7 +64,7 @@ function PricingResult({ output, isLoading }) {
 </div>
 ```
 
-片段形式会自动被包装为函数，注入所有可用 props。
+片段形式会自动被包装为函数，注入所有可用变量。
 
 ### 注入的 Props
 
@@ -67,21 +72,26 @@ function PricingResult({ output, isLoading }) {
 
 | Prop | 类型 | 说明 |
 |------|------|------|
-| `toolName` | `string` | 工具名称 |
+| `tool` | `{ name: string; input: unknown; output: unknown }` | 工具对象（聚合了 name/input/output） |
 | `state` | `string` | 当前状态：`input-streaming`、`input-available`、`output-available`、`error` |
-| `input` | `unknown` | 工具调用的输入参数 |
-| `output` | `unknown` | 工具返回的结果数据 |
 | `isLoading` | `boolean` | 是否正在加载（等待工具返回） |
 | `isComplete` | `boolean` | 工具调用是否已完成 |
 | `isError` | `boolean` | 工具调用是否出错 |
 
+**JSX 片段中的便捷变量**：在片段形式中，以下变量自动可用，无需从 props 解构：
+- `tool` — 工具对象
+- `toolName` — 等于 `tool.name`
+- `input` — 等于 `tool.input`
+- `output` — 等于 `tool.output`
+- `state`、`isLoading`、`isComplete`、`isError`
+
 典型用法：
 
 ```jsx
-function MyComponent({ output, isLoading, isError }) {
+function MyComponent({ tool, isLoading, isError }) {
   if (isLoading) return <Spinner className="size-4" />;
   if (isError) return <p className="text-destructive">出错了</p>;
-  return <div>{output.message}</div>;
+  return <div>{tool.output.message}</div>;
 }
 ```
 
@@ -103,21 +113,53 @@ function MyComponent({ output, isLoading, isError }) {
 **图标**：
 `ChevronRight`、`FileText`
 
-### Mock Data
+---
 
-JSON 格式的模拟数据，用于编辑器中的实时预览。编辑 Mock Data 后预览面板会即时更新渲染效果。
+## Playground Tab
 
-示例：
+Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 
-```json
-{
-  "plan": "专业版",
-  "price": "¥299/月",
-  "features": ["无限项目", "团队协作", "优先支持"]
-}
-```
+### 使用方法
 
-预览时 Mock Data 会作为 `output` prop 传入组件。
+1. 在 **Tool Name** 输入框中填写工具名称（可选）
+2. 在 **Tool Input (JSON)** 编辑器中填写模拟输入数据
+3. 在 **Tool Output (JSON)** 编辑器中填写模拟输出数据
+4. 下方的 **Preview** 区域会实时渲染组件
+5. 点击 **Refresh** 按钮强制刷新预览
+
+可以从右上角的 **Test Cases** 下拉菜单加载已有测试用例的数据。
+
+---
+
+## Test Cases Tab
+
+测试用例用于验证组件在各种数据场景下的渲染正确性。组件的测试在客户端执行：渲染无报错 = 通过，抛异常 = 失败。
+
+### 创建测试用例
+
+1. 点击底部的 **Add Test Case** 按钮
+2. 填写：
+   - **Name**：测试用例名称
+   - **Tags**：标签（用于分组过滤）
+   - **Tool Name**：工具名称
+   - **Tool Input (JSON)**：工具输入 JSON
+   - **Tool Output (JSON)**：工具输出 JSON
+3. 点击 **Save**
+
+### 运行测试
+
+- **单个运行**：点击测试用例右侧的 ▶ 按钮
+- **批量运行**：点击顶部工具栏的 **Run All** 按钮
+
+运行结果会显示 Passed/Failed 状态和渲染耗时。
+
+### 标签过滤
+
+点击顶部的标签按钮可以只显示和运行特定标签的测试用例。
+
+### 运行历史
+
+每次 Run All 都会生成一条运行记录，保存在 **Runs** 区域。可以展开查看每个用例的详细结果，也可以删除历史记录。
 
 ---
 
@@ -153,7 +195,8 @@ JSON 格式的模拟数据，用于编辑器中的实时预览。编辑 Mock Dat
 **组件源码**：
 
 ```jsx
-function PricingResult({ output, isLoading }) {
+function PricingResult({ tool, isLoading }) {
+  const { output } = tool;
   if (isLoading) return <Spinner className="size-4" />;
   if (!output) return null;
 
@@ -176,8 +219,11 @@ function PricingResult({ output, isLoading }) {
 }
 ```
 
-**Mock Data**：
+**测试用例数据**（在 Test Cases 中创建）：
 
+- Tool Name: `get_pricing`
+- Tool Input: `{}`
+- Tool Output:
 ```json
 {
   "plan": "专业版",

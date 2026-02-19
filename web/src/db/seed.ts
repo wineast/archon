@@ -150,7 +150,6 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
           name,
           description: "",
           componentSource: source,
-          componentMockData: "{}",
           generatedCss,
         })
         .onConflictDoUpdate({

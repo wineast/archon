@@ -29,7 +29,6 @@ export interface ToolDefinition {
   handler: string;
   component: string;
   componentSource: string;
-  componentMockData: string;
   enabled: boolean;
 }
 

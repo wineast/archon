@@ -81,7 +81,6 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
           handler: updated.handler,
           component: updated.component,
           componentSource: updated.componentSource,
-          componentMockData: updated.componentMockData,
         },
         mutate
       );

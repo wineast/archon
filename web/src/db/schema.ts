@@ -254,7 +254,6 @@ export const tools = pgTable(
     handler: text("handler"),
     component: text("component"),
     componentSource: text("component_source"),
-    componentMockData: text("component_mock_data"),
     enabled: boolean("enabled").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -599,7 +598,7 @@ export const components = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     componentSource: text("component_source").notNull().default(""),
-    componentMockData: text("component_mock_data").notNull().default("{}"),
+    schemaRef: text("schema_ref"),
     generatedCss: text("generated_css").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -616,4 +615,84 @@ export const components = pgTable(
 
 export type ComponentRow = typeof components.$inferSelect;
 export type NewComponentRow = typeof components.$inferInsert;
+
+/* ─────────── Component Test Cases ─────────── */
+
+export const componentTestCases = pgTable(
+  "component_test_cases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    componentId: uuid("component_id")
+      .notNull()
+      .references(() => components.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    tool: jsonb("tool")
+      .$type<{ name: string; input: unknown; output: unknown }>()
+      .notNull()
+      .default({ name: "", input: {}, output: {} }),
+    tags: text("tags").array().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("component_test_cases_component_id_idx").on(table.componentId),
+  ]
+);
+
+export type ComponentTestCaseRow = typeof componentTestCases.$inferSelect;
+export type NewComponentTestCaseRow = typeof componentTestCases.$inferInsert;
+
+/* ─────────── Component Test Runs ─────────── */
+
+export const componentTestRuns = pgTable("component_test_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  componentId: uuid("component_id")
+    .notNull()
+    .references(() => components.id, { onDelete: "cascade" }),
+  filterTags: text("filter_tags").array().notNull().default([]),
+  totalCases: integer("total_cases").notNull(),
+  passedCases: integer("passed_cases").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type ComponentTestRunRow = typeof componentTestRuns.$inferSelect;
+export type NewComponentTestRunRow = typeof componentTestRuns.$inferInsert;
+
+/* ─────────── Component Test Run Results ─────────── */
+
+export const componentTestRunResults = pgTable(
+  "component_test_run_results",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => componentTestRuns.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id").notNull(),
+    caseName: text("case_name").notNull(),
+    tool: jsonb("tool")
+      .$type<{ name: string; input: unknown; output: unknown }>()
+      .notNull(),
+    passed: boolean("passed").notNull(),
+    error: text("error"),
+    durationMs: integer("duration_ms").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("component_test_run_results_run_id_idx").on(table.runId),
+  ]
+);
+
+export type ComponentTestRunResultRow =
+  typeof componentTestRunResults.$inferSelect;
+export type NewComponentTestRunResultRow =
+  typeof componentTestRunResults.$inferInsert;
 

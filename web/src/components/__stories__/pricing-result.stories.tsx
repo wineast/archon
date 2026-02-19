@@ -102,10 +102,8 @@ function PricingStory({
   return (
     <DynamicComponentErrorBoundary fallbackToolName="pricing-story">
       <DynamicToolRenderer
-        toolName="pricing_universe"
+        tool={{ name: "pricing_universe", input: input ?? {}, output: output ?? null }}
         state={state}
-        input={input ?? {}}
-        output={output ?? null}
         source={STORY_SOURCE}
       />
     </DynamicComponentErrorBoundary>

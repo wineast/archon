@@ -3,15 +3,20 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { JsEditor } from "@/components/editors/js-editor";
-import { ComponentPreviewPanel } from "@/components/tools/component-preview-panel";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSchemas } from "@/lib/schemas/hooks";
 import type { ComponentDefinition } from "@/lib/components/types";
 import { useEffect, useRef } from "react";
 import {
   Controller,
   FormProvider,
   useForm,
-  useFormContext,
-  useWatch,
 } from "react-hook-form";
 
 export interface ComponentFormHandle {
@@ -22,28 +27,15 @@ export interface ComponentFormHandle {
 
 interface ComponentFormProps {
   component: ComponentDefinition;
+  agentId?: string;
   onDraftRef: (ref: ComponentFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-/** Bridge: isolates component watching from the main form. */
-function PreviewBridge() {
-  const { control, setValue } = useFormContext<ComponentDefinition>();
-  const componentSource = useWatch({ control, name: "componentSource" });
-  const componentMockData = useWatch({ control, name: "componentMockData" });
-  return (
-    <ComponentPreviewPanel
-      componentSource={componentSource}
-      mockData={componentMockData}
-      onMockDataChange={(value) => setValue("componentMockData", value)}
-      collapsible={false}
-    />
-  );
-}
-
-export function ComponentForm({ component, onDraftRef, onDirtyChange }: ComponentFormProps) {
+export function ComponentForm({ component, agentId, onDraftRef, onDirtyChange }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
   const originalRef = useRef(JSON.stringify(component));
+  const { schemas } = useSchemas(agentId);
 
   useEffect(() => {
     onDraftRef({
@@ -104,6 +96,33 @@ export function ComponentForm({ component, onDraftRef, onDirtyChange }: Componen
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">
+            Schema Ref
+          </label>
+          <Controller
+            name="schemaRef"
+            control={form.control}
+            render={({ field }) => (
+              <Select
+                value={field.value ?? "__none__"}
+                onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+              >
+                <SelectTrigger className="mt-1 h-8 text-sm">
+                  <SelectValue placeholder="Select a schema..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {schemas.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
             Component Source (JSX)
           </label>
           <Controller
@@ -119,13 +138,12 @@ export function ComponentForm({ component, onDraftRef, onDirtyChange }: Componen
             )}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            完整函数组件: function Component({"{ output, isLoading, ... }"}) {"{ ... }"}
+            完整函数组件: function Component({"{ tool, state, isLoading, ... }"}) {"{ ... }"}
           </p>
           <p className="text-xs text-muted-foreground">
-            Props: toolName, state, input, output, isLoading, isComplete, isError
+            Props: tool (name/input/output), state, isLoading, isComplete, isError
           </p>
         </div>
-        <PreviewBridge />
       </div>
     </FormProvider>
   );
