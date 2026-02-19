@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
 import { gatherTemplateData, renderTemplate } from "@/lib/template/render";
 import { buildJudgeSchema, toJudgeResult } from "@/lib/eval/judge-dimensions";
-import type { RunCaseRequest, RunCaseResponse, EvalResult } from "@/lib/eval/types";
+import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResult } from "@/lib/eval/types";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
@@ -103,30 +103,183 @@ export async function POST(
       ? buildDynamicTools(toolPayloads, templateData, modelConfig.agentId ?? undefined)
       : {};
 
-    // 1. Generate chat response
-    const chatResult = await generateText({
-      model: gateway(chatModel),
-      system: resolvedSystemPrompt,
-      prompt: evalCase.input,
-      temperature: chatTemperature,
-      tools: allTools,
-      stopWhen: stepCountIs(5),
-    });
-    const chatResponse = chatResult.text;
+    const mode = evalCase.mode ?? "single";
+    const turns = evalCase.turns ?? [];
 
-    // 2. Run assertions
+    // ── Execute based on mode ──
+    const chatMessages: ChatMessage[] = [];
+    const turnResults: TurnResult[] = [];
+    let chatResponse = "";
+
+    if (mode === "single") {
+      // Single turn: one user message, one LLM call
+      const userContent = turns[0]?.content ?? "";
+      const messages = [{ role: "user" as const, content: userContent }];
+
+      const chatResult = await generateText({
+        model: gateway(chatModel),
+        system: resolvedSystemPrompt,
+        messages,
+        temperature: chatTemperature,
+        tools: allTools,
+        stopWhen: stepCountIs(5),
+      });
+      chatResponse = chatResult.text;
+
+      chatMessages.push({ role: "user", content: userContent });
+      chatMessages.push({ role: "assistant", content: chatResponse });
+
+    } else if (mode === "injected") {
+      // Injected: all turns become message history, only last user turn triggers LLM
+      const lastUserIndex = turns.reduce(
+        (acc, t, i) => (t.role === "user" ? i : acc),
+        -1
+      );
+
+      const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+      for (let i = 0; i < turns.length; i++) {
+        const turn = turns[i];
+        messages.push({ role: turn.role, content: turn.content });
+        chatMessages.push({
+          role: turn.role,
+          content: turn.content,
+          injected: i < lastUserIndex || (i === lastUserIndex ? false : i < turns.length - 1),
+        });
+      }
+      // The last user message is NOT injected
+      if (chatMessages.length > 0) {
+        chatMessages[chatMessages.length - 1].injected = false;
+      }
+      // Mark all messages before the last user message as injected
+      for (let i = 0; i < chatMessages.length; i++) {
+        if (i < lastUserIndex) {
+          chatMessages[i].injected = true;
+        } else if (i === lastUserIndex) {
+          chatMessages[i].injected = false;
+        }
+      }
+
+      const chatResult = await generateText({
+        model: gateway(chatModel),
+        system: resolvedSystemPrompt,
+        messages,
+        temperature: chatTemperature,
+        tools: allTools,
+        stopWhen: stepCountIs(5),
+      });
+      chatResponse = chatResult.text;
+
+      chatMessages.push({ role: "assistant", content: chatResponse });
+
+    } else if (mode === "sequential") {
+      // Sequential: process turns one at a time, calling LLM for each user turn
+      const history: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+      for (let i = 0; i < turns.length; i++) {
+        const turn = turns[i];
+
+        if (turn.role === "assistant") {
+          // Inject assistant turn into history without calling LLM
+          history.push({ role: "assistant", content: turn.content });
+          chatMessages.push({ role: "assistant", content: turn.content, injected: true });
+        } else {
+          // User turn: add to history and call LLM
+          history.push({ role: "user", content: turn.content });
+          chatMessages.push({ role: "user", content: turn.content });
+
+          const chatResult = await generateText({
+            model: gateway(chatModel),
+            system: resolvedSystemPrompt,
+            messages: [...history],
+            temperature: chatTemperature,
+            tools: allTools,
+            stopWhen: stepCountIs(5),
+          });
+          const assistantResponse = chatResult.text;
+          chatResponse = assistantResponse; // Last response
+
+          history.push({ role: "assistant", content: assistantResponse });
+          chatMessages.push({ role: "assistant", content: assistantResponse });
+
+          // Per-turn assertions
+          let perTurnAssertionsPassed = true;
+          if (turn.assertions && turn.assertions.length > 0) {
+            const perTurnAssertionResults = runAllAssertions(turn.assertions, assistantResponse);
+            perTurnAssertionsPassed = perTurnAssertionResults.every((r) => r.passed);
+            turnResults.push({
+              turnIndex: i,
+              role: "user",
+              assertionResults: perTurnAssertionResults,
+            });
+          }
+
+          // Per-turn judge (skip if per-turn assertions failed)
+          if (turn.judge && perTurnAssertionsPassed && dimensions.length > 0) {
+            const conversationLog = chatMessages
+              .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.content}`)
+              .join("\n");
+            const turnExpected = turn.expectedOutput || evalCase.expectedOutput;
+            const judgePrompt = [
+              `Conversation:\n${conversationLog}`,
+              turnExpected
+                ? `Expected Output: ${turnExpected}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join("\n\n");
+
+            const judgeGenResult = await generateText({
+              model: gateway(judgeConfig.model),
+              system: await renderTemplate(
+                judgeConfig.systemPrompt,
+                templateData,
+                { ...templateVars, model: chatModel, caseName: evalCase.name, toolNames }
+              ),
+              prompt: judgePrompt,
+              temperature: judgeConfig.temperature ?? 0.1,
+              output: Output.object({ schema: judgeSchema }),
+            });
+
+            const raw = judgeGenResult.output as Record<string, { score: number; reason: string }>;
+            const perTurnJudge = toJudgeResult(raw, dimensions);
+
+            // Find existing turn result or create new one
+            const existingIdx = turnResults.findIndex((tr) => tr.turnIndex === i);
+            if (existingIdx >= 0) {
+              turnResults[existingIdx].judgeResult = perTurnJudge;
+            } else {
+              turnResults.push({
+                turnIndex: i,
+                role: "user",
+                judgeResult: perTurnJudge,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Case-level assertions (on final response)
     const assertionResults = runAllAssertions(evalCase.assertions, chatResponse);
     const allAssertionsPassed = assertionResults.every((r) => r.passed);
 
-    // 3. Judge (only if assertions pass)
+    // Case-level judge (only if assertions pass)
     let judgeResult = null;
-    if (allAssertionsPassed) {
+    if (allAssertionsPassed && dimensions.length > 0) {
+      const conversationLog = chatMessages
+        .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.content}`)
+        .join("\n");
       const judgePrompt = [
-        `User Input: ${evalCase.input}`,
+        mode === "single"
+          ? `User Input: ${turns[0]?.content ?? ""}`
+          : `Conversation:\n${conversationLog}`,
         evalCase.expectedOutput
           ? `Expected Output: ${evalCase.expectedOutput}`
           : null,
-        `Actual Response: ${chatResponse}`,
+        mode === "single"
+          ? `Actual Response: ${chatResponse}`
+          : null,
       ]
         .filter(Boolean)
         .join("\n\n");
@@ -150,7 +303,10 @@ export async function POST(
     result = {
       caseId: evalCase.id,
       caseName: evalCase.name,
-      input: evalCase.input,
+      mode,
+      turns,
+      chatMessages,
+      turnResults,
       chatResponse,
       assertionResults,
       allAssertionsPassed,
@@ -162,7 +318,10 @@ export async function POST(
     result = {
       caseId: evalCase.id,
       caseName: evalCase.name,
-      input: evalCase.input,
+      mode: evalCase.mode ?? "single",
+      turns: evalCase.turns ?? [],
+      chatMessages: [],
+      turnResults: [],
       chatResponse: "",
       assertionResults: [],
       allAssertionsPassed: false,
@@ -178,7 +337,10 @@ export async function POST(
     runId,
     caseId: result.caseId,
     caseName: result.caseName,
-    input: result.input,
+    mode: result.mode,
+    turns: result.turns,
+    chatMessages: result.chatMessages,
+    turnResults: result.turnResults,
     chatResponse: result.chatResponse || null,
     assertionResults: result.assertionResults,
     allAssertionsPassed: result.allAssertionsPassed,

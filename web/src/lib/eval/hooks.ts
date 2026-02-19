@@ -68,7 +68,8 @@ export async function createEvalCase(
     agentId: string;
     key: string;
     name: string;
-    input: string;
+    mode: import("./types").EvalCaseMode;
+    turns: import("./types").EvalTurn[];
     expectedOutput?: string;
     assertions?: unknown[];
   },

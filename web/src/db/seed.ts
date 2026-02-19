@@ -27,7 +27,7 @@ import {
 } from "./schema";
 import type { ToolParameter } from "@/lib/tools/types";
 import { compileCssForComponent } from "@/lib/components/compile-css";
-import type { Assertion, Dimension } from "@/lib/eval/types";
+import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
 
 // ── helpers ──
 
@@ -714,7 +714,8 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     Array<{
       key?: string;
       name: string;
-      input: string;
+      mode: EvalCaseMode;
+      turns: Array<Omit<EvalTurn, "id"> & { assertions?: Array<Omit<Assertion, "id">>; judge?: boolean }>;
       expectedOutput: string;
       assertions: Array<Omit<Assertion, "id">>;
       tags: string[];
@@ -724,12 +725,20 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   const evalCaseIds: string[] = [];
   for (const c of evalCasesSeed) {
     const key = c.key ?? c.name.replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
+    const turns: EvalTurn[] = c.turns.map((t) => ({
+      id: nanoid(),
+      role: t.role,
+      content: t.content,
+      ...(t.assertions ? { assertions: t.assertions.map((a): Assertion => ({ ...a, id: nanoid() })) } : {}),
+      ...(t.judge !== undefined ? { judge: t.judge } : {}),
+    }));
     const [row] = await db
       .insert(evalCases)
       .values({
         key,
         name: c.name,
-        input: c.input,
+        mode: c.mode,
+        turns,
         expectedOutput: c.expectedOutput || null,
         assertions: c.assertions.map((a): Assertion => ({ ...a, id: nanoid() })),
         tags: c.tags,
@@ -739,7 +748,8 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
         target: [evalCases.agentId, evalCases.key],
         set: {
           name: c.name,
-          input: c.input,
+          mode: c.mode,
+          turns,
           expectedOutput: c.expectedOutput || null,
           assertions: c.assertions.map((a): Assertion => ({ ...a, id: nanoid() })),
           tags: c.tags,

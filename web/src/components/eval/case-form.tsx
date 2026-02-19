@@ -3,10 +3,18 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { Assertion, EvalCase } from "@/lib/eval/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Assertion, EvalCase, EvalCaseMode } from "@/lib/eval/types";
 import { nanoid } from "nanoid";
 import { useCallback, useState } from "react";
 import { AssertionRow } from "./assertion-row";
+import { TurnsList } from "./turns-list";
 import { PlusIcon, SaveIcon, Trash2Icon, XIcon } from "lucide-react";
 
 interface CaseFormProps {
@@ -18,6 +26,8 @@ interface CaseFormProps {
 
 export function CaseForm({ evalCase, onSave, onDelete, onCancel }: CaseFormProps) {
   const [draft, setDraft] = useState<EvalCase>({ ...evalCase });
+
+  const singleInput = draft.turns[0]?.content ?? "";
 
   const handleAssertionChange = useCallback(
     (idx: number, updated: Assertion) => {
@@ -71,15 +81,73 @@ export function CaseForm({ evalCase, onSave, onDelete, onCancel }: CaseFormProps
       </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground">
-          Input (User Message)
+          Mode
         </label>
-        <Textarea
-          className="mt-1 min-h-[60px] resize-none text-sm"
-          value={draft.input}
-          onChange={(e) => setDraft({ ...draft, input: e.target.value })}
-          placeholder="User message to send..."
-        />
+        <Select
+          value={draft.mode}
+          onValueChange={(v) => {
+            const newMode = v as EvalCaseMode;
+            const newDraft = { ...draft, mode: newMode };
+            if (newMode === "single" && (draft.turns.length === 0 || draft.turns[0]?.role !== "user")) {
+              newDraft.turns = [{ id: nanoid(), role: "user", content: draft.turns[0]?.content ?? "" }];
+            }
+            setDraft(newDraft);
+          }}
+        >
+          <SelectTrigger className="mt-1 h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single" className="text-xs">
+              Single
+            </SelectItem>
+            <SelectItem value="injected" className="text-xs">
+              Injected
+            </SelectItem>
+            <SelectItem value="sequential" className="text-xs">
+              Sequential
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
+      {draft.mode === "single" ? (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Input (User Message)
+          </label>
+          <Textarea
+            className="mt-1 min-h-[60px] resize-none text-sm"
+            value={singleInput}
+            onChange={(e) => {
+              const content = e.target.value;
+              if (draft.turns.length === 0) {
+                setDraft({ ...draft, turns: [{ id: nanoid(), role: "user", content }] });
+              } else {
+                setDraft({
+                  ...draft,
+                  turns: draft.turns.map((t, i) => (i === 0 ? { ...t, content } : t)),
+                });
+              }
+            }}
+            placeholder="User message to send..."
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Turns
+          </label>
+          <div className="mt-1">
+            <TurnsList
+              turns={draft.turns}
+              mode={draft.mode}
+              onTurnsChange={(turns) => setDraft({ ...draft, turns })}
+            />
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="text-xs font-medium text-muted-foreground">
           Expected Output (for judge reference)

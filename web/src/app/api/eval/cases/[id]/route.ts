@@ -29,7 +29,8 @@ export async function PUT(
     .set({
       ...(body.key !== undefined && { key: body.key }),
       ...(body.name !== undefined && { name: body.name }),
-      ...(body.input !== undefined && { input: body.input }),
+      ...(body.mode !== undefined && { mode: body.mode }),
+      ...(body.turns !== undefined && { turns: body.turns }),
       ...(body.expectedOutput !== undefined && {
         expectedOutput: body.expectedOutput,
       }),

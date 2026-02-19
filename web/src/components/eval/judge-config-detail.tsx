@@ -111,7 +111,7 @@ export function JudgeConfigDetail({
   const handleAddDimension = useCallback(() => {
     setDimensions((prev) => [
       ...prev,
-      { key: "", label: "", weight: 1 },
+      { key: "", label: "", weight: 1, min: 1, max: 10 },
     ]);
   }, []);
 
@@ -218,16 +218,18 @@ export function JudgeConfigDetail({
             )}
             {dimensions.length > 0 && (
               <div className="mt-2 space-y-2">
-                <div className="grid grid-cols-[1fr_1fr_80px_28px] gap-1.5 text-[10px] font-medium text-muted-foreground px-0.5">
+                <div className="grid grid-cols-[1fr_1fr_60px_50px_50px_28px] gap-1.5 text-[10px] font-medium text-muted-foreground px-0.5">
                   <span>Key</span>
                   <span>Label</span>
                   <span>Weight</span>
+                  <span>Min</span>
+                  <span>Max</span>
                   <span />
                 </div>
                 {dimensions.map((dim, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-[1fr_1fr_80px_28px] gap-1.5 items-center"
+                    className="grid grid-cols-[1fr_1fr_60px_50px_50px_28px] gap-1.5 items-center"
                   >
                     <Input
                       className="h-7 text-xs"
@@ -256,6 +258,34 @@ export function JudgeConfigDetail({
                           i,
                           "weight",
                           parseFloat(e.target.value) || 0
+                        )
+                      }
+                    />
+                    <Input
+                      className="h-7 text-xs"
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={dim.min ?? 1}
+                      onChange={(e) =>
+                        handleDimensionChange(
+                          i,
+                          "min",
+                          parseInt(e.target.value) || 0
+                        )
+                      }
+                    />
+                    <Input
+                      className="h-7 text-xs"
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={dim.max ?? 10}
+                      onChange={(e) =>
+                        handleDimensionChange(
+                          i,
+                          "max",
+                          parseInt(e.target.value) || 1
                         )
                       }
                     />

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { EvalResult } from "@/lib/eval/types";
 import { CheckCircle2Icon, XCircleIcon, AlertCircleIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 function scoreColor(score: number): string {
   if (score >= 8) return "text-green-600";
@@ -16,12 +17,19 @@ interface ResultCardProps {
 }
 
 export function ResultCard({ result }: ResultCardProps) {
+  const isMultiTurn = result.mode !== "single" && result.chatMessages.length > 0;
+
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4 py-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">{result.caseName}</CardTitle>
           <div className="flex items-center gap-2">
+            {result.mode !== "single" && (
+              <Badge variant="outline" className="text-[10px]">
+                {result.mode}
+              </Badge>
+            )}
             {result.error ? (
               <Badge variant="destructive">Error</Badge>
             ) : result.allAssertionsPassed ? (
@@ -44,20 +52,114 @@ export function ResultCard({ result }: ResultCardProps) {
           </div>
         )}
 
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Input</p>
-          <p className="mt-0.5 text-xs bg-muted rounded p-2 whitespace-pre-wrap">
-            {result.input}
-          </p>
-        </div>
+        {isMultiTurn ? (
+          /* Multi-turn: chat bubble display */
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Conversation</p>
+            {result.chatMessages.map((msg, i) => {
+              const turnResult = result.turnResults.find(
+                (tr) => tr.turnIndex === Math.floor(i / 2) * 2 + (msg.role === "assistant" ? 0 : -1)
+              );
+              // Find the turnResult for the user turn that triggered this assistant response
+              const associatedTurnResult =
+                msg.role === "assistant"
+                  ? result.turnResults.find((tr) => {
+                      // The previous message was the user turn at index i-1
+                      // The turn index in the original turns array
+                      const userMsgsBefore = result.chatMessages
+                        .slice(0, i)
+                        .filter((m) => m.role === "user").length;
+                      return tr.turnIndex !== undefined && userMsgsBefore > 0;
+                    })
+                  : undefined;
+              // Simpler approach: show turnResults after each assistant message
+              // by matching the count of user messages before this point
+              const userCountBefore = result.chatMessages
+                .slice(0, i + 1)
+                .filter((m) => m.role === "user").length;
 
-        {result.chatResponse && (
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Response</p>
-            <p className="mt-0.5 text-xs bg-muted rounded p-2 max-h-[120px] overflow-y-auto whitespace-pre-wrap">
-              {result.chatResponse}
-            </p>
+              const matchingTurnResults = msg.role === "assistant"
+                ? result.turnResults.filter((tr) => {
+                    // Count user turns in original turns up to turnIndex
+                    const userTurnsUpTo = result.turns
+                      .slice(0, tr.turnIndex + 1)
+                      .filter((t) => t.role === "user").length;
+                    return userTurnsUpTo === userCountBefore;
+                  })
+                : [];
+
+              return (
+                <div key={i}>
+                  <div
+                    className={cn(
+                      "rounded-lg p-2 text-xs whitespace-pre-wrap max-h-[120px] overflow-y-auto",
+                      msg.role === "user"
+                        ? "ml-8 bg-blue-50 text-blue-900"
+                        : "mr-8 bg-muted",
+                      msg.injected && "border border-dashed opacity-60"
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        {msg.role === "user" ? "User" : "Assistant"}
+                      </span>
+                      {msg.injected && (
+                        <Badge variant="outline" className="text-[9px] h-4 px-1">
+                          injected
+                        </Badge>
+                      )}
+                    </div>
+                    {msg.content}
+                  </div>
+                  {/* Per-turn assertion/judge results */}
+                  {matchingTurnResults.map((tr, trIdx) => (
+                    <div key={trIdx} className="mt-1 ml-4 space-y-1">
+                      {tr.assertionResults && tr.assertionResults.length > 0 && (
+                        <div className="space-y-0.5">
+                          {tr.assertionResults.map((ar, arIdx) => (
+                            <div key={arIdx} className="flex items-start gap-1 text-[10px]">
+                              {ar.passed ? (
+                                <CheckCircle2Icon className="mt-0.5 size-2.5 shrink-0 text-green-600" />
+                              ) : (
+                                <XCircleIcon className="mt-0.5 size-2.5 shrink-0 text-red-600" />
+                              )}
+                              <span>{ar.message}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {tr.judgeResult && (
+                        <div className="text-[10px] text-muted-foreground">
+                          Turn judge: <span className={scoreColor(tr.judgeResult.overallScore)}>
+                            {tr.judgeResult.overallScore}/10
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
+        ) : (
+          /* Single turn: traditional display */
+          <>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Input</p>
+              <p className="mt-0.5 text-xs bg-muted rounded p-2 whitespace-pre-wrap">
+                {result.turns[0]?.content ?? ""}
+              </p>
+            </div>
+
+            {result.chatResponse && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Response</p>
+                <p className="mt-0.5 text-xs bg-muted rounded p-2 max-h-[120px] overflow-y-auto whitespace-pre-wrap">
+                  {result.chatResponse}
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {result.assertionResults.length > 0 && (

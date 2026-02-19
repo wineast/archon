@@ -18,11 +18,37 @@ export interface AssertionResult {
   message: string;
 }
 
+export type EvalCaseMode = "single" | "injected" | "sequential";
+
+export interface EvalTurn {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  assertions?: Assertion[];
+  judge?: boolean;
+  expectedOutput?: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  injected?: boolean;
+  toolCalls?: Array<{ name: string; args: Record<string, unknown> }>;
+}
+
+export interface TurnResult {
+  turnIndex: number;
+  role: "user" | "assistant";
+  assertionResults?: AssertionResult[];
+  judgeResult?: JudgeResult | null;
+}
+
 export interface EvalCase {
   id: string;
   key: string;
   name: string;
-  input: string;
+  mode: EvalCaseMode;
+  turns: EvalTurn[];
   assertions: Assertion[];
   expectedOutput: string;
   tags?: string[];
@@ -32,6 +58,8 @@ export interface Dimension {
   key: string;
   label: string;
   weight: number;
+  min?: number;
+  max?: number;
 }
 
 export interface JudgeConfig {
@@ -49,7 +77,10 @@ export interface JudgeResult {
 export interface EvalResult {
   caseId: string;
   caseName: string;
-  input: string;
+  mode: EvalCaseMode;
+  turns: EvalTurn[];
+  chatMessages: ChatMessage[];
+  turnResults: TurnResult[];
   chatResponse: string;
   assertionResults: AssertionResult[];
   allAssertionsPassed: boolean;
@@ -77,7 +108,8 @@ export function toEvalCase(row: EvalCaseRow): EvalCase {
     id: row.id,
     key: row.key,
     name: row.name,
-    input: row.input,
+    mode: row.mode,
+    turns: row.turns,
     assertions: row.assertions,
     expectedOutput: row.expectedOutput ?? "",
     tags: row.tags,
@@ -147,7 +179,10 @@ export function toEvalResult(row: EvalRunResultRow): EvalResult {
   return {
     caseId: row.caseId,
     caseName: row.caseName,
-    input: row.input,
+    mode: row.mode,
+    turns: row.turns,
+    chatMessages: row.chatMessages,
+    turnResults: row.turnResults,
     chatResponse: row.chatResponse ?? "",
     assertionResults: row.assertionResults,
     allAssertionsPassed: row.allAssertionsPassed,
