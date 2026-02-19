@@ -40,6 +40,8 @@
 
 ### Database
 - schema 见 `web/src/db/schema.ts`
+- 当前为开发阶段，schema 变更直接用 `make db-push`，不要生成迁移文件
+- 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 
 ### Template Engine（LiquidJS）
 - 使用文档见 `guide/template-engine.md`
