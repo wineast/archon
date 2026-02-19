@@ -9,25 +9,33 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import {
-  Message,
-  MessageContent,
-  MessageResponse,
-} from "@/components/ai-elements/message";
+import { Message } from "@/components/ai-elements/message";
 import {
   PromptInput,
   PromptInputBody,
+  PromptInputButton,
   PromptInputFooter,
+  PromptInputHeader,
   PromptInputSubmit,
   PromptInputTextarea,
+  usePromptInputAttachments,
+  type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
+import { SpeechInput } from "@/components/ai-elements/speech-input";
+import {
+  Attachment,
+  AttachmentPreview,
+  AttachmentRemove,
+  Attachments,
+} from "@/components/ai-elements/attachments";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
-import { MessageParts } from "@/components/message-parts";
+import { MessageParts, UserMessageContent } from "@/components/message-parts";
 import { ChatWelcome } from "@/components/chat-welcome";
 import { Spinner } from "@/components/ui/spinner";
 import { executeClientTool } from "@/lib/tools/client-executor";
 import { registerDynamicToolSource } from "@/tool-ui";
 import type { WelcomeIconKey } from "@/lib/config/types";
+import { PaperclipIcon } from "lucide-react";
 
 /* ─── Types ─── */
 
@@ -88,6 +96,44 @@ function SuggestionItem({
   }, [onClick, suggestion]);
 
   return <Suggestion onClick={handleClick} suggestion={suggestion} />;
+}
+
+/* ─── Prompt sub-components (need PromptInput context) ─── */
+
+function EmbedAttachmentPreviewBar() {
+  const { files, remove } = usePromptInputAttachments();
+  if (files.length === 0) return null;
+  return (
+    <PromptInputHeader>
+      <Attachments variant="grid">
+        {files.map((f) => (
+          <Attachment key={f.id} data={f} onRemove={() => remove(f.id)}>
+            <AttachmentPreview />
+            <AttachmentRemove />
+          </Attachment>
+        ))}
+      </Attachments>
+    </PromptInputHeader>
+  );
+}
+
+function EmbedAttachmentButton() {
+  const { openFileDialog } = usePromptInputAttachments();
+  return (
+    <PromptInputButton onClick={openFileDialog} tooltip="添加附件">
+      <PaperclipIcon className="size-4" />
+    </PromptInputButton>
+  );
+}
+
+function EmbedInputSubmit({ input, isStreaming }: { input: string; isStreaming: boolean }) {
+  const { files } = usePromptInputAttachments();
+  return (
+    <PromptInputSubmit
+      disabled={(!input.trim() && files.length === 0) || isStreaming}
+      status={isStreaming ? "streaming" : "ready"}
+    />
+  );
 }
 
 /* ─── Main embed chat ─── */
@@ -317,11 +363,22 @@ function EmbedChat({
     []
   );
 
-  const onPromptSubmit = useCallback(() => {
-    if (!input.trim()) return;
-    sendMessage({ text: input });
+  const onPromptSubmit = useCallback((message: PromptInputMessage) => {
+    if (!message.text.trim() && message.files.length === 0) return;
+    sendMessage(message);
     setInput("");
-  }, [input, sendMessage]);
+  }, [sendMessage]);
+
+  const handleTranscription = useCallback((text: string) => {
+    setInput((prev) => prev + text);
+  }, []);
+
+  const [speechSupported, setSpeechSupported] = useState(false);
+  useEffect(() => {
+    setSpeechSupported(
+      "SpeechRecognition" in window || "webkitSpeechRecognition" in window
+    );
+  }, []);
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
@@ -384,14 +441,7 @@ function EmbedChat({
               {messages.map((message) => (
                 <Message from={message.role} key={message.id}>
                   {message.role === "user" ? (
-                    <MessageContent>
-                      <MessageResponse>
-                        {message.parts
-                          ?.filter(isTextUIPart)
-                          .map((p) => p.text)
-                          .join("")}
-                      </MessageResponse>
-                    </MessageContent>
+                    <UserMessageContent message={message} />
                   ) : (
                     <MessageParts message={message} />
                   )}
@@ -427,8 +477,9 @@ function EmbedChat({
             </Suggestions>
           )}
           <div className="w-full px-4 pb-4">
-            <PromptInput onSubmit={onPromptSubmit}>
+            <PromptInput onSubmit={onPromptSubmit} multiple>
               <PromptInputBody>
+                <EmbedAttachmentPreviewBar />
                 <PromptInputTextarea
                   onChange={handleTextChange}
                   placeholder={placeholder}
@@ -436,11 +487,16 @@ function EmbedChat({
                 />
               </PromptInputBody>
               <PromptInputFooter>
+                <EmbedAttachmentButton />
+                {speechSupported && (
+                  <SpeechInput
+                    size="icon-sm"
+                    onTranscriptionChange={handleTranscription}
+                    lang="zh-CN"
+                  />
+                )}
                 <div className="flex-1" />
-                <PromptInputSubmit
-                  disabled={!input.trim() || isStreaming}
-                  status={isStreaming ? "streaming" : "ready"}
-                />
+                <EmbedInputSubmit input={input} isStreaming={isStreaming} />
               </PromptInputFooter>
             </PromptInput>
           </div>

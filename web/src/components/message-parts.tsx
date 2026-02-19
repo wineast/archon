@@ -1,7 +1,7 @@
 "use client";
 
 import { isToolUIPart, isTextUIPart, isReasoningUIPart } from "ai";
-import type { UIMessage } from "ai";
+import type { UIMessage, FileUIPart } from "ai";
 import {
   MessageContent,
   MessageResponse,
@@ -24,6 +24,11 @@ import {
   SourcesContent,
   SourcesTrigger,
 } from "@/components/ai-elements/sources";
+import {
+  Attachment,
+  AttachmentPreview,
+  Attachments,
+} from "@/components/ai-elements/attachments";
 import {
   getCompiledToolComponent,
   getDynamicToolSource,
@@ -128,5 +133,30 @@ export function MessageParts({
         return null;
       })}
     </>
+  );
+}
+
+export function UserMessageContent({ message }: { message: UIMessage }) {
+  const fileParts = (message.parts?.filter(
+    (p): p is FileUIPart => p.type === "file"
+  ) ?? []);
+  const textContent = message.parts
+    ?.filter(isTextUIPart)
+    .map((p) => p.text)
+    .join("") ?? "";
+
+  return (
+    <MessageContent>
+      {fileParts.length > 0 && (
+        <Attachments variant="grid">
+          {fileParts.map((file, i) => (
+            <Attachment key={`file-${i}`} data={{ ...file, id: `file-${i}` }}>
+              <AttachmentPreview />
+            </Attachment>
+          ))}
+        </Attachments>
+      )}
+      {textContent && <MessageResponse>{textContent}</MessageResponse>}
+    </MessageContent>
   );
 }
