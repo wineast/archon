@@ -37,6 +37,7 @@ export async function PATCH(
       ...(body.componentSource !== undefined && { componentSource: body.componentSource }),
       ...(body.componentMockData !== undefined && { componentMockData: body.componentMockData }),
       ...(typeof body.enabled === "boolean" && { enabled: body.enabled }),
+      ...(body.executionTarget !== undefined && { executionTarget: body.executionTarget }),
     })
     .where(eq(tools.id, id))
     .returning();

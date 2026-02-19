@@ -43,6 +43,7 @@ import { UserSettingsModal } from "@/components/user/user-settings-modal";
 import { useChatConfig } from "@/lib/chat-config/hooks";
 import { useActiveModelConfig } from "@/lib/model-config/hooks";
 import { useTools } from "@/lib/tools/hooks";
+import { executeClientTool } from "@/lib/tools/client-executor";
 import { useComponents } from "@/lib/components/hooks";
 import { registerDynamicToolSource } from "@/tool-ui";
 import { SessionHistory } from "@/components/session-history";
@@ -153,7 +154,12 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
     [agent.id]
   );
 
-  const { messages, setMessages, sendMessage, status } = useChat({ transport });
+  const { messages, setMessages, sendMessage, status, addToolOutput } = useChat({
+    transport,
+    onToolCall: ({ toolCall }) => {
+      executeClientTool(toolCall, addToolOutput, toolsList);
+    },
+  });
 
   /* ── Session handlers ── */
 

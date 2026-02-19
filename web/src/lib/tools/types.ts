@@ -31,6 +31,7 @@ export interface ToolDefinition {
   componentSource: string;
   componentMockData: string;
   enabled: boolean;
+  executionTarget: "server" | "client";
 }
 
 /** Slim payload sent to the API (no id/enabled). */
@@ -40,4 +41,5 @@ export interface ToolDefinitionPayload {
   parameters: ToolParameter[];
   returnParameters?: ToolParameter[];
   handler: string;
+  executionTarget?: "server" | "client";
 }
