@@ -22,6 +22,11 @@
 
 ## Agent 配置
 
+### 模型
+
+- [ ] **全局模型注册表** — 新增 models 表存储可用模型列表，modelConfigs/evalJudgeConfigs 的模型选择从文本输入改为 Combobox 下拉，种子数据包含 Vercel AI Gateway 所有主流 chat 模型
+  - 工作区: `model-registry` | 分支: `dev-model-registry-20260219`
+
 ### 版本管理
 
 - [x] **Agent 版本管理系统** — 为 Agent 添加 SemVer 版本号，发布时对所有关联配置做整体快照，支持查看历史版本和回滚

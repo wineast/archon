@@ -7,6 +7,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks(.*)",
   "/share(.*)",
   "/api/share(.*)",
+  "/embed(.*)",
+  "/api/embed(.*)",
 ]);
 
 export default clerkMiddleware(

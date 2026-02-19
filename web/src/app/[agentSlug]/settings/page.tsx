@@ -9,6 +9,7 @@ import {
   ArrowLeftIcon,
   BookOpenIcon,
   BracesIcon,
+  CodeIcon,
   DatabaseIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
@@ -41,6 +42,7 @@ import {
   publishVersion,
   deleteVersion,
 } from "@/lib/versions/hooks";
+import { EmbedTokensPanel } from "@/components/embed-tokens/embed-tokens-panel";
 import { useAgentRole } from "@/lib/auth/hooks";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
@@ -63,6 +65,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
   { value: "model-config", label: "Model Config", icon: SettingsIcon },
+  { value: "embed", label: "Embed", icon: CodeIcon },
   { value: "members", label: "Members", icon: UsersIcon },
 ];
 
@@ -214,6 +217,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         return <EvalPanel agentId={agent.id} />;
       case "model-config":
         return <ModelConfigPanel agentId={agent.id} />;
+      case "embed":
+        return <EmbedTokensPanel agentId={agent.id} />;
       case "members":
         return canManageMembers ? (
           <MembersPanel agentId={agent.id} isPublic={agent.isPublic} />
