@@ -47,7 +47,7 @@ export function processTemplate(
 
     *render(_context: Context, emitter: Emitter): Generator<unknown, void, unknown> {
       const doc = ctx.documents.find(
-        (d) => d.title === this.title || d.id === this.title
+        (d) => d.title === this.title || d.id === this.title || d.key === this.title
       );
       if (!doc) {
         emitter.write(`> Document not found: ${this.title}`);

@@ -11,7 +11,7 @@ interface WikiSidebarProps {
   documents: WikiDocument[];
   activeDocId: string | null;
   onSelect: (id: string) => void;
-  onCreate: () => Promise<void>;
+  onCreate: () => void;
   onDelete: (id: string) => Promise<boolean>;
   onReorder: (id: string, direction: "up" | "down") => Promise<void>;
 }

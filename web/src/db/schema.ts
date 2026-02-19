@@ -177,22 +177,30 @@ export const datasets = pgTable(
 export type DatasetRow = typeof datasets.$inferSelect;
 export type NewDatasetRow = typeof datasets.$inferInsert;
 
-export const wikiDocuments = pgTable("wiki_documents", {
-  id: text("id").primaryKey(),
-  agentId: uuid("agent_id").references(() => agents.id, {
-    onDelete: "cascade",
-  }),
-  parentId: text("parent_id"),
-  content: text("content").notNull().default(""),
-  order: integer("order").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const wikiDocuments = pgTable(
+  "wiki_documents",
+  {
+    id: text("id").primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    parentId: text("parent_id"),
+    title: text("title").notNull().default(""),
+    key: text("key").notNull().default(""),
+    content: text("content").notNull().default(""),
+    order: integer("order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    unique("wiki_documents_agent_id_key_idx").on(table.agentId, table.key),
+  ]
+);
 
 export type WikiDocumentRow = typeof wikiDocuments.$inferSelect;
 export type NewWikiDocumentRow = typeof wikiDocuments.$inferInsert;
