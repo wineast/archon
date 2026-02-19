@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@tailwindcss/node", "lightningcss"],
+  serverExternalPackages: ["@tailwindcss/node", "lightningcss", "quickjs-emscripten"],
   async headers() {
     return [
       {

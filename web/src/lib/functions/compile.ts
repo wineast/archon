@@ -6,11 +6,18 @@
  *   - Known base dep names (e.g. compileExpression) → injected from npm packages
  *   - Other param names matching a function key → injected from compiled functions
  * Compilation order is determined by topological sort of the inferred dependency graph.
+ *
+ * Execution uses QuickJS WASM sandbox for isolation — user code cannot access
+ * Node.js APIs, filesystem, network, or process globals.
  */
 
 import { compileExpression } from "filtrex";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import type { ToolParameter } from "@/lib/tools/types";
+import {
+  createFunctionsSandbox,
+  type FunctionsSandbox,
+} from "./sandbox";
 
 // Base dependencies available to all functions (npm packages)
 const BASE_DEPS: Record<string, unknown> = {
@@ -38,38 +45,6 @@ export function inferDeps(code: string, knownKeys: Set<string>): string[] {
   return parseFnParams(code).filter(
     (p) => !BASE_DEP_NAMES.has(p) && knownKeys.has(p)
   );
-}
-
-/**
- * Compile a single function source into a callable.
- * When `parameters` is provided (non-empty), the returned function is wrapped
- * to validate its input against a Zod schema built from the parameters.
- */
-export function compileFn(
-  code: string,
-  extraDeps: Record<string, unknown> = {},
-  parameters?: ToolParameter[]
-): unknown {
-  const allDepNames = [...Object.keys(BASE_DEPS), ...Object.keys(extraDeps)];
-  const allDepValues = [...Object.values(BASE_DEPS), ...Object.values(extraDeps)];
-
-  const factory = new Function(
-    ...allDepNames,
-    code + `\n; return fn(${allDepNames.join(", ")});`
-  );
-
-  const rawFn = factory(...allDepValues);
-
-  // Wrap with Zod validation when parameters are defined
-  if (parameters && parameters.length > 0 && typeof rawFn === "function") {
-    const schema = buildInputSchema(parameters);
-    return function validatedFn(input: unknown) {
-      const parsed = schema.parse(input);
-      return (rawFn as (input: unknown) => unknown)(parsed);
-    };
-  }
-
-  return rawFn;
 }
 
 export interface FunctionRecord {
@@ -135,49 +110,84 @@ function topoSort(records: FunctionRecord[]): FunctionRecord[] {
 }
 
 /**
- * Resolve and compile a set of function records, respecting dependency order.
- * Returns a map of key → compiled function.
+ * Resolve and compile a set of function records into a shared sandbox.
+ * Returns a map of key → sync wrapper function, plus the sandbox for lifecycle management.
  */
-export function resolveAndCompileFunctions(
+export async function resolveAndCompileFunctions(
   rows: FunctionRecord[]
-): Map<string, unknown> {
+): Promise<{ fns: Map<string, unknown>; sandbox: FunctionsSandbox }> {
   const sorted = topoSort(rows);
   const knownKeys = new Set(rows.map((r) => r.key));
-  const compiled = new Map<string, unknown>();
 
-  for (const row of sorted) {
-    // Inject only the function deps this code actually references
-    const deps = inferDeps(row.code, knownKeys);
-    const extraDeps: Record<string, unknown> = {};
-    for (const depKey of deps) {
-      if (compiled.has(depKey)) {
-        extraDeps[depKey] = compiled.get(depKey);
-      }
+  const records = sorted.map((row) => {
+    // All deps for this function: base deps + function deps
+    const fnDeps = inferDeps(row.code, knownKeys);
+    const allDeps = [...Object.keys(BASE_DEPS), ...fnDeps];
+    return {
+      key: row.key,
+      code: row.code,
+      depNames: allDeps,
+    };
+  });
+
+  const sandbox = await createFunctionsSandbox(records, BASE_DEPS);
+
+  // Build map of key → sync wrapper with Zod validation
+  const fns = new Map<string, unknown>();
+  for (const row of rows) {
+    if (row.parameters && row.parameters.length > 0) {
+      const schema = buildInputSchema(row.parameters);
+      fns.set(row.key, function validatedFn(input: unknown) {
+        const parsed = schema.parse(input);
+        return sandbox.call(row.key, parsed);
+      });
+    } else {
+      fns.set(row.key, function (input: unknown) {
+        return sandbox.call(row.key, input);
+      });
     }
-
-    const result = compileFn(row.code, extraDeps, row.parameters);
-    compiled.set(row.key, result);
   }
 
-  return compiled;
+  return { fns, sandbox };
 }
 
 // ── Agent-scoped cache ──
 
-const agentCache = new Map<string, Map<string, unknown>>();
-
-export function getCachedFunctions(agentId: string): Map<string, unknown> | undefined {
-  return agentCache.get(agentId);
+interface CacheEntry {
+  fns: Map<string, unknown>;
+  sandbox: FunctionsSandbox;
 }
 
-export function setCachedFunctions(agentId: string, fns: Map<string, unknown>) {
-  agentCache.set(agentId, fns);
+const agentCache = new Map<string, CacheEntry>();
+
+export function getCachedFunctions(agentId: string): Map<string, unknown> | undefined {
+  return agentCache.get(agentId)?.fns;
+}
+
+export function setCachedFunctions(
+  agentId: string,
+  fns: Map<string, unknown>,
+  sandbox: FunctionsSandbox
+) {
+  // Dispose previous sandbox if replacing
+  const prev = agentCache.get(agentId);
+  if (prev) {
+    prev.sandbox.dispose();
+  }
+  agentCache.set(agentId, { fns, sandbox });
 }
 
 export function clearFunctionCache(agentId?: string) {
   if (agentId) {
-    agentCache.delete(agentId);
+    const entry = agentCache.get(agentId);
+    if (entry) {
+      entry.sandbox.dispose();
+      agentCache.delete(agentId);
+    }
   } else {
+    for (const entry of agentCache.values()) {
+      entry.sandbox.dispose();
+    }
     agentCache.clear();
   }
 }
