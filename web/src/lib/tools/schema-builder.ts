@@ -80,6 +80,9 @@ function buildParamSchema(
       if (param.format === "uuid") schema = (schema as z.ZodString).uuid();
       if (param.format === "date") schema = (schema as z.ZodString).date();
       if (param.format === "date-time") schema = (schema as z.ZodString).datetime();
+      if (param.format === "time") schema = (schema as z.ZodString).time();
+      if (param.format === "ipv4") schema = (schema as z.ZodString).ip({ version: "v4" });
+      if (param.format === "ipv6") schema = (schema as z.ZodString).ip({ version: "v6" });
       break;
     }
   }

@@ -58,6 +58,9 @@ const STRING_FORMATS = [
   { value: "uuid", label: "uuid" },
   { value: "date", label: "date" },
   { value: "date-time", label: "date-time" },
+  { value: "time", label: "time" },
+  { value: "ipv4", label: "ipv4" },
+  { value: "ipv6", label: "ipv6" },
 ];
 
 export interface EnumDatasetOption {
