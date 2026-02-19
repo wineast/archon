@@ -88,6 +88,7 @@ export function SchemasPanel({ agentId }: { agentId: string }) {
               schema={activeSchema}
               allSchemas={schemas}
               onSave={handleSave}
+              agentId={agentId}
               onDelete={handleDelete}
             />
           ) : (
@@ -122,6 +123,7 @@ export function SchemasPanel({ agentId }: { agentId: string }) {
                 key={activeSchema.id}
                 schema={activeSchema}
                 allSchemas={schemas}
+                agentId={agentId}
                 onSave={handleSave}
                 onDelete={handleDelete}
               />

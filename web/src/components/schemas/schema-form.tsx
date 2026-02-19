@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ParameterList } from "@/components/parameters/parameter-list";
 import { SchemaIncludesEditor } from "./schema-includes-editor";
 import { SchemaResolvedPreview } from "./schema-resolved-preview";
+import { useDatasetsMap } from "@/lib/datasets/hooks";
 import type { SchemaProperty } from "@/lib/schemas/types";
 import type { SchemaWithIncludes } from "@/db/schema";
 
@@ -30,6 +31,7 @@ interface SchemaFormProps {
   onDirtyChange?: (dirty: boolean) => void;
   allSchemas?: SchemaWithIncludes[];
   currentSchemaId?: string;
+  agentId?: string;
 }
 
 export function SchemaForm({
@@ -38,6 +40,7 @@ export function SchemaForm({
   onDirtyChange,
   allSchemas = [],
   currentSchemaId,
+  agentId,
 }: SchemaFormProps) {
   const form = useForm<SchemaFormValues>({ defaultValues: { ...schema } });
   const originalRef = useRef(JSON.stringify(schema));
@@ -80,6 +83,8 @@ export function SchemaForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentSchemaId, parameters, includeSchemaIds]
   );
+
+  const { enumRefOptions, enumRefValues } = useDatasetsMap(agentId);
 
   // Filter out current schema from schemas list passed to ParameterList
   const schemasForParams = useMemo(
@@ -136,6 +141,8 @@ export function SchemaForm({
           fieldName="parameters"
           label="Parameters"
           schemas={schemasForParams}
+          enumRefOptions={enumRefOptions}
+          enumRefValues={enumRefValues}
         />
 
         {/* Resolved Preview */}

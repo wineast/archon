@@ -42,6 +42,12 @@ function buildParamSchema(
       schema = z.array(itemSchema);
       if (param.minItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).min(param.minItems);
       if (param.maxItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).max(param.maxItems);
+      if (param.uniqueItems) {
+        schema = (schema as z.ZodArray<z.ZodTypeAny>).refine(
+          (arr) => new Set(arr.map((v) => JSON.stringify(v))).size === arr.length,
+          { message: "Array items must be unique" }
+        );
+      }
       break;
     }
     case "enum": {
@@ -102,11 +108,15 @@ function buildNestedObject(
       childSchema = childSchema.describe(child.description);
     }
     if (!child.required) {
-      childSchema = childSchema.optional();
+      if (child.defaultValue !== undefined) {
+        childSchema = childSchema.default(child.defaultValue);
+      } else {
+        childSchema = childSchema.optional();
+      }
     }
     nested[child.name] = childSchema;
   }
-  return z.object(nested).passthrough();
+  return z.object(nested);
 }
 
 /** Resolve enum values from datasets / resolvedVars / inline enum. */
@@ -171,7 +181,11 @@ export function buildInputSchema(
     }
 
     if (!param.required) {
-      schema = schema.optional();
+      if (param.defaultValue !== undefined) {
+        schema = schema.default(param.defaultValue);
+      } else {
+        schema = schema.optional();
+      }
     }
 
     shape[param.name] = schema;
