@@ -319,7 +319,6 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
     const filename = mdFiles[i];
     const slug = filename.replace(/\.md$/, "");
     const content = readFileSync(join(wikiDir, filename), "utf-8");
-    const docId = `wiki-uw-${slug}`;
     const key = `wiki_uw_${slug}`;
     // Extract title from frontmatter
     const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n?/);
@@ -331,10 +330,10 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
 
     await db
       .insert(wikiDocuments)
-      .values({ id: docId, title, key, content, order: i, agentId })
+      .values({ title, key, content, order: i, agentId })
       .onConflictDoUpdate({
-        target: wikiDocuments.id,
-        set: { title, key, content, order: i, agentId },
+        target: [wikiDocuments.agentId, wikiDocuments.key],
+        set: { title, content, order: i },
       });
   }
 
