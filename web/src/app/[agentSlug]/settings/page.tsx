@@ -11,6 +11,7 @@ import {
   DatabaseIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
+  PuzzleIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
   UsersIcon,
@@ -26,6 +27,7 @@ import { DatasetsPanel } from "@/components/datasets/datasets-panel";
 import { FunctionsPanel } from "@/components/functions/functions-panel";
 import { EvalPanel } from "@/components/eval/eval-panel";
 import { ModelConfigPanel } from "@/components/model-config/model-config-panel";
+import { ComponentsPanel } from "@/components/components/components-panel";
 import { MembersPanel } from "@/components/members/members-panel";
 import { useAgentRole } from "@/lib/auth/hooks";
 import { cn } from "@/lib/utils";
@@ -42,6 +44,7 @@ interface SettingsTab {
 const SETTINGS_TABS: SettingsTab[] = [
   { value: "config", label: "Config", icon: SlidersHorizontalIcon },
   { value: "tools", label: "Tools", icon: WrenchIcon },
+  { value: "components", label: "Components", icon: PuzzleIcon },
   { value: "wiki", label: "Wiki", icon: BookOpenIcon },
   { value: "datasets", label: "Datasets", icon: DatabaseIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
@@ -100,6 +103,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         return <ChatConfigPanel agentId={agent.id} />;
       case "tools":
         return <ToolsPanel agentId={agent.id} />;
+      case "components":
+        return <ComponentsPanel agentId={agent.id} />;
       case "wiki":
         return <WikiPanel agentId={agent.id} />;
       case "datasets":

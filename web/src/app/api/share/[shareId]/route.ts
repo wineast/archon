@@ -1,6 +1,6 @@
 import { getSessionByShareId } from "@/db/chat-persistence";
 import { db } from "@/db";
-import { tools } from "@/db/schema";
+import { tools, components } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -19,16 +19,36 @@ export async function GET(
 
   // Build toolComponentSourceMap for dynamic tool UIs
   const toolComponentSourceMap: Record<string, string> = {};
+  const dynamicComponentCss: string[] = [];
   if (session.agentId) {
-    const rows = await db
-      .select({
-        name: tools.name,
-        componentSource: tools.componentSource,
-      })
-      .from(tools)
-      .where(eq(tools.agentId, session.agentId));
-    for (const r of rows) {
-      if (r.componentSource) toolComponentSourceMap[r.name] = r.componentSource;
+    const [toolRows, componentRows] = await Promise.all([
+      db
+        .select({
+          name: tools.name,
+          component: tools.component,
+          componentSource: tools.componentSource,
+        })
+        .from(tools)
+        .where(eq(tools.agentId, session.agentId)),
+      db
+        .select({
+          key: components.key,
+          componentSource: components.componentSource,
+          generatedCss: components.generatedCss,
+        })
+        .from(components)
+        .where(eq(components.agentId, session.agentId)),
+    ]);
+
+    const componentMap = new Map(componentRows.map((c) => [c.key, c.componentSource]));
+    for (const r of toolRows) {
+      const source = (r.component && componentMap.get(r.component)) || r.componentSource;
+      if (source) toolComponentSourceMap[r.name] = source;
+    }
+
+    // Collect generated CSS from components
+    for (const c of componentRows) {
+      if (c.generatedCss) dynamicComponentCss.push(c.generatedCss);
     }
   }
 
@@ -39,5 +59,6 @@ export async function GET(
     agentSlug: session.agentSlug,
     messages: session.messages,
     toolComponentSourceMap,
+    dynamicComponentCss,
   });
 }

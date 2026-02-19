@@ -545,3 +545,34 @@ export const toolTestRunResults = pgTable(
 export type ToolTestRunResultRow = typeof toolTestRunResults.$inferSelect;
 export type NewToolTestRunResultRow = typeof toolTestRunResults.$inferInsert;
 
+/* ─────────── Components (reusable UI components) ─────────── */
+
+export const components = pgTable(
+  "components",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    componentSource: text("component_source").notNull().default(""),
+    componentMockData: text("component_mock_data").notNull().default("{}"),
+    generatedCss: text("generated_css").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    unique("components_agent_id_key_idx").on(table.agentId, table.key),
+  ]
+);
+
+export type ComponentRow = typeof components.$inferSelect;
+export type NewComponentRow = typeof components.$inferInsert;
+

@@ -43,6 +43,7 @@ import { UserSettingsModal } from "@/components/user/user-settings-modal";
 import { useChatConfig } from "@/lib/chat-config/hooks";
 import { useActiveModelConfig } from "@/lib/model-config/hooks";
 import { useTools } from "@/lib/tools/hooks";
+import { useComponents } from "@/lib/components/hooks";
 import { registerDynamicToolSource } from "@/tool-ui";
 import { SessionHistory } from "@/components/session-history";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -92,12 +93,28 @@ function AgentChatContent({ agent }: { agent: AgentRow }) {
   const [showAllSessions, setShowAllSessions] = useState(false);
   const { activeConfig } = useActiveModelConfig(agent.id);
   const { tools: toolsList } = useTools(agent.id);
-  // Register dynamic component sources from DB
+  const { components: componentsList } = useComponents(agent.id);
+  // Register dynamic component sources + inject generated CSS
   useMemo(() => {
+    const componentMap = new Map(componentsList.map((c) => [c.key, c.componentSource]));
     for (const t of toolsList) {
-      if (t.componentSource) registerDynamicToolSource(t.name, t.componentSource);
+      const source = (t.component && componentMap.get(t.component)) || t.componentSource;
+      if (source) registerDynamicToolSource(t.name, source);
     }
-  }, [toolsList]);
+  }, [toolsList, componentsList]);
+
+  useEffect(() => {
+    const cssBlocks: string[] = [];
+    for (const c of componentsList) {
+      if (c.generatedCss) cssBlocks.push(c.generatedCss);
+    }
+    if (cssBlocks.length === 0) return;
+    const style = document.createElement("style");
+    style.setAttribute("data-dynamic-components", "true");
+    style.textContent = cssBlocks.join("\n");
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, [componentsList]);
 
   const sessionIdRef = useRef<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);

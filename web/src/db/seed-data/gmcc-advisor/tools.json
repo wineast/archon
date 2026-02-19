@@ -92,7 +92,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_universe\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_ocean",
@@ -180,7 +180,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_ocean\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_hermes_ca",
@@ -295,7 +295,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_hermes_ca\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_hermes_non_ca",
@@ -403,7 +403,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_hermes_non_ca\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_thunder",
@@ -529,7 +529,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_thunder\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_fabulous",
@@ -585,7 +585,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_fabulous\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_celebrity",
@@ -797,7 +797,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_celebrity\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_radiant_cra",
@@ -890,7 +890,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_radiant_cra\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_radiant_portfolio",
@@ -1005,7 +1005,7 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_radiant_portfolio\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   },
   {
     "name": "pricing_radiant_au",
@@ -1106,6 +1106,6 @@
     ],
     "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_radiant_au\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
-    "componentSource": "pricing-result"
+    "component": "pricing-result"
   }
 ]

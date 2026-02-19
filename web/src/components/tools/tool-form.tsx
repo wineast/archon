@@ -6,16 +6,16 @@ import { JsEditor } from "@/components/editors/js-editor";
 import { JsonEditor } from "@/components/editors/json-editor";
 import type { ToolDefinition } from "@/lib/tools/types";
 import { useDatasets } from "@/lib/datasets/hooks";
+import { useComponents } from "@/lib/components/hooks";
 import type { EnumRefOption } from "@/components/parameters/parameter-row";
 import { ParameterList } from "@/components/parameters/parameter-list";
 import { ReturnParameterList } from "@/components/parameters/return-parameter-list";
-import { ComponentPreviewPanel } from "./component-preview-panel";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Controller,
   FormProvider,
   useForm,
-  useFormContext,
   useWatch,
 } from "react-hook-form";
 import { CodeIcon, GlobeIcon, LinkIcon, TypeIcon } from "lucide-react";
@@ -43,20 +43,6 @@ function detectHandlerMode(handler: string): HandlerMode {
   return "simple";
 }
 
-/** Bridge: isolates component watching from the main form. */
-function ComponentPreviewPanelBridge() {
-  const { control, setValue } = useFormContext<ToolDefinition>();
-  const componentSource = useWatch({ control, name: "componentSource" });
-  const componentMockData = useWatch({ control, name: "componentMockData" });
-  return (
-    <ComponentPreviewPanel
-      componentSource={componentSource}
-      mockData={componentMockData}
-      onMockDataChange={(value) => setValue("componentMockData", value)}
-    />
-  );
-}
-
 export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormProps) {
   const form = useForm<ToolDefinition>({ defaultValues: { ...tool } });
   const [handlerMode, setHandlerMode] = useState<HandlerMode>(() =>
@@ -71,6 +57,13 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
 
   // Fetch datasets for enum ref options
   const { datasets } = useDatasets(agentId);
+
+  // Fetch components for component selector
+  const { components: componentsList } = useComponents(agentId);
+  const componentOptions = useMemo(
+    () => componentsList.map((c) => ({ key: c.key, name: c.name })),
+    [componentsList]
+  );
 
   const enumRefOptions = useMemo<EnumRefOption[]>(() => {
     return datasets
@@ -301,30 +294,33 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
         />
         <div>
           <label className="text-xs font-medium text-muted-foreground">
-            UI Component (JSX)
+            UI Component
           </label>
           <Controller
-            name="componentSource"
+            name="component"
             control={form.control}
             render={({ field }) => (
-              <JsEditor
-                value={field.value}
-                onChange={field.onChange}
-                height="200px"
-                className="mt-1"
-              />
+              <Select
+                value={field.value || "__none__"}
+                onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+              >
+                <SelectTrigger className="mt-1 h-8 text-sm">
+                  <SelectValue placeholder="Select a component..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {componentOptions.map((c) => (
+                    <SelectItem key={c.key} value={c.key}>
+                      {c.name} ({c.key})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            完整函数组件: function Component({"{ output, isLoading, ... }"}) {"{ ... }"}
+            关联 Components 页面中定义的组件，用于展示工具结果
           </p>
-          <p className="text-xs text-muted-foreground">
-            简单 JSX 片段也可用，props: toolName, state, input, output, isLoading, isComplete, isError
-          </p>
-          <p className="text-xs text-muted-foreground">
-            可用: useState, useMemo, useCallback, useEffect, useRef, Fragment, Table 系列, Badge, Spinner, Tooltip 系列, CollapsibleSection, ResultHeader, ResultSection, RateSheetLinks, RateSheetPanel, ChevronRight, FileText
-          </p>
-          <ComponentPreviewPanelBridge />
         </div>
       </div>
     </FormProvider>

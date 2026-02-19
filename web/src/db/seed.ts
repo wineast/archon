@@ -9,6 +9,7 @@ import {
   agentMembers,
   users,
   chatConfigs,
+  components,
   modelConfigs,
   datasets,
   functions,
@@ -22,6 +23,7 @@ import {
   evalRuns,
 } from "./schema";
 import type { ToolParameter } from "@/lib/tools/types";
+import { compileCssForComponent } from "@/lib/components/compile-css";
 import type { Assertion, Dimension } from "@/lib/eval/types";
 
 // ── helpers ──
@@ -123,24 +125,48 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
   }
   console.log(`  - ${allUsers.length} user(s) added as owner`);
 
-  // Seed system tools
-  console.log("Seeding system tools...");
+  // Seed components
+  console.log("Seeding components...");
 
-  // Read component source files
   const componentsDir = join(agentDir, "components");
-  const componentSources: Record<string, string> = {};
   try {
     const componentFiles = readdirSync(componentsDir).filter(
       (f) => f.endsWith(".jsx") || f.endsWith(".tsx")
     );
     for (const file of componentFiles) {
       const key = file.replace(/\.(jsx|tsx)$/, "");
-      componentSources[key] = readFileSync(join(componentsDir, file), "utf-8");
+      const source = readFileSync(join(componentsDir, file), "utf-8");
+      const name = key
+        .split("-")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+      const generatedCss = await compileCssForComponent(source);
+
+      await db
+        .insert(components)
+        .values({
+          agentId,
+          key,
+          name,
+          description: "",
+          componentSource: source,
+          componentMockData: "{}",
+          generatedCss,
+        })
+        .onConflictDoUpdate({
+          target: [components.agentId, components.key],
+          set: { name, componentSource: source, generatedCss },
+        });
+      console.log(`  - ${key} (css: ${generatedCss.length} bytes)`);
     }
-    console.log(`  Loaded ${Object.keys(componentSources).length} component source(s)`);
+    console.log(`Seeded ${componentFiles.length} components`);
   } catch {
     // components dir may not exist
+    console.log("  No components directory found, skipping");
   }
+
+  // Seed system tools
+  console.log("Seeding system tools...");
 
   const toolsSeed = readJson<
     Array<{
@@ -150,23 +176,18 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
       parameters: ToolParameter[];
       handler?: string;
       enabled: boolean;
-      componentSource?: string;
+      component?: string;
     }>
   >(join(agentDir, "tools.json"));
 
   const toolIds: string[] = [];
   for (const t of toolsSeed) {
-    // Resolve componentSource: inline value or reference to component file
-    const componentSource = t.componentSource
-      ? componentSources[t.componentSource] ?? t.componentSource
-      : null;
-
     // Derive key from name if not provided
     const key = t.key ?? t.name.replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
 
     const [row] = await db
       .insert(tools)
-      .values({ ...t, key, componentSource, agentId })
+      .values({ ...t, key, component: t.component ?? null, agentId })
       .onConflictDoUpdate({
         target: [tools.agentId, tools.key],
         set: {
@@ -174,13 +195,13 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
           description: t.description,
           parameters: t.parameters,
           handler: t.handler ?? null,
-          componentSource,
+          component: t.component ?? null,
           agentId,
         },
       })
       .returning();
     toolIds.push(row.id);
-    console.log(`  - ${row.name} (${row.id})${componentSource ? " [+component]" : ""}`);
+    console.log(`  - ${row.name} (${row.id})${t.component ? ` [→${t.component}]` : ""}`);
   }
 
   // Seed tool test cases

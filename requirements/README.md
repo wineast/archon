@@ -11,6 +11,8 @@
   - 工作区: `simplify-json-model` | 分支: `dev-simplify-json-model-20260217`
 - [ ] **数据集自动依赖解析** — 去掉 layer 分层，扫描 Liquid 模板变量自动构建依赖图，Kahn 拓扑排序渲染，保存时检测循环
   - 工作区: `dataset-auto-deps` | 分支: `dev-dataset-auto-deps-20260218`
+- [ ] **独立 Schema 资源管理** — 将 ToolParameter[] 抽象为独立 Schema 资源，tool output 和 component input 通过引用 schema key 保证数据结构一致
+  - 工作区: `schema-resource` | 分支: `dev-schema-resource-20260219`
 
 ## Agent 配置
 
@@ -20,11 +22,15 @@
   - 工作区: `tools` | 分支: `dev-tools-20260219`
 - [ ] **Tools Key 字段与创建对话框** — tools 表添加 key 字段（agentId+key 联合唯一），去掉 name 全局唯一约束，参考 functions 实现创建对话框
   - 工作区: `tools-key-and-create-dialog` | 分支: `dev-tools-key-and-create-dialog-20260219`
+- [ ] **简化工具 Handler 类型** — 移除本地 Key 注册表模式，只保留 URL、JS 代码、静态输出三种 handler 类型
+  - 工作区: `tools-handler-simplify` | 分支: `dev-tools-handler-simplify-20260219`
 
 ### Wiki
 
 - [ ] **Wiki 移除独立 title** — 标题从 meta.title 获取，若无则 fallback 到内容开头
   - 工作区: `wiki-no-title` | 分支: `dev-wiki-no-title-20260217`
+- [ ] **Wiki 表单化改造 + Key/Title 字段** — 文档页面统一为表单交互（编辑/预览/reset/dirty save），数据库新增 title 和 key 字段，创建对话框输入 title+key
+  - 工作区: `wiki-form-and-key` | 分支: `dev-wiki-form-and-key-20260219`
 
 ## 前端通用
 

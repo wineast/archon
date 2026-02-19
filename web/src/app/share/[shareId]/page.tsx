@@ -30,6 +30,7 @@ interface SharedSession {
     parts: unknown[];
   }>;
   toolComponentSourceMap?: Record<string, string>;
+  dynamicComponentCss?: string[];
 }
 
 export default function SharePage({
@@ -57,6 +58,13 @@ export default function SharePage({
             registerDynamicToolSource(name, source as string);
           }
         }
+        // Inject dynamic component CSS
+        if (data.dynamicComponentCss?.length) {
+          const style = document.createElement("style");
+          style.setAttribute("data-dynamic-components", "true");
+          style.textContent = data.dynamicComponentCss.join("\n");
+          document.head.appendChild(style);
+        }
         setSession(data);
       } catch {
         setError("load_failed");
@@ -65,6 +73,11 @@ export default function SharePage({
       }
     }
     fetchSession();
+    return () => {
+      document.head
+        .querySelectorAll("style[data-dynamic-components]")
+        .forEach((el) => el.remove());
+    };
   }, [shareId]);
 
   if (isLoading) {
