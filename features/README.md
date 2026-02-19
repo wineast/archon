@@ -14,9 +14,12 @@
 
 - [ ] **本地 Docker 开发数据库** — 用 Docker PostgreSQL 替代 Neon 云数据库，省钱低延迟
   - 使用说明：[local-docker-db.md](../guide/local-docker-db.md)
+- [ ] **Seed 系统模块化** — 将 seed.ts 单体函数拆分为 12 个独立 seeder 模块，统一连接管理，批量插入优化，结构化日志
 
 ## 数据模型
 
+- [ ] **本体（Ontology）** — Agent 下的语义层，定义领域对象类型、关系、实例，将 Schema/Tool/Component/Wiki/Dataset 串成领域模型
+  - 使用说明：[ontology.md](../guide/ontology.md)
 - [ ] **统一 JSON 数据模型** — 将码表、对象、模板变量统一为分层 JSON：底层原子值无模板语法，上层可引用底层并使用模板
 - [ ] **数据集自动依赖解析** — 去掉 layer 分层，扫描 Liquid 模板变量自动构建依赖图，Kahn 拓扑排序渲染，保存时检测循环
 - [ ] **独立 Schema 资源管理** — 将 ToolParameter[] 抽象为独立 Schema 资源，tool output 和 component input 通过引用 schema key 保证数据结构一致
@@ -54,7 +57,7 @@
 - [x] **组件系统重构** — 组件对齐工具/函数体验，增加 Playground + Test Cases tab，Props 聚合为 tool 对象
   - 使用说明：[components.md](../guide/components.md)
 - [x] **组件系统清理** — Schema Ref 拆为 input/output 两个字段，删除动态渲染器便捷变量，表单展示 generatedCss
-- [ ] **组件组合复用** — 允许组件在 JSX 中引用其他组件，自动检测 PascalCase 名称映射到 kebab-case key，拓扑排序编译注入
+- [ ] **组件闭包注入重构** — 组件依赖注入从 JSX 标签全局扫描改为闭包参数注入（对齐函数模式），去掉裸 JSX 片段支持，移除 inputSchemaId/outputSchemaId 字段
 
 ### Files
 
@@ -62,12 +65,17 @@
 
 ### Wiki
 
+- [x] **Wiki include 仅按 key 查找** — `{% include %}` 标签从 title/id/key 三重匹配改为仅 key 查找，语义统一、不兜底
 - [ ] **Wiki 移除独立 title** — 标题从 meta.title 获取，若无则 fallback 到内容开头
 - [ ] **Wiki 表单化改造 + Key/Title 字段** — 文档页面统一为表单交互，数据库新增 title 和 key 字段，创建对话框输入 title+key
 
 ## 路由与导航
 
 - [ ] **URL 路由重构（平级设计）** — 将 /[agentSlug] 拆分为 /chat 和 /build，使聊天和配置平级
+
+## 评估系统
+
+- [ ] **多轮评估** — 评估系统从单轮扩展为支持三种模式：单轮（single）、注入历史（injected）、逐轮对话（sequential），支持逐轮断言和 judge 评分
 
 ## 前端通用
 
