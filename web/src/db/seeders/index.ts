@@ -1,4 +1,5 @@
 export { seedModels } from "./seed-models";
+export { seedPlatformSettings } from "./seed-platform-settings";
 export { seedAgent } from "./seed-agent";
 export { seedUsers } from "./seed-users";
 export { seedComponents } from "./seed-components";
@@ -15,6 +16,7 @@ export type { SeedContext, SeedResult, Seeder } from "./types";
 
 import type { Seeder } from "./types";
 import { seedModels } from "./seed-models";
+import { seedPlatformSettings } from "./seed-platform-settings";
 import { seedAgent } from "./seed-agent";
 import { seedUsers } from "./seed-users";
 import { seedComponents } from "./seed-components";
@@ -30,6 +32,7 @@ import { seedVersion } from "./seed-version";
 /** The full seed pipeline in execution order. */
 export const pipeline: Seeder[] = [
   seedModels,
+  seedPlatformSettings,
   seedAgent,
   seedUsers,
   seedComponents,
