@@ -159,17 +159,19 @@ describe("processTemplate", () => {
     });
   });
 
-  describe("{% include 'title' %} document embedding", () => {
-    it("includes document by title", () => {
+  describe("{% include 'key' %} document embedding", () => {
+    it("includes document by key", () => {
       const header = makeDoc({
         id: "header",
+        key: "header",
         title: "Header",
         content: "# Company Wiki",
       });
       const main = makeDoc({
         id: "main",
+        key: "home",
         title: "Home",
-        content: "{% include 'Header' %}\n\nBody content",
+        content: "{% include 'header' %}\n\nBody content",
       });
       const result = processTemplate(
         main.content,
@@ -187,13 +189,15 @@ describe("processTemplate", () => {
     it("prevents circular references", () => {
       const docA = makeDoc({
         id: "a",
+        key: "a",
         title: "A",
-        content: "Content A\n{% include 'B' %}",
+        content: "Content A\n{% include 'b' %}",
       });
       const docB = makeDoc({
         id: "b",
+        key: "b",
         title: "B",
-        content: "Content B\n{% include 'A' %}",
+        content: "Content B\n{% include 'a' %}",
       });
       const result = processTemplate(
         docA.content,
@@ -207,11 +211,13 @@ describe("processTemplate", () => {
     it("processes templates in included documents", () => {
       const partial = makeDoc({
         id: "p",
+        key: "partial",
         title: "partial",
         content: "Doc: {{documentTitle}}",
       });
       const main = makeDoc({
         id: "m",
+        key: "home",
         title: "Home",
         content: "{% include 'partial' %}",
       });
@@ -222,7 +228,7 @@ describe("processTemplate", () => {
       expect(result).toBe("Doc: partial");
     });
 
-    it("includes document by key", () => {
+    it("includes document by key with different title", () => {
       const header = makeDoc({
         id: "header",
         key: "site_header",
@@ -231,6 +237,7 @@ describe("processTemplate", () => {
       });
       const main = makeDoc({
         id: "main",
+        key: "home",
         title: "Home",
         content: "{% include 'site_header' %}\n\nBody content",
       });
@@ -244,13 +251,15 @@ describe("processTemplate", () => {
     it("strips frontmatter from included document", () => {
       const included = makeDoc({
         id: "inc",
+        key: "included",
         title: "Included",
         content: "---\nid: inc\ntitle: Included\n---\n\nIncluded body content",
       });
       const main = makeDoc({
         id: "main",
+        key: "main",
         title: "Main",
-        content: "Before\n{% include 'Included' %}\nAfter",
+        content: "Before\n{% include 'included' %}\nAfter",
       });
       const result = processTemplate(
         main.content,

@@ -184,6 +184,8 @@ describe("renderSystemPrompt", () => {
       [
         {
           id: "faq-doc",
+          key: "faq",
+          title: "FAQ",
           content: "Q: What? A: This.",
           order: 0,
           createdAt: now,
@@ -195,7 +197,7 @@ describe("renderSystemPrompt", () => {
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
-      "{% include 'faq-doc' %}",
+      "{% include 'faq' %}",
       "agent-1"
     );
     expect(result).toBe("Q: What? A: This.");
@@ -432,6 +434,8 @@ describe("renderWikiContent", () => {
       [
         {
           id: "doc-1",
+          key: "main",
+          title: "Main",
           content: "Main doc",
           order: 0,
           createdAt: now,
@@ -439,6 +443,8 @@ describe("renderWikiContent", () => {
         },
         {
           id: "doc-2",
+          key: "footer",
+          title: "Footer",
           content: "-- End --",
           order: 1,
           createdAt: now,
@@ -450,7 +456,7 @@ describe("renderWikiContent", () => {
 
     const { renderWikiContent } = await import("../render");
     const result = await renderWikiContent(
-      "{{org}}\n{% include 'doc-2' %}",
+      "{{org}}\n{% include 'footer' %}",
       "agent-1",
       "doc-1"
     );

@@ -23,7 +23,7 @@ function buildContext(ctx: TemplateContext): Record<string, unknown> {
 
 /**
  * Process LiquidJS template syntax in wiki content.
- * Supports: {{variable}}, {% if %}, {% for %}, {% include 'title' %}, {{lookup.key}}
+ * Supports: {{variable}}, {% if %}, {% for %}, {% include 'key' %}, {{lookup.key}}
  */
 export function processTemplate(
   content: string,
@@ -35,22 +35,20 @@ export function processTemplate(
   // Create Liquid engine: no HTML escaping (AI prompts, not web pages)
   const engine = new Liquid({ jsTruthy: true });
 
-  // Register custom {% include 'title' %} tag for wiki document embedding
+  // Register custom {% include 'key' %} tag for wiki document embedding
   engine.registerTag("include", class IncludeDocTag extends Tag {
-    private title = "";
+    private key = "";
 
     constructor(token: TagToken, remainTokens: TopLevelToken[], liquid: Liquid) {
       super(token, remainTokens, liquid);
-      // Parse the title: strip surrounding quotes
-      this.title = token.args.trim().replace(/^['"]|['"]$/g, "");
+      // Parse the key: strip surrounding quotes
+      this.key = token.args.trim().replace(/^['"]|['"]$/g, "");
     }
 
     *render(_context: Context, emitter: Emitter): Generator<unknown, void, unknown> {
-      const doc = ctx.documents.find(
-        (d) => d.title === this.title || d.id === this.title || d.key === this.title
-      );
+      const doc = ctx.documents.find((d) => d.key === this.key);
       if (!doc) {
-        emitter.write(`> Document not found: ${this.title}`);
+        emitter.write(`> Document not found: ${this.key}`);
         return;
       }
       if (visitedSet.has(doc.id)) {
