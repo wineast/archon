@@ -948,7 +948,6 @@ export const objectRelations = pgTable(
 export type ObjectRelationRow = typeof objectRelations.$inferSelect;
 export type NewObjectRelationRow = typeof objectRelations.$inferInsert;
 
-<<<<<<< HEAD
 /* ─────────── Object Instances (Ontology) ─────────── */
 
 export const objectInstances = pgTable(
