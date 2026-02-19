@@ -119,6 +119,29 @@ export interface ComponentTestCaseSnapshotItem {
   tags: string[];
 }
 
+/* ─────────── Ontology Snapshot Items ─────────── */
+
+export interface ObjectTypeSnapshotItem {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  schemaKey: string | null;
+  order: number;
+}
+
+export interface ObjectRelationSnapshotItem {
+  key: string;
+  name: string;
+  description: string;
+  sourceTypeKey: string;
+  targetTypeKey: string;
+  relationType: "has_one" | "has_many" | "belongs_to" | "many_to_many";
+  inverseName: string;
+  order: number;
+}
+
 /* ─────────── Agent Snapshot ─────────── */
 
 export interface AgentSnapshot {
@@ -139,6 +162,8 @@ export interface AgentSnapshot {
   chatConfig: ChatConfigSnapshotItem | null;
   evalCases: EvalCaseSnapshotItem[];
   evalJudgeConfigs: EvalJudgeConfigSnapshotItem[];
+  objectTypes: ObjectTypeSnapshotItem[];
+  objectRelations: ObjectRelationSnapshotItem[];
 }
 
 /* ─────────── Version List Item (without snapshot) ─────────── */

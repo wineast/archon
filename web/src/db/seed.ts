@@ -1,5 +1,5 @@
 import { join } from "path";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { db as AppDb } from "@/db";
 import { withClient, logSection } from "./seed-utils";
 import { pipeline } from "./seeders";
 import type { SeedContext, SeedResult } from "./seeders/types";
@@ -9,8 +9,8 @@ export type { SeedResult } from "./seeders/types";
 
 // ── seed ──
 
-export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
-  const run = async (database: PostgresJsDatabase) => {
+export async function seed(db?: typeof AppDb): Promise<SeedResult> {
+  const run = async (database: typeof AppDb) => {
     const ctx: SeedContext = {
       db: database,
       agentId: "",

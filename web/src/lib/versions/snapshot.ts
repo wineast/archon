@@ -14,6 +14,8 @@ import {
   toolTestCases,
   functionTestCases,
   componentTestCases,
+  objectTypes,
+  objectRelations,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
@@ -35,6 +37,8 @@ import type {
   ToolTestCaseSnapshotItem,
   FunctionTestCaseSnapshotItem,
   ComponentTestCaseSnapshotItem,
+  ObjectTypeSnapshotItem,
+  ObjectRelationSnapshotItem,
 } from "./types";
 
 type Tx = PgTransaction<
@@ -64,6 +68,8 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
     toolTestCaseRows,
     functionTestCaseRows,
     componentTestCaseRows,
+    objectTypeRows,
+    objectRelationRows,
   ] = await Promise.all([
     _db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
     _db.select().from(tools).where(eq(tools.agentId, agentId)),
@@ -98,6 +104,8 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         eq(componentTestCases.componentId, components.id)
       )
       .where(eq(components.agentId, agentId)),
+    _db.select().from(objectTypes).where(eq(objectTypes.agentId, agentId)),
+    _db.select().from(objectRelations).where(eq(objectRelations.agentId, agentId)),
   ]);
 
   if (!agent) throw new Error("Agent not found");
@@ -151,6 +159,9 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
 
   // Schema: convert id to key for snapshot references
   const schemaIdToKey = new Map(schemaRows.map((s) => [s.id, s.key]));
+
+  // ObjectType: convert id to key for relation snapshot references
+  const objTypeIdToKey = new Map(objectTypeRows.map((t) => [t.id, t.key]));
 
   return {
     agent: {
@@ -264,6 +275,29 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         isDefault: j.isDefault,
       })
     ),
+    objectTypes: objectTypeRows.map(
+      (t): ObjectTypeSnapshotItem => ({
+        key: t.key,
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+        color: t.color,
+        schemaKey: t.schemaId ? schemaIdToKey.get(t.schemaId) ?? null : null,
+        order: t.order,
+      })
+    ),
+    objectRelations: objectRelationRows.map(
+      (r): ObjectRelationSnapshotItem => ({
+        key: r.key,
+        name: r.name,
+        description: r.description,
+        sourceTypeKey: objTypeIdToKey.get(r.sourceTypeId) ?? "",
+        targetTypeKey: objTypeIdToKey.get(r.targetTypeId) ?? "",
+        relationType: r.relationType,
+        inverseName: r.inverseName,
+        order: r.order,
+      })
+    ),
   };
 }
 
@@ -277,7 +311,10 @@ export async function restoreSnapshot(
   tx: Tx
 ) {
   // 1. Delete all existing config data (CASCADE takes care of test cases & test runs)
+  // Delete objectRelations first (FK → objectTypes), then objectTypes
+  await tx.delete(objectRelations).where(eq(objectRelations.agentId, agentId));
   await Promise.all([
+    tx.delete(objectTypes).where(eq(objectTypes.agentId, agentId)),
     tx.delete(tools).where(eq(tools.agentId, agentId)),
     tx.delete(functions).where(eq(functions.agentId, agentId)),
     tx.delete(components).where(eq(components.agentId, agentId)),
@@ -308,6 +345,46 @@ export async function restoreSnapshot(
     for (const s of insertedSchemas) {
       schemaKeyToNewId.set(s.key, s.id);
     }
+  }
+
+  // 2b. Rebuild objectTypes (after schemas, since they reference schemas via FK)
+  const objTypeKeyToNewId = new Map<string, string>();
+  if (snapshot.objectTypes?.length) {
+    const insertedObjTypes = await tx
+      .insert(objectTypes)
+      .values(
+        snapshot.objectTypes.map((t) => ({
+          agentId,
+          key: t.key,
+          name: t.name,
+          description: t.description,
+          icon: t.icon,
+          color: t.color,
+          schemaId: t.schemaKey ? schemaKeyToNewId.get(t.schemaKey) ?? null : null,
+          order: t.order,
+        }))
+      )
+      .returning({ id: objectTypes.id, key: objectTypes.key });
+    for (const t of insertedObjTypes) {
+      objTypeKeyToNewId.set(t.key, t.id);
+    }
+  }
+
+  // 2c. Rebuild objectRelations (after objectTypes)
+  if (snapshot.objectRelations?.length) {
+    await tx.insert(objectRelations).values(
+      snapshot.objectRelations.map((r) => ({
+        agentId,
+        key: r.key,
+        name: r.name,
+        description: r.description,
+        sourceTypeId: objTypeKeyToNewId.get(r.sourceTypeKey)!,
+        targetTypeId: objTypeKeyToNewId.get(r.targetTypeKey)!,
+        relationType: r.relationType,
+        inverseName: r.inverseName,
+        order: r.order,
+      }))
+    );
   }
 
   // 3. Rebuild components + test cases (before tools, since tools reference components via FK)

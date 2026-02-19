@@ -45,6 +45,8 @@ function SnapshotSummary({ snapshot }: { snapshot: AgentSnapshot }) {
     { label: "Chat Config", count: snapshot.chatConfig ? 1 : 0 },
     { label: "Eval Cases", count: snapshot.evalCases.length },
     { label: "Judges", count: snapshot.evalJudgeConfigs.length },
+    { label: "Object Types", count: snapshot.objectTypes?.length ?? 0 },
+    { label: "Relations", count: snapshot.objectRelations?.length ?? 0 },
   ];
 
   return (

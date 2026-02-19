@@ -1,8 +1,8 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { db as AppDb } from "@/db";
 
 /** Shared context threaded through all seeders */
 export interface SeedContext {
-  db: PostgresJsDatabase;
+  db: typeof AppDb;
   agentId: string;
   agentDir: string;
   /** component key → id */

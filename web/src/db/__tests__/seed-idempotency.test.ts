@@ -6,6 +6,7 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
 import { seed } from "../seed";
+import * as schema from "../schema";
 import {
   chatConfigs,
   datasets,
@@ -18,7 +19,7 @@ const pgClient = postgres(
 );
 
 function createDb() {
-  return drizzle({ client: pgClient });
+  return drizzle({ client: pgClient, schema });
 }
 
 afterAll(async () => {
