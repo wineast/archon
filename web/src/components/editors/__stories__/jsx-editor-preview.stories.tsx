@@ -107,7 +107,9 @@ type Story = StoryObj<typeof meta>;
 
 const badgeSource = `<Badge variant="outline">Hello from JSX</Badge>`;
 
-const tableSource = `function Component({ output }) {
+const tableSource = `function Component({ React, Table, TableHeader, TableRow, TableHead, TableBody, TableCell }) {
+  return function({ tool }) {
+  var output = tool.output;
   if (!output?.items?.length) {
     return <div className="text-sm text-muted-foreground">No data</div>;
   }
@@ -130,9 +132,12 @@ const tableSource = `function Component({ output }) {
       </TableBody>
     </Table>
   );
+  }
 }`;
 
-const richSource = `function Component({ output, isLoading }) {
+const richSource = `function Component({ React, Spinner, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell }) {
+  return function({ tool, isLoading }) {
+  var output = tool.output;
   if (isLoading) return <Spinner />;
 
   const items = output?.results ?? [];
@@ -165,6 +170,7 @@ const richSource = `function Component({ output, isLoading }) {
       </Table>
     </div>
   );
+  }
 }`;
 
 const richMockData = JSON.stringify(
@@ -180,7 +186,9 @@ const richMockData = JSON.stringify(
   2
 );
 
-const hooksSource = `function Component({ output }) {
+const hooksSource = `function Component({ React, useState, useMemo, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell }) {
+  return function({ tool }) {
+  var output = tool.output;
   const [selected, setSelected] = useState(null);
   const items = output?.items ?? [];
 
@@ -224,6 +232,7 @@ const hooksSource = `function Component({ output }) {
       )}
     </div>
   );
+  }
 }`;
 
 const hooksMockData = JSON.stringify(

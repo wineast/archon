@@ -57,7 +57,9 @@ export const ToolHandler: Story = {
 
 export const WithJsx: Story = {
   args: {
-    value: `function Component({ output, isLoading }) {
+    value: `function Component({ React, Spinner, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell }) {
+  return function({ tool, isLoading }) {
+  var output = tool.output;
   if (isLoading) return <Spinner />;
 
   return (
@@ -81,6 +83,7 @@ export const WithJsx: Story = {
       </Table>
     </div>
   );
+  }
 }`,
     onChange: () => {},
     height: "400px",

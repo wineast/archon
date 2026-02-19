@@ -24,8 +24,9 @@ import {
   ResultSection,
 } from "@/components/tool-result";
 
-// Dependencies injected into dynamically compiled components via new Function().
-// Keys become parameter names in the factory function.
+// Available dependency registry for dynamically compiled components.
+// These deps are passed as a single object to the outer closure;
+// user code destructures only the deps it needs: function Component({ React, useState, ... }).
 export const INJECTED_DEPS: Record<string, unknown> = {
   // React core
   React,

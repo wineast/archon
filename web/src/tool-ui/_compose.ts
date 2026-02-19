@@ -20,12 +20,12 @@ export function pascalToKey(name: string): string {
 
 // ── Dependency inference ──
 
-/** Parse the outer function's parameter names and map PascalCase names to known component keys. */
+/** Parse the outer function's destructured parameter names and map PascalCase names to known component keys. */
 export function inferComponentDeps(
   source: string,
   knownKeys: Set<string>,
 ): string[] {
-  const m = /function\s+\w+\s*\(([^)]*)\)/.exec(source.trim());
+  const m = /function\s+\w+\s*\(\s*\{([^}]*)\}\s*\)/.exec(source.trim());
   if (!m || !m[1].trim()) return [];
   const params = m[1].split(",").map((s) => s.trim()).filter(Boolean);
   const found = new Set<string>();

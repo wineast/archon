@@ -1,4 +1,4 @@
-function Component() {
+function Component({ React, useState, Fragment, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipTrigger, ChevronRight, ResultSection, RateSheetLinks, RateSheetPanel }) {
   return function({ tool, state, isLoading, isComplete, isError }) {
 
   // ============================================================================

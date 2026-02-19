@@ -39,7 +39,9 @@ import {
 } from "./pricing-mock-data";
 
 // Minimal dynamic component for storybook — delegates to full component source at runtime
-const STORY_SOURCE = `function Component({ output, isLoading }) {
+const STORY_SOURCE = `function Component({ React, Spinner, ResultSection, Table, TableHeader, TableRow, TableHead, TableBody, TableCell }) {
+  return function({ tool, state, isLoading }) {
+  var output = tool.output;
   if (isLoading || !output) {
     return (
       <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -88,6 +90,7 @@ const STORY_SOURCE = `function Component({ output, isLoading }) {
       </ResultSection>
     </div>
   );
+  }
 }`;
 
 function PricingStory({
