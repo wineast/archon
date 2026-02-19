@@ -52,7 +52,7 @@ export function buildModelConfigTools(agentId: string): Record<string, AnyTool> 
       inputSchema: z.object({
         key: z.string().describe("唯一标识，snake_case"),
         name: z.string().describe("显示名称"),
-        modelId: z.string().describe("模型 ID，如 anthropic:claude-sonnet-4-20250514"),
+        modelId: z.string().describe("模型 ID，如 anthropic/claude-sonnet-4"),
         systemPrompt: z.string().optional().default(""),
         temperature: z.number().optional().default(0.7),
         isActive: z.boolean().optional().default(false),

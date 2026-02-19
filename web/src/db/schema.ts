@@ -1136,7 +1136,7 @@ export type NewUsageRecordRow = typeof usageRecords.$inferInsert;
 
 export const platformSettings = pgTable("platform_settings", {
   id: text("id").primaryKey().default("singleton"),
-  buildChatModel: text("build_chat_model").notNull().default("anthropic:claude-sonnet-4-20250514"),
+  buildChatModel: text("build_chat_model").notNull().default("anthropic/claude-sonnet-4"),
   buildChatTemperature: real("build_chat_temperature").notNull().default(0.3),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()

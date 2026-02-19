@@ -3,7 +3,7 @@ import { platformSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 const DEFAULTS = {
-  buildChatModel: "anthropic:claude-sonnet-4-20250514",
+  buildChatModel: "anthropic/claude-sonnet-4",
   buildChatTemperature: 0.3,
 } as const;
 
