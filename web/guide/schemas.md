@@ -1,6 +1,6 @@
 # Schema 使用指南
 
-Schema 是系统的可复用参数定义层。工具（Tool）、函数（Function）、对象类型（Object Type）共享同一套 Schema 机制来描述数据结构。Schema 定义存储在数据库中（JSONB），运行时自动转换为 Zod 校验 + JSON Schema（发给 LLM），形成三层架构。
+Schema 是系统的可复用参数定义层。工具（Tool）、函数（Function）、对象类型（Object Type）共享同一套 Schema 机制来描述数据结构。Schema 定义存储在数据库中（JSONB），运行时转换为 Zod 校验 + JSON Schema 7（发给 LLM），形成三层架构。
 
 ---
 
@@ -28,7 +28,7 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 
 每个参数（SchemaProperty）有一个 `type` 字段，决定其数据类型和可用约束。
 
-### 六种基础类型
+### 七种基础类型
 
 | 类型 | 说明 | Zod 映射 | JSON Schema 映射 |
 |------|------|---------|-----------------|
@@ -38,6 +38,7 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 | `enum` | 枚举（固定可选值） | `z.enum([...])` | `{"type":"string","enum":[...]}` |
 | `object` | 嵌套对象 | `z.object({...})` | `{"type":"object","properties":{...}}` |
 | `array` | 数组 | `z.array(...)` | `{"type":"array","items":{...}}` |
+| `union` | 联合类型（A 或 B） | `z.discriminatedUnion()` / `z.union()` | `{"oneOf":[...]}` |
 
 ### 参数公共字段
 
@@ -49,9 +50,18 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 | `type` | SchemaPropertyType | 是 | 数据类型 |
 | `description` | string | 是 | 参数描述，LLM 会看到 |
 | `required` | boolean | 是 | 是否必填 |
-| `defaultValue` | unknown | 否 | 默认值（规划中，尚未在运行时生效） |
+| `defaultValue` | unknown | 否 | 默认值，缺失时自动填充（Zod `.default()`） |
 
 > **注意**：`description` 非常重要——它会通过 JSON Schema 的 `description` 字段传递给 LLM，直接影响 LLM 对参数语义的理解。
+
+### defaultValue 行为
+
+当 `required: false` 且设置了 `defaultValue` 时：
+- Zod 使用 `.default(value)` — 字段缺失时自动填充默认值，结果始终有值
+- JSON Schema 输出 `"default": value` — LLM 可以看到默认值提示
+
+当 `required: false` 且没有 `defaultValue` 时：
+- Zod 使用 `.optional()` — 字段缺失时值为 `undefined`
 
 ---
 
@@ -101,14 +111,13 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 
 枚举类型，限制参数值必须是预定义列表中的一个。
 
-**三种枚举值来源**（按优先级排列）：
+**两种枚举值来源**（按优先级排列）：
 
 1. **enumDatasetId**（推荐）：引用一个数据集（Dataset）的 UUID，运行时从数据集解析枚举值
-2. **enumRef**（已废弃）：引用数据集的 key，通过 resolvedVars 解析
-3. **enum**（内联）：直接在参数定义中写死枚举值数组
+2. **enum**（内联）：直接在参数定义中写死枚举值数组
 
 ```
-解析优先级：enumDatasetId > enumRef > inline enum
+解析优先级：enumDatasetId > inline enum
 ```
 
 **数据集解析规则**：
@@ -123,7 +132,7 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 
 ### object
 
-嵌套对象类型，有两种定义方式：
+嵌套对象类型，有三种定义方式：
 
 **方式一：内联 properties**
 
@@ -145,9 +154,28 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 参数: billing_address (type: object, schemaId: "<address-schema-uuid>")
 ```
 
-运行时会从 schemaMap 中查找该 Schema 的参数列表，展开为嵌套对象。
+运行时会从 schemaMap 中查找该 Schema 的参数列表，展开为嵌套对象。支持递归自引用（通过 `z.lazy()` 实现），可以表达树形结构。
 
-**无 properties 且无 schemaId 时**：退化为 `z.unknown()`，接受任意数据。
+**方式三：Map/Record（additionalProperties）**
+
+通过 `additionalProperties` 字段定义动态 key 的值类型，对应 JSON Schema 的 `additionalProperties` 和 Zod 的 `z.record()`：
+
+```
+参数: metadata (type: object, additionalProperties: {type: string})
+→ z.record(z.string(), z.string())
+→ 接受 {"key1": "val1", "key2": "val2"} 等任意 string→string 映射
+```
+
+可以与固定 properties 组合使用，此时固定字段用 `z.object()` 定义，动态字段用 `.catchall()` 允许：
+
+```
+参数: config (type: object)
+  properties: [name (required), version (required)]
+  additionalProperties: {type: string}
+→ z.object({ name: z.string(), version: z.string() }).catchall(z.string())
+```
+
+**无 properties、无 schemaId、无 additionalProperties 时**：退化为 `z.unknown()`，接受任意数据。
 
 ### array
 
@@ -158,7 +186,9 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 | `items` | SchemaProperty | 递归构建 | `"items":{...}` | 元素类型定义 |
 | `minItems` | number | `.min(n)` | `"minItems":n` | 最少元素数 |
 | `maxItems` | number | `.max(n)` | `"maxItems":n` | 最多元素数 |
-| `uniqueItems` | boolean | — | — | 元素唯一（已定义，尚未实现） |
+| `uniqueItems` | boolean | `.refine()` | `"uniqueItems":true` | 元素唯一 |
+
+> `uniqueItems` 在 Zod 层通过 `.refine()` 实现运行时校验，在 JSON Schema 层直接输出 `"uniqueItems": true`。但 `.refine()` 不会被 AI SDK 的 `zod-to-json-schema` 转换器识别——如果走 Zod→JSON Schema 隐式路径，LLM 看不到此约束。走 `buildJsonSchema()` 显式路径则正确输出。
 
 **无 items 时**：元素类型为 `z.unknown()`，接受任意类型的元素。
 
@@ -172,8 +202,32 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
   └── items: (type: object)
       └── properties:
           ├── name (type: string, required)
-          └── phone (type: string, format: "phone")
+          └── phone (type: string)
 ```
+
+### union
+
+联合类型，表达"值是 A 或 B 其中之一"的语义。
+
+**核心字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `discriminator` | string | 判别字段名（可选，有则用 discriminated union） |
+| `variants` | SchemaProperty[][] | 每个变体的参数列表（至少 2 个） |
+
+**有 discriminator 时**：使用 `z.discriminatedUnion()`——每个变体必须有一个相同名称的 literal 字段作为判别：
+
+```
+参数: payment (type: union, discriminator: "method")
+  variants:
+    ├── [method: "card", card_number: string, expiry: string]
+    └── [method: "bank", account_number: string, routing: string]
+```
+
+**无 discriminator 时**：使用 `z.union()`——Zod 按顺序尝试匹配。
+
+**不足 2 个变体时**：退化为 `z.unknown()`（打印警告）。
 
 ---
 
@@ -234,55 +288,47 @@ Schema 被以下实体引用：
 
 ## 三层架构
 
-Schema 在系统中经历三次转换：
+Schema 在系统中有两条转换路径：
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: SchemaProperty[]（数据库）                  │
 │  存储在 schemas.parameters (JSONB) 中                │
 │  人类可读、可编辑的参数定义                             │
-└──────────────────────┬──────────────────────────────┘
-                       │ buildInputSchema()
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│  Layer 2: Zod Schema（运行时）                        │
-│  z.object({ name: z.string().min(1), ... })         │
-│  用于 LLM 工具调用结果的运行时校验                      │
-└──────────────────────┬──────────────────────────────┘
-                       │ AI SDK 自动转换（zod-to-json-schema）
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│  Layer 3: JSON Schema（发给 LLM）                     │
-│  {"type":"object","properties":{"name":{...}}}      │
-│  LLM 基于此 schema 生成工具调用参数                    │
-└─────────────────────────────────────────────────────┘
+└──────────────┬──────────────────────┬───────────────┘
+               │                      │
+    buildInputSchema()         buildJsonSchema()
+               │                      │
+               ▼                      ▼
+┌──────────────────────┐  ┌──────────────────────────┐
+│  Zod Schema（运行时）  │  │  JSON Schema 7（显式生成） │
+│  运行时参数校验        │  │  直接输出标准 JSON Schema  │
+│  AI SDK 自动转为       │  │  包含 uniqueItems 等      │
+│  JSON Schema 发给 LLM  │  │  所有字段完整保留         │
+└──────────────────────┘  └──────────────────────────┘
 ```
 
-### 转换细节
+### 路径一：Zod（运行时校验 + AI SDK）
 
-**Layer 1 → Layer 2**（`buildInputSchema`）：
+代码位于 `web/src/lib/tools/schema-builder.ts` 的 `buildInputSchema()`。入参为 `SchemaProperty[]`，返回 `z.ZodObject`。
 
-代码位于 `web/src/lib/tools/schema-builder.ts`。入参为 `SchemaProperty[]`，返回 `z.ZodObject`。关键行为：
-
-- `required: false` → `.optional()`
+关键行为：
+- `required: false` + `defaultValue` → `.default(value)`
+- `required: false` 无 defaultValue → `.optional()`
 - `description` → `.describe(text)`
-- enum 值从 `datasetsById` / `resolvedVars` / 内联 `enum` 解析
-- object 的 `schemaId` 从 `schemaMap` 解析
-- 嵌套 object 使用 `.passthrough()`（允许额外字段）
+- enum 值从 `datasetsById` / 内联 `enum` 解析
+- object 的 `schemaId` 从 `schemaMap` 解析，支持递归自引用（`z.lazy()`）
+- object 的 `additionalProperties` → `z.record()` 或 `.catchall()`
+- union 的 `discriminator` + `variants` → `z.discriminatedUnion()` 或 `z.union()`
+- `uniqueItems` → `.refine()`（Zod 运行时生效，但 AI SDK 转 JSON Schema 时丢失）
 
-**Layer 2 → Layer 3**（AI SDK 隐式完成）：
+AI SDK 的 `tool()` 内部用 `zod-to-json-schema` 将 Zod 自动转为 JSON Schema。大部分映射正确，已知丢失：`.refine()` 类的自定义校验。
 
-由 Vercel AI SDK 的 `tool()` 函数内部调用 `zod-to-json-schema`，开发者无需手动操作。大部分 Zod 方法都有对应的 JSON Schema 表示，少数例外：
+### 路径二：JSON Schema 7（显式生成）
 
-| Zod | JSON Schema | 是否对齐 |
-|-----|-------------|---------|
-| `z.string().min(3)` | `{"minLength":3}` | 对齐 |
-| `z.number().int()` | `{"type":"integer"}` | 对齐 |
-| `z.enum(["a","b"])` | `{"enum":["a","b"]}` | 对齐 |
-| `z.string().email()` | `{"format":"email"}` | 对齐 |
-| `.optional()` | 不在 `required` 数组中 | 对齐 |
-| `.describe("...")` | `{"description":"..."}` | 对齐 |
-| `.refine(fn)` | 无对应 | **不对齐**（信息丢失） |
+代码位于同一文件的 `buildJsonSchema()`。直接从 `SchemaProperty[]` 生成标准 JSON Schema 7 对象，不经过 Zod。
+
+所有字段完整保留：`uniqueItems`、`default`、`format`、`pattern` 等均直接输出对应的 JSON Schema 关键字。适用于 API 文档导出、前端预览、第三方对接等场景。
 
 ---
 
@@ -294,46 +340,42 @@ Schema 在系统中经历三次转换：
 1. 加载工具定义
    └── 从 DB 读取 tool.parametersSchemaId → schemas 表
 
-2. 解析 Schema
-   └── 递归解析 includes → 合并参数列表
-   └── 解析 enum 的 enumDatasetId → 从 datasets 获取值
-   └── 解析 object 的 schemaId → 从 schemaMap 获取子参数
+2. 解析 Schema（gatherTemplateData）
+   └── 加载 agent 所有 schemas + schema_includes
+   └── 递归解析 includes → 合并参数列表 → 构建 schemaMap
+   └── 加载 datasets → 构建 datasetsById
 
-3. 构建 Zod Schema
-   └── buildInputSchema(resolvedParameters, resolvedVars, options)
+3. 构建工具定义负载
+   └── 从 schemaMap 解析 parametersSchemaId → SchemaProperty[]
+   └── 从 schemaMap 解析 returnParametersSchemaId → SchemaProperty[]
+
+4. 构建 Zod Schema
+   └── buildInputSchema(parameters, resolvedVars, { datasetsById, schemaMap })
    └── 返回 z.object({...})
 
-4. 注册为 AI SDK Tool
+5. 注册为 AI SDK Tool
    └── tool({ description, inputSchema: zodSchema, execute })
-   └── AI SDK 自动将 Zod 转为 JSON Schema
+   └── AI SDK 自动将 Zod 转为 JSON Schema 发给 LLM
 
-5. LLM 生成工具调用
+6. LLM 生成工具调用
    └── LLM 根据 JSON Schema 生成参数 JSON
    └── AI SDK 用 Zod Schema 校验参数
    └── 校验通过 → 执行 handler
    └── 校验失败 → 报错
 
-6. 输出验证（可选）
+7. 输出验证（可选）
    └── 如果配置了 returnParametersSchemaId
    └── 用同样的流程构建输出 Zod Schema
    └── 校验 handler 返回值
+   └── 验证失败时注入 _outputValidationWarning（不阻断，记录事件）
 ```
 
 ---
 
-## 已知限制
+## 已知问题
 
-以下是当前 Schema 系统的已知限制，对应的 issue 已记录在 `backlog/open/` 下：
-
-| 限制 | 影响 | Issue |
-|------|------|-------|
-| `defaultValue` 未在 Zod 层实现 | 默认值不生效，LLM 看不到 | `schema-defaultvalue-not-implemented.md` |
-| `uniqueItems` 未在 Zod 层实现 | 数组唯一性约束不生效 | `schema-uniqueitems-not-implemented.md` |
-| 嵌套 object 有 `passthrough`，顶层没有 | 额外字段处理不一致 | `schema-passthrough-inconsistency.md` |
-| 无显式 JSON Schema 生成 | 无法导出标准 JSON Schema | `schema-no-explicit-jsonschema-generation.md` |
-| 不支持 Map/Record 类型 | 无法表达动态 key 结构 | `schema-no-map-type.md` |
-| 不支持 Union 类型 | 无法表达"A 或 B"的参数 | `schema-no-union-type.md` |
-| 不支持递归类型 | 无法表达树形结构 | `schema-no-recursive-type.md` |
+- `enum` 作为独立 type 与 JSON Schema 标准存在语义差异：JSON Schema 中 `enum` 不是 type 而是 `string` 的值约束。当前功能上无影响，但做 JSON Schema 导入时需要映射。
+- string / number / array 的约束字段（minLength、minimum、minItems 等）在**参数编辑 UI 中没有输入控件**——只能通过 Build Chat 或 API 设置。Zod 和 JSON Schema 层均已完整支持。
 
 ---
 
