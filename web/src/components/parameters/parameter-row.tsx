@@ -31,6 +31,8 @@ const PARAM_TYPES: { value: SchemaPropertyType; label: string }[] = [
   { value: "object", label: "Object" },
   { value: "array", label: "Array" },
   { value: "union", label: "Union" },
+  { value: "null", label: "Null" },
+  { value: "const", label: "Const" },
 ];
 
 /** Item types available when type === "array" */
@@ -578,6 +580,10 @@ export function ParameterRow({
                 if (value !== "union") {
                   setValue(`${fieldPath}.discriminator`, undefined);
                   setValue(`${fieldPath}.variants`, undefined);
+                  setValue(`${fieldPath}.unionMode`, undefined);
+                }
+                if (value !== "const") {
+                  setValue(`${fieldPath}.constValue`, undefined);
                 }
               }}
             >

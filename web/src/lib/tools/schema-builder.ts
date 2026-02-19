@@ -35,6 +35,9 @@ function buildParamSchema(
     case "boolean":
       schema = z.boolean();
       break;
+    case "null":
+      schema = z.null();
+      break;
     case "object":
       schema = buildObjectSchema(param, resolvedVars, options, ancestorSchemaIds);
       break;
@@ -301,6 +304,14 @@ function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
     case "boolean": {
       const s: JsonSchema7 = { type: "boolean" };
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
+      return s;
+    }
+    case "null": {
+      return { type: "null" };
+    }
+    case "const": {
+      const s: JsonSchema7 = {};
+      if (param.constValue !== undefined) s.const = param.constValue;
       return s;
     }
     case "enum": {
