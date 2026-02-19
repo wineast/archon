@@ -29,7 +29,6 @@ export const agents = pgTable("agents", {
   icon: text("icon").notNull().default("bot"),
   slug: text("slug").notNull().unique(),
   isPublic: boolean("is_public").notNull().default(false),
-  version: text("version").notNull().default("0.0.0"),
   editingVersionId: uuid("editing_version_id").references(
     (): AnyPgColumn => agentVersions.id,
     { onDelete: "set null" }

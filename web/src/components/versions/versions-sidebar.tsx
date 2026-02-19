@@ -33,7 +33,7 @@ import type { VersionListItem } from "@/lib/versions/types";
 
 interface VersionsSidebarProps {
   versions: VersionListItem[];
-  currentVersion: string;
+  latestVersion: string | null;
   editingVersionId: string | null;
   publishedVersionId: string | null;
   onSelect: (id: string) => void;
@@ -53,7 +53,7 @@ function formatDate(dateStr: string) {
 
 export function VersionsSidebar({
   versions,
-  currentVersion,
+  latestVersion,
   editingVersionId,
   publishedVersionId,
   onSelect,
@@ -84,7 +84,7 @@ export function VersionsSidebar({
           <div className="flex items-center gap-1.5">
             <TagIcon className="size-3.5 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">
-              v{currentVersion}
+              {latestVersion ? `v${latestVersion}` : "未发布"}
             </span>
           </div>
           <Button

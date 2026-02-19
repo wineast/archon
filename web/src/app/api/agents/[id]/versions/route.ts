@@ -92,7 +92,7 @@ export async function POST(
 
     await tx
       .update(agents)
-      .set({ version, editingVersionId: inserted[0].id })
+      .set({ editingVersionId: inserted[0].id })
       .where(eq(agents.id, agentId));
 
     return inserted;

@@ -100,7 +100,6 @@ export async function POST(req: Request) {
   const updatedAgent = await db
     .update(agents)
     .set({
-      version: "0.1.0",
       editingVersionId: initialVersion.id,
       publishedVersionId: initialVersion.id,
     })
