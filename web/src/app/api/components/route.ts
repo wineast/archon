@@ -43,7 +43,8 @@ export async function POST(req: Request) {
       name: body.name,
       description: body.description ?? "",
       componentSource,
-      schemaRef: body.schemaRef ?? null,
+      inputSchemaRef: body.inputSchemaRef ?? null,
+      outputSchemaRef: body.outputSchemaRef ?? null,
       generatedCss,
     })
     .returning();

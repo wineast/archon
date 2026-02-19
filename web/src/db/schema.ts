@@ -620,7 +620,8 @@ export const components = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     componentSource: text("component_source").notNull().default(""),
-    schemaRef: text("schema_ref"),
+    inputSchemaRef: text("input_schema_ref"),
+    outputSchemaRef: text("output_schema_ref"),
     generatedCss: text("generated_css").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

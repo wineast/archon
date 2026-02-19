@@ -23,9 +23,6 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
     ? `${trimmed}\nreturn Component;`
     : `return function Component(props) {
   var tool = props.tool;
-  var toolName = tool.name;
-  var input = tool.input;
-  var output = tool.output;
   var state = props.state;
   var isLoading = props.isLoading;
   var isComplete = props.isComplete;

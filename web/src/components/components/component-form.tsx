@@ -96,10 +96,37 @@ export function ComponentForm({ component, agentId, onDraftRef, onDirtyChange }:
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">
-            Schema Ref
+            Input Schema Ref
           </label>
           <Controller
-            name="schemaRef"
+            name="inputSchemaRef"
+            control={form.control}
+            render={({ field }) => (
+              <Select
+                value={field.value ?? "__none__"}
+                onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+              >
+                <SelectTrigger className="mt-1 h-8 text-sm">
+                  <SelectValue placeholder="Select a schema..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {schemas.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Output Schema Ref
+          </label>
+          <Controller
+            name="outputSchemaRef"
             control={form.control}
             render={({ field }) => (
               <Select

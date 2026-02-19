@@ -4,5 +4,6 @@ export interface ComponentDefinition {
   name: string;
   description: string;
   componentSource: string;
-  schemaRef: string | null;
+  inputSchemaRef: string | null;
+  outputSchemaRef: string | null;
 }
