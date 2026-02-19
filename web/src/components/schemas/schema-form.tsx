@@ -84,7 +84,7 @@ export function SchemaForm({
     [currentSchemaId, parameters, includeSchemaIds]
   );
 
-  const { enumRefOptions, enumRefValues } = useDatasetsMap(agentId);
+  const { enumDatasetOptions, enumDatasetValues } = useDatasetsMap(agentId);
 
   // Filter out current schema from schemas list passed to ParameterList
   const schemasForParams = useMemo(
@@ -141,8 +141,8 @@ export function SchemaForm({
           fieldName="parameters"
           label="Parameters"
           schemas={schemasForParams}
-          enumRefOptions={enumRefOptions}
-          enumRefValues={enumRefValues}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
         />
 
         {/* Resolved Preview */}

@@ -202,15 +202,15 @@ function AdditionalPropertiesEditor({
 /** Union variant editor — each variant is a list of properties (like an object). */
 function UnionVariants({
   fieldPath,
-  enumRefOptions,
-  enumRefValues,
+  enumDatasetOptions,
+  enumDatasetValues,
   hideDefault,
   depth,
   schemas,
 }: {
   fieldPath: string;
-  enumRefOptions: EnumRefOption[];
-  enumRefValues: Record<string, string[]>;
+  enumDatasetOptions: EnumDatasetOption[];
+  enumDatasetValues: Record<string, string[]>;
   hideDefault: boolean;
   depth: number;
   schemas?: SchemaRow[];
@@ -240,8 +240,8 @@ function UnionVariants({
           </div>
           <NestedPropertiesForVariant
             fieldPath={`${fieldPath}.variants.${vIndex}`}
-            enumRefOptions={enumRefOptions}
-            enumRefValues={enumRefValues}
+            enumDatasetOptions={enumDatasetOptions}
+            enumDatasetValues={enumDatasetValues}
             hideDefault={hideDefault}
             depth={depth}
             schemas={schemas}
@@ -274,15 +274,15 @@ function UnionVariants({
  */
 function NestedPropertiesForVariant({
   fieldPath,
-  enumRefOptions,
-  enumRefValues,
+  enumDatasetOptions,
+  enumDatasetValues,
   hideDefault,
   depth,
   schemas,
 }: {
   fieldPath: string;
-  enumRefOptions: EnumRefOption[];
-  enumRefValues: Record<string, string[]>;
+  enumDatasetOptions: EnumDatasetOption[];
+  enumDatasetValues: Record<string, string[]>;
   hideDefault: boolean;
   depth: number;
   schemas?: SchemaRow[];
@@ -300,8 +300,8 @@ function NestedPropertiesForVariant({
           key={field.id}
           fieldPath={`${fieldPath}.${index}`}
           onDelete={() => remove(index)}
-          enumRefOptions={enumRefOptions}
-          enumRefValues={enumRefValues}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
           hideDefault={hideDefault}
           depth={depth + 1}
           schemas={schemas}
@@ -858,8 +858,8 @@ export function ParameterRow({
           </div>
           <UnionVariants
             fieldPath={fieldPath}
-            enumRefOptions={enumRefOptions}
-            enumRefValues={enumRefValues}
+            enumDatasetOptions={enumDatasetOptions}
+            enumDatasetValues={enumDatasetValues}
             hideDefault={hideDefault}
             depth={depth}
             schemas={schemas}

@@ -114,7 +114,7 @@ make setup
 
 除了直接使用 make 命令，也可以在 Claude Code 中通过 `/worktree` 技能操作，技能会额外处理：
 
-- **创建时**：采访式澄清需求 → 生成 `start.sh` 启动脚本 → 同步功能树
+- **创建时**：基于 guide/ 文档变更分析需求 → 调研代码 → 生成 `start.sh` 启动脚本
 - **`start.sh`**：进入工作区后执行，自动启动 Claude Code 并注入任务描述
 
 ```bash

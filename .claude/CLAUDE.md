@@ -41,9 +41,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 
 ## 项目知识
 
-- 功能树：`features/README.md`
-- 使用指南：`guide/`
-- Backlog（issue + 需求）：`backlog/`
+- 使用指南：`web/guide/`（唯一 source of truth，需求/问题/功能全部通过 guide 文档驱动）
 
 ## 通用约定
 - 使用中文回复
@@ -85,7 +83,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 
 ### Template Engine（LiquidJS）
-- 使用文档见 `guide/template-engine.md`
+- 使用文档见 `web/guide/template-engine.md`
 - 数据源：数据集（2 层 JSON）+ 工具定义
 - 保留字：`tool`、`tool_names`、`tool_entries`
 
