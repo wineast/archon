@@ -5,8 +5,8 @@ import { readJson, toKey, logSection, log } from "../seed-utils";
 import type { SchemaProperty } from "@/lib/schemas/types";
 import type { Seeder } from "./types";
 
-/** Seed-time parameter with optional legacy enumRef. */
-interface SeedToolParameter extends Omit<SchemaProperty, "enumRef"> {
+/** Seed-time parameter with optional enumRef (resolved to enumDatasetId at seed time). */
+interface SeedToolParameter extends SchemaProperty {
   enumRef?: string;
   properties?: SeedToolParameter[];
 }

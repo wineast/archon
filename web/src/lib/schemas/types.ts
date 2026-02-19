@@ -10,7 +10,6 @@ export interface SchemaProperty {
 
   // enum
   enum?: string[];
-  enumRef?: string;
   enumDatasetId?: string;
 
   // object（原 json）

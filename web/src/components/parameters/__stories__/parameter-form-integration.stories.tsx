@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ParameterList } from "../parameter-list";
 import { ReturnParameterList } from "../return-parameter-list";
-import type { EnumRefOption } from "../parameter-row";
+import type { EnumDatasetOption } from "../parameter-row";
 import type { SchemaProperty } from "@/lib/schemas/types";
 
 // ---------------------------------------------------------------------------
@@ -39,12 +39,12 @@ function FormJsonPreview() {
 
 function ParameterFormDemo({
   defaultValues,
-  enumRefOptions,
-  enumRefValues,
+  enumDatasetOptions,
+  enumDatasetValues,
 }: {
   defaultValues: DemoFormValues;
-  enumRefOptions?: EnumRefOption[];
-  enumRefValues?: Record<string, string[]>;
+  enumDatasetOptions?: EnumDatasetOption[];
+  enumDatasetValues?: Record<string, string[]>;
 }) {
   const form = useForm<DemoFormValues>({ defaultValues });
 
@@ -75,8 +75,8 @@ function ParameterFormDemo({
         <ParameterList
           fieldName="parameters"
           label="Parameters"
-          enumRefOptions={enumRefOptions}
-          enumRefValues={enumRefValues}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
         />
 
         <ReturnParameterList
@@ -184,12 +184,12 @@ const sampleReturnParams: SchemaProperty[] = [
   },
 ];
 
-const enumRefOptions: EnumRefOption[] = [
+const enumDatasetOptions: EnumDatasetOption[] = [
   { id: "ds-us-states", key: "us_states", name: "US States", source: "dataset" },
   { id: "ds-product-categories", key: "product_categories", name: "Product Categories", source: "dataset" },
 ];
 
-const enumRefValues: Record<string, string[]> = {
+const enumDatasetValues: Record<string, string[]> = {
   "ds-us-states": ["CA", "NY", "TX", "FL", "WA"],
   "ds-product-categories": ["Electronics", "Clothing", "Food", "Books"],
 };
@@ -256,7 +256,7 @@ export const WithEnumRef: Story = {
         },
       ],
     },
-    enumRefOptions,
-    enumRefValues,
+    enumDatasetOptions,
+    enumDatasetValues,
   },
 };

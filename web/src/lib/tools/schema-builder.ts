@@ -45,7 +45,7 @@ function buildParamSchema(
       break;
     }
     case "enum": {
-      // Resolve enumRef → actual enum values from datasets
+      // Resolve enum values from datasets or inline
       const resolvedEnum = resolveEnumValues(param, resolvedVars, options);
       if (resolvedEnum && resolvedEnum.length > 0) {
         schema = z.enum(resolvedEnum as [string, ...string[]]);
@@ -109,22 +109,15 @@ function buildNestedObject(
   return z.object(nested).passthrough();
 }
 
-/** Resolve enum values from datasets / resolvedVars / inline enum. */
+/** Resolve enum values from datasets / inline enum. */
 function resolveEnumValues(
   param: SchemaProperty,
-  resolvedVars?: Record<string, unknown>,
+  _resolvedVars?: Record<string, unknown>,
   options?: BuildSchemaOptions
 ): string[] | undefined {
-  // 1. enumDatasetId → from datasetsById (by UUID)
+  // enumDatasetId → from datasetsById (by UUID)
   if (param.enumDatasetId && options?.datasetsById?.[param.enumDatasetId] != null) {
     const val = options.datasetsById[param.enumDatasetId];
-    const resolved = resolveEnumFromValue(val);
-    if (resolved) return resolved;
-  }
-
-  // 2. enumRef → from resolvedVars (by key, backward compat)
-  if (param.enumRef && resolvedVars?.[param.enumRef] != null) {
-    const val = resolvedVars[param.enumRef];
     const resolved = resolveEnumFromValue(val);
     if (resolved) return resolved;
   }
@@ -178,4 +171,109 @@ export function buildInputSchema(
   }
 
   return z.object(shape);
+}
+
+/* ─────────── JSON Schema 7 generation ─────────── */
+
+type JsonSchema7 = Record<string, unknown>;
+
+/** Build a single JSON Schema 7 property from a SchemaProperty. */
+function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
+  switch (param.type) {
+    case "string": {
+      const s: JsonSchema7 = { type: "string" };
+      if (param.minLength != null) s.minLength = param.minLength;
+      if (param.maxLength != null) s.maxLength = param.maxLength;
+      if (param.pattern) s.pattern = param.pattern;
+      if (param.format) s.format = param.format;
+      if (param.defaultValue !== undefined) s.default = param.defaultValue;
+      return s;
+    }
+    case "number": {
+      const s: JsonSchema7 = { type: param.integer ? "integer" : "number" };
+      if (param.minimum != null) s.minimum = param.minimum;
+      if (param.maximum != null) s.maximum = param.maximum;
+      if (param.exclusiveMinimum != null) s.exclusiveMinimum = param.exclusiveMinimum;
+      if (param.exclusiveMaximum != null) s.exclusiveMaximum = param.exclusiveMaximum;
+      if (param.multipleOf != null) s.multipleOf = param.multipleOf;
+      if (param.defaultValue !== undefined) s.default = param.defaultValue;
+      return s;
+    }
+    case "boolean": {
+      const s: JsonSchema7 = { type: "boolean" };
+      if (param.defaultValue !== undefined) s.default = param.defaultValue;
+      return s;
+    }
+    case "enum": {
+      // enum → JSON Schema: {"type": "string", "enum": [...]}
+      const s: JsonSchema7 = { type: "string" };
+      if (param.enum && param.enum.length > 0) {
+        s.enum = param.enum;
+      }
+      if (param.defaultValue !== undefined) s.default = param.defaultValue;
+      return s;
+    }
+    case "object": {
+      return buildJsonSchemaObject(param);
+    }
+    case "array": {
+      const s: JsonSchema7 = { type: "array" };
+      if (param.items) {
+        s.items = buildJsonSchemaProperty(param.items);
+      }
+      if (param.minItems != null) s.minItems = param.minItems;
+      if (param.maxItems != null) s.maxItems = param.maxItems;
+      if (param.uniqueItems != null) s.uniqueItems = param.uniqueItems;
+      if (param.defaultValue !== undefined) s.default = param.defaultValue;
+      return s;
+    }
+    default:
+      return { type: "string" };
+  }
+}
+
+/** Build JSON Schema object from an object-type SchemaProperty. */
+function buildJsonSchemaObject(param: SchemaProperty): JsonSchema7 {
+  if (!param.properties || param.properties.length === 0) {
+    const s: JsonSchema7 = { type: "object" };
+    if (param.defaultValue !== undefined) s.default = param.defaultValue;
+    return s;
+  }
+
+  const properties: Record<string, JsonSchema7> = {};
+  const required: string[] = [];
+
+  for (const child of param.properties) {
+    const prop = buildJsonSchemaProperty(child);
+    if (child.description) prop.description = child.description;
+    properties[child.name] = prop;
+    if (child.required) required.push(child.name);
+  }
+
+  const s: JsonSchema7 = { type: "object", properties };
+  if (required.length > 0) s.required = required;
+  if (param.defaultValue !== undefined) s.default = param.defaultValue;
+  return s;
+}
+
+/**
+ * Build a standard JSON Schema 7 object from a list of SchemaProperty definitions.
+ * Generates schema directly without going through Zod.
+ *
+ * Enum type mapping: {type: "enum", enum: [...]} → {"type": "string", "enum": [...]}
+ */
+export function buildJsonSchema(parameters: SchemaProperty[]): JsonSchema7 {
+  const properties: Record<string, JsonSchema7> = {};
+  const required: string[] = [];
+
+  for (const param of parameters) {
+    const prop = buildJsonSchemaProperty(param);
+    if (param.description) prop.description = param.description;
+    properties[param.name] = prop;
+    if (param.required) required.push(param.name);
+  }
+
+  const schema: JsonSchema7 = { type: "object", properties };
+  if (required.length > 0) schema.required = required;
+  return schema;
 }

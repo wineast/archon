@@ -5,7 +5,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
-import { ParameterRow, type EnumRefOption } from "../parameter-row";
+import { ParameterRow, type EnumDatasetOption } from "../parameter-row";
 import type { SchemaProperty } from "@/lib/schemas/types";
 
 function makeParam(overrides: Partial<SchemaProperty> = {}): SchemaProperty {
@@ -19,7 +19,7 @@ function makeParam(overrides: Partial<SchemaProperty> = {}): SchemaProperty {
   };
 }
 
-const defaultEnumRefOptions: EnumRefOption[] = [
+const defaultEnumDatasetOptions: EnumDatasetOption[] = [
   { id: "ds-states", key: "states", name: "States", source: "dataset" },
   { id: "ds-languages", key: "languages", name: "Languages", source: "dataset" },
 ];
@@ -50,7 +50,7 @@ function renderRow(
       <ParameterRow
         fieldPath="items.0"
         onDelete={onDelete}
-        enumRefOptions={defaultEnumRefOptions}
+        enumDatasetOptions={defaultEnumDatasetOptions}
         {...propsOverrides}
       />
     </FormWrapper>
@@ -100,7 +100,7 @@ describe("ParameterRow", () => {
   });
 
   it("clears enum fields when switching from enum to other type", () => {
-    const param = makeParam({ type: "enum", enum: ["CA"], enumRef: "states" });
+    const param = makeParam({ type: "enum", enum: ["CA"], enumDatasetId: "ds-states" });
     const updated: SchemaProperty = { ...param, type: "string" };
     delete updated.enum;
 

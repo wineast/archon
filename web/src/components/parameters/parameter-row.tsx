@@ -43,7 +43,7 @@ const ARRAY_ITEM_TYPES: { value: SchemaPropertyType; label: string }[] = [
 
 const MAX_DEPTH = 3;
 
-export interface EnumRefOption {
+export interface EnumDatasetOption {
   id: string;
   key: string;
   name: string;
@@ -53,8 +53,8 @@ export interface EnumRefOption {
 interface ParameterRowProps {
   fieldPath: string;
   onDelete: () => void;
-  enumRefOptions?: EnumRefOption[];
-  enumRefValues?: Record<string, string[]>;
+  enumDatasetOptions?: EnumDatasetOption[];
+  enumDatasetValues?: Record<string, string[]>;
   /** Hide default value input (e.g. for return parameters). */
   hideDefault?: boolean;
   depth?: number;
@@ -67,15 +67,15 @@ type ObjectSource = "manual" | "ref";
 /** Nested properties — separated to avoid conditional useFieldArray calls. */
 function NestedProperties({
   fieldPath,
-  enumRefOptions,
-  enumRefValues,
+  enumDatasetOptions,
+  enumDatasetValues,
   hideDefault,
   depth,
   schemas,
 }: {
   fieldPath: string;
-  enumRefOptions: EnumRefOption[];
-  enumRefValues: Record<string, string[]>;
+  enumDatasetOptions: EnumDatasetOption[];
+  enumDatasetValues: Record<string, string[]>;
   hideDefault: boolean;
   depth: number;
   schemas?: SchemaRow[];
@@ -93,8 +93,8 @@ function NestedProperties({
           key={field.id}
           fieldPath={`${fieldPath}.properties.${index}`}
           onDelete={() => remove(index)}
-          enumRefOptions={enumRefOptions}
-          enumRefValues={enumRefValues}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
           hideDefault={hideDefault}
           depth={depth + 1}
           schemas={schemas}
@@ -158,11 +158,11 @@ function DefaultValueToggleButton({
 function DefaultValueEditor({
   type,
   fieldPath,
-  enumRefValues,
+  enumDatasetValues,
 }: {
   type: SchemaPropertyType;
   fieldPath: string;
-  enumRefValues: Record<string, string[]>;
+  enumDatasetValues: Record<string, string[]>;
 }) {
   const { control, setValue } = useFormContext();
   const defaultValue = useWatch({ control, name: `${fieldPath}.defaultValue` });
@@ -171,8 +171,8 @@ function DefaultValueEditor({
 
   // Resolve available options for enum type
   const options =
-    enumDatasetId && enumRefValues[enumDatasetId]
-      ? enumRefValues[enumDatasetId]
+    enumDatasetId && enumDatasetValues[enumDatasetId]
+      ? enumDatasetValues[enumDatasetId]
       : enumValues ?? [];
 
   if (type === "boolean") {
@@ -292,8 +292,8 @@ function SchemaRefPreview({ schemas, schemaId }: { schemas: SchemaRow[]; schemaI
 export function ParameterRow({
   fieldPath,
   onDelete,
-  enumRefOptions = [],
-  enumRefValues = {},
+  enumDatasetOptions = [],
+  enumDatasetValues = {},
   hideDefault = false,
   depth = 0,
   schemas = [],
@@ -406,7 +406,7 @@ export function ParameterRow({
         <DefaultValueEditor
           type={type}
           fieldPath={fieldPath}
-          enumRefValues={enumRefValues}
+          enumDatasetValues={enumDatasetValues}
         />
       )}
 
@@ -467,8 +467,8 @@ export function ParameterRow({
                       <SelectValue placeholder="选择引用..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {enumRefOptions.length > 0 ? (
-                        enumRefOptions.map((o) => (
+                      {enumDatasetOptions.length > 0 ? (
+                        enumDatasetOptions.map((o) => (
                           <SelectItem key={o.id} value={o.id}>
                             <span className="mr-1.5 text-[10px] text-muted-foreground">
                               [数据集]
@@ -485,9 +485,9 @@ export function ParameterRow({
                   </Select>
                 )}
               />
-              {enumDatasetId && enumRefValues[enumDatasetId] && (
+              {enumDatasetId && enumDatasetValues[enumDatasetId] && (
                 <p className="text-[11px] text-muted-foreground truncate">
-                  {enumRefValues[enumDatasetId].join(", ")}
+                  {enumDatasetValues[enumDatasetId].join(", ")}
                 </p>
               )}
             </div>
@@ -536,8 +536,8 @@ export function ParameterRow({
       {canNestArrayItems && itemsType === "object" && (
         <NestedProperties
           fieldPath={`${fieldPath}.items`}
-          enumRefOptions={enumRefOptions}
-          enumRefValues={enumRefValues}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
           hideDefault={hideDefault}
           depth={depth + 1}
           schemas={schemas}
@@ -604,8 +604,8 @@ export function ParameterRow({
       {canNestObject && objectSource === "manual" && (
         <NestedProperties
           fieldPath={fieldPath}
-          enumRefOptions={enumRefOptions}
-          enumRefValues={enumRefValues}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
           hideDefault={hideDefault}
           depth={depth}
           schemas={schemas}
@@ -616,8 +616,8 @@ export function ParameterRow({
       {canNestObject && !hasSchemas && (
         <NestedProperties
           fieldPath={fieldPath}
-          enumRefOptions={enumRefOptions}
-          enumRefValues={enumRefValues}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
           hideDefault={hideDefault}
           depth={depth}
         />
