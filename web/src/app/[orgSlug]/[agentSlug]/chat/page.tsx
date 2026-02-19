@@ -2,7 +2,6 @@
 
 import { use } from "react";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import useSWR from "swr";
 import { UserMenu } from "@/components/auth/user-menu";
 import { DefaultChatTransport, isTextUIPart } from "ai";
@@ -69,7 +68,6 @@ import {
   EllipsisVerticalIcon,
   PaperclipIcon,
   SearchCodeIcon,
-  SettingsIcon,
   Trash2Icon,
   UploadIcon,
   UserCogIcon,
@@ -566,12 +564,6 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
                     <DropdownMenuItem onClick={() => setInspectorOpen(true)}>
                       <SearchCodeIcon className="size-4" />
                       Inspect
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href={`/${orgSlug}/${agent.slug}/build`}>
-                        <SettingsIcon className="size-4" />
-                        Agent Settings
-                      </Link>
                     </DropdownMenuItem>
                   </>
                 )}

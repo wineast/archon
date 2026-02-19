@@ -87,6 +87,8 @@
   - 使用说明：[components.md](../guide/components.md)
 - [x] **组件系统清理** — Schema Ref 拆为 input/output 两个字段，删除动态渲染器便捷变量，表单展示 generatedCss
 - [ ] **闭包依赖注入统一为对象解构** — 组件和函数的依赖注入从参数列表改为对象解构，去掉隐式全局注入，所有依赖显式出现在外层函数签名中
+- [ ] **组件编辑器帮助文档** — JSX 编辑器旁增加帮助按钮，弹出 Markdown 渲染的编写规范（闭包结构、注入依赖、props 字段说明、示例）
+- [ ] **组件 JSX 编辑器 AI 辅助** — 参考系统提示词的 AI 编辑功能，为 JSX 编辑器增加 AI 辅助编辑对话框
 
 ### Files
 
@@ -137,6 +139,10 @@
 
 - [ ] **用量计费系统** — 统计每次 LLM 调用的 token 用量和费用，按 Agent/用户/模型维度聚合，含 Blob 存储统计，提供 Dashboard 可视化
   - 使用说明：[usage-metering.md](../guide/usage-metering.md)
+
+## 监控
+
+- [ ] **Agent 运行监控（P1：事件采集）** — 新增 runtimeEvents 表，在聊天执行流程中采集 LLM 调用延迟、工具执行结果、错误等运行时事件，非阻塞写入
 
 ## 组织与租户
 
