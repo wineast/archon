@@ -222,6 +222,70 @@ export const PrefilledForm: Story = {
   },
 };
 
+export const WithConstraints: Story = {
+  name: "With Constraints",
+  args: {
+    defaultValues: {
+      name: "createUser",
+      description: "Create a new user with validated fields",
+      parameters: [
+        {
+          id: "c1",
+          name: "email",
+          type: "string",
+          description: "User email address",
+          required: true,
+          format: "email",
+          minLength: 5,
+          maxLength: 255,
+        },
+        {
+          id: "c2",
+          name: "username",
+          type: "string",
+          description: "Username (alphanumeric)",
+          required: true,
+          minLength: 3,
+          maxLength: 20,
+          pattern: "^[a-zA-Z0-9_]+$",
+        },
+        {
+          id: "c3",
+          name: "age",
+          type: "number",
+          description: "User age",
+          required: true,
+          integer: true,
+          minimum: 0,
+          maximum: 150,
+        },
+        {
+          id: "c4",
+          name: "score",
+          type: "number",
+          description: "Score (exclusive bounds, step 0.5)",
+          required: false,
+          exclusiveMinimum: 0,
+          exclusiveMaximum: 100,
+          multipleOf: 0.5,
+        },
+        {
+          id: "c5",
+          name: "tags",
+          type: "array",
+          description: "Unique tag list (1-10 items)",
+          required: false,
+          items: { id: "c5i", name: "item", type: "string", description: "", required: true },
+          minItems: 1,
+          maxItems: 10,
+          uniqueItems: true,
+        },
+      ],
+      returnParameters: [],
+    },
+  },
+};
+
 export const WithEnumRef: Story = {
   name: "With Enum Ref (Dataset)",
   args: {

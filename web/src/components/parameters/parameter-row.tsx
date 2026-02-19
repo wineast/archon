@@ -52,6 +52,14 @@ const MAP_VALUE_TYPES: { value: SchemaPropertyType; label: string }[] = [
 
 const MAX_DEPTH = 3;
 
+const STRING_FORMATS = [
+  { value: "email", label: "email" },
+  { value: "url", label: "url" },
+  { value: "uuid", label: "uuid" },
+  { value: "date", label: "date" },
+  { value: "date-time", label: "date-time" },
+];
+
 export interface EnumDatasetOption {
   id: string;
   key: string;
@@ -513,6 +521,8 @@ export function ParameterRow({
   const schemaId = useWatch({ control, name: `${fieldPath}.schemaId` }) as string | undefined;
   const itemsType = useWatch({ control, name: `${fieldPath}.items.type` }) as SchemaPropertyType | undefined;
 
+  const isString = type === "string";
+  const isNumber = type === "number";
   const isEnum = type === "enum";
   const isObject = type === "object";
   const isArray = type === "array";
@@ -709,6 +719,109 @@ export function ParameterRow({
         </div>
       )}
 
+      {/* String constraints */}
+      {isString && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0 flex-wrap">
+          <span className="text-xs text-muted-foreground shrink-0">minLength</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            placeholder="0"
+            {...register(`${fieldPath}.minLength`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">maxLength</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            placeholder="∞"
+            {...register(`${fieldPath}.maxLength`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">pattern</span>
+          <Input
+            className="h-8 flex-1 text-xs font-mono"
+            placeholder="^[a-z]+$"
+            {...register(`${fieldPath}.pattern`, { setValueAs: (v: string) => v === "" ? undefined : v })}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">format</span>
+          <Controller
+            name={`${fieldPath}.format`}
+            control={control}
+            render={({ field }) => (
+              <Select
+                value={field.value ?? "__none__"}
+                onValueChange={(value) => {
+                  field.onChange(value === "__none__" ? undefined : value);
+                }}
+              >
+                <SelectTrigger className="w-[120px]" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">无</SelectItem>
+                  {STRING_FORMATS.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+      )}
+
+      {/* Number constraints */}
+      {isNumber && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0 flex-wrap">
+          <Controller
+            name={`${fieldPath}.integer`}
+            control={control}
+            render={({ field }) => (
+              <Switch
+                size="sm"
+                checked={field.value ?? false}
+                onCheckedChange={(checked: boolean) => {
+                  field.onChange(checked || undefined);
+                }}
+              />
+            )}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">integer</span>
+          <span className="text-xs text-muted-foreground shrink-0">min</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            placeholder="-∞"
+            {...register(`${fieldPath}.minimum`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">max</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            placeholder="∞"
+            {...register(`${fieldPath}.maximum`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">excl.min</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            {...register(`${fieldPath}.exclusiveMinimum`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">excl.max</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            {...register(`${fieldPath}.exclusiveMaximum`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">multipleOf</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            {...register(`${fieldPath}.multipleOf`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+        </div>
+      )}
+
       {/* Array: items type selector */}
       {canNestArrayItems && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0">
@@ -743,6 +856,40 @@ export function ParameterRow({
               </Select>
             )}
           />
+        </div>
+      )}
+
+      {/* Array constraints */}
+      {canNestArrayItems && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0">
+          <span className="text-xs text-muted-foreground shrink-0">minItems</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            placeholder="0"
+            {...register(`${fieldPath}.minItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">maxItems</span>
+          <Input
+            className="h-8 w-[80px] text-xs font-mono"
+            type="number"
+            placeholder="∞"
+            {...register(`${fieldPath}.maxItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+          />
+          <Controller
+            name={`${fieldPath}.uniqueItems`}
+            control={control}
+            render={({ field }) => (
+              <Switch
+                size="sm"
+                checked={field.value ?? false}
+                onCheckedChange={(checked: boolean) => {
+                  field.onChange(checked || undefined);
+                }}
+              />
+            )}
+          />
+          <span className="text-xs text-muted-foreground shrink-0">uniqueItems</span>
         </div>
       )}
 
