@@ -118,7 +118,7 @@ git diff web/guide/ → 分析变更 → 分组 → 提交文档变更 → 调�
    git add web/guide/
    git commit -m "docs: update guide for upcoming changes"
    ```
-6. 调用 `/worktree` 技能为每组创建工作区，传入对应的 web/guide/ 文件变更列表
+6. 调用 `/worktree` 技能为每组创建工作区，传入对应的 web/guide/ 文件变更列表（即 `guideDocs` 数组，如 `["web/guide/schemas.md"]`）。worktree 技能会将此列表写入 `meta.json`，用于合并时回溯更新文档。
 
 ## 注意事项
 

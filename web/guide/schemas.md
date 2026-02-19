@@ -375,7 +375,6 @@ AI SDK 的 `tool()` 内部用 `zod-to-json-schema` 将 Zod 自动转为 JSON Sch
 ## 已知问题
 
 - `enum` 作为独立 type 与 JSON Schema 标准存在语义差异：JSON Schema 中 `enum` 不是 type 而是 `string` 的值约束。当前功能上无影响，但做 JSON Schema 导入时需要映射。
-- string / number / array 的约束字段（minLength、minimum、minItems 等）在**参数编辑 UI 中没有输入控件**——只能通过 Build Chat 或 API 设置。Zod 和 JSON Schema 层均已完整支持。
 
 ---
 
