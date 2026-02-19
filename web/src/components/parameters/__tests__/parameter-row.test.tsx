@@ -20,8 +20,8 @@ function makeParam(overrides: Partial<ToolParameter> = {}): ToolParameter {
 }
 
 const defaultEnumRefOptions: EnumRefOption[] = [
-  { key: "states", source: "dataset" },
-  { key: "languages", source: "dataset" },
+  { id: "ds-states", key: "states", name: "States", source: "dataset" },
+  { id: "ds-languages", key: "languages", name: "Languages", source: "dataset" },
 ];
 
 /** Wrapper that provides FormProvider context for ParameterRow. */
@@ -77,8 +77,8 @@ describe("ParameterRow", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows ref select when enumRef is set", () => {
-    renderRow({ type: "enum", enumRef: "states" });
+  it("shows ref select when enumDatasetId is set", () => {
+    renderRow({ type: "enum", enumDatasetId: "ds-states" });
     expect(
       screen.queryByPlaceholderText("逗号分隔值，如 CA, NY, TX")
     ).not.toBeInTheDocument();

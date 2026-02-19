@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { schemas } from "@/db/schema";
+import type { SchemaRow } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { resolveParameters, detectCycle } from "@/lib/schemas/resolve";
+
+/** Load all schemas for an agent into a Map<id, SchemaRow>. */
+async function getAllSchemasMap(agentId: string) {
+  const rows = await db
+    .select()
+    .from(schemas)
+    .where(eq(schemas.agentId, agentId))
+    .orderBy(schemas.key);
+  return { rows, map: new Map(rows.map((r) => [r.id, r])) };
+}
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -13,12 +25,14 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await db
-    .select()
-    .from(schemas)
-    .where(eq(schemas.agentId, agentId))
-    .orderBy(schemas.key);
-  return NextResponse.json(rows);
+  const { rows, map } = await getAllSchemasMap(agentId);
+
+  const result = rows.map((row) => ({
+    ...row,
+    resolvedParameters: resolveParameters(row, map),
+  }));
+
+  return NextResponse.json(result);
 }
 
 export async function POST(req: Request) {
@@ -31,6 +45,33 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  const includeSchemaIds: string[] = body.includeSchemaIds ?? [];
+
+  // Validate cycle if includes are provided
+  if (includeSchemaIds.length > 0) {
+    const { map } = await getAllSchemasMap(agentId);
+    // Use a temporary ID for the new schema
+    const tempId = "__new__";
+    const tempSchema: SchemaRow = {
+      id: tempId,
+      agentId,
+      key: body.key,
+      name: body.name,
+      description: body.description ?? "",
+      parameters: body.parameters ?? [],
+      includeSchemaIds,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    map.set(tempId, tempSchema);
+    if (detectCycle(tempId, includeSchemaIds, map)) {
+      return NextResponse.json(
+        { error: "Circular include detected" },
+        { status: 400 }
+      );
+    }
+  }
+
   const [row] = await db
     .insert(schemas)
     .values({
@@ -39,6 +80,7 @@ export async function POST(req: Request) {
       name: body.name,
       description: body.description ?? "",
       parameters: body.parameters ?? [],
+      includeSchemaIds,
     })
     .returning();
 

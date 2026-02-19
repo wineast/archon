@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ParameterList } from "@/components/parameters/parameter-list";
+import { SchemaIncludesEditor } from "./schema-includes-editor";
+import { SchemaResolvedPreview } from "./schema-resolved-preview";
 import type { ToolParameter } from "@/lib/tools/types";
+import type { SchemaRow } from "@/db/schema";
 
 export interface SchemaFormValues {
   key: string;
   name: string;
   description: string;
   parameters: ToolParameter[];
+  includeSchemaIds: string[];
 }
 
 export interface SchemaFormHandle {
@@ -24,9 +28,17 @@ interface SchemaFormProps {
   schema: SchemaFormValues;
   onDraftRef: (ref: SchemaFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  allSchemas?: SchemaRow[];
+  currentSchemaId?: string;
 }
 
-export function SchemaForm({ schema, onDraftRef, onDirtyChange }: SchemaFormProps) {
+export function SchemaForm({
+  schema,
+  onDraftRef,
+  onDirtyChange,
+  allSchemas = [],
+  currentSchemaId,
+}: SchemaFormProps) {
   const form = useForm<SchemaFormValues>({ defaultValues: { ...schema } });
   const originalRef = useRef(JSON.stringify(schema));
 
@@ -53,6 +65,27 @@ export function SchemaForm({ schema, onDraftRef, onDirtyChange }: SchemaFormProp
     });
     return () => subscription.unsubscribe();
   }, [form, onDirtyChange]);
+
+  const includeSchemaIds = form.watch("includeSchemaIds") ?? [];
+  const parameters = form.watch("parameters") ?? [];
+
+  // Build a virtual schema for the preview
+  const previewSchema = useMemo(
+    () => ({
+      id: currentSchemaId ?? "__new__",
+      name: form.getValues("name"),
+      parameters,
+      includeSchemaIds,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentSchemaId, parameters, includeSchemaIds]
+  );
+
+  // Filter out current schema from schemas list passed to ParameterList
+  const schemasForParams = useMemo(
+    () => allSchemas.filter((s) => s.id !== currentSchemaId),
+    [allSchemas, currentSchemaId]
+  );
 
   return (
     <FormProvider {...form}>
@@ -87,9 +120,28 @@ export function SchemaForm({ schema, onDraftRef, onDirtyChange }: SchemaFormProp
             placeholder="Describe what this schema represents..."
           />
         </div>
+
+        {/* Includes */}
+        {allSchemas.length > 0 && (
+          <SchemaIncludesEditor
+            includeSchemaIds={includeSchemaIds}
+            onChange={(ids) => form.setValue("includeSchemaIds", ids, { shouldDirty: true })}
+            allSchemas={allSchemas}
+            currentSchemaId={currentSchemaId}
+          />
+        )}
+
+        {/* Own Fields */}
         <ParameterList
           fieldName="parameters"
           label="Parameters"
+          schemas={schemasForParams}
+        />
+
+        {/* Resolved Preview */}
+        <SchemaResolvedPreview
+          schema={previewSchema}
+          allSchemas={allSchemas}
         />
       </div>
     </FormProvider>

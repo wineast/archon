@@ -6,12 +6,14 @@ import { useFieldArray, useFormContext } from "react-hook-form";
 import { nanoid } from "nanoid";
 import type { EnumRefOption } from "./parameter-row";
 import { ParameterRow } from "./parameter-row";
+import type { SchemaRow } from "@/db/schema";
 
 interface ParameterListProps {
   fieldName: string;
   label: string;
   enumRefOptions?: EnumRefOption[];
   enumRefValues?: Record<string, string[]>;
+  schemas?: SchemaRow[];
 }
 
 export function ParameterList({
@@ -19,6 +21,7 @@ export function ParameterList({
   label,
   enumRefOptions,
   enumRefValues,
+  schemas,
 }: ParameterListProps) {
   const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
@@ -39,6 +42,7 @@ export function ParameterList({
             onDelete={() => remove(index)}
             enumRefOptions={enumRefOptions}
             enumRefValues={enumRefValues}
+            schemas={schemas}
           />
         ))}
         <Button

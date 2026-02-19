@@ -76,13 +76,13 @@ const sampleParams: ToolParameter[] = [
 ];
 
 const enumRefOptions: EnumRefOption[] = [
-  { key: "us_states", source: "dataset" },
-  { key: "product_categories", source: "dataset" },
+  { id: "ds-us-states", key: "us_states", name: "US States", source: "dataset" },
+  { id: "ds-product-categories", key: "product_categories", name: "Product Categories", source: "dataset" },
 ];
 
 const enumRefValues: Record<string, string[]> = {
-  us_states: ["CA", "NY", "TX", "FL", "WA"],
-  product_categories: ["Electronics", "Clothing", "Food", "Books"],
+  "ds-us-states": ["CA", "NY", "TX", "FL", "WA"],
+  "ds-product-categories": ["Electronics", "Clothing", "Food", "Books"],
 };
 
 export const Empty: Story = {

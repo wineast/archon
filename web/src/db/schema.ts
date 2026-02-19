@@ -218,6 +218,7 @@ export const schemas = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     parameters: jsonb("parameters").$type<ToolParameter[]>().notNull().default([]),
+    includeSchemaIds: uuid("include_schema_ids").array().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

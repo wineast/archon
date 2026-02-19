@@ -1,28 +1,36 @@
 import { z } from "zod";
 import type { ToolParameter } from "./types";
 
+export interface BuildSchemaOptions {
+  /** Datasets by UUID: id → resolved data. */
+  datasetsById?: Record<string, unknown>;
+  /** Schema map: schema UUID → resolved ToolParameter[]. */
+  schemaMap?: Record<string, ToolParameter[]>;
+}
+
 /**
  * Build a zod schema for a single ToolParameter.
  */
 function buildParamSchema(
   param: ToolParameter,
-  resolvedVars?: Record<string, unknown>
+  resolvedVars?: Record<string, unknown>,
+  options?: BuildSchemaOptions
 ): z.ZodTypeAny {
   // Resolve enumRef → actual enum values from datasets
   let resolvedEnum: string[] | undefined;
-  if (param.enumRef && resolvedVars?.[param.enumRef] != null) {
-    const val = resolvedVars[param.enumRef];
-    if (Array.isArray(val)) {
-      resolvedEnum = val.map(String);
-    } else if (typeof val === "object" && val !== null) {
-      const values = Object.values(val as Record<string, unknown>);
-      if (values.length > 0 && typeof values[0] === "string") {
-        resolvedEnum = values.map(String);
-      } else {
-        resolvedEnum = Object.keys(val as Record<string, unknown>);
-      }
-    }
+
+  // 1. enumDatasetId → from datasetsById (by UUID)
+  if (param.enumDatasetId && options?.datasetsById?.[param.enumDatasetId] != null) {
+    const val = options.datasetsById[param.enumDatasetId];
+    resolvedEnum = resolveEnumFromValue(val);
   }
+
+  // 2. enumRef → from resolvedVars (by key, backward compat)
+  if (!resolvedEnum && param.enumRef && resolvedVars?.[param.enumRef] != null) {
+    const val = resolvedVars[param.enumRef];
+    resolvedEnum = resolveEnumFromValue(val);
+  }
+
   if (!resolvedEnum) {
     resolvedEnum = param.enum;
   }
@@ -37,10 +45,25 @@ function buildParamSchema(
       schema = z.boolean();
       break;
     case "json":
-      if (param.properties && param.properties.length > 0) {
+      if (param.schemaId && options?.schemaMap?.[param.schemaId]) {
+        // Use referenced schema's resolved parameters as properties
+        const refParams = options.schemaMap[param.schemaId];
+        const nested: Record<string, z.ZodTypeAny> = {};
+        for (const child of refParams) {
+          let childSchema = buildParamSchema(child, resolvedVars, options);
+          if (child.description) {
+            childSchema = childSchema.describe(child.description);
+          }
+          if (!child.required) {
+            childSchema = childSchema.optional();
+          }
+          nested[child.name] = childSchema;
+        }
+        schema = z.object(nested).passthrough();
+      } else if (param.properties && param.properties.length > 0) {
         const nested: Record<string, z.ZodTypeAny> = {};
         for (const child of param.properties) {
-          let childSchema = buildParamSchema(child, resolvedVars);
+          let childSchema = buildParamSchema(child, resolvedVars, options);
           if (child.description) {
             childSchema = childSchema.describe(child.description);
           }
@@ -77,6 +100,21 @@ function buildParamSchema(
   return schema;
 }
 
+/** Extract enum values from a resolved dataset value. */
+function resolveEnumFromValue(val: unknown): string[] | undefined {
+  if (Array.isArray(val)) {
+    return val.map(String);
+  } else if (typeof val === "object" && val !== null) {
+    const values = Object.values(val as Record<string, unknown>);
+    if (values.length > 0 && typeof values[0] === "string") {
+      return values.map(String);
+    } else {
+      return Object.keys(val as Record<string, unknown>);
+    }
+  }
+  return undefined;
+}
+
 /**
  * Build a zod object schema from a list of ToolParameter definitions.
  * Returns z.object({}) when parameters is empty (no-arg tool).
@@ -88,12 +126,13 @@ function buildParamSchema(
  */
 export function buildInputSchema(
   parameters: ToolParameter[],
-  resolvedVars?: Record<string, unknown>
+  resolvedVars?: Record<string, unknown>,
+  options?: BuildSchemaOptions
 ) {
   const shape: Record<string, z.ZodTypeAny> = {};
 
   for (const param of parameters) {
-    let schema = buildParamSchema(param, resolvedVars);
+    let schema = buildParamSchema(param, resolvedVars, options);
 
     if (param.description) {
       schema = schema.describe(param.description);

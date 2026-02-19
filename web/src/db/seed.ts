@@ -455,6 +455,44 @@ export async function seed(db?: PostgresJsDatabase): Promise<SeedResult> {
 
   console.log(`Seeded ${datasetsSeed.length} datasets (+ pricing configs)`);
 
+  // Build datasetKeyToIdMap for enumRef → enumDatasetId migration
+  const allDatasetRows = await db
+    .select({ id: datasets.id, key: datasets.key })
+    .from(datasets)
+    .where(eq(datasets.agentId, agentId));
+  const datasetKeyToIdMap: Record<string, string> = {};
+  for (const d of allDatasetRows) {
+    datasetKeyToIdMap[d.key] = d.id;
+  }
+
+  // Migrate enumRef → enumDatasetId in existing schemas
+  console.log("Migrating schema enumRef → enumDatasetId...");
+  const allSchemaRows = await db
+    .select()
+    .from(schemas)
+    .where(eq(schemas.agentId, agentId));
+
+  for (const schemaRow of allSchemaRows) {
+    let changed = false;
+    const updatedParams = schemaRow.parameters.map((p: ToolParameter) => {
+      if (p.enumRef && !p.enumDatasetId) {
+        const datasetId = datasetKeyToIdMap[p.enumRef];
+        if (datasetId) {
+          changed = true;
+          return { ...p, enumDatasetId: datasetId };
+        }
+      }
+      return p;
+    });
+    if (changed) {
+      await db
+        .update(schemas)
+        .set({ parameters: updatedParams })
+        .where(eq(schemas.id, schemaRow.id));
+      console.log(`  - Updated ${schemaRow.key}`);
+    }
+  }
+
   // Seed functions
   console.log("Seeding functions...");
 

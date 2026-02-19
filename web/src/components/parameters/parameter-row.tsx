@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { ToolParameter, ToolParamType } from "@/lib/tools/types";
+import type { SchemaRow } from "@/db/schema";
 import { BracesIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import {
@@ -33,7 +34,9 @@ const PARAM_TYPES: { value: ToolParamType; label: string }[] = [
 const MAX_DEPTH = 3;
 
 export interface EnumRefOption {
+  id: string;
   key: string;
+  name: string;
   source: "dataset";
 }
 
@@ -45,9 +48,11 @@ interface ParameterRowProps {
   /** Hide default value input (e.g. for return parameters). */
   hideDefault?: boolean;
   depth?: number;
+  schemas?: SchemaRow[];
 }
 
 type EnumSource = "manual" | "ref";
+type JsonSource = "manual" | "ref";
 
 /** Nested properties — separated to avoid conditional useFieldArray calls. */
 function NestedProperties({
@@ -56,12 +61,14 @@ function NestedProperties({
   enumRefValues,
   hideDefault,
   depth,
+  schemas,
 }: {
   fieldPath: string;
   enumRefOptions: EnumRefOption[];
   enumRefValues: Record<string, string[]>;
   hideDefault: boolean;
   depth: number;
+  schemas?: SchemaRow[];
 }) {
   const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
@@ -80,6 +87,7 @@ function NestedProperties({
           enumRefValues={enumRefValues}
           hideDefault={hideDefault}
           depth={depth + 1}
+          schemas={schemas}
         />
       ))}
       <Button
@@ -149,13 +157,16 @@ function DefaultValueEditor({
   const { control, setValue } = useFormContext();
   const defaultValue = useWatch({ control, name: `${fieldPath}.defaultValue` });
   const enumValues = useWatch({ control, name: `${fieldPath}.enum` }) as string[] | undefined;
+  const enumDatasetId = useWatch({ control, name: `${fieldPath}.enumDatasetId` }) as string | undefined;
   const enumRef = useWatch({ control, name: `${fieldPath}.enumRef` }) as string | undefined;
 
   // Resolve available options for enum type
   const options =
-    enumRef && enumRefValues[enumRef]
-      ? enumRefValues[enumRef]
-      : enumValues ?? [];
+    enumDatasetId && enumRefValues[enumDatasetId]
+      ? enumRefValues[enumDatasetId]
+      : enumRef && enumRefValues[enumRef]
+        ? enumRefValues[enumRef]
+        : enumValues ?? [];
 
   if (type === "boolean") {
     return (
@@ -253,6 +264,24 @@ function DefaultValueEditor({
   );
 }
 
+/** Read-only preview of schema parameters for JSON ref mode. */
+function SchemaRefPreview({ schemas, schemaId }: { schemas: SchemaRow[]; schemaId: string }) {
+  const schema = schemas.find((s) => s.id === schemaId);
+  if (!schema || schema.parameters.length === 0) return null;
+
+  return (
+    <div className="border-l-2 border-muted pl-4 ml-2 space-y-0.5">
+      {schema.parameters.map((p) => (
+        <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-mono">{p.name}</span>
+          <span>{p.type}</span>
+          {p.required && <span className="text-orange-500 text-[10px]">req</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ParameterRow({
   fieldPath,
   onDelete,
@@ -260,24 +289,32 @@ export function ParameterRow({
   enumRefValues = {},
   hideDefault = false,
   depth = 0,
+  schemas = [],
 }: ParameterRowProps) {
   const { register, control, setValue, getValues } = useFormContext();
 
   // Only watch fields needed for conditional rendering in this component
   const type = useWatch({ control, name: `${fieldPath}.type` }) as ToolParamType;
+  const enumDatasetId = useWatch({ control, name: `${fieldPath}.enumDatasetId` }) as string | undefined;
   const enumRef = useWatch({ control, name: `${fieldPath}.enumRef` }) as string | undefined;
+  const schemaId = useWatch({ control, name: `${fieldPath}.schemaId` }) as string | undefined;
 
   const isEnum = type === "enum";
   const isJson = type === "json";
   const canNest = isJson && depth < MAX_DEPTH;
 
   const [enumSource, setEnumSource] = useState<EnumSource>(() =>
-    enumRef ? "ref" : "manual"
+    enumDatasetId || enumRef ? "ref" : "manual"
+  );
+  const [jsonSource, setJsonSource] = useState<JsonSource>(() =>
+    schemaId ? "ref" : "manual"
   );
   // Read initial defaultValue once (no subscription) to set initial expand state
   const [showDefault, setShowDefault] = useState(
     () => getValues(`${fieldPath}.defaultValue`) != null
   );
+
+  const hasSchemas = schemas.length > 0;
 
   return (
     <div className="space-y-1.5 min-w-0">
@@ -298,9 +335,11 @@ export function ParameterRow({
                 if (value !== "enum") {
                   setValue(`${fieldPath}.enum`, undefined);
                   setValue(`${fieldPath}.enumRef`, undefined);
+                  setValue(`${fieldPath}.enumDatasetId`, undefined);
                 }
                 if (value !== "json") {
                   setValue(`${fieldPath}.properties`, undefined);
+                  setValue(`${fieldPath}.schemaId`, undefined);
                 }
               }}
             >
@@ -384,6 +423,7 @@ export function ParameterRow({
               setEnumSource(value);
               if (value === "manual") {
                 setValue(`${fieldPath}.enumRef`, undefined);
+                setValue(`${fieldPath}.enumDatasetId`, undefined);
               } else {
                 setValue(`${fieldPath}.enum`, undefined);
               }
@@ -420,14 +460,16 @@ export function ParameterRow({
           ) : (
             <div className="flex-1 min-w-0 space-y-1">
               <Controller
-                name={`${fieldPath}.enumRef`}
+                name={`${fieldPath}.enumDatasetId`}
                 control={control}
                 render={({ field }) => (
                   <Select
                     value={field.value ?? ""}
-                    onValueChange={(value: string) =>
-                      field.onChange(value || undefined)
-                    }
+                    onValueChange={(value: string) => {
+                      field.onChange(value || undefined);
+                      // Clear legacy enumRef when selecting by ID
+                      setValue(`${fieldPath}.enumRef`, undefined);
+                    }}
                   >
                     <SelectTrigger className="w-full" size="sm">
                       <SelectValue placeholder="选择引用..." />
@@ -435,11 +477,11 @@ export function ParameterRow({
                     <SelectContent>
                       {enumRefOptions.length > 0 ? (
                         enumRefOptions.map((o) => (
-                          <SelectItem key={o.key} value={o.key}>
+                          <SelectItem key={o.id} value={o.id}>
                             <span className="mr-1.5 text-[10px] text-muted-foreground">
                               [数据集]
                             </span>
-                            {o.key}
+                            {o.name}
                           </SelectItem>
                         ))
                       ) : (
@@ -451,9 +493,9 @@ export function ParameterRow({
                   </Select>
                 )}
               />
-              {enumRef && enumRefValues[enumRef] && (
+              {enumDatasetId && enumRefValues[enumDatasetId] && (
                 <p className="text-[11px] text-muted-foreground truncate">
-                  {enumRefValues[enumRef].join(", ")}
+                  {enumRefValues[enumDatasetId].join(", ")}
                 </p>
               )}
             </div>
@@ -461,7 +503,76 @@ export function ParameterRow({
         </div>
       )}
 
-      {canNest && (
+      {/* JSON: schema ref or manual properties */}
+      {canNest && hasSchemas && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0">
+          <Select
+            value={jsonSource}
+            onValueChange={(value: JsonSource) => {
+              setJsonSource(value);
+              if (value === "manual") {
+                setValue(`${fieldPath}.schemaId`, undefined);
+              } else {
+                setValue(`${fieldPath}.properties`, undefined);
+              }
+            }}
+          >
+            <SelectTrigger className="w-[80px]" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="manual">手动</SelectItem>
+              <SelectItem value="ref">引用</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {jsonSource === "ref" && (
+            <Controller
+              name={`${fieldPath}.schemaId`}
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(value: string) =>
+                    field.onChange(value || undefined)
+                  }
+                >
+                  <SelectTrigger className="flex-1" size="sm">
+                    <SelectValue placeholder="选择 Schema..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schemas.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          )}
+        </div>
+      )}
+
+      {/* JSON ref preview */}
+      {canNest && jsonSource === "ref" && schemaId && (
+        <SchemaRefPreview schemas={schemas} schemaId={schemaId} />
+      )}
+
+      {/* JSON manual nested properties */}
+      {canNest && jsonSource === "manual" && (
+        <NestedProperties
+          fieldPath={fieldPath}
+          enumRefOptions={enumRefOptions}
+          enumRefValues={enumRefValues}
+          hideDefault={hideDefault}
+          depth={depth}
+          schemas={schemas}
+        />
+      )}
+
+      {/* JSON without schemas: always show nested properties */}
+      {canNest && !hasSchemas && (
         <NestedProperties
           fieldPath={fieldPath}
           enumRefOptions={enumRefOptions}
