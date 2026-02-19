@@ -76,6 +76,8 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
           description: updated.description,
           parameters: updated.parameters,
           returnParameters: updated.returnParameters,
+          parametersSchemaRef: updated.parametersSchemaRef ?? null,
+          returnParametersSchemaRef: updated.returnParametersSchemaRef ?? null,
           output: updated.output,
           handler: updated.handler,
           component: updated.component,

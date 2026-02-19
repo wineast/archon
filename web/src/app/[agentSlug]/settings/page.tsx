@@ -8,6 +8,7 @@ import { UserButton } from "@clerk/nextjs";
 import {
   ArrowLeftIcon,
   BookOpenIcon,
+  BracesIcon,
   DatabaseIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ChatConfigPanel } from "@/components/chat-config/chat-config-panel";
 import { ToolsPanel } from "@/components/tools/tools-panel";
+import { SchemasPanel } from "@/components/schemas/schemas-panel";
 import { WikiPanel } from "@/components/wiki/wiki-panel";
 import { DatasetsPanel } from "@/components/datasets/datasets-panel";
 import { FunctionsPanel } from "@/components/functions/functions-panel";
@@ -42,6 +44,7 @@ interface SettingsTab {
 const SETTINGS_TABS: SettingsTab[] = [
   { value: "config", label: "Config", icon: SlidersHorizontalIcon },
   { value: "tools", label: "Tools", icon: WrenchIcon },
+  { value: "schemas", label: "Schemas", icon: BracesIcon },
   { value: "wiki", label: "Wiki", icon: BookOpenIcon },
   { value: "datasets", label: "Datasets", icon: DatabaseIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
@@ -100,6 +103,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         return <ChatConfigPanel agentId={agent.id} />;
       case "tools":
         return <ToolsPanel agentId={agent.id} />;
+      case "schemas":
+        return <SchemasPanel agentId={agent.id} />;
       case "wiki":
         return <WikiPanel agentId={agent.id} />;
       case "datasets":

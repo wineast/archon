@@ -33,6 +33,8 @@ export async function PATCH(
       ...(body.output !== undefined && { output: body.output }),
       ...(body.handler !== undefined && { handler: body.handler }),
       ...(body.component !== undefined && { component: body.component }),
+      ...(body.parametersSchemaRef !== undefined && { parametersSchemaRef: body.parametersSchemaRef }),
+      ...(body.returnParametersSchemaRef !== undefined && { returnParametersSchemaRef: body.returnParametersSchemaRef }),
       ...(body.componentSource !== undefined && { componentSource: body.componentSource }),
       ...(body.componentMockData !== undefined && { componentMockData: body.componentMockData }),
       ...(typeof body.enabled === "boolean" && { enabled: body.enabled }),
