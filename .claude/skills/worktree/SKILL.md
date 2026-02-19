@@ -6,6 +6,10 @@ allowed-tools: Bash, Write, Edit, Read, AskUserQuestion
 
 管理 git worktree 工作区。
 
+## 重要：不要进入规划模式
+
+当用户明确要求创建工作区时，**禁止使用 EnterPlanMode**。调研阶段使用 Task 工具的 Explore agent（`subagent_type=Explore`）来研究代码库，获取足够上下文后直接执行创建流程。不要因为任务看起来复杂就自动进入规划模式——工作区的 start.sh prompt 本身就是给子工作区的"规划"，主会话只需要调研 + 生成 prompt + 创建工作区。
+
 ## 触发条件
 
 当用户提到以下任意表述时，应调用此技能（`/worktree`）：

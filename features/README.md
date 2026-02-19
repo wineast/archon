@@ -40,6 +40,11 @@
 
 ## Agent 配置
 
+### Build Chat
+
+- [ ] **Build Chat — 对话式配置助手** — Build 页面左侧聊天窗，通过对话操作所有资源（工具、Schema、Wiki、数据集等）
+  - 使用说明：[build-chat.md](../guide/build-chat.md)
+
 ### 模型
 
 - [ ] **全局模型注册表** — 新增 models 表存储可用模型列表，modelConfigs/evalJudgeConfigs 的模型选择从文本输入改为 Combobox 下拉
@@ -47,6 +52,10 @@
 ### 版本管理
 
 - [x] **Agent 版本管理系统** — SemVer 版本号，发布时对所有关联配置做整体快照，支持查看历史版本和回滚
+
+### 会话管理
+
+- [ ] **会话查看器** — Build 页面新增 Sessions 标签页，管理员/编辑者可查看所有用户的聊天会话记录，左侧会话列表 + 右侧只读对话查看
 
 ### 通用
 
@@ -64,7 +73,7 @@
 - [x] **组件系统重构** — 组件对齐工具/函数体验，增加 Playground + Test Cases tab，Props 聚合为 tool 对象
   - 使用说明：[components.md](../guide/components.md)
 - [x] **组件系统清理** — Schema Ref 拆为 input/output 两个字段，删除动态渲染器便捷变量，表单展示 generatedCss
-- [ ] **组件闭包注入重构** — 组件依赖注入从 JSX 标签全局扫描改为闭包参数注入（对齐函数模式），去掉裸 JSX 片段支持，移除 inputSchemaId/outputSchemaId 字段
+- [ ] **闭包依赖注入统一为对象解构** — 组件和函数的依赖注入从参数列表改为对象解构，去掉隐式全局注入，所有依赖显式出现在外层函数签名中
 
 ### Files
 
@@ -103,6 +112,11 @@
 - [ ] **嵌入式宿主通信** — Widget 与宿主页面双向 postMessage 通信：宿主上下文注入系统提示词、宿主工具执行、Widget JS API
   - 来源：嵌入场景下 AI 需要感知宿主页面状态并执行宿主侧操作
   - 使用说明：[embed-host-communication.md](../guide/embed-host-communication.md)
+
+## 计费与用量
+
+- [ ] **用量计费系统** — 统计每次 LLM 调用的 token 用量和费用，按 Agent/用户/模型维度聚合，含 Blob 存储统计，提供 Dashboard 可视化
+  - 使用说明：[usage-metering.md](../guide/usage-metering.md)
 
 ## 用户与权限
 
