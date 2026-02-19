@@ -1,6 +1,6 @@
 ## 项目知识
 
-- 需求文档：`requirements/`
+- 功能树：`features/README.md`
 - 使用指南：`guide/`
 - Issue 跟踪：`issues/`
 
