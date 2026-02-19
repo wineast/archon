@@ -346,6 +346,7 @@ function EmbedChat({
         componentId: null,
         enabled: true,
         executionTarget: t.executionTarget as "server" | "client" | "host",
+        sandboxMode: "light" as const,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,

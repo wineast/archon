@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ChevronDownIcon, PlayIcon } from "lucide-react";
+import { BoxIcon, ChevronDownIcon, PlayIcon, ZapIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { JsonEditor } from "@/components/editors/json-editor";
@@ -25,6 +25,7 @@ export function ToolPlayground({ toolId }: ToolPlaygroundProps) {
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [durationMs, setDurationMs] = useState<number | null>(null);
+  const [sandboxMode, setSandboxMode] = useState<"light" | "full" | null>(null);
 
   const { testCases } = useToolTestCases(toolId);
 
@@ -32,6 +33,7 @@ export function ToolPlayground({ toolId }: ToolPlaygroundProps) {
     setError(null);
     setOutput("");
     setDurationMs(null);
+    setSandboxMode(null);
     setRunning(true);
 
     let parsedInput: Record<string, unknown>;
@@ -52,6 +54,7 @@ export function ToolPlayground({ toolId }: ToolPlaygroundProps) {
 
       const data = await res.json();
       setDurationMs(data.durationMs ?? null);
+      setSandboxMode(data.sandboxMode ?? null);
 
       if (data.success) {
         setOutput(JSON.stringify(data.result, null, 2));
@@ -108,9 +111,17 @@ export function ToolPlayground({ toolId }: ToolPlaygroundProps) {
 
           <div>
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">
-                Output
-              </label>
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Output
+                </label>
+                {sandboxMode && (
+                  <span className="inline-flex items-center gap-0.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {sandboxMode === "light" ? <ZapIcon className="size-2.5" /> : <BoxIcon className="size-2.5" />}
+                    {sandboxMode === "light" ? "轻量沙盒" : "完整沙盒"}
+                  </span>
+                )}
+              </div>
               {durationMs != null && (
                 <span className="text-xs text-muted-foreground">
                   {durationMs}ms

@@ -100,6 +100,7 @@ export async function executeChatStream(
       parameters: row.parametersSchemaId ? (templateData.schemaMap[row.parametersSchemaId] ?? []) : [],
       handler: row.handler ?? "",
       executionTarget: row.executionTarget ?? "server",
+      sandboxMode: row.sandboxMode ?? "light",
     }));
 
   const allTools = toolPayloads.length

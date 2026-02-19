@@ -109,6 +109,7 @@ export async function POST(
       description: row.description,
       parameters: row.parametersSchemaId ? (schemaMap[row.parametersSchemaId] ?? []) : [],
       handler: row.handler ?? "",
+      sandboxMode: row.sandboxMode ?? "light",
     }));
 
     const allTools = toolPayloads.length

@@ -77,6 +77,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
           output: updated.output,
           handler: updated.handler,
           componentId: updated.componentId,
+          sandboxMode: updated.sandboxMode,
         },
         mutate
       );
