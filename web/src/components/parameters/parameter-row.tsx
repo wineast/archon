@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { JsonEditor } from "@/components/editors/json-editor";
 import {
@@ -84,7 +85,7 @@ interface ParameterRowProps {
 }
 
 type EnumSource = "manual" | "ref";
-type ObjectSource = "manual" | "ref";
+type ObjectSource = "manual" | "ref" | "merge";
 
 /** Nested properties — separated to avoid conditional useFieldArray calls. */
 function NestedProperties({
@@ -622,6 +623,71 @@ function DefaultValueEditor({
   );
 }
 
+/** Schema merge editor — multi-select schemas with merged preview. */
+function SchemaMergeEditor({
+  fieldPath,
+  schemas,
+}: {
+  fieldPath: string;
+  schemas: SchemaRow[];
+}) {
+  const { control, setValue } = useFormContext();
+  const selectedIds = (useWatch({ control, name: `${fieldPath}.schemaIds` }) as string[] | undefined) ?? [];
+
+  const toggleSchema = (id: string) => {
+    const next = selectedIds.includes(id)
+      ? selectedIds.filter((s) => s !== id)
+      : [...selectedIds, id];
+    setValue(`${fieldPath}.schemaIds`, next.length > 0 ? next : undefined);
+  };
+
+  // Compute merged preview
+  const mergedParams: { name: string; type: string; required: boolean; source: string }[] = [];
+  const seen = new Set<string>();
+  for (const sid of selectedIds) {
+    const schema = schemas.find((s) => s.id === sid);
+    if (!schema) continue;
+    for (const p of schema.parameters) {
+      if (seen.has(p.name)) {
+        const idx = mergedParams.findIndex((m) => m.name === p.name);
+        if (idx >= 0) mergedParams[idx] = { name: p.name, type: p.type, required: p.required, source: schema.name };
+      } else {
+        seen.add(p.name);
+        mergedParams.push({ name: p.name, type: p.type, required: p.required, source: schema.name });
+      }
+    }
+  }
+
+  return (
+    <div className="pl-[128px] space-y-2 min-w-0">
+      <div className="space-y-1">
+        {schemas.map((s) => (
+          <label key={s.id} className="flex items-center gap-2 text-xs cursor-pointer">
+            <Checkbox
+              checked={selectedIds.includes(s.id)}
+              onCheckedChange={() => toggleSchema(s.id)}
+            />
+            {s.name}
+          </label>
+        ))}
+      </div>
+      {mergedParams.length > 0 && (
+        <div className="border-l-2 border-muted pl-4 ml-2 space-y-0.5">
+          <span className="text-[10px] text-muted-foreground">合并预览</span>
+          {mergedParams.map((p) => (
+            <div key={p.name} className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-mono">{p.name}</span>
+              <span>{p.type}</span>
+              {p.required && <span className="text-orange-500 text-[10px]">req</span>}
+              <span className="text-[10px] opacity-60">← {p.source}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Read-only preview of schema parameters for object ref mode. */
 function SchemaRefPreview({ schemas, schemaId }: { schemas: SchemaRow[]; schemaId: string }) {
   const schema = schemas.find((s) => s.id === schemaId);
@@ -672,8 +738,9 @@ export function ParameterRow({
   const [enumSource, setEnumSource] = useState<EnumSource>(() =>
     enumDatasetId ? "ref" : "manual"
   );
+  const schemaIds = useWatch({ control, name: `${fieldPath}.schemaIds` }) as string[] | undefined;
   const [objectSource, setObjectSource] = useState<ObjectSource>(() =>
-    schemaId ? "ref" : "manual"
+    schemaIds && schemaIds.length > 0 ? "merge" : schemaId ? "ref" : "manual"
   );
   // Read initial defaultValue once (no subscription) to set initial expand state
   const [showDefault, setShowDefault] = useState(
@@ -705,6 +772,7 @@ export function ParameterRow({
                 if (value !== "object") {
                   setValue(`${fieldPath}.properties`, undefined);
                   setValue(`${fieldPath}.schemaId`, undefined);
+                  setValue(`${fieldPath}.schemaIds`, undefined);
                   setValue(`${fieldPath}.additionalProperties`, undefined);
                 }
                 if (value !== "array") {
@@ -1134,7 +1202,7 @@ export function ParameterRow({
         />
       )}
 
-      {/* Object: schema ref or manual properties */}
+      {/* Object: source selector (manual / ref / merge) */}
       {canNestObject && hasSchemas && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0">
           <Select
@@ -1143,8 +1211,14 @@ export function ParameterRow({
               setObjectSource(value);
               if (value === "manual") {
                 setValue(`${fieldPath}.schemaId`, undefined);
-              } else {
+                setValue(`${fieldPath}.schemaIds`, undefined);
+              } else if (value === "ref") {
                 setValue(`${fieldPath}.properties`, undefined);
+                setValue(`${fieldPath}.schemaIds`, undefined);
+              } else {
+                // merge
+                setValue(`${fieldPath}.properties`, undefined);
+                setValue(`${fieldPath}.schemaId`, undefined);
               }
             }}
           >
@@ -1154,6 +1228,7 @@ export function ParameterRow({
             <SelectContent>
               <SelectItem value="manual">手动</SelectItem>
               <SelectItem value="ref">引用</SelectItem>
+              <SelectItem value="merge">合并</SelectItem>
             </SelectContent>
           </Select>
 
@@ -1183,6 +1258,11 @@ export function ParameterRow({
             />
           )}
         </div>
+      )}
+
+      {/* Object merge mode: multi-select schemas */}
+      {canNestObject && objectSource === "merge" && (
+        <SchemaMergeEditor fieldPath={fieldPath} schemas={schemas} />
       )}
 
       {/* Object ref preview */}

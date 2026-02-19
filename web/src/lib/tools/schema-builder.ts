@@ -95,8 +95,8 @@ function buildParamSchema(
       if (param.format === "date") schema = (schema as z.ZodString).date();
       if (param.format === "date-time") schema = (schema as z.ZodString).datetime();
       if (param.format === "time") schema = (schema as z.ZodString).time();
-      if (param.format === "ipv4") schema = (schema as z.ZodString).ip({ version: "v4" });
-      if (param.format === "ipv6") schema = (schema as z.ZodString).ip({ version: "v6" });
+      if (param.format === "ipv4") schema = (schema as z.ZodString).ipv4();
+      if (param.format === "ipv6") schema = (schema as z.ZodString).ipv6();
       break;
     }
   }
@@ -137,6 +137,35 @@ function buildObjectSchema(
       return obj.catchall(valSchema);
     }
     return obj;
+  }
+
+  // --- allOf: merge multiple schemas via schemaIds ---
+  if (param.schemaIds && param.schemaIds.length > 0 && options?.schemaMap) {
+    const mergedParams: SchemaProperty[] = [];
+    const seen = new Set<string>();
+    for (const sid of param.schemaIds) {
+      const refParams = options.schemaMap[sid];
+      if (refParams) {
+        for (const p of refParams) {
+          if (seen.has(p.name)) {
+            // Later schema overrides earlier one (same name)
+            const idx = mergedParams.findIndex((m) => m.name === p.name);
+            if (idx >= 0) mergedParams[idx] = p;
+          } else {
+            seen.add(p.name);
+            mergedParams.push(p);
+          }
+        }
+      }
+    }
+    if (mergedParams.length > 0) {
+      const obj = buildNestedObject(mergedParams, resolvedVars, options, ancestorSchemaIds);
+      if (param.additionalProperties) {
+        const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, ancestorSchemaIds);
+        return obj.catchall(valSchema);
+      }
+      return obj;
+    }
   }
 
   // --- Inline properties ---
@@ -298,7 +327,7 @@ export function buildInputSchema(
 type JsonSchema7 = Record<string, unknown>;
 
 /** Build a single JSON Schema 7 property from a SchemaProperty. */
-function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
+function buildJsonSchemaProperty(param: SchemaProperty, options?: BuildSchemaOptions): JsonSchema7 {
   switch (param.type) {
     case "string": {
       const s: JsonSchema7 = { type: "string" };
@@ -342,16 +371,16 @@ function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
       return s;
     }
     case "object": {
-      return buildJsonSchemaObject(param);
+      return buildJsonSchemaObject(param, options);
     }
     case "array": {
       const s: JsonSchema7 = { type: "array" };
       if (param.tuple && param.prefixItems && param.prefixItems.length > 0) {
         // Draft 7 tuple: items as array
-        s.items = param.prefixItems.map((item) => buildJsonSchemaProperty(item));
+        s.items = param.prefixItems.map((item) => buildJsonSchemaProperty(item, options));
       } else {
         if (param.items) {
-          s.items = buildJsonSchemaProperty(param.items);
+          s.items = buildJsonSchemaProperty(param.items, options);
         }
         if (param.minItems != null) s.minItems = param.minItems;
         if (param.maxItems != null) s.maxItems = param.maxItems;
@@ -366,7 +395,7 @@ function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
           const properties: Record<string, JsonSchema7> = {};
           const required: string[] = [];
           for (const child of variantProps) {
-            const prop = buildJsonSchemaProperty(child);
+            const prop = buildJsonSchemaProperty(child, options);
             if (child.description) prop.description = child.description;
             properties[child.name] = prop;
             if (child.required) required.push(child.name);
@@ -386,18 +415,52 @@ function buildJsonSchemaProperty(param: SchemaProperty): JsonSchema7 {
 }
 
 /** Build JSON Schema object from an object-type SchemaProperty. */
-function buildJsonSchemaObject(param: SchemaProperty): JsonSchema7 {
+function buildJsonSchemaObject(param: SchemaProperty, options?: BuildSchemaOptions): JsonSchema7 {
+  // allOf: merge multiple schemas
+  if (param.schemaIds && param.schemaIds.length > 0 && options?.schemaMap) {
+    const mergedChildren: SchemaProperty[] = [];
+    const seen = new Set<string>();
+    for (const sid of param.schemaIds) {
+      const refParams = options.schemaMap[sid];
+      if (refParams) {
+        for (const p of refParams) {
+          if (seen.has(p.name)) {
+            const idx = mergedChildren.findIndex((m) => m.name === p.name);
+            if (idx >= 0) mergedChildren[idx] = p;
+          } else {
+            seen.add(p.name);
+            mergedChildren.push(p);
+          }
+        }
+      }
+    }
+    if (mergedChildren.length > 0) {
+      return buildJsonSchemaFromChildren(mergedChildren, param.defaultValue, options);
+    }
+  }
+
+  // schemaId: single schema ref
+  if (param.schemaId && options?.schemaMap?.[param.schemaId]) {
+    const refParams = options.schemaMap[param.schemaId];
+    return buildJsonSchemaFromChildren(refParams, param.defaultValue, options);
+  }
+
   if (!param.properties || param.properties.length === 0) {
     const s: JsonSchema7 = { type: "object" };
     if (param.defaultValue !== undefined) s.default = param.defaultValue;
     return s;
   }
 
+  return buildJsonSchemaFromChildren(param.properties, param.defaultValue, options);
+}
+
+/** Helper to build JSON Schema from a list of child properties. */
+function buildJsonSchemaFromChildren(children: SchemaProperty[], defaultValue?: unknown, options?: BuildSchemaOptions): JsonSchema7 {
   const properties: Record<string, JsonSchema7> = {};
   const required: string[] = [];
 
-  for (const child of param.properties) {
-    const prop = buildJsonSchemaProperty(child);
+  for (const child of children) {
+    const prop = buildJsonSchemaProperty(child, options);
     if (child.description) prop.description = child.description;
     properties[child.name] = prop;
     if (child.required) required.push(child.name);
@@ -405,7 +468,7 @@ function buildJsonSchemaObject(param: SchemaProperty): JsonSchema7 {
 
   const s: JsonSchema7 = { type: "object", properties };
   if (required.length > 0) s.required = required;
-  if (param.defaultValue !== undefined) s.default = param.defaultValue;
+  if (defaultValue !== undefined) s.default = defaultValue;
   return s;
 }
 
@@ -415,12 +478,12 @@ function buildJsonSchemaObject(param: SchemaProperty): JsonSchema7 {
  *
  * Enum type mapping: {type: "enum", enum: [...]} → {"type": "string", "enum": [...]}
  */
-export function buildJsonSchema(parameters: SchemaProperty[]): JsonSchema7 {
+export function buildJsonSchema(parameters: SchemaProperty[], options?: BuildSchemaOptions): JsonSchema7 {
   const properties: Record<string, JsonSchema7> = {};
   const required: string[] = [];
 
   for (const param of parameters) {
-    const prop = buildJsonSchemaProperty(param);
+    const prop = buildJsonSchemaProperty(param, options);
     if (param.description) prop.description = param.description;
     properties[param.name] = prop;
     if (param.required) required.push(param.name);
