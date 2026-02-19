@@ -112,7 +112,8 @@ const baseBody = {
   case: {
     id: "case-1",
     name: "Test Case",
-    input: "Hello",
+    mode: "single",
+    turns: [{ id: "t1", role: "user", content: "Hello" }],
     assertions: [{ id: "a1", type: "contains", value: "world" }],
     expectedOutput: "Hello world",
   },
@@ -157,7 +158,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
     expect(res.status).toBe(400);
   });
 
-  it("executes a case and returns result with all assertions passed", async () => {
+  it("executes a single mode case and returns result with all assertions passed", async () => {
     mockGenerateText
       .mockResolvedValueOnce({ text: "Hello world response" }) // chat
       .mockResolvedValueOnce({
@@ -178,9 +179,13 @@ describe("POST /api/eval/run/[runId]/case", () => {
     const json = await res.json();
     expect(json.result.caseId).toBe("case-1");
     expect(json.result.caseName).toBe("Test Case");
+    expect(json.result.mode).toBe("single");
     expect(json.result.allAssertionsPassed).toBe(true);
     expect(json.result.chatResponse).toBe("Hello world response");
     expect(json.result.judgeResult).toBeTruthy();
+    expect(json.result.chatMessages).toHaveLength(2);
+    expect(json.result.chatMessages[0].role).toBe("user");
+    expect(json.result.chatMessages[1].role).toBe("assistant");
   });
 
   it("skips judge when assertions fail", async () => {
@@ -203,7 +208,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
     expect(mockGenerateText).toHaveBeenCalledTimes(1);
   });
 
-  it("saves result to evalRunResults", async () => {
+  it("saves result to evalRunResults with new fields", async () => {
     mockGenerateText.mockResolvedValueOnce({ text: "response" });
     mockRunAllAssertions.mockReturnValue([]);
 
@@ -214,7 +219,11 @@ describe("POST /api/eval/run/[runId]/case", () => {
       runId: "run-1",
       caseId: "case-1",
       caseName: "Test Case",
+      mode: "single",
     });
+    expect(insertedResults[0]).toHaveProperty("turns");
+    expect(insertedResults[0]).toHaveProperty("chatMessages");
+    expect(insertedResults[0]).toHaveProperty("turnResults");
   });
 
   it("passes tools and maxSteps to generateText", async () => {
@@ -250,10 +259,77 @@ describe("POST /api/eval/run/[runId]/case", () => {
     expect(json.result.error).toBe("API timeout");
     expect(json.result.chatResponse).toBe("");
     expect(json.result.allAssertionsPassed).toBe(false);
+    expect(json.result.mode).toBe("single");
     // Should still save the error result
     expect(insertedResults.length).toBe(1);
     expect(insertedResults[0]).toMatchObject({
       error: "API timeout",
+      mode: "single",
     });
+  });
+
+  it("executes injected mode with single LLM call", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "Detailed analysis" }) // chat
+      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } } }); // judge
+    mockRunAllAssertions.mockReturnValue([]);
+
+    const injectedBody = {
+      ...baseBody,
+      case: {
+        id: "case-2",
+        name: "Injected Case",
+        mode: "injected",
+        turns: [
+          { id: "t1", role: "user", content: "What products match?" },
+          { id: "t2", role: "assistant", content: "Universe, Ocean" },
+          { id: "t3", role: "user", content: "Tell me more about Universe" },
+        ],
+        assertions: [],
+        expectedOutput: "",
+      },
+    };
+
+    const res = await POST(makeRequest(injectedBody), { params });
+    const json = await res.json();
+
+    expect(json.result.mode).toBe("injected");
+    // 1 chat LLM call + 1 judge call = 2 total
+    expect(mockGenerateText).toHaveBeenCalledTimes(2);
+    // Should have 4 chat messages (3 injected + 1 response)
+    expect(json.result.chatMessages).toHaveLength(4);
+  });
+
+  it("executes sequential mode with multiple LLM calls", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "Products: Universe, Ocean" }) // chat turn 1
+      .mockResolvedValueOnce({ text: "Max LTV is 75%" }) // chat turn 2
+      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } } }); // judge
+    mockRunAllAssertions.mockReturnValue([]);
+
+    const sequentialBody = {
+      ...baseBody,
+      case: {
+        id: "case-3",
+        name: "Sequential Case",
+        mode: "sequential",
+        turns: [
+          { id: "t1", role: "user", content: "List products" },
+          { id: "t2", role: "user", content: "What is max LTV?" },
+        ],
+        assertions: [],
+        expectedOutput: "",
+      },
+    };
+
+    const res = await POST(makeRequest(sequentialBody), { params });
+    const json = await res.json();
+
+    expect(json.result.mode).toBe("sequential");
+    // 2 chat LLM calls + 1 judge call = 3 total
+    expect(mockGenerateText).toHaveBeenCalledTimes(3);
+    // 4 chat messages: user1, assistant1, user2, assistant2
+    expect(json.result.chatMessages).toHaveLength(4);
+    expect(json.result.chatResponse).toBe("Max LTV is 75%");
   });
 });

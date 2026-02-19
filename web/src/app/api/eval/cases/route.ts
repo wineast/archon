@@ -37,7 +37,8 @@ export async function POST(req: Request) {
       agentId,
       key: body.key,
       name: body.name,
-      input: body.input,
+      mode: body.mode ?? "single",
+      turns: body.turns ?? [],
       expectedOutput: body.expectedOutput ?? null,
       assertions: body.assertions ?? [],
     })

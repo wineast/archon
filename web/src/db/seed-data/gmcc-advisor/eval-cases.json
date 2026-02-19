@@ -1,7 +1,10 @@
 [
   {
     "name": "Purchase Investment Condo CA + Borrower P&L",
-    "input": "1. Transaction Type: Purchase\n2. Occupancy Type: Investment\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 55\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Purchase\n2. Occupancy Type: Investment\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 55\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "必须路由到 Universe、Ocean、Hermes CA、Radiant CRA、Radiant Portfolio，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -14,7 +17,10 @@
   },
   {
     "name": "Cash-Out Primary Condo TX + Borrower P&L",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: Texas\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: Texas\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "必须路由到 Universe、Ocean、Hermes Non-CA，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -25,7 +31,10 @@
   },
   {
     "name": "Cash-Out Primary Condo GA + Borrower P&L",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: Georgia\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: Georgia\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "必须路由到 Universe、Hermes Non-CA，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -35,7 +44,10 @@
   },
   {
     "name": "Cash-Out Primary Condo FN CA + CPA P&L",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: Foreign National (FN)\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (6) NQM - CPA Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: Foreign National (FN)\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (6) NQM - CPA Prepared P&L" }
+    ],
     "expectedOutput": "必须路由到 Universe、Ocean、Hermes CA、Radiant CRA、Radiant Portfolio，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -48,7 +60,10 @@
   },
   {
     "name": "Cash-Out Primary Condo F1 FL + W2",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: F1 Visa with EAD\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: Florida\n8. Credit FICO Score: 680\n9. Income Type: (1) Full Doc - W2 Wage Earner",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: F1 Visa with EAD\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: Florida\n8. Credit FICO Score: 680\n9. Income Type: (1) Full Doc - W2 Wage Earner" }
+    ],
     "expectedOutput": "必须路由到 Fabulous，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Fabulous" }
@@ -57,7 +72,10 @@
   },
   {
     "name": "Purchase Primary SFR CA + No Ratio DTA",
-    "input": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: SFR\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $3,500,000\n6b. LTV (%): 66\n7a. Property State: California\n8. Credit FICO Score: 730\n9. Income Type: (3) No Ratio - No Job/No DTI-DTA",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: SFR\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $3,500,000\n6b. LTV (%): 66\n7a. Property State: California\n8. Credit FICO Score: 730\n9. Income Type: (3) No Ratio - No Job/No DTI-DTA" }
+    ],
     "expectedOutput": "必须路由到 Universe、Radiant AU，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -67,7 +85,10 @@
   },
   {
     "name": "Cash-Out Primary Condo FN CA + Asset Depletion + FICO 300",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: Foreign National (FN)\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 63\n7a. Property State: California\n8. Credit FICO Score: 300\n9. Income Type: (10) No Ratio - Asset Depletion/Utilization",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: Foreign National (FN)\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 63\n7a. Property State: California\n8. Credit FICO Score: 300\n9. Income Type: (10) No Ratio - Asset Depletion/Utilization" }
+    ],
     "expectedOutput": "必须路由到 Universe、Radiant AU，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -77,7 +98,10 @@
   },
   {
     "name": "Rate/Term Refi Primary Condo HI + Asset Depletion",
-    "input": "1. Transaction Type: Rate/Term Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 67\n7a. Property State: Hawaii\n8. Credit FICO Score: 690\n9. Income Type: (10) No Ratio - Asset Depletion/Utilization",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Rate/Term Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 67\n7a. Property State: Hawaii\n8. Credit FICO Score: 690\n9. Income Type: (10) No Ratio - Asset Depletion/Utilization" }
+    ],
     "expectedOutput": "必须路由到 Radiant AU，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Radiant.*AU|Radiant.*Asset|AU" }
@@ -86,7 +110,10 @@
   },
   {
     "name": "Cash-Out Investment PUD FN WA + Self Employed",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Investment\n3. Property Type: PUD\n4. Citizenship/Residency Status: Foreign National (FN)\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $2,500,000\n6b. LTV (%): 55\n7a. Property State: Washington\n8. Credit FICO Score: 700\n9. Income Type: (2) NQM - 1year of 2-years Full Doc-Self-employed",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Investment\n3. Property Type: PUD\n4. Citizenship/Residency Status: Foreign National (FN)\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $2,500,000\n6b. LTV (%): 55\n7a. Property State: Washington\n8. Credit FICO Score: 700\n9. Income Type: (2) NQM - 1year of 2-years Full Doc-Self-employed" }
+    ],
     "expectedOutput": "必须路由到 Universe、Hermes Non-CA，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -96,7 +123,10 @@
   },
   {
     "name": "Cash-Out Primary 2-4 Units CA + Self Employed",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: 2-4 Units\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $2,300,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 690\n9. Income Type: (2) NQM - 1year of 2-years Full Doc-Self-employed",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: 2-4 Units\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $2,300,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 690\n9. Income Type: (2) NQM - 1year of 2-years Full Doc-Self-employed" }
+    ],
     "expectedOutput": "必须路由到 Universe、Ocean、Hermes CA、Radiant CRA、Radiant Portfolio，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -109,7 +139,10 @@
   },
   {
     "name": "Cash-Out Primary Condo F1 CA + W2",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: F1 Visa with EAD\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (1) Full Doc - W2 Wage Earner",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: F1 Visa with EAD\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (1) Full Doc - W2 Wage Earner" }
+    ],
     "expectedOutput": "必须路由到 Thunder、Celebrity，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Thunder" },
@@ -119,7 +152,10 @@
   },
   {
     "name": "Rate/Term Refi Primary Condo TX + Bank Statements",
-    "input": "1. Transaction Type: Rate/Term Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 67\n7a. Property State: Texas\n8. Credit FICO Score: 690\n9. Income Type: (4) NQM - 12/24mo Bank Statements",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Rate/Term Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 67\n7a. Property State: Texas\n8. Credit FICO Score: 690\n9. Income Type: (4) NQM - 12/24mo Bank Statements" }
+    ],
     "expectedOutput": "必须路由到 Universe、Ocean、Hermes Non-CA，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -130,7 +166,10 @@
   },
   {
     "name": "Cash-Out Primary Condo AK + Borrower P&L (No Match)",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $3,000,000\n6b. LTV (%): 50\n7a. Property State: Alaska\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $3,000,000\n6b. LTV (%): 50\n7a. Property State: Alaska\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "没有任何产品可以匹配此贷款条件。Alaska 不在任何产品的覆盖范围内。",
     "assertions": [
       { "type": "regex", "value": "(?i)(未找到|没有|no.*(product|match)|0)" }
@@ -139,7 +178,10 @@
   },
   {
     "name": "Purchase Primary SFR CA + WVOE",
-    "input": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: SFR\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $3,500,000\n6b. LTV (%): 66\n7a. Property State: California\n8. Credit FICO Score: 730\n9. Income Type: (8) NQM-WVOE",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: SFR\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $3,500,000\n6b. LTV (%): 66\n7a. Property State: California\n8. Credit FICO Score: 730\n9. Income Type: (8) NQM-WVOE" }
+    ],
     "expectedOutput": "必须路由到 Universe、Ocean、Hermes CA、Radiant CRA、Radiant Portfolio，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -152,7 +194,10 @@
   },
   {
     "name": "Rate/Term Refi Primary Condo MA + 1099",
-    "input": "1. Transaction Type: Rate/Term Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 67\n7a. Property State: Massachusetts\n8. Credit FICO Score: 690\n9. Income Type: (7) NQM - 1-2yr 1099",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Rate/Term Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 67\n7a. Property State: Massachusetts\n8. Credit FICO Score: 690\n9. Income Type: (7) NQM - 1-2yr 1099" }
+    ],
     "expectedOutput": "必须路由到 Universe，不允许路由到其他产品。",
     "assertions": [
       { "type": "regex", "value": "Universe" }
@@ -161,7 +206,10 @@
   },
   {
     "name": "universe1 - Purchase+Investment → Universe 核保不通过",
-    "input": "1. Transaction Type: Purchase\n2. Occupancy Type: Investment\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 55\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Purchase\n2. Occupancy Type: Investment\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 55\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "Universe 产品被路由到但核保不通过，因为 Purchase + Investment 组合不允许。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -171,7 +219,10 @@
   },
   {
     "name": "universe2 - Texas+Primary → Universe 核保不通过",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: Texas\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: Texas\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "Universe 产品被路由到但核保不通过，因为 Texas 州不允许 Primary 居住类型。",
     "assertions": [
       { "type": "regex", "value": "Universe" },
@@ -181,7 +232,10 @@
   },
   {
     "name": "Ocean1 - F1 Visa → Ocean 核保不通过",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: F1 Visa with EAD\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: F1 Visa with EAD\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "Ocean 产品被路由到但核保不通过，因为 F1 签证不在允许的身份类型中。",
     "assertions": [
       { "type": "regex", "value": "Ocean" },
@@ -191,7 +245,10 @@
   },
   {
     "name": "Ocean2 - FICO<700 减 5% LTV → Ocean 核保不通过",
-    "input": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: PUD\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,400,000\n6b. LTV (%): 67\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: PUD\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,400,000\n6b. LTV (%): 67\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "Ocean 产品被路由到但核保不通过，因为 FICO < 700 需减 5% 最大 LTV，67% 超出调整后的限制。",
     "assertions": [
       { "type": "regex", "value": "Ocean" },
@@ -201,7 +258,10 @@
   },
   {
     "name": "Ocean6 - FICO<680 → Ocean 核保不通过",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: 2nd Home\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 660\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: 2nd Home\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 660\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "Ocean 产品被路由到但核保不通过，因为 FICO 660 低于最低要求 680。",
     "assertions": [
       { "type": "regex", "value": "Ocean" },
@@ -211,7 +271,10 @@
   },
   {
     "name": "Ocean8 - 金额超 2MM → Ocean 核保不通过",
-    "input": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $2,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: Warrantable Condo\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $2,500,000\n6b. LTV (%): 50\n7a. Property State: California\n8. Credit FICO Score: 680\n9. Income Type: (5) NQM - Borrower Prepared P&L" }
+    ],
     "expectedOutput": "Ocean 产品被路由到但核保不通过，因为贷款金额 $2,500,000 超过 Ocean 的 $2,000,000 上限。",
     "assertions": [
       { "type": "regex", "value": "Ocean" },
@@ -221,12 +284,56 @@
   },
   {
     "name": "Duplex 别名自动映射 Multi-Unit + units=2",
-    "input": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: Duplex\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 55\n7a. Property State: California\n8. Credit FICO Score: 720\n9. Income Type: (1) Full Doc - W2 Wage Earner",
+    "mode": "single",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: Duplex\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 55\n7a. Property State: California\n8. Credit FICO Score: 720\n9. Income Type: (1) Full Doc - W2 Wage Earner" }
+    ],
     "expectedOutput": "AI 应将 Duplex 自动映射为 Multi-Unit (Property Type) 且 units=2，不应单独询问用户 units 数量。应直接用 Multi-Unit + 2 units 进行路由和核保。",
     "assertions": [
       { "type": "regex", "value": "(?i)(multi.?unit|2.?unit|duplex)" },
       { "type": "not_regex", "value": "(?i)(几单元|how many unit|请确认.*unit|确认.*单元)" }
     ],
     "tags": ["property-type-alias"]
+  },
+  {
+    "name": "Injected: Follow-up on Universe product details",
+    "mode": "injected",
+    "turns": [
+      { "role": "user", "content": "1. Transaction Type: Purchase\n2. Occupancy Type: Primary\n3. Property Type: SFR\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 55\n7a. Property State: California\n8. Credit FICO Score: 720\n9. Income Type: (5) NQM - Borrower Prepared P&L" },
+      { "role": "assistant", "content": "Based on the loan parameters provided, the following products are eligible:\n\n1. **Universe** - Eligible\n2. **Ocean** - Eligible\n3. **Hermes CA** - Eligible\n\nWould you like me to provide detailed underwriting analysis for any of these products?" },
+      { "role": "user", "content": "Please provide detailed underwriting analysis for the Universe product." }
+    ],
+    "expectedOutput": "应提供 Universe 产品的详细核保分析，包括 LTV 限制、FICO 要求等具体条件。",
+    "assertions": [
+      { "type": "regex", "value": "Universe" },
+      { "type": "regex", "value": "(?i)(LTV|loan.to.value)" }
+    ],
+    "tags": ["multi-turn", "injected"]
+  },
+  {
+    "name": "Sequential: Initial routing then follow-up question",
+    "mode": "sequential",
+    "turns": [
+      {
+        "role": "user",
+        "content": "1. Transaction Type: Cash Out Refinance\n2. Occupancy Type: Primary\n3. Property Type: SFR\n4. Citizenship/Residency Status: US Citizen\n5. Lien Position: 1st Mortgage\n6a. Loan Amount: $1,500,000\n6b. LTV (%): 55\n7a. Property State: California\n8. Credit FICO Score: 720\n9. Income Type: (4) NQM - 12/24mo Bank Statements",
+        "assertions": [
+          { "type": "regex", "value": "Universe" },
+          { "type": "regex", "value": "Ocean" }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "What is the maximum LTV allowed for the Ocean product with my FICO score?",
+        "assertions": [
+          { "type": "regex", "value": "(?i)(LTV|loan.to.value)" },
+          { "type": "regex", "value": "(?i)(Ocean)" }
+        ],
+        "judge": true
+      }
+    ],
+    "expectedOutput": "第一轮应路由到产品列表，第二轮应回答 Ocean 产品在给定 FICO 下的 LTV 限制。",
+    "assertions": [],
+    "tags": ["multi-turn", "sequential"]
   }
 ]

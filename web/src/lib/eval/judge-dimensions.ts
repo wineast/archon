@@ -9,16 +9,18 @@ export function resolveDimensions(dimensions: Dimension[]): Dimension[] {
   return dimensions.length > 0 ? dimensions : DEFAULT_DIMENSIONS;
 }
 
-const dimensionScoreSchema = z.object({
-  score: z.number().min(1).max(10),
-  reason: z.string(),
-});
+function dimensionScoreSchema(min: number, max: number) {
+  return z.object({
+    score: z.number().min(min).max(max),
+    reason: z.string(),
+  });
+}
 
 export function buildJudgeSchema(dimensions: Dimension[]) {
   const resolved = resolveDimensions(dimensions);
-  const shape: Record<string, typeof dimensionScoreSchema> = {};
+  const shape: Record<string, z.ZodObject<{ score: z.ZodNumber; reason: z.ZodString }>> = {};
   for (const dim of resolved) {
-    shape[dim.key] = dimensionScoreSchema;
+    shape[dim.key] = dimensionScoreSchema(dim.min ?? 1, dim.max ?? 10);
   }
   return z.object(shape);
 }

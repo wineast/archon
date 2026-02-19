@@ -16,8 +16,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { AssertionRow } from "./assertion-row";
+import { TurnsList } from "./turns-list";
 import { ResultCard } from "./result-card";
 import { useActiveModelConfig } from "@/lib/model-config/hooks";
 import { useDefaultJudgeConfig, useEvalRuns } from "@/lib/eval/hooks";
@@ -30,6 +38,8 @@ import type {
   Assertion,
   EvalResult,
   EvalCase,
+  EvalCaseMode,
+  EvalTurn,
   CreateEvalRunResponse,
   RunCaseResponse,
 } from "@/lib/eval/types";
@@ -48,7 +58,8 @@ interface CaseDetailProps {
 
 export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailProps) {
   const [name, setName] = useState(evalCase.name);
-  const [input, setInput] = useState(evalCase.input);
+  const [mode, setMode] = useState<EvalCaseMode>(evalCase.mode);
+  const [turns, setTurns] = useState<EvalTurn[]>(evalCase.turns);
   const [expectedOutput, setExpectedOutput] = useState(
     evalCase.expectedOutput ?? ""
   );
@@ -74,7 +85,8 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
 
   const dirty =
     name !== evalCase.name ||
-    input !== evalCase.input ||
+    mode !== evalCase.mode ||
+    JSON.stringify(turns) !== JSON.stringify(evalCase.turns) ||
     expectedOutput !== (evalCase.expectedOutput ?? "") ||
     JSON.stringify(assertions) !== JSON.stringify(evalCase.assertions) ||
     JSON.stringify(tags) !== JSON.stringify(evalCase.tags ?? []);
@@ -124,9 +136,35 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     [tagInput, handleAddTag]
   );
 
+  const handleModeChange = useCallback(
+    (newMode: EvalCaseMode) => {
+      setMode(newMode);
+      // When switching to single, ensure at least one user turn exists
+      if (newMode === "single" && (turns.length === 0 || turns[0]?.role !== "user")) {
+        setTurns([{ id: nanoid(), role: "user", content: turns[0]?.content ?? "" }]);
+      }
+      // When switching from single, keep existing turns
+    },
+    [turns]
+  );
+
+  // For single mode: map single textarea to turns[0].content
+  const singleInput = turns[0]?.content ?? "";
+  const handleSingleInputChange = useCallback(
+    (content: string) => {
+      if (turns.length === 0) {
+        setTurns([{ id: nanoid(), role: "user", content }]);
+      } else {
+        setTurns(turns.map((t, i) => (i === 0 ? { ...t, content } : t)));
+      }
+    },
+    [turns]
+  );
+
   const handleReset = useCallback(() => {
     setName(evalCase.name);
-    setInput(evalCase.input);
+    setMode(evalCase.mode);
+    setTurns(evalCase.turns);
     setExpectedOutput(evalCase.expectedOutput ?? "");
     setAssertions(evalCase.assertions);
     setTags(evalCase.tags ?? []);
@@ -138,7 +176,8 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     try {
       await onSave(evalCase.id, {
         name,
-        input,
+        mode,
+        turns,
         expectedOutput: expectedOutput || null,
         assertions,
         tags,
@@ -146,7 +185,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     } finally {
       setSaving(false);
     }
-  }, [evalCase.id, name, input, expectedOutput, assertions, tags, onSave]);
+  }, [evalCase.id, name, mode, turns, expectedOutput, assertions, tags, onSave]);
 
   const handleDelete = useCallback(async () => {
     setDeleting(true);
@@ -156,6 +195,22 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
       setDeleting(false);
     }
   }, [evalCase.id, onDelete]);
+
+  const makeErrorResult = (error: string): EvalResult => ({
+    caseId: evalCase.id,
+    caseName: name,
+    mode,
+    turns,
+    chatMessages: [],
+    turnResults: [],
+    chatResponse: "",
+    assertionResults: [],
+    allAssertionsPassed: false,
+    judgeResult: null,
+    timestamp: Date.now(),
+    durationMs: 0,
+    error,
+  });
 
   const handleRun = useCallback(async () => {
     if (!activeModelConfig || !defaultJudge) {
@@ -168,7 +223,8 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
       id: evalCase.id,
       key: evalCase.key,
       name,
-      input,
+      mode,
+      turns,
       assertions,
       expectedOutput,
       tags,
@@ -205,18 +261,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
       setRunResults((prev) => [
         {
           modelName,
-          result: {
-            caseId: currentCase.id,
-            caseName: currentCase.name,
-            input: currentCase.input,
-            chatResponse: "",
-            assertionResults: [],
-            allAssertionsPassed: false,
-            judgeResult: null,
-            timestamp: Date.now(),
-            durationMs: 0,
-            error: err instanceof Error ? err.message : String(err),
-          },
+          result: makeErrorResult(err instanceof Error ? err.message : String(err)),
         },
         ...prev,
       ]);
@@ -240,35 +285,13 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
 
       if (!res.ok) {
         const errText = await res.text();
-        result = {
-          caseId: currentCase.id,
-          caseName: currentCase.name,
-          input: currentCase.input,
-          chatResponse: "",
-          assertionResults: [],
-          allAssertionsPassed: false,
-          judgeResult: null,
-          timestamp: Date.now(),
-          durationMs: 0,
-          error: `HTTP ${res.status}: ${errText}`,
-        };
+        result = makeErrorResult(`HTTP ${res.status}: ${errText}`);
       } else {
         const data: RunCaseResponse = await res.json();
         result = data.result;
       }
     } catch (err) {
-      result = {
-        caseId: currentCase.id,
-        caseName: currentCase.name,
-        input: currentCase.input,
-        chatResponse: "",
-        assertionResults: [],
-        allAssertionsPassed: false,
-        judgeResult: null,
-        timestamp: Date.now(),
-        durationMs: 0,
-        error: err instanceof Error ? err.message : String(err),
-      };
+      result = makeErrorResult(err instanceof Error ? err.message : String(err));
     }
 
     // Step 3: Finalize the run
@@ -283,8 +306,10 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     mutateRuns();
   }, [
     evalCase.id,
+    evalCase.key,
     name,
-    input,
+    mode,
+    turns,
     assertions,
     expectedOutput,
     tags,
@@ -353,15 +378,53 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">
-              Input (User Message)
+              Mode
             </label>
-            <Textarea
-              className="mt-1 min-h-[60px] resize-none text-sm"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="User message to send..."
-            />
+            <Select value={mode} onValueChange={(v) => handleModeChange(v as EvalCaseMode)}>
+              <SelectTrigger className="mt-1 h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single" className="text-xs">
+                  Single (one question)
+                </SelectItem>
+                <SelectItem value="injected" className="text-xs">
+                  Injected (history + last question)
+                </SelectItem>
+                <SelectItem value="sequential" className="text-xs">
+                  Sequential (multi-turn conversation)
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {mode === "single" ? (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                Input (User Message)
+              </label>
+              <Textarea
+                className="mt-1 min-h-[60px] resize-none text-sm"
+                value={singleInput}
+                onChange={(e) => handleSingleInputChange(e.target.value)}
+                placeholder="User message to send..."
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                Turns
+              </label>
+              <div className="mt-1">
+                <TurnsList
+                  turns={turns}
+                  mode={mode}
+                  onTurnsChange={setTurns}
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-medium text-muted-foreground">
               Expected Output (for judge reference)

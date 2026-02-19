@@ -107,7 +107,8 @@ const baseCase: EvalCaseRow = {
   agentId: "agent-1",
   key: "test_case",
   name: "Test Case",
-  input: "Hello, how are you?",
+  mode: "single" as const,
+  turns: [{ id: "t1", role: "user" as const, content: "Hello, how are you?" }],
   expectedOutput: "I am fine",
   assertions: [{ id: "a1", type: "contains", value: "fine" }],
   tags: ["greeting"],
@@ -166,12 +167,25 @@ describe("Run button rendering", () => {
   });
 });
 
+describe("Mode selector", () => {
+  it("renders the mode selector with single as default", () => {
+    renderDetail();
+    expect(screen.getByText("Single (one question)")).toBeInTheDocument();
+  });
+});
+
 describe("Run execution", () => {
   it("calls 3-step API and shows result on success", async () => {
     const mockResult = {
       caseId: "case-1",
       caseName: "Test Case",
-      input: "Hello, how are you?",
+      mode: "single",
+      turns: [{ id: "t1", role: "user", content: "Hello, how are you?" }],
+      chatMessages: [
+        { role: "user", content: "Hello, how are you?" },
+        { role: "assistant", content: "I am fine, thank you!" },
+      ],
+      turnResults: [],
       chatResponse: "I am fine, thank you!",
       assertionResults: [
         { assertion: { id: "a1", type: "contains", value: "fine" }, passed: true, message: "Contains 'fine'" },
@@ -307,7 +321,10 @@ describe("Run execution", () => {
             result: {
               caseId: "case-1",
               caseName: "Test Case",
-              input: "Modified input",
+              mode: "single",
+              turns: [{ id: "t1", role: "user", content: "Modified input" }],
+              chatMessages: [],
+              turnResults: [],
               chatResponse: "Response",
               assertionResults: [],
               allAssertionsPassed: true,
@@ -334,18 +351,22 @@ describe("Run execution", () => {
       expect(globalThis.fetch).toHaveBeenCalledTimes(3);
     });
 
-    // Verify the case body sent to API uses modified input
+    // Verify the case body sent to API uses modified input (via turns)
     const step2Call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
       .calls[1];
     const step2Body = JSON.parse(step2Call[1].body);
-    expect(step2Body.case.input).toBe("Modified input");
+    expect(step2Body.case.turns[0].content).toBe("Modified input");
+    expect(step2Body.case.mode).toBe("single");
   });
 
   it("accumulates multiple run results with newest first", async () => {
     const makeResult = (ts: number) => ({
       caseId: "case-1",
       caseName: "Test Case",
-      input: "Hello",
+      mode: "single",
+      turns: [{ id: "t1", role: "user", content: "Hello" }],
+      chatMessages: [],
+      turnResults: [],
       chatResponse: `Response at ${ts}`,
       assertionResults: [],
       allAssertionsPassed: true,

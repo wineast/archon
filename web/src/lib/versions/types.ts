@@ -1,5 +1,5 @@
 import type { ToolParameter } from "@/lib/tools/types";
-import type { Assertion, Dimension } from "@/lib/eval/types";
+import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
 
 /* ─────────── Snapshot Item Types (no id/agentId/createdAt/updatedAt) ─────────── */
 
@@ -79,7 +79,8 @@ export interface ChatConfigSnapshotItem {
 export interface EvalCaseSnapshotItem {
   key: string;
   name: string;
-  input: string;
+  mode: EvalCaseMode;
+  turns: EvalTurn[];
   expectedOutput: string | null;
   assertions: Assertion[];
   tags: string[];

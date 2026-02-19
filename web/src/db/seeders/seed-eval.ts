@@ -2,7 +2,7 @@ import { join } from "path";
 import { nanoid } from "nanoid";
 import { evalCases, evalJudgeConfigs, evalRunResults, evalRuns } from "../schema";
 import { readJson, toKey, logSection, log } from "../seed-utils";
-import type { Assertion, Dimension } from "@/lib/eval/types";
+import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
 import type { Seeder } from "./types";
 
 export const seedEval: Seeder = {
@@ -55,7 +55,8 @@ export const seedEval: Seeder = {
       Array<{
         key?: string;
         name: string;
-        input: string;
+        mode: EvalCaseMode;
+        turns: Array<Omit<EvalTurn, "id"> & { assertions?: Array<Omit<Assertion, "id">>; judge?: boolean }>;
         expectedOutput: string;
         assertions: Array<Omit<Assertion, "id">>;
         tags: string[];
@@ -64,12 +65,20 @@ export const seedEval: Seeder = {
 
     for (const c of evalCasesSeed) {
       const key = c.key ?? toKey(c.name);
+      const turns: EvalTurn[] = c.turns.map((t) => ({
+        id: nanoid(),
+        role: t.role,
+        content: t.content,
+        ...(t.assertions ? { assertions: t.assertions.map((a): Assertion => ({ ...a, id: nanoid() })) } : {}),
+        ...(t.judge !== undefined ? { judge: t.judge } : {}),
+      }));
       const [row] = await ctx.db
         .insert(evalCases)
         .values({
           key,
           name: c.name,
-          input: c.input,
+          mode: c.mode,
+          turns,
           expectedOutput: c.expectedOutput || null,
           assertions: c.assertions.map((a): Assertion => ({ ...a, id: nanoid() })),
           tags: c.tags,
@@ -79,7 +88,8 @@ export const seedEval: Seeder = {
           target: [evalCases.agentId, evalCases.key],
           set: {
             name: c.name,
-            input: c.input,
+            mode: c.mode,
+            turns,
             expectedOutput: c.expectedOutput || null,
             assertions: c.assertions.map((a): Assertion => ({ ...a, id: nanoid() })),
             tags: c.tags,

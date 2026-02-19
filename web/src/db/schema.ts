@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import type { ToolParameter } from "@/lib/tools/types";
-import type { Assertion, AssertionResult, Dimension, JudgeResult } from "@/lib/eval/types";
+import type { Assertion, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
 
 /* ─────────── Agent Role Constants ─────────── */
 
@@ -374,7 +374,8 @@ export const evalCases = pgTable(
     }),
     key: text("key").notNull(),
     name: text("name").notNull(),
-    input: text("input").notNull(),
+    mode: text("mode").notNull().default("single").$type<EvalCaseMode>(),
+    turns: jsonb("turns").$type<EvalTurn[]>().notNull().default([]),
     expectedOutput: text("expected_output"),
     assertions: jsonb("assertions").$type<Assertion[]>().notNull().default([]),
     tags: text("tags").array().notNull().default([]),
@@ -454,7 +455,10 @@ export const evalRunResults = pgTable(
       .references(() => evalRuns.id, { onDelete: "cascade" }),
     caseId: text("case_id").notNull(),
     caseName: text("case_name").notNull(),
-    input: text("input").notNull(),
+    mode: text("mode").notNull().default("single").$type<EvalCaseMode>(),
+    turns: jsonb("turns").$type<EvalTurn[]>().notNull().default([]),
+    chatMessages: jsonb("chat_messages").$type<ChatMessage[]>().notNull().default([]),
+    turnResults: jsonb("turn_results").$type<TurnResult[]>().notNull().default([]),
     chatResponse: text("chat_response"),
     assertionResults: jsonb("assertion_results")
       .$type<AssertionResult[]>()
