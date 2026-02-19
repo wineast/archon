@@ -32,18 +32,18 @@ export function ChatConfigDetail({
   const [welcomeIcon, setWelcomeIcon] = useState<WelcomeIconKey>(
     config.welcomeIcon as WelcomeIconKey
   );
-  const [quickActions, setQuickActions] = useState<string[]>(config.quickActions);
+  const [quickActions, setQuickActions] = useState<string[]>(config.quickActions ?? []);
   const [placeholder, setPlaceholder] = useState(config.placeholder);
-  const [suggestions, setSuggestions] = useState<string[]>(config.suggestions);
+  const [suggestions, setSuggestions] = useState<string[]>(config.suggestions ?? []);
 
   // Reset draft when config changes
   useEffect(() => {
     setTitle(config.title);
     setWelcomeTitle(config.welcomeTitle);
     setWelcomeIcon(config.welcomeIcon as WelcomeIconKey);
-    setQuickActions(config.quickActions);
+    setQuickActions(config.quickActions ?? []);
     setPlaceholder(config.placeholder);
-    setSuggestions(config.suggestions);
+    setSuggestions(config.suggestions ?? []);
   }, [config]);
 
   const handleSave = useCallback(async () => {

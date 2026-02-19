@@ -1,0 +1,513 @@
+import { db } from "@/db";
+import {
+  agents,
+  tools,
+  functions,
+  components,
+  schemas,
+  wikiDocuments,
+  datasets,
+  modelConfigs,
+  chatConfigs,
+  evalCases,
+  evalJudgeConfigs,
+  toolTestCases,
+  functionTestCases,
+  componentTestCases,
+} from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
+import type { ExtractTablesWithRelations } from "drizzle-orm";
+import type { PgTransaction } from "drizzle-orm/pg-core";
+import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import type * as schema from "@/db/schema";
+import type {
+  AgentSnapshot,
+  ToolSnapshotItem,
+  FunctionSnapshotItem,
+  ComponentSnapshotItem,
+  SchemaSnapshotItem,
+  WikiDocumentSnapshotItem,
+  DatasetSnapshotItem,
+  ModelConfigSnapshotItem,
+  ChatConfigSnapshotItem,
+  EvalCaseSnapshotItem,
+  EvalJudgeConfigSnapshotItem,
+  ToolTestCaseSnapshotItem,
+  FunctionTestCaseSnapshotItem,
+  ComponentTestCaseSnapshotItem,
+} from "./types";
+
+type Tx = PgTransaction<
+  PostgresJsQueryResultHKT,
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
+>;
+
+/* ═══════════════════════════════════════════════
+   Build Snapshot
+   ═══════════════════════════════════════════════ */
+
+export async function buildSnapshot(agentId: string): Promise<AgentSnapshot> {
+  const [
+    [agent],
+    toolRows,
+    functionRows,
+    componentRows,
+    schemaRows,
+    wikiRows,
+    datasetRows,
+    modelConfigRows,
+    chatConfigRows,
+    evalCaseRows,
+    evalJudgeConfigRows,
+    toolTestCaseRows,
+    functionTestCaseRows,
+    componentTestCaseRows,
+  ] = await Promise.all([
+    db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
+    db.select().from(tools).where(eq(tools.agentId, agentId)),
+    db.select().from(functions).where(eq(functions.agentId, agentId)),
+    db.select().from(components).where(eq(components.agentId, agentId)),
+    db.select().from(schemas).where(eq(schemas.agentId, agentId)),
+    db.select().from(wikiDocuments).where(eq(wikiDocuments.agentId, agentId)),
+    db.select().from(datasets).where(eq(datasets.agentId, agentId)),
+    db.select().from(modelConfigs).where(eq(modelConfigs.agentId, agentId)),
+    db.select().from(chatConfigs).where(eq(chatConfigs.agentId, agentId)),
+    db.select().from(evalCases).where(eq(evalCases.agentId, agentId)),
+    db
+      .select()
+      .from(evalJudgeConfigs)
+      .where(eq(evalJudgeConfigs.agentId, agentId)),
+    // Test cases: join through parent tables
+    db
+      .select()
+      .from(toolTestCases)
+      .innerJoin(tools, eq(toolTestCases.toolId, tools.id))
+      .where(eq(tools.agentId, agentId)),
+    db
+      .select()
+      .from(functionTestCases)
+      .innerJoin(functions, eq(functionTestCases.functionId, functions.id))
+      .where(eq(functions.agentId, agentId)),
+    db
+      .select()
+      .from(componentTestCases)
+      .innerJoin(
+        components,
+        eq(componentTestCases.componentId, components.id)
+      )
+      .where(eq(components.agentId, agentId)),
+  ]);
+
+  if (!agent) throw new Error("Agent not found");
+
+  // Build tool id → key map
+  const toolIdToKey = new Map(toolRows.map((t) => [t.id, t.key]));
+  const funcIdToKey = new Map(functionRows.map((f) => [f.id, f.key]));
+  const compIdToKey = new Map(componentRows.map((c) => [c.id, c.key]));
+
+  // Group test cases by parent key
+  const toolTestsByKey = new Map<string, ToolTestCaseSnapshotItem[]>();
+  for (const row of toolTestCaseRows) {
+    const key = toolIdToKey.get(row.tools.id)!;
+    const items = toolTestsByKey.get(key) ?? [];
+    items.push({
+      name: row.tool_test_cases.name,
+      input: row.tool_test_cases.input,
+      expectedOutput: row.tool_test_cases.expectedOutput,
+      tags: row.tool_test_cases.tags,
+    });
+    toolTestsByKey.set(key, items);
+  }
+
+  const funcTestsByKey = new Map<string, FunctionTestCaseSnapshotItem[]>();
+  for (const row of functionTestCaseRows) {
+    const key = funcIdToKey.get(row.functions.id)!;
+    const items = funcTestsByKey.get(key) ?? [];
+    items.push({
+      name: row.function_test_cases.name,
+      input: row.function_test_cases.input,
+      expectedOutput: row.function_test_cases.expectedOutput,
+      tags: row.function_test_cases.tags,
+    });
+    funcTestsByKey.set(key, items);
+  }
+
+  const compTestsByKey = new Map<string, ComponentTestCaseSnapshotItem[]>();
+  for (const row of componentTestCaseRows) {
+    const key = compIdToKey.get(row.components.id)!;
+    const items = compTestsByKey.get(key) ?? [];
+    items.push({
+      name: row.component_test_cases.name,
+      tool: row.component_test_cases.tool,
+      tags: row.component_test_cases.tags,
+    });
+    compTestsByKey.set(key, items);
+  }
+
+  // Wiki: convert parentId to parentKey
+  const wikiIdToKey = new Map(wikiRows.map((w) => [w.id, w.key]));
+
+  return {
+    agent: {
+      name: agent.name,
+      description: agent.description,
+      icon: agent.icon,
+      slug: agent.slug,
+      isPublic: agent.isPublic,
+    },
+    tools: toolRows.map(
+      (t): ToolSnapshotItem => ({
+        key: t.key,
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters,
+        returnParameters: t.returnParameters,
+        parametersSchemaRef: t.parametersSchemaRef,
+        returnParametersSchemaRef: t.returnParametersSchemaRef,
+        output: t.output,
+        handler: t.handler,
+        component: t.component,
+        componentSource: t.componentSource,
+        enabled: t.enabled,
+        executionTarget: t.executionTarget,
+        testCases: toolTestsByKey.get(t.key) ?? [],
+      })
+    ),
+    functions: functionRows.map(
+      (f): FunctionSnapshotItem => ({
+        key: f.key,
+        name: f.name,
+        description: f.description,
+        code: f.code,
+        parameters: f.parameters,
+        returnParameters: f.returnParameters,
+        testCases: funcTestsByKey.get(f.key) ?? [],
+      })
+    ),
+    components: componentRows.map(
+      (c): ComponentSnapshotItem => ({
+        key: c.key,
+        name: c.name,
+        description: c.description,
+        componentSource: c.componentSource,
+        schemaRef: c.schemaRef,
+        generatedCss: c.generatedCss,
+        testCases: compTestsByKey.get(c.key) ?? [],
+      })
+    ),
+    schemas: schemaRows.map(
+      (s): SchemaSnapshotItem => ({
+        key: s.key,
+        name: s.name,
+        description: s.description,
+        parameters: s.parameters,
+      })
+    ),
+    wikiDocuments: wikiRows.map(
+      (w): WikiDocumentSnapshotItem => ({
+        key: w.key,
+        title: w.title,
+        content: w.content,
+        order: w.order,
+        parentKey: w.parentId ? (wikiIdToKey.get(w.parentId) ?? null) : null,
+      })
+    ),
+    datasets: datasetRows.map(
+      (d): DatasetSnapshotItem => ({
+        key: d.key,
+        name: d.name,
+        description: d.description,
+        data: d.data,
+      })
+    ),
+    modelConfigs: modelConfigRows.map(
+      (m): ModelConfigSnapshotItem => ({
+        key: m.key,
+        name: m.name,
+        modelId: m.modelId,
+        systemPrompt: m.systemPrompt,
+        temperature: m.temperature,
+        isActive: m.isActive,
+      })
+    ),
+    chatConfig: chatConfigRows[0]
+      ? ({
+          title: chatConfigRows[0].title,
+          welcomeTitle: chatConfigRows[0].welcomeTitle,
+          welcomeIcon: chatConfigRows[0].welcomeIcon,
+          quickActions: chatConfigRows[0].quickActions,
+          placeholder: chatConfigRows[0].placeholder,
+          suggestions: chatConfigRows[0].suggestions,
+        } satisfies ChatConfigSnapshotItem)
+      : null,
+    evalCases: evalCaseRows.map(
+      (e): EvalCaseSnapshotItem => ({
+        key: e.key,
+        name: e.name,
+        input: e.input,
+        expectedOutput: e.expectedOutput,
+        assertions: e.assertions,
+        tags: e.tags,
+      })
+    ),
+    evalJudgeConfigs: evalJudgeConfigRows.map(
+      (j): EvalJudgeConfigSnapshotItem => ({
+        key: j.key,
+        name: j.name,
+        model: j.model,
+        systemPrompt: j.systemPrompt,
+        temperature: j.temperature,
+        dimensions: j.dimensions,
+        isDefault: j.isDefault,
+      })
+    ),
+  };
+}
+
+/* ═══════════════════════════════════════════════
+   Restore Snapshot
+   ═══════════════════════════════════════════════ */
+
+export async function restoreSnapshot(
+  agentId: string,
+  snapshot: AgentSnapshot,
+  tx: Tx
+) {
+  // 1. Delete all existing config data (CASCADE takes care of test cases & test runs)
+  await Promise.all([
+    tx.delete(tools).where(eq(tools.agentId, agentId)),
+    tx.delete(functions).where(eq(functions.agentId, agentId)),
+    tx.delete(components).where(eq(components.agentId, agentId)),
+    tx.delete(schemas).where(eq(schemas.agentId, agentId)),
+    tx.delete(wikiDocuments).where(eq(wikiDocuments.agentId, agentId)),
+    tx.delete(datasets).where(eq(datasets.agentId, agentId)),
+    tx.delete(modelConfigs).where(eq(modelConfigs.agentId, agentId)),
+    tx.delete(chatConfigs).where(eq(chatConfigs.agentId, agentId)),
+    tx.delete(evalCases).where(eq(evalCases.agentId, agentId)),
+    tx.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.agentId, agentId)),
+  ]);
+
+  // 2. Rebuild tools + test cases
+  if (snapshot.tools.length > 0) {
+    const insertedTools = await tx
+      .insert(tools)
+      .values(
+        snapshot.tools.map((t) => ({
+          agentId,
+          key: t.key,
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters,
+          returnParameters: t.returnParameters,
+          parametersSchemaRef: t.parametersSchemaRef,
+          returnParametersSchemaRef: t.returnParametersSchemaRef,
+          output: t.output,
+          handler: t.handler,
+          component: t.component,
+          componentSource: t.componentSource,
+          enabled: t.enabled,
+          executionTarget: t.executionTarget,
+        }))
+      )
+      .returning({ id: tools.id, key: tools.key });
+
+    const toolKeyToNewId = new Map(insertedTools.map((t) => [t.key, t.id]));
+    const toolTCs = snapshot.tools.flatMap((t) =>
+      t.testCases.map((tc) => ({
+        toolId: toolKeyToNewId.get(t.key)!,
+        name: tc.name,
+        input: tc.input,
+        expectedOutput: tc.expectedOutput,
+        tags: tc.tags,
+      }))
+    );
+    if (toolTCs.length > 0) {
+      await tx.insert(toolTestCases).values(toolTCs);
+    }
+  }
+
+  // 3. Rebuild functions + test cases
+  if (snapshot.functions.length > 0) {
+    const insertedFunctions = await tx
+      .insert(functions)
+      .values(
+        snapshot.functions.map((f) => ({
+          agentId,
+          key: f.key,
+          name: f.name,
+          description: f.description,
+          code: f.code,
+          parameters: f.parameters,
+          returnParameters: f.returnParameters,
+        }))
+      )
+      .returning({ id: functions.id, key: functions.key });
+
+    const funcKeyToNewId = new Map(
+      insertedFunctions.map((f) => [f.key, f.id])
+    );
+    const funcTCs = snapshot.functions.flatMap((f) =>
+      f.testCases.map((tc) => ({
+        functionId: funcKeyToNewId.get(f.key)!,
+        name: tc.name,
+        input: tc.input,
+        expectedOutput: tc.expectedOutput,
+        tags: tc.tags,
+      }))
+    );
+    if (funcTCs.length > 0) {
+      await tx.insert(functionTestCases).values(funcTCs);
+    }
+  }
+
+  // 4. Rebuild components + test cases
+  if (snapshot.components.length > 0) {
+    const insertedComponents = await tx
+      .insert(components)
+      .values(
+        snapshot.components.map((c) => ({
+          agentId,
+          key: c.key,
+          name: c.name,
+          description: c.description,
+          componentSource: c.componentSource,
+          schemaRef: c.schemaRef,
+          generatedCss: c.generatedCss,
+        }))
+      )
+      .returning({ id: components.id, key: components.key });
+
+    const compKeyToNewId = new Map(
+      insertedComponents.map((c) => [c.key, c.id])
+    );
+    const compTCs = snapshot.components.flatMap((c) =>
+      c.testCases.map((tc) => ({
+        componentId: compKeyToNewId.get(c.key)!,
+        name: tc.name,
+        tool: tc.tool,
+        tags: tc.tags,
+      }))
+    );
+    if (compTCs.length > 0) {
+      await tx.insert(componentTestCases).values(compTCs);
+    }
+  }
+
+  // 5. Rebuild schemas
+  if (snapshot.schemas.length > 0) {
+    await tx.insert(schemas).values(
+      snapshot.schemas.map((s) => ({
+        agentId,
+        key: s.key,
+        name: s.name,
+        description: s.description,
+        parameters: s.parameters,
+      }))
+    );
+  }
+
+  // 6. Rebuild wiki documents (two-pass for parentKey)
+  if (snapshot.wikiDocuments.length > 0) {
+    // First pass: insert all with parentId = null
+    const wikiValues = snapshot.wikiDocuments.map((w) => ({
+      id: nanoid(),
+      agentId,
+      key: w.key,
+      title: w.title,
+      content: w.content,
+      order: w.order,
+      parentId: null as string | null,
+    }));
+
+    await tx.insert(wikiDocuments).values(wikiValues);
+
+    // Second pass: update parentId for documents with parentKey
+    const wikiKeyToNewId = new Map(wikiValues.map((w) => [w.key, w.id]));
+    for (const doc of snapshot.wikiDocuments) {
+      if (doc.parentKey) {
+        const newId = wikiKeyToNewId.get(doc.key);
+        const parentNewId = wikiKeyToNewId.get(doc.parentKey);
+        if (newId && parentNewId) {
+          await tx
+            .update(wikiDocuments)
+            .set({ parentId: parentNewId })
+            .where(eq(wikiDocuments.id, newId));
+        }
+      }
+    }
+  }
+
+  // 7. Rebuild datasets
+  if (snapshot.datasets.length > 0) {
+    await tx.insert(datasets).values(
+      snapshot.datasets.map((d) => ({
+        agentId,
+        key: d.key,
+        name: d.name,
+        description: d.description,
+        data: d.data,
+      }))
+    );
+  }
+
+  // 8. Rebuild model configs
+  if (snapshot.modelConfigs.length > 0) {
+    await tx.insert(modelConfigs).values(
+      snapshot.modelConfigs.map((m) => ({
+        agentId,
+        key: m.key,
+        name: m.name,
+        modelId: m.modelId,
+        systemPrompt: m.systemPrompt,
+        temperature: m.temperature,
+        isActive: m.isActive,
+      }))
+    );
+  }
+
+  // 9. Rebuild chat config
+  if (snapshot.chatConfig) {
+    await tx.insert(chatConfigs).values({
+      agentId,
+      title: snapshot.chatConfig.title,
+      welcomeTitle: snapshot.chatConfig.welcomeTitle,
+      welcomeIcon: snapshot.chatConfig.welcomeIcon,
+      quickActions: snapshot.chatConfig.quickActions,
+      placeholder: snapshot.chatConfig.placeholder,
+      suggestions: snapshot.chatConfig.suggestions,
+    });
+  }
+
+  // 10. Rebuild eval cases
+  if (snapshot.evalCases.length > 0) {
+    await tx.insert(evalCases).values(
+      snapshot.evalCases.map((e) => ({
+        agentId,
+        key: e.key,
+        name: e.name,
+        input: e.input,
+        expectedOutput: e.expectedOutput,
+        assertions: e.assertions,
+        tags: e.tags,
+      }))
+    );
+  }
+
+  // 11. Rebuild eval judge configs
+  if (snapshot.evalJudgeConfigs.length > 0) {
+    await tx.insert(evalJudgeConfigs).values(
+      snapshot.evalJudgeConfigs.map((j) => ({
+        agentId,
+        key: j.key,
+        name: j.name,
+        model: j.model,
+        systemPrompt: j.systemPrompt,
+        temperature: j.temperature,
+        dimensions: j.dimensions,
+        isDefault: j.isDefault,
+      }))
+    );
+  }
+}

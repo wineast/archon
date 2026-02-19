@@ -28,6 +28,9 @@ export const agents = pgTable("agents", {
   icon: text("icon").notNull().default("bot"),
   slug: text("slug").notNull().unique(),
   isPublic: boolean("is_public").notNull().default(false),
+  version: text("version").notNull().default("0.0.0"),
+  editingVersionId: uuid("editing_version_id"),
+  publishedVersionId: uuid("published_version_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -715,4 +718,32 @@ export type ComponentTestRunResultRow =
   typeof componentTestRunResults.$inferSelect;
 export type NewComponentTestRunResultRow =
   typeof componentTestRunResults.$inferInsert;
+
+/* ─────────── Agent Versions ─────────── */
+
+export const agentVersions = pgTable(
+  "agent_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    version: text("version").notNull(),
+    changelog: text("changelog").notNull().default(""),
+    snapshot: jsonb("snapshot").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("agent_versions_agent_id_version_idx").on(t.agentId, t.version),
+    index("agent_versions_agent_id_created_at_idx").on(t.agentId, t.createdAt),
+  ]
+);
+
+export type AgentVersionRow = typeof agentVersions.$inferSelect;
+export type NewAgentVersionRow = typeof agentVersions.$inferInsert;
 
