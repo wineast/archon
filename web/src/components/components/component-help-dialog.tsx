@@ -34,7 +34,7 @@ export function ComponentHelpButton() {
             <DialogTitle>组件编写指南</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1 min-h-0">
-            <div className="prose prose-sm dark:prose-invert max-w-none p-6">
+            <div className="prose prose-sm dark:prose-invert max-w-none p-6 overflow-hidden prose-pre:overflow-x-auto prose-table:overflow-x-auto">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {helpDoc}
               </ReactMarkdown>

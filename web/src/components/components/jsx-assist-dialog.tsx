@@ -11,6 +11,8 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { unifiedMergeView, updateOriginalDoc, getOriginalDoc } from "@codemirror/merge";
 import { ChangeSet, Text } from "@codemirror/state";
 import { javascript } from "@codemirror/lang-javascript";
+import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
+import { oneDark } from "@codemirror/theme-one-dark";
 import {
   Dialog,
   DialogContent,
@@ -215,6 +217,8 @@ function DiffEditor({
         history(),
         lineNumbers(),
         javascript({ jsx: true }),
+        syntaxHighlighting(defaultHighlightStyle),
+        ...(isDark ? [oneDark] : []),
         EditorView.lineWrapping,
         EditorView.theme({
           "&": {
@@ -242,7 +246,7 @@ function DiffEditor({
           highlightChanges: true,
           gutter: true,
           mergeControls: false,
-          syntaxHighlightDeletions: false,
+          syntaxHighlightDeletions: true,
         }),
         readOnlyCompartment.current.of([
           EditorView.editable.of(!readOnly),
@@ -269,7 +273,7 @@ function DiffEditor({
       viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isDark]);
 
   useEffect(() => {
     const view = viewRef.current;
