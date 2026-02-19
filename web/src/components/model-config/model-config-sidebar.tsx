@@ -10,7 +10,7 @@ interface ModelConfigSidebarProps {
   configs: ModelConfigRow[];
   activeConfigId: string | null;
   onSelect: (id: string) => void;
-  onCreate: () => Promise<void>;
+  onCreate: () => void;
 }
 
 export function ModelConfigSidebar({

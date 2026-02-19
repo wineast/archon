@@ -16,6 +16,7 @@ import useSWR from "swr";
 import { ModelConfigSidebar } from "./model-config-sidebar";
 import { ModelConfigDetail } from "./model-config-detail";
 import { ModelConfigEmptyState } from "./model-config-empty-state";
+import { ModelConfigCreateDialog } from "./model-config-create-dialog";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -32,6 +33,7 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">(
     "sidebar"
   );
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const activeConfig = useMemo(
     () => configs.find((c) => c.id === activeConfigId) ?? null,
@@ -44,19 +46,25 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
     }
   }, [activeConfigId]);
 
-  const handleCreate = useCallback(async () => {
-    const result = await createModelConfig(
-      {
-        agentId,
-        key: `new_config_${Date.now()}`,
-        name: "New Config",
-        systemPrompt: "",
-        temperature: 0.7,
-      },
-      listMutate
-    );
-    if (result?.id) setActiveConfigId(result.id);
-  }, [listMutate]);
+  const handleCreate = useCallback(
+    async (key: string, name: string) => {
+      const result = await createModelConfig(
+        {
+          agentId,
+          key,
+          name,
+          systemPrompt: "",
+          temperature: 0.7,
+        },
+        listMutate
+      );
+      if (result?.id) {
+        setActiveConfigId(result.id);
+        setCreateDialogOpen(false);
+      }
+    },
+    [agentId, listMutate]
+  );
 
   const handleSave = useCallback(
     async (
@@ -91,6 +99,8 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
     return fresh.find((c) => c.id === activeConfigId) ?? null;
   }, [listMutate, activeConfigId]);
 
+  const openCreateDialog = useCallback(() => setCreateDialogOpen(true), []);
+
   return (
     <div className="flex h-full flex-col">
       {/* Desktop layout */}
@@ -99,7 +109,7 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
           configs={configs}
           activeConfigId={activeConfigId}
           onSelect={setActiveConfigId}
-          onCreate={handleCreate}
+          onCreate={openCreateDialog}
         />
         <div className="flex-1 overflow-hidden">
           {activeConfig ? (
@@ -113,7 +123,7 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
               onPull={handlePull}
             />
           ) : (
-            <ModelConfigEmptyState onCreate={handleCreate} />
+            <ModelConfigEmptyState onCreate={openCreateDialog} />
           )}
         </div>
       </div>
@@ -125,7 +135,7 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
             configs={configs}
             activeConfigId={activeConfigId}
             onSelect={setActiveConfigId}
-            onCreate={handleCreate}
+            onCreate={openCreateDialog}
           />
         ) : (
           <>
@@ -152,6 +162,12 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
           </>
         )}
       </div>
+
+      <ModelConfigCreateDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onCreate={handleCreate}
+      />
     </div>
   );
 }

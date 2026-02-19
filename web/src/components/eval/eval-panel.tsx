@@ -21,6 +21,8 @@ import { CaseDetail } from "./case-detail";
 import { JudgeConfigDetail } from "./judge-config-detail";
 import { ResultsPanel } from "./results-panel";
 import { EvalEmptyState } from "./eval-empty-state";
+import { EvalCaseCreateDialog } from "./eval-case-create-dialog";
+import { JudgeConfigCreateDialog } from "./judge-config-create-dialog";
 
 export function EvalPanel({ agentId }: { agentId: string }) {
   const { cases, mutate: mutateCases } = useEvalCases(agentId, true);
@@ -30,6 +32,8 @@ export function EvalPanel({ agentId }: { agentId: string }) {
     "sidebar"
   );
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [caseDialogOpen, setCaseDialogOpen] = useState(false);
+  const [judgeDialogOpen, setJudgeDialogOpen] = useState(false);
 
   const handleToggleTag = useCallback((tag: string) => {
     setSelectedTags((prev) =>
@@ -61,20 +65,26 @@ export function EvalPanel({ agentId }: { agentId: string }) {
 
   // ── Case handlers ──
 
-  const handleCreateCase = useCallback(async () => {
-    const result = await createEvalCase(
-      {
-        agentId,
-        key: `new_case_${Date.now()}`,
-        name: "New Case",
-        input: "",
-        expectedOutput: "",
-        assertions: [],
-      },
-      mutateCases
-    );
-    if (result?.id) setActiveView({ type: "case", id: result.id });
-  }, [mutateCases]);
+  const handleCreateCase = useCallback(
+    async (key: string, name: string) => {
+      const result = await createEvalCase(
+        {
+          agentId,
+          key,
+          name,
+          input: "",
+          expectedOutput: "",
+          assertions: [],
+        },
+        mutateCases
+      );
+      if (result?.id) {
+        setActiveView({ type: "case", id: result.id });
+        setCaseDialogOpen(false);
+      }
+    },
+    [agentId, mutateCases]
+  );
 
   const handleSaveCase = useCallback(
     async (id: string, data: Record<string, unknown>) => {
@@ -95,20 +105,26 @@ export function EvalPanel({ agentId }: { agentId: string }) {
 
   // ── Judge config handlers ──
 
-  const handleCreateConfig = useCallback(async () => {
-    const result = await createJudgeConfig(
-      {
-        agentId,
-        key: `new_judge_${Date.now()}`,
-        name: "New Judge",
-        model: DEFAULT_JUDGE_CONFIG.model,
-        systemPrompt: DEFAULT_JUDGE_CONFIG.systemPrompt,
-        temperature: DEFAULT_JUDGE_CONFIG.temperature,
-      },
-      mutateConfigs
-    );
-    if (result?.id) setActiveView({ type: "judge", id: result.id });
-  }, [mutateConfigs]);
+  const handleCreateConfig = useCallback(
+    async (key: string, name: string) => {
+      const result = await createJudgeConfig(
+        {
+          agentId,
+          key,
+          name,
+          model: DEFAULT_JUDGE_CONFIG.model,
+          systemPrompt: DEFAULT_JUDGE_CONFIG.systemPrompt,
+          temperature: DEFAULT_JUDGE_CONFIG.temperature,
+        },
+        mutateConfigs
+      );
+      if (result?.id) {
+        setActiveView({ type: "judge", id: result.id });
+        setJudgeDialogOpen(false);
+      }
+    },
+    [agentId, mutateConfigs]
+  );
 
   const handleSaveConfig = useCallback(
     async (id: string, data: Record<string, unknown>) => {
@@ -171,6 +187,9 @@ export function EvalPanel({ agentId }: { agentId: string }) {
     return <EvalEmptyState />;
   }
 
+  const openCaseDialog = useCallback(() => setCaseDialogOpen(true), []);
+  const openJudgeDialog = useCallback(() => setJudgeDialogOpen(true), []);
+
   return (
     <div className="flex h-full flex-col">
       <EvalRunProvider>
@@ -181,8 +200,8 @@ export function EvalPanel({ agentId }: { agentId: string }) {
             configs={configs}
             activeView={activeView}
             onSelect={setActiveView}
-            onCreateCase={handleCreateCase}
-            onCreateConfig={handleCreateConfig}
+            onCreateCase={openCaseDialog}
+            onCreateConfig={openJudgeDialog}
             selectedTags={selectedTags}
             onToggleTag={handleToggleTag}
           />
@@ -197,8 +216,8 @@ export function EvalPanel({ agentId }: { agentId: string }) {
               configs={configs}
               activeView={activeView}
               onSelect={setActiveView}
-              onCreateCase={handleCreateCase}
-              onCreateConfig={handleCreateConfig}
+              onCreateCase={openCaseDialog}
+              onCreateConfig={openJudgeDialog}
               selectedTags={selectedTags}
               onToggleTag={handleToggleTag}
             />
@@ -219,6 +238,17 @@ export function EvalPanel({ agentId }: { agentId: string }) {
           )}
         </div>
       </EvalRunProvider>
+
+      <EvalCaseCreateDialog
+        open={caseDialogOpen}
+        onOpenChange={setCaseDialogOpen}
+        onCreate={handleCreateCase}
+      />
+      <JudgeConfigCreateDialog
+        open={judgeDialogOpen}
+        onOpenChange={setJudgeDialogOpen}
+        onCreate={handleCreateConfig}
+      />
     </div>
   );
 }
