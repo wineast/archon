@@ -779,3 +779,32 @@ export const embedTokens = pgTable(
 export type EmbedTokenRow = typeof embedTokens.$inferSelect;
 export type NewEmbedTokenRow = typeof embedTokens.$inferInsert;
 
+/* ─────────── Agent Files (Vercel Blob) ─────────── */
+
+export const agentFiles = pgTable(
+  "agent_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    size: integer("size").notNull(),
+    contentType: text("content_type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("agent_files_agent_id_name_idx").on(t.agentId, t.name),
+  ]
+);
+
+export type AgentFileRow = typeof agentFiles.$inferSelect;
+export type NewAgentFileRow = typeof agentFiles.$inferInsert;
+

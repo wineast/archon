@@ -11,6 +11,7 @@ import {
   BracesIcon,
   CodeIcon,
   DatabaseIcon,
+  FileIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
   PuzzleIcon,
@@ -43,6 +44,7 @@ import {
   deleteVersion,
 } from "@/lib/versions/hooks";
 import { EmbedTokensPanel } from "@/components/embed-tokens/embed-tokens-panel";
+import { FilesPanel } from "@/components/agent-files/files-panel";
 import { useAgentRole } from "@/lib/auth/hooks";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
@@ -63,6 +65,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "wiki", label: "Wiki", icon: BookOpenIcon },
   { value: "datasets", label: "Datasets", icon: DatabaseIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
+  { value: "files", label: "Files", icon: FileIcon },
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
   { value: "model-config", label: "Model Config", icon: SettingsIcon },
   { value: "embed", label: "Embed", icon: CodeIcon },
@@ -213,6 +216,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         return <DatasetsPanel agentId={agent.id} />;
       case "functions":
         return <FunctionsPanel agentId={agent.id} />;
+      case "files":
+        return <FilesPanel agentId={agent.id} />;
       case "eval":
         return <EvalPanel agentId={agent.id} />;
       case "model-config":
