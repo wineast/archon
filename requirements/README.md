@@ -24,7 +24,7 @@
 
 ### 版本管理
 
-- [ ] **Agent 版本管理系统** — 为 Agent 添加 SemVer 版本号，发布时对所有关联配置做整体快照，支持查看历史版本和回滚
+- [x] **Agent 版本管理系统** — 为 Agent 添加 SemVer 版本号，发布时对所有关联配置做整体快照，支持查看历史版本和回滚
   - 工作区: `agent-versioning` | 分支: `dev-agent-versioning-20260219`
 
 ### 通用
@@ -63,6 +63,11 @@
   - 工作区: `wiki-no-title` | 分支: `dev-wiki-no-title-20260217`
 - [ ] **Wiki 表单化改造 + Key/Title 字段** — 文档页面统一为表单交互（编辑/预览/reset/dirty save），数据库新增 title 和 key 字段，创建对话框输入 title+key
   - 工作区: `wiki-form-and-key` | 分支: `dev-wiki-form-and-key-20260219`
+
+## 路由与导航
+
+- [ ] **URL 路由重构（方案A：平级设计）** — 将 /[agentSlug] 拆分为 /[agentSlug]/chat 和 /[agentSlug]/build，使聊天和配置平级，settings 重命名为 build
+  - 工作区: `url-restructure` | 分支: `dev-url-restructure-20260219`
 
 ## 前端通用
 
