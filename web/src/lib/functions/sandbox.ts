@@ -257,8 +257,9 @@ export async function compileAndExecFn(
     // Build dep names list for the factory call
     const depNames = deps ? Object.keys(deps) : [];
 
-    // Compile: evaluate user code + call fn() factory
-    const evalCode = `${code}\nif (typeof fn !== 'function') throw new Error('code must define function fn()');\nfn(${depNames.join(", ")});`;
+    // Compile: evaluate user code + call fn() factory with deps object
+    const depsObj = depNames.length > 0 ? `{ ${depNames.join(", ")} }` : "";
+    const evalCode = `${code}\nif (typeof fn !== 'function') throw new Error('code must define function fn()');\nfn(${depsObj});`;
     const compileResult = vm.evalCode(evalCode);
     if (compileResult.error) {
       const errDump = vm.dump(compileResult.error);
@@ -339,7 +340,8 @@ export async function createFunctionsSandbox(
 
   // Compile each function in order
   for (const rec of records) {
-    const evalCode = `${rec.code}\nif (typeof fn !== 'function') throw new Error('code must define function fn()');\nfn(${rec.depNames.join(", ")});`;
+    const depsObj = rec.depNames.length > 0 ? `{ ${rec.depNames.join(", ")} }` : "";
+    const evalCode = `${rec.code}\nif (typeof fn !== 'function') throw new Error('code must define function fn()');\nfn(${depsObj});`;
     const result = vm.evalCode(evalCode);
     if (result.error) {
       const errDump = vm.dump(result.error);

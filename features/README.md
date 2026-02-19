@@ -12,6 +12,8 @@
 
 ## 基础设施
 
+- [ ] **Agent 软删除** — agents 表增加 deletedAt 字段，删除改为标记而非物理删除，配套回收站 UI 支持恢复
+  - 来源：生产环境误删 Agent 会级联清除全部关联数据且不可恢复
 - [ ] **函数/工具沙盒执行** — 用 isolated-vm（V8 Isolate）替代 `new Function()`，实现内存隔离、CPU 超时、零 API 访问的安全沙盒
   - 来源：FDA/母 Agent 生成的代码不可控，私有化部署需要安全合规
 - [ ] **本地 Docker 开发数据库** — 用 Docker PostgreSQL 替代 Neon 云数据库，省钱低延迟
@@ -32,11 +34,14 @@
 - [ ] **独立 Schema 资源管理** — 将 ToolParameter[] 抽象为独立 Schema 资源，tool output 和 component input 通过引用 schema key 保证数据结构一致
 - [x] **Schema FK 关联迁移** — tools/components 的 schema 引用从字符串 key 改为 UUID 外键，删除 tools 内联 parameters 字段
 - [ ] **修复 unique 约束范围** — modelConfigs、evalCases、evalJudgeConfigs 的 name 从全局唯一改为 (agentId, name) 联合唯一
+- [ ] **Schema includes 改 junction table** — 将 schemas.includeSchemaIds UUID 数组改为独立关联表 schema_includes，利用 FK 约束保证引用完整性
+  - 来源：Postgres 无法对数组元素做外键约束，删除被引用 Schema 会导致悬挂 UUID
 - [ ] **Schema 组合与引用增强** — Schema includes 组合、json 字段级 schema 引用、enumRef 迁移为 UUID FK
 - [x] **补全缺失索引与 FK** — chatSessions 加 agentId/userId 索引，agents 的 editingVersionId/publishedVersionId 加 FK 约束
 - [x] **Functions 参数迁移到 Schema FK** — functions 表的 parameters/returnParameters 从内联 JSONB 改为引用 schemas 表的 FK，对齐 tools 的实现
 - [x] **Tools 组件字段改为 FK** — tools 表去掉 component/componentSource 内联字段，改为 componentId FK 引用 components 表
 - [x] **Wiki 主键迁移为 UUID** — wikiDocuments 的 PK 从 text 改为 uuid，统一全库主键类型
+- [ ] **Wiki schema 清理** — 去掉 key/title 的 `.default("")` 历史遗留（对齐其他资源表），parentId 加 self-referencing FK 约束
 
 ## Agent 配置
 

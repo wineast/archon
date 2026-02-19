@@ -22,8 +22,8 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
  *
  *  Source format:
  *  ```
- *  function Component(DepA, DepB) {          // outer: receives custom component deps
- *    return function({ tool, state, ... }) {  // inner: render function
+ *  function Component({ React, useState, DepA }) {  // outer: destructure deps
+ *    return function({ tool, state, ... }) {         // inner: render function
  *      ...
  *    }
  *  }
@@ -31,8 +31,8 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
  *
  *  Compilation:
  *  1. Sucrase transpile (JSX/TS → JS)
- *  2. `new Function(...INJECTED_DEP_NAMES, code + '\nreturn Component;')` → outer function
- *  3. `outer(...extraDepValues)` → inner render function
+ *  2. `new Function(code + '\nreturn Component;')` → outer function
+ *  3. `outer({ ...INJECTED_DEPS, ...extraDeps })` → inner render function
  *
  *  Does NOT use the source cache (intended for graph compilation). */
 export function compileSourceWithDeps(
@@ -48,16 +48,14 @@ export function compileSourceWithDeps(
     production: true,
   });
 
-  // Step 2: inject INJECTED_DEPS via new Function, get the outer closure
-  const injectedNames = Object.keys(INJECTED_DEPS);
-  const injectedValues = Object.values(INJECTED_DEPS);
+  // Step 2: compile source into outer closure (no deps injected via new Function)
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
-  const factory = new Function(...injectedNames, code);
-  const outerFn = factory(...injectedValues);
+  const factory = new Function(code);
+  const outerFn = factory();
 
-  // Step 3: call outer closure with custom component deps to get inner render function
-  const extraValues = extraDeps ? Object.values(extraDeps) : [];
-  return outerFn(...extraValues) as ComponentType<ToolRendererProps>;
+  // Step 3: call outer closure with all deps as a single object
+  const allDeps = { ...INJECTED_DEPS, ...(extraDeps ?? {}) };
+  return outerFn(allDeps) as ComponentType<ToolRendererProps>;
 }
 
 // ── Public renderer component ──

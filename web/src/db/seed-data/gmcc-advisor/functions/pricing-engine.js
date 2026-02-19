@@ -4,7 +4,7 @@
  * Base dep: compileExpression (filtrex) — always injected.
  * Returns `pricingEngine(config, args)` — the public API.
  */
-function fn(compileExpression) {
+function fn({ compileExpression }) {
   // ── Constants ──
 
   var ENGINE_DEFAULTS = { lockDays: 30, extensionDays: 0 };

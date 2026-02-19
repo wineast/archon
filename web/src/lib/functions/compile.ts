@@ -2,9 +2,10 @@
  * Function compilation & caching layer.
  *
  * Compiles JS source code stored in the `functions` table into callable functions.
- * Dependencies are inferred from the `function fn(...)` parameter names:
+ * Dependencies are inferred from the `function fn({ ... })` destructured parameter names:
  *   - Known base dep names (e.g. compileExpression) → injected from npm packages
  *   - Other param names matching a function key → injected from compiled functions
+ * All deps are passed as a single object: `fn({ compileExpression, otherDep })`.
  * Compilation order is determined by topological sort of the inferred dependency graph.
  *
  * Execution uses QuickJS WASM sandbox for isolation — user code cannot access
@@ -27,10 +28,10 @@ const BASE_DEPS: Record<string, unknown> = {
 const BASE_DEP_NAMES = new Set(Object.keys(BASE_DEPS));
 
 /**
- * Parse parameter names from `function fn(param1, param2, ...)` in source code.
+ * Parse parameter names from `function fn({ param1, param2, ... })` in source code.
  */
 export function parseFnParams(code: string): string[] {
-  const match = code.match(/function\s+fn\s*\(([^)]*)\)/);
+  const match = code.match(/function\s+fn\s*\(\s*\{([^}]*)\}\s*\)/);
   if (!match) return [];
   return match[1]
     .split(",")

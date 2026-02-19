@@ -113,10 +113,10 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             )}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            两层闭包: function Component(DepA, DepB) {"{"} return function({"{ tool, state, ... }"}) {"{ ... }"} {"}"}
+            两层闭包: function Component({"{ React, useState, DepA }"}) {"{"} return function({"{ tool, state, ... }"}) {"{ ... }"} {"}"}
           </p>
           <p className="text-xs text-muted-foreground">
-            外层参数: 自定义组件依赖（PascalCase）；内层 props: tool, state, isLoading, isComplete, isError
+            外层参数: 解构声明所需依赖（React/hooks/UI 组件/自定义组件）；内层 props: tool, state, isLoading, isComplete, isError
           </p>
           {referencedComponents.length > 0 && (
             <div className="mt-2 flex items-center gap-1.5 flex-wrap">

@@ -24,7 +24,9 @@ type Story = StoryObj<typeof meta>;
 
 const simpleBadgeSource = `<Badge variant="outline">Hello World</Badge>`;
 
-const tableComponentSource = `function Component({ output }) {
+const tableComponentSource = `function Component({ React, Table, TableHeader, TableRow, TableHead, TableBody, TableCell }) {
+  return function({ tool }) {
+  var output = tool.output;
   if (!output?.items?.length) {
     return <div className="text-sm text-muted-foreground">No data</div>;
   }
@@ -47,9 +49,12 @@ const tableComponentSource = `function Component({ output }) {
       </TableBody>
     </Table>
   );
+  }
 }`;
 
-const loadingComponentSource = `function Component({ isLoading, output }) {
+const loadingComponentSource = `function Component({ React, Spinner }) {
+  return function({ tool, isLoading }) {
+  var output = tool.output;
   if (isLoading) return <Spinner />;
 
   return (
@@ -58,6 +63,7 @@ const loadingComponentSource = `function Component({ isLoading, output }) {
       <div className="text-xs text-muted-foreground">{output.description}</div>
     </div>
   );
+  }
 }`;
 
 // ---------------------------------------------------------------------------
