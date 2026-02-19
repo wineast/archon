@@ -10,11 +10,12 @@ import type { SchemaRow } from "@/db/schema";
 
 interface SchemaDetailProps {
   schema: SchemaRow;
+  allSchemas: SchemaRow[];
   onSave: (id: string, data: Omit<SchemaFormValues, "key">) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
-export function SchemaDetail({ schema, onSave, onDelete }: SchemaDetailProps) {
+export function SchemaDetail({ schema, allSchemas, onSave, onDelete }: SchemaDetailProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const draftRef = useRef<SchemaFormHandle | null>(null);
@@ -33,6 +34,7 @@ export function SchemaDetail({ schema, onSave, onDelete }: SchemaDetailProps) {
         name: draft.name,
         description: draft.description,
         parameters: draft.parameters,
+        includeSchemaIds: draft.includeSchemaIds,
       });
     } finally {
       setSaving(false);
@@ -58,9 +60,12 @@ export function SchemaDetail({ schema, onSave, onDelete }: SchemaDetailProps) {
               name: schema.name,
               description: schema.description,
               parameters: schema.parameters,
+              includeSchemaIds: schema.includeSchemaIds,
             }}
             onDraftRef={handleDraftRef}
             onDirtyChange={setDirty}
+            allSchemas={allSchemas}
+            currentSchemaId={schema.id}
           />
         </div>
       </ScrollArea>

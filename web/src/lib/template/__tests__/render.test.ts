@@ -18,6 +18,7 @@ vi.mock("@/db/schema", () => ({
     name: "name",
     data: "data",
     agentId: "agent_id",
+    id: "id",
   },
   wikiDocuments: {
     id: "id",
@@ -66,9 +67,14 @@ vi.mock("drizzle-orm", () => ({
  *   [0] datasets rows   — getResolvedDatasets → getDatasets
  *   [1] wiki doc rows    — getWikiDocs
  *   [2] tool rows        — getEnabledTools
- *   [3] schema rows      — (optional) resolve schema parameters
+ *   [3] all dataset rows — for datasetsById
+ *   [4] all schema rows  — for resolveParameters
+ *
+ * For convenience, pass 3 items and the helper fills [3] and [4] with [].
  */
 function setupDbChain(queries: unknown[][]) {
+  // Auto-fill missing trailing queries with empty arrays
+  while (queries.length < 5) queries.push([]);
   let callIdx = 0;
   mockSelect.mockImplementation(() => {
     const rows = queries[callIdx] ?? [];
@@ -89,6 +95,17 @@ function setupDbChain(queries: unknown[][]) {
     };
   });
 }
+
+const makeSchemaRow = (id: string, params: unknown[]) => ({
+  id,
+  agentId: "agent-1",
+  key: id,
+  name: id,
+  parameters: params,
+  includeSchemaIds: [],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
 
 const makeTool = (name: string, description: string, schemaId: string | null = null) => ({
   id: `tool-${name}`,
@@ -532,7 +549,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
-      [{ id: "schema-dti", parameters: params }],
+      [],
+      [makeSchemaRow("schema-dti", params)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -551,7 +569,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calc_rate", "Calculate rate", "schema-rate")],
-      [{ id: "schema-rate", parameters: params }],
+      [],
+      [makeSchemaRow("schema-rate", params)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -576,7 +595,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
-      [{ id: "schema-dti", parameters: params }],
+      [],
+      [makeSchemaRow("schema-dti", params)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -596,7 +616,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calc", "Calculate", "schema-calc")],
-      [{ id: "schema-calc", parameters: params }],
+      [],
+      [makeSchemaRow("schema-calc", params)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -615,7 +636,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("route", "Route products", "schema-route")],
-      [{ id: "schema-route", parameters: params }],
+      [],
+      [makeSchemaRow("schema-route", params)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -671,7 +693,8 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calc", "Calculate", "schema-calc")],
-      [{ id: "schema-calc", parameters: params }],
+      [],
+      [makeSchemaRow("schema-calc", params)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");

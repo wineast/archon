@@ -8,8 +8,8 @@ import {
 import { after } from "next/server";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import { db } from "@/db";
-import { tools, schemas, modelConfigs } from "@/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { tools, modelConfigs } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
   createSession,
@@ -58,37 +58,17 @@ export async function executeChatStream(
     .from(tools)
     .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true)));
 
-  // Resolve schema references: collect all unique schema IDs referenced by tools
-  const schemaIds = new Set<string>();
-  for (const row of enabledRows) {
-    if (row.parametersSchemaId) schemaIds.add(row.parametersSchemaId);
-    if (row.returnParametersSchemaId) schemaIds.add(row.returnParametersSchemaId);
-  }
+  // Gather template data once (includes resolved schemas and datasetsById)
+  const templateData = await gatherTemplateData(agentId);
 
-  const schemaMap: Record<
-    string,
-    import("@/lib/tools/types").ToolParameter[]
-  > = {};
-  if (schemaIds.size > 0) {
-    const schemaRows = await db
-      .select()
-      .from(schemas)
-      .where(inArray(schemas.id, [...schemaIds]));
-    for (const s of schemaRows) {
-      schemaMap[s.id] = s.parameters;
-    }
-  }
-
+  // Use resolved schema parameters from templateData.schemaMap
   const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
     name: row.name,
     description: row.description,
-    parameters: row.parametersSchemaId ? (schemaMap[row.parametersSchemaId] ?? []) : [],
+    parameters: row.parametersSchemaId ? (templateData.schemaMap[row.parametersSchemaId] ?? []) : [],
     handler: row.handler ?? "",
     executionTarget: row.executionTarget ?? "server",
   }));
-
-  // Gather template data once
-  const templateData = await gatherTemplateData(agentId);
 
   const allTools = toolPayloads.length
     ? buildDynamicTools(toolPayloads, templateData, agentId)

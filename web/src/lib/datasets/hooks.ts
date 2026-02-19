@@ -52,6 +52,47 @@ export function useDatasetVarsMap(agentId?: string) {
   return { datasetVars };
 }
 
+/**
+ * Returns enumRefOptions (by dataset ID) and enumRefValues (by dataset ID)
+ * for use with ParameterRow's enum ref mode.
+ */
+export function useDatasetsMap(agentId?: string) {
+  const { datasets } = useDatasets(agentId);
+
+  const enumRefOptions: Array<{
+    id: string;
+    key: string;
+    name: string;
+    source: "dataset";
+  }> = [];
+
+  const enumRefValues: Record<string, string[]> = {};
+
+  for (const ds of datasets) {
+    enumRefOptions.push({
+      id: ds.id,
+      key: ds.key,
+      name: ds.name,
+      source: "dataset",
+    });
+
+    // Extract enum values
+    const val = ds.data;
+    if (Array.isArray(val)) {
+      enumRefValues[ds.id] = val.map(String);
+    } else if (typeof val === "object" && val !== null) {
+      const values = Object.values(val as Record<string, unknown>);
+      if (values.length > 0 && typeof values[0] === "string") {
+        enumRefValues[ds.id] = values.map(String);
+      } else {
+        enumRefValues[ds.id] = Object.keys(val as Record<string, unknown>);
+      }
+    }
+  }
+
+  return { enumRefOptions, enumRefValues };
+}
+
 export async function createDataset(
   data: {
     key: string;

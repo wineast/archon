@@ -1,12 +1,13 @@
 import { db } from "@/db";
-import { wikiDocuments, tools, schemas } from "@/db/schema";
+import { datasets, wikiDocuments, tools, schemas } from "@/db/schema";
 import type { ToolRow } from "@/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { ToolParameter } from "@/lib/tools/types";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import { getResolvedDatasets } from "@/lib/datasets/queries";
+import { resolveParameters } from "@/lib/schemas/resolve";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -18,6 +19,8 @@ export interface TemplateData {
   toolRows: ToolRow[];
   schemaMap: Record<string, ToolParameter[]>;
   datasetEntries: Record<string, Array<{ value: string }>>;
+  /** Datasets by UUID: id → resolved data. For enumDatasetId resolution. */
+  datasetsById: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,34 +182,43 @@ export async function gatherTemplateData(
   agentId?: string
 ): Promise<TemplateData> {
   if (!agentId) {
-    return { resolvedVars: {}, docs: [], toolRows: [], schemaMap: {}, datasetEntries: {} };
+    return { resolvedVars: {}, docs: [], toolRows: [], schemaMap: {}, datasetEntries: {}, datasetsById: {} };
   }
 
-  const [{ resolvedVars, datasetEntries }, docs, toolRows] = await Promise.all([
+  const [{ resolvedVars, datasetEntries }, docs, toolRows, allDatasetRows] = await Promise.all([
     getResolvedDatasets(agentId),
     getWikiDocs(agentId),
     getEnabledTools(agentId),
+    db.select().from(datasets).where(eq(datasets.agentId, agentId)),
   ]);
 
-  // Resolve schema parameters for tools
-  const schemaIds = new Set<string>();
-  for (const row of toolRows) {
-    if (row.parametersSchemaId) schemaIds.add(row.parametersSchemaId);
-    if (row.returnParametersSchemaId) schemaIds.add(row.returnParametersSchemaId);
-  }
+  // Load ALL schemas for this agent and resolve parameters
+  const allSchemaRows = await db
+    .select()
+    .from(schemas)
+    .where(eq(schemas.agentId, agentId));
 
+  const allSchemasMap = new Map(allSchemaRows.map((r) => [r.id, r]));
+
+  // Build schemaMap using resolved parameters (strip _source metadata)
   const schemaMap: Record<string, ToolParameter[]> = {};
-  if (schemaIds.size > 0) {
-    const schemaRows = await db
-      .select()
-      .from(schemas)
-      .where(inArray(schemas.id, [...schemaIds]));
-    for (const s of schemaRows) {
-      schemaMap[s.id] = s.parameters;
-    }
+  for (const row of allSchemaRows) {
+    schemaMap[row.id] = resolveParameters(row, allSchemasMap).map((p) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _source, ...param } = p;
+      return param;
+    });
   }
 
-  return { resolvedVars, docs, toolRows, schemaMap, datasetEntries };
+  // Build datasetsById: id → resolved data
+  // We need to combine the dataset rows (for IDs) with resolvedVars (for resolved data)
+  const datasetsById: Record<string, unknown> = {};
+  for (const row of allDatasetRows) {
+    // Use the resolved value (which has template rendering applied) if available
+    datasetsById[row.id] = resolvedVars[row.key] ?? row.data;
+  }
+
+  return { resolvedVars, docs, toolRows, schemaMap, datasetEntries, datasetsById };
 }
 
 /**
