@@ -9,6 +9,7 @@ import {
   timestamp,
   index,
   unique,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 import type { ToolParameter } from "@/lib/tools/types";
@@ -29,8 +30,14 @@ export const agents = pgTable("agents", {
   slug: text("slug").notNull().unique(),
   isPublic: boolean("is_public").notNull().default(false),
   version: text("version").notNull().default("0.0.0"),
-  editingVersionId: uuid("editing_version_id"),
-  publishedVersionId: uuid("published_version_id"),
+  editingVersionId: uuid("editing_version_id").references(
+    (): AnyPgColumn => agentVersions.id,
+    { onDelete: "set null" }
+  ),
+  publishedVersionId: uuid("published_version_id").references(
+    (): AnyPgColumn => agentVersions.id,
+    { onDelete: "set null" }
+  ),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -95,27 +102,34 @@ export const agentMembers = pgTable(
 export type AgentMemberRow = typeof agentMembers.$inferSelect;
 export type NewAgentMemberRow = typeof agentMembers.$inferInsert;
 
-export const chatSessions = pgTable("chat_sessions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  agentId: uuid("agent_id").references(() => agents.id, {
-    onDelete: "set null",
-  }),
-  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
-  title: text("title").notNull(),
-  model: text("model").notNull(),
-  systemPrompt: text("system_prompt"),
-  messageCount: integer("message_count").default(0).notNull(),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  shareId: text("share_id").unique(),
-  sharedAt: timestamp("shared_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const chatSessions = pgTable(
+  "chat_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "set null",
+    }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    title: text("title").notNull(),
+    model: text("model").notNull(),
+    systemPrompt: text("system_prompt"),
+    messageCount: integer("message_count").default(0).notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    shareId: text("share_id").unique(),
+    sharedAt: timestamp("shared_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("chat_sessions_agent_id_idx").on(table.agentId),
+    index("chat_sessions_user_id_idx").on(table.userId),
+  ]
+);
 
 export type ChatSession = typeof chatSessions.$inferSelect;
 export type NewChatSession = typeof chatSessions.$inferInsert;
