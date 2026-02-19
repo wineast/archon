@@ -19,6 +19,7 @@ vi.mock("@/db/schema", () => ({
     data: "data",
     agentId: "agent_id",
     id: "id",
+    deletedAt: "deleted_at",
   },
   wikiDocuments: {
     id: "id",
@@ -27,6 +28,7 @@ vi.mock("@/db/schema", () => ({
     order: "order",
     createdAt: "created_at",
     updatedAt: "updated_at",
+    deletedAt: "deleted_at",
   },
   tools: {
     id: "id",
@@ -41,6 +43,7 @@ vi.mock("@/db/schema", () => ({
     enabled: "enabled",
     createdAt: "created_at",
     updatedAt: "updated_at",
+    deletedAt: "deleted_at",
   },
   schemas: {
     id: "id",
@@ -48,6 +51,7 @@ vi.mock("@/db/schema", () => ({
     key: "key",
     name: "name",
     parameters: "parameters",
+    deletedAt: "deleted_at",
   },
   schemaIncludes: {
     schemaId: "schema_id",
@@ -60,10 +64,12 @@ vi.mock("@/db/schema", () => ({
     key: "key",
     name: "name",
     order: "order",
+    deletedAt: "deleted_at",
   },
   objectRelations: {
     id: "id",
     agentId: "agent_id",
+    deletedAt: "deleted_at",
   },
 }));
 
@@ -72,6 +78,7 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
   inArray: vi.fn((a, b) => ({ op: "inArray", a, b })),
   asc: vi.fn((a) => ({ op: "asc", a })),
+  isNull: vi.fn((a) => ({ op: "isNull", a })),
 }));
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import {
-  tools, functions, components, schemas, datasets,
+  tools, functions, components, schemas, schemaIncludes, datasets,
   wikiDocuments, modelConfigs, evalCases, evalJudgeConfigs,
   objectTypes, objectRelations,
 } from "@/db/schema";
@@ -155,19 +155,16 @@ export async function DELETE(
     return NextResponse.json({ error: "invalid type" }, { status: 400 });
   }
 
-  // For schemas: clean up includeSchemaIds references before deleting
+  // For schemas: clean up schemaIncludes junction references before deleting
   if (type === "schema") {
-    const activeSchemas = await db
-      .select({ id: schemas.id, includeSchemaIds: schemas.includeSchemaIds })
-      .from(schemas)
-      .where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt)));
-
-    for (const s of activeSchemas) {
-      const filtered = s.includeSchemaIds.filter((sid) => !ids.includes(sid));
-      if (filtered.length !== s.includeSchemaIds.length) {
-        await db.update(schemas).set({ includeSchemaIds: filtered }).where(eq(schemas.id, s.id));
-      }
-    }
+    await db
+      .delete(schemaIncludes)
+      .where(
+        or(
+          inArray(schemaIncludes.schemaId, ids),
+          inArray(schemaIncludes.includeSchemaId, ids)
+        )
+      );
   }
 
   await db
