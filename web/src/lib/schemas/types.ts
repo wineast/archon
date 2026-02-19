@@ -1,4 +1,4 @@
-export type SchemaPropertyType = "string" | "number" | "boolean" | "enum" | "object" | "array" | "union";
+export type SchemaPropertyType = "string" | "number" | "boolean" | "enum" | "object" | "array" | "union" | "null" | "const";
 
 export interface SchemaProperty {
   id: string;
@@ -15,21 +15,28 @@ export interface SchemaProperty {
   // object（原 json）
   properties?: SchemaProperty[];
   schemaId?: string;
+  schemaIds?: string[];
   /** Map/Record: value type for dynamic keys (additionalProperties in JSON Schema). */
   additionalProperties?: SchemaProperty;
+
+  // const
+  constValue?: unknown;
 
   // union
   discriminator?: string;
   variants?: SchemaProperty[][];
+  unionMode?: "oneOf" | "anyOf";
 
   // array
   items?: SchemaProperty;
+  tuple?: boolean;
+  prefixItems?: SchemaProperty[];
 
   // string 约束
   minLength?: number;
   maxLength?: number;
   pattern?: string;
-  format?: "email" | "url" | "date" | "date-time" | "uuid";
+  format?: "email" | "url" | "date" | "date-time" | "uuid" | "time" | "ipv4" | "ipv6";
 
   // number 约束
   minimum?: number;
