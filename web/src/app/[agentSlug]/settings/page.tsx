@@ -10,6 +10,7 @@ import {
   BookOpenIcon,
   BracesIcon,
   DatabaseIcon,
+  FileIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
   PuzzleIcon,
@@ -31,6 +32,7 @@ import { EvalPanel } from "@/components/eval/eval-panel";
 import { ModelConfigPanel } from "@/components/model-config/model-config-panel";
 import { ComponentsPanel } from "@/components/components/components-panel";
 import { MembersPanel } from "@/components/members/members-panel";
+import { FilesPanel } from "@/components/agent-files/files-panel";
 import { useAgentRole } from "@/lib/auth/hooks";
 import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
@@ -51,6 +53,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "wiki", label: "Wiki", icon: BookOpenIcon },
   { value: "datasets", label: "Datasets", icon: DatabaseIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
+  { value: "files", label: "Files", icon: FileIcon },
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
   { value: "model-config", label: "Model Config", icon: SettingsIcon },
   { value: "members", label: "Members", icon: UsersIcon },
@@ -117,6 +120,8 @@ function SettingsContent({ agent }: { agent: AgentRow }) {
         return <DatasetsPanel agentId={agent.id} />;
       case "functions":
         return <FunctionsPanel agentId={agent.id} />;
+      case "files":
+        return <FilesPanel agentId={agent.id} />;
       case "eval":
         return <EvalPanel agentId={agent.id} />;
       case "model-config":
