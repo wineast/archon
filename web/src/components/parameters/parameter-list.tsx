@@ -10,7 +10,7 @@ import type { SchemaRow } from "@/db/schema";
 
 interface ParameterListProps {
   fieldName: string;
-  label: string;
+  label?: string;
   enumDatasetOptions?: EnumDatasetOption[];
   enumDatasetValues?: Record<string, string[]>;
   schemas?: SchemaRow[];
@@ -31,9 +31,11 @@ export function ParameterList({
 
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
+      {label && (
+        <label className="text-xs font-medium text-muted-foreground">
+          {label}
+        </label>
+      )}
       <div className="mt-1 space-y-2">
         {fields.map((field, index) => (
           <ParameterRow

@@ -19,6 +19,7 @@
 | Wiki 编辑器 | `editors/wiki-editor.tsx` | Markdown + Liquid 模板 | 否（客户端渲染） |
 | 数据集表单 | `datasets/dataset-form.tsx` | JSON + Liquid 模板 | 是（`/api/template/preview`） |
 | 模型配置 | `model-config/model-config-detail.tsx` | Markdown + Liquid 模板 | 是（`/api/template/preview`） |
+| Schema 详情 | `schemas/schema-detail.tsx` | Zod Code + JSON Schema | 否（客户端生成） |
 | 请求检查器 - System | `request-inspector-modal.tsx` | 系统提示词 模板/渲染 | 是（`/api/template/preview`） |
 | 请求检查器 - Messages | `request-inspector-modal.tsx` | 消息格式（UI/Model） | 否（纯格式切换） |
 

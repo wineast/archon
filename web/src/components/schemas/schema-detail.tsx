@@ -1,17 +1,20 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { BracesIcon, CodeIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { CheckIcon, CopyIcon, DownloadIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { JsonEditor } from "@/components/editors/json-editor";
+import { JsEditor } from "@/components/editors/js-editor";
 import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./schema-form";
-import { SchemaJsonDialog } from "./schema-json-dialog";
-import { SchemaZodDialog } from "./schema-zod-dialog";
 import { SchemaPlayground } from "./schema-playground";
 import { SchemaTestCasesPanel } from "./schema-test-cases-panel";
+import { buildZodCode } from "@/lib/tools/zod-code-builder";
+import { buildJsonSchema } from "@/lib/tools/schema-builder";
 import type { SchemaWithIncludes } from "@/db/schema";
 
 interface SchemaDetailProps {
@@ -30,8 +33,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
     draftRef.current = ref;
   }, []);
   const [dirty, setDirty] = useState(false);
-  const [jsonOpen, setJsonOpen] = useState(false);
-  const [zodOpen, setZodOpen] = useState(false);
+  const [innerTab, setInnerTab] = useState<"edit" | "preview">("edit");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting;
 
@@ -85,7 +87,26 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
               allSchemas={allSchemas}
               currentSchemaId={schema.id}
               agentId={agentId}
-            />
+              parametersHidden={innerTab === "preview"}
+            >
+              <Tabs
+                value={innerTab}
+                onValueChange={(v) => setInnerTab(v as "edit" | "preview")}
+              >
+                <TabsList>
+                  <TabsTrigger value="edit">Edit</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </SchemaForm>
+
+            {innerTab === "preview" && (
+              <SchemaPreviewPanel
+                schemaKey={schema.key}
+                getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
+                allSchemas={allSchemas}
+              />
+            )}
           </div>
         </ScrollArea>
 
@@ -113,22 +134,6 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
           </Button>
           <div className="flex-1" />
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setZodOpen(true)}
-          >
-            <CodeIcon className="mr-1 size-3" />
-            Zod Code
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setJsonOpen(true)}
-          >
-            <BracesIcon className="mr-1 size-3" />
-            JSON Schema
-          </Button>
-          <Button
             variant="destructive"
             size="sm"
             onClick={() => setConfirmOpen(true)}
@@ -143,20 +148,6 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
           </Button>
         </div>
 
-        <SchemaJsonDialog
-          open={jsonOpen}
-          onOpenChange={setJsonOpen}
-          schemaKey={schema.key}
-          getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
-          allSchemas={allSchemas}
-        />
-        <SchemaZodDialog
-          open={zodOpen}
-          onOpenChange={setZodOpen}
-          schemaKey={schema.key}
-          getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
-          allSchemas={allSchemas}
-        />
         <ConfirmDialog
           open={confirmOpen}
           onOpenChange={setConfirmOpen}
@@ -172,6 +163,105 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
 
       <TabsContent value="test-cases" className="flex min-h-0 flex-1 flex-col">
         <SchemaTestCasesPanel schemaId={schema.id} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Preview panel with Zod / JSON sub-tabs                            */
+/* ------------------------------------------------------------------ */
+
+interface SchemaPreviewPanelProps {
+  schemaKey: string;
+  getParameters: () => import("@/lib/schemas/types").SchemaProperty[];
+  allSchemas: SchemaWithIncludes[];
+}
+
+function SchemaPreviewPanel({ schemaKey, getParameters, allSchemas }: SchemaPreviewPanelProps) {
+  const [codeTab, setCodeTab] = useState<"zod" | "json">("zod");
+
+  const parameters = getParameters();
+
+  const schemaMap = useMemo(() => {
+    const map: Record<string, import("@/lib/schemas/types").SchemaProperty[]> = {};
+    for (const s of allSchemas) {
+      map[s.id] = s.parameters;
+    }
+    return map;
+  }, [allSchemas]);
+
+  const schemaKeyMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of allSchemas) {
+      map[s.id] = s.key;
+    }
+    return map;
+  }, [allSchemas]);
+
+  const zodCode = useMemo(
+    () => buildZodCode(parameters, { schemaMap, schemaKeyMap }),
+    [parameters, schemaMap, schemaKeyMap]
+  );
+
+  const jsonText = useMemo(() => {
+    const jsonSchema = buildJsonSchema(parameters, { schemaMap });
+    return JSON.stringify(jsonSchema, null, 2);
+  }, [parameters, schemaMap]);
+
+  const currentCode = codeTab === "zod" ? zodCode : jsonText;
+  const currentLang = codeTab === "zod" ? "typescript" : "json";
+  const currentFilename = codeTab === "zod" ? `${schemaKey}.ts` : `${schemaKey}.json`;
+  const currentMimeType = codeTab === "zod" ? "text/typescript" : "application/json";
+
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(currentCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([currentCode], { type: currentMimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = currentFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Tabs
+      value={codeTab}
+      onValueChange={(v) => setCodeTab(v as "zod" | "json")}
+      className="mt-3"
+    >
+      <div className="flex items-center gap-2">
+        <TabsList>
+          <TabsTrigger value="zod">Zod Code</TabsTrigger>
+          <TabsTrigger value="json">JSON Schema</TabsTrigger>
+        </TabsList>
+        <div className="flex-1" />
+        <Button size="icon" variant="ghost" className="size-7" onClick={handleCopy}>
+          {copied ? <CheckIcon className="size-3.5 text-green-500" /> : <CopyIcon className="size-3.5" />}
+        </Button>
+        <Button size="icon" variant="ghost" className="size-7" onClick={handleExport}>
+          <DownloadIcon className="size-3.5" />
+        </Button>
+      </div>
+
+      <TabsContent value="zod">
+        <JsEditor value={zodCode} readOnly height="400px" />
+      </TabsContent>
+
+      <TabsContent value="json">
+        <JsonEditor value={jsonText} readOnly height="400px" />
       </TabsContent>
     </Tabs>
   );

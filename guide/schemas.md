@@ -443,27 +443,30 @@ AI SDK 的 `tool()` 内部用 `zod-to-json-schema` 将 Zod 自动转为 JSON Sch
 | `union` + `discriminator` | `"discriminator": { "propertyName": "..." }` |
 | `enumDatasetId` | 从 `options.datasetsById` 解析为 `"enum": [...]` |
 
-### JSON Schema 导出
+### 代码预览与导出
 
-Schema 详情页底部工具栏提供 **JSON Schema** 按钮，点击打开对话框查看当前 Schema 的标准 JSON Schema 7 输出：
+Schema 详情页的 Edit Tab 内部有 **Edit / Preview** 两个子标签（内层 Tabs）：
 
-- **预览**：实时显示格式化 JSON（基于当前表单参数快照 + schemaMap 生成）
-- **复制**：点击 Copy 按钮复制到剪贴板
-- **导出**：点击 Export 按钮下载为 `.json` 文件（文件名为 Schema key）
+- **Edit**：Schema 表单编辑器（参数定义、includes 等）
+- **Preview**：代码预览面板，切换到此标签时实时生成
 
-组件位于 `web/src/components/schemas/schema-json-dialog.tsx`。
+Preview 面板内部再通过 **Zod Code / JSON Schema** 子标签切换两种输出格式：
 
-### Zod Code 导出
+**Zod Code**：
+- 语法高亮显示生成的 `z.object({...})` 代码（含 `import { z } from "zod"` 头部）
+- 代码生成逻辑位于 `web/src/lib/tools/zod-code-builder.ts` 的 `buildZodCode()`
+- 变量命名规则：将 Schema key 转为 camelCase 加 `Schema` 后缀（如 `address_fields` → `addressFieldsSchema`）
+- 引用其他 Schema 时会生成独立变量声明，自引用使用 `z.lazy()`
 
-Schema 详情页底部工具栏提供 **Zod Code** 按钮，点击打开对话框查看当前 Schema 的 TypeScript Zod 代码：
+**JSON Schema**：
+- 实时显示格式化 JSON（基于当前表单参数 + schemaMap 生成）
+- 生成逻辑位于 `web/src/lib/tools/schema-builder.ts` 的 `buildJsonSchema()`
 
-- **预览**：语法高亮显示生成的 `z.object({...})` 代码（含 `import { z } from "zod"` 头部）
-- **复制**：点击 Copy 按钮复制到剪贴板
-- **导出**：点击 Export 按钮下载为 `.ts` 文件（文件名为 Schema key）
+两种格式均提供：
+- **Copy**：复制到剪贴板
+- **Export**：下载为文件（Zod → `.ts`，JSON Schema → `.json`，文件名为 Schema key）
 
-代码生成逻辑位于 `web/src/lib/tools/zod-code-builder.ts` 的 `buildZodCode()`。变量命名规则：将 Schema key 转为 camelCase 加 `Schema` 后缀（如 `address_fields` → `addressFieldsSchema`）。引用其他 Schema 时会生成独立变量声明，自引用使用 `z.lazy()`。
-
-组件位于 `web/src/components/schemas/schema-zod-dialog.tsx`。
+底部操作栏仅保留 **Save / Reset / Delete**，在 Edit 和 Preview 子标签之间共享。
 
 ---
 

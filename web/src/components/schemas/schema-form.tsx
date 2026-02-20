@@ -35,6 +35,10 @@ interface SchemaFormProps {
   allSchemas?: SchemaWithIncludes[];
   currentSchemaId?: string;
   agentId?: string;
+  /** Rendered between Includes and Parameters sections. */
+  children?: React.ReactNode;
+  /** When true, hide ParameterList + ResolvedPreview (keeps form fields registered). */
+  parametersHidden?: boolean;
 }
 
 /**
@@ -56,6 +60,8 @@ export function SchemaForm({
   allSchemas = [],
   currentSchemaId,
   agentId,
+  children,
+  parametersHidden,
 }: SchemaFormProps) {
   const form = useForm<SchemaFormValues>({ defaultValues: { ...schema } });
   const originalRef = useRef<SchemaFormValues>({ ...schema });
@@ -164,19 +170,26 @@ export function SchemaForm({
         )}
 
         {/* Own Fields */}
-        <ParameterList
-          fieldName="parameters"
-          label="Parameters"
-          schemas={schemasForParams}
-          enumDatasetOptions={enumDatasetOptions}
-          enumDatasetValues={enumDatasetValues}
-        />
+        <label className="text-xs font-medium text-muted-foreground">
+          Parameters
+        </label>
 
-        {/* Resolved Preview */}
-        <SchemaResolvedPreview
-          schema={previewSchema}
-          allSchemas={allSchemas}
-        />
+        {children}
+
+        <div className={parametersHidden ? "hidden" : undefined}>
+          <ParameterList
+            fieldName="parameters"
+            schemas={schemasForParams}
+            enumDatasetOptions={enumDatasetOptions}
+            enumDatasetValues={enumDatasetValues}
+          />
+
+          {/* Resolved Preview */}
+          <SchemaResolvedPreview
+            schema={previewSchema}
+            allSchemas={allSchemas}
+          />
+        </div>
       </div>
     </FormProvider>
   );
