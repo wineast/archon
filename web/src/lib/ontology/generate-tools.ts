@@ -41,7 +41,7 @@ export async function generateCrudToolsForType(
   const toolDefs = [
     {
       toolKey: `create_${typeKey}`,
-      toolName: `Create ${objType.name}`,
+      toolName: `create_${typeKey}`,
       toolDescription: `Create a new ${objType.name} instance. ${objType.description}`,
       schemaKey: null, // reuse objectType's schema
       schemaParams: null,
@@ -49,7 +49,7 @@ export async function generateCrudToolsForType(
     },
     {
       toolKey: `get_${typeKey}`,
-      toolName: `Get ${objType.name}`,
+      toolName: `get_${typeKey}`,
       toolDescription: `Get a ${objType.name} instance by ID, including its relations.`,
       schemaKey: `_auto_${typeKey}_get`,
       schemaParams: [
@@ -65,7 +65,7 @@ export async function generateCrudToolsForType(
     },
     {
       toolKey: `query_${typeKey}s`,
-      toolName: `Query ${objType.name}s`,
+      toolName: `query_${typeKey}s`,
       toolDescription: `Query ${objType.name} instances with optional filters.`,
       schemaKey: `_auto_${typeKey}_query`,
       schemaParams: schema.parameters.map(
@@ -78,7 +78,7 @@ export async function generateCrudToolsForType(
     },
     {
       toolKey: `update_${typeKey}`,
-      toolName: `Update ${objType.name}`,
+      toolName: `update_${typeKey}`,
       toolDescription: `Update a ${objType.name} instance by ID. Only provided fields are updated.`,
       schemaKey: `_auto_${typeKey}_update`,
       schemaParams: [
