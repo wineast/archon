@@ -99,12 +99,7 @@ export function FunctionTestCasesPanel({
   const handleSave = useCallback(
     async (
       caseId: string,
-      data: {
-        name: string;
-        input: Record<string, unknown>;
-        expectedOutput: unknown;
-        tags: string[];
-      }
+      data: Record<string, unknown>
     ) => {
       await updateFunctionTestCase(functionId, caseId, data, mutate);
     },

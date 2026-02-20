@@ -39,6 +39,7 @@ export async function createFunctionTestCase(
     input: Record<string, unknown>;
     expectedOutput?: unknown;
     tags?: string[];
+    showAsExample?: boolean;
   },
   mutate: () => void
 ) {
