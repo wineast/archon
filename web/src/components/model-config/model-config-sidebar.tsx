@@ -2,6 +2,8 @@
 
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import modelConfigGuide from "../../../guide/model-config.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ModelConfigRow } from "@/db/schema";
 import { ModelConfigListItem } from "./model-config-list-item";
@@ -22,7 +24,10 @@ export function ModelConfigSidebar({
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-semibold">Configs</span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-semibold">Configs</span>
+          <GuideDialog title="模型配置" content={modelConfigGuide} />
+        </div>
         <Button
           variant="ghost"
           size="icon-xs"

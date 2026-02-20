@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { CrownIcon, ShieldIcon, Trash2Icon, UserIcon } from "lucide-react";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import membersGuide from "../../../guide/user-permissions.md";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -103,8 +105,10 @@ export function MembersPanel({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center px-4 py-3">
-        <h2 className="text-sm font-medium">成员管理</h2>
+      <div className="flex items-center gap-2 border-b px-3 py-1.5">
+        <span className="text-sm font-semibold">Members</span>
+        <GuideDialog title="成员管理" content={membersGuide} />
+        <div className="flex-1" />
       </div>
 
       {/* Invite section */}

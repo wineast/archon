@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { FileIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import filesGuide from "../../../guide/files.md";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Spinner } from "@/components/ui/spinner";
@@ -59,6 +61,11 @@ export function FilesPanel({ agentId }: { agentId: string }) {
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 border-b px-3 py-1.5">
+        <span className="text-sm font-semibold">Files</span>
+        <GuideDialog title="文件模块" content={filesGuide} />
+        <div className="flex-1" />
+      </div>
       <ScrollArea className="min-h-0 flex-1">
         {files.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-20 text-muted-foreground">

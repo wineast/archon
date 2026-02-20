@@ -6,6 +6,8 @@ import {
   PlusIcon,
   Trash2Icon,
 } from "lucide-react";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import embedGuide from "../../../guide/embed-widget.md";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,14 +93,16 @@ export function EmbedTokensPanel({ agentId }: EmbedTokensPanelProps) {
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 border-b px-3 py-1.5">
+        <span className="text-sm font-semibold">Embed</span>
+        <GuideDialog title="嵌入部署" content={embedGuide} />
+        <div className="flex-1" />
+      </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-4 p-4">
-          <div>
-            <h3 className="text-sm font-medium">Embed Tokens</h3>
-            <p className="text-xs text-muted-foreground">
-              Create tokens to embed this agent as a chat widget on external websites.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Create tokens to embed this agent as a chat widget on external websites.
+          </p>
 
           {tokens.length === 0 && !showCreate && (
             <p className="text-sm text-muted-foreground">

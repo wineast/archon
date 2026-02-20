@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import usageGuide from "../../../guide/usage-metering.md";
 import {
   AreaChart,
   Area,
@@ -79,7 +81,13 @@ export function UsagePanel({ agentId }: { agentId: string }) {
   const totalPages = recordsData ? Math.ceil(recordsData.total / pageSize) : 1;
 
   return (
-    <ScrollArea className="h-full min-h-0">
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 border-b px-3 py-1.5">
+        <span className="text-sm font-semibold">Usage</span>
+        <GuideDialog title="用量统计" content={usageGuide} />
+        <div className="flex-1" />
+      </div>
+      <ScrollArea className="flex-1 min-h-0">
       <div className="mx-auto max-w-4xl space-y-6 p-6">
         {/* Date Range Selector */}
         <div className="flex items-center gap-2">
@@ -345,6 +353,7 @@ export function UsagePanel({ agentId }: { agentId: string }) {
           </CardContent>
         </Card>
       </div>
-    </ScrollArea>
+      </ScrollArea>
+    </div>
   );
 }

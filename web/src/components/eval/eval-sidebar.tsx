@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import evalGuide from "../../../guide/eval.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EvalCaseRow, EvalJudgeConfigRow } from "@/db/schema";
 import {
@@ -61,6 +63,7 @@ export function EvalSidebar({
             <div className="flex items-center gap-1.5">
               <FlaskConicalIcon className="size-3.5 text-muted-foreground" />
               <span className="text-sm font-semibold">Cases</span>
+              <GuideDialog title="评测模块" content={evalGuide} />
             </div>
             <Button
               variant="ghost"

@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import useSWR from "swr";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import sessionsGuide from "../../../guide/sessions.md";
 import { isTextUIPart } from "ai";
 import type { UIMessage } from "ai";
 import { MessageSquareIcon, UsersIcon, UserIcon } from "lucide-react";
@@ -66,6 +68,7 @@ export function SessionsPanel({ agentId }: SessionsPanelProps) {
         <div className="flex h-12 shrink-0 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">会话记录</span>
+            <GuideDialog title="会话模块" content={sessionsGuide} />
             {!isLoading && (
               <Badge variant="secondary" className="text-xs">
                 {sessions.length}

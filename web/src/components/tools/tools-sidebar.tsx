@@ -2,6 +2,8 @@
 
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import toolsGuide from "../../../guide/tools.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ToolRow } from "@/db/schema";
 import { ToolListItem } from "./tool-list-item";
@@ -22,7 +24,10 @@ export function ToolsSidebar({
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-semibold">Tools</span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-semibold">Tools</span>
+          <GuideDialog title="工具模块" content={toolsGuide} />
+        </div>
         <Button
           variant="ghost"
           size="icon-xs"

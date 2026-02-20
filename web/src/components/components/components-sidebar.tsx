@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { PlusIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import componentsGuide from "../../../guide/components.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { inferComponentDeps } from "@/tool-ui";
@@ -39,7 +41,10 @@ export function ComponentsSidebar({
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-semibold">Components</span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-semibold">Components</span>
+          <GuideDialog title="组件模块" content={componentsGuide} />
+        </div>
         <Button
           variant="ghost"
           size="icon-xs"

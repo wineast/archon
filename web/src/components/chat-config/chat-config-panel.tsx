@@ -3,6 +3,8 @@
 import { chatConfigApiKey, updateChatConfig } from "@/lib/chat-config/hooks";
 import type { ChatConfigRow } from "@/db/schema";
 import { ChatConfigDetail } from "./chat-config-detail";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import chatConfigGuide from "../../../guide/chat-config.md";
 import useSWR from "swr";
 import { useCallback } from "react";
 
@@ -23,6 +25,11 @@ export function ChatConfigPanel({ agentId }: { agentId: string }) {
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 border-b px-3 py-1.5">
+        <span className="text-sm font-semibold">Config</span>
+        <GuideDialog title="对话配置" content={chatConfigGuide} />
+        <div className="flex-1" />
+      </div>
       {config ? (
         <ChatConfigDetail
           key={config.id}

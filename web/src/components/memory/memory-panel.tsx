@@ -15,14 +15,12 @@ import {
 } from "@/lib/memory/hooks";
 import { MemoryConfigDetail } from "./memory-config-detail";
 import { MemoryList } from "./memory-list";
-import { MemoryEditSheet } from "./memory-edit-sheet";
 import { MemoryCreateDialog } from "./memory-create-dialog";
 import type { MemoryRow } from "@/db/schema";
 
 export function MemoryPanel({ agentId }: { agentId: string }) {
   const { config, mutate: mutateConfig } = useMemoryConfig(agentId);
   const { memories, mutate: mutateMemories } = useMemories(agentId);
-  const [editMemory, setEditMemory] = useState<MemoryRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MemoryRow | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -68,13 +66,12 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
     const ok = await deleteMemory(deleteTarget.id, mutateMemories);
     if (ok) {
       setDeleteTarget(null);
-      if (editMemory?.id === deleteTarget.id) setEditMemory(null);
     }
-  }, [deleteTarget, mutateMemories, editMemory]);
+  }, [deleteTarget, mutateMemories]);
 
   return (
     <div className="flex h-full flex-col">
-      <Tabs defaultValue="config" className="flex h-full flex-col">
+      <Tabs defaultValue="config" className="flex h-full flex-col gap-0">
         <div className="flex items-center gap-2 border-b px-3 py-1.5">
           <span className="text-sm font-semibold">Memory</span>
           <GuideDialog title="记忆模块" content={memoryGuide} />
@@ -99,7 +96,8 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
         <TabsContent value="memories" className="flex-1 min-h-0 mt-0">
           <MemoryList
             memories={memories}
-            onEdit={setEditMemory}
+            allTypes={allTypes}
+            onSave={handleSaveMemory}
             onDelete={setDeleteTarget}
             onAdd={() => setCreateDialogOpen(true)}
           />
@@ -111,19 +109,6 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
         onOpenChange={setCreateDialogOpen}
         onCreate={handleCreate}
         allTypes={allTypes}
-      />
-
-      <MemoryEditSheet
-        open={!!editMemory}
-        onOpenChange={(open) => {
-          if (!open) setEditMemory(null);
-        }}
-        memory={editMemory}
-        allTypes={allTypes}
-        onSave={handleSaveMemory}
-        onDelete={async (id) => {
-          setDeleteTarget(memories.find((m) => m.id === id) ?? null);
-        }}
       />
 
       <ConfirmDialog

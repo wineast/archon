@@ -3,6 +3,8 @@
 import { useCallback } from "react";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import datasetsGuide from "../../../guide/datasets.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { DatasetRow } from "@/db/schema";
@@ -49,7 +51,10 @@ export function DatasetsSidebar({
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-semibold">Datasets</span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-semibold">Datasets</span>
+          <GuideDialog title="数据集模块" content={datasetsGuide} />
+        </div>
         <Button
           variant="ghost"
           size="icon-xs"

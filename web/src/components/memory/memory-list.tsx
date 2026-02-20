@@ -1,154 +1,129 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SearchIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { MemoryRow } from "@/db/schema";
+import { MemoryDetail } from "./memory-detail";
 
 interface MemoryListProps {
   memories: MemoryRow[];
-  onEdit: (memory: MemoryRow) => void;
+  allTypes: string[];
+  onSave: (id: string, data: Record<string, unknown>) => Promise<void>;
   onDelete: (memory: MemoryRow) => void;
   onAdd: () => void;
 }
 
 export function MemoryList({
   memories,
-  onEdit,
+  allTypes,
+  onSave,
   onDelete,
   onAdd,
 }: MemoryListProps) {
-  const [selectedUser, setSelectedUser] = useState<string>("all");
-
-  // Build user list with counts from all memories (before filtering)
-  const userEntries = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const m of memories) {
-      const key = m.userId || "global";
-      map.set(key, (map.get(key) ?? 0) + 1);
-    }
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [memories]);
+  const [activeMemoryId, setActiveMemoryId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
-    if (selectedUser === "all") return memories;
-    return memories.filter((m) =>
-      selectedUser === "global" ? !m.userId : m.userId === selectedUser
+    if (!search.trim()) return memories;
+    const q = search.toLowerCase();
+    return memories.filter(
+      (m) =>
+        m.content.toLowerCase().includes(q) ||
+        m.type.toLowerCase().includes(q) ||
+        (m.userId && m.userId.toLowerCase().includes(q))
     );
-  }, [memories, selectedUser]);
+  }, [memories, search]);
+
+  const activeMemory = useMemo(
+    () => memories.find((m) => m.id === activeMemoryId) ?? null,
+    [memories, activeMemoryId]
+  );
 
   return (
-    <div className="flex flex-1 min-h-0">
-      {/* Left: user list */}
-      <ScrollArea className="w-40 shrink-0 border-r min-h-0">
-        <div className="flex flex-col py-1">
-          <button
-            type="button"
-            className={cn(
-              "flex items-center justify-between px-3 py-1.5 text-xs hover:bg-accent",
-              selectedUser === "all" && "bg-accent font-medium"
-            )}
-            onClick={() => setSelectedUser("all")}
+    <div className="flex h-full min-h-0">
+      {/* Left: sidebar */}
+      <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
+        <div className="flex items-center gap-2 border-b px-3 py-2">
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-7 pl-7 text-xs"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onAdd}
+            title="New Memory"
           >
-            <span>All</span>
-            <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-              {memories.length}
-            </Badge>
-          </button>
-          {userEntries.map(([userId, count]) => (
-            <button
-              key={userId}
-              type="button"
-              className={cn(
-                "flex items-center justify-between px-3 py-1.5 text-xs hover:bg-accent",
-                selectedUser === userId && "bg-accent font-medium"
-              )}
-              onClick={() => setSelectedUser(userId)}
-            >
-              <span className="truncate mr-1">{userId}</span>
-              <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-                {count}
-              </Badge>
-            </button>
-          ))}
-        </div>
-      </ScrollArea>
-
-      {/* Right: toolbar + table */}
-      <div className="flex flex-1 flex-col min-h-0 min-w-0">
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 px-4 py-2">
-          <div className="flex-1" />
-          <Button size="sm" onClick={onAdd}>
-            <PlusIcon className="mr-1 size-3" />
-            Add
+            <PlusIcon className="size-4" />
           </Button>
         </div>
 
-        {/* Table */}
-        {filtered.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center p-8">
-            <p className="text-sm text-muted-foreground">No memories yet.</p>
+        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
+          <div className="p-1">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-6 text-center text-xs text-muted-foreground">
+                No memories
+              </p>
+            ) : (
+              filtered.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={cn(
+                    "flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-accent",
+                    activeMemoryId === m.id && "bg-muted font-medium"
+                  )}
+                  onClick={() => setActiveMemoryId(m.id)}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 text-[10px] h-4 px-1.5"
+                    >
+                      {m.type}
+                    </Badge>
+                    {m.userId && (
+                      <span className="truncate text-[10px] text-muted-foreground">
+                        {m.userId}
+                      </span>
+                    )}
+                  </div>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {m.content}
+                  </span>
+                </button>
+              ))
+            )}
           </div>
+        </ScrollArea>
+      </div>
+
+      {/* Right: detail */}
+      <div className="flex-1 min-w-0 overflow-hidden">
+        {activeMemory ? (
+          <MemoryDetail
+            key={activeMemory.id}
+            memory={activeMemory}
+            allTypes={allTypes}
+            onSave={onSave}
+            onDelete={onDelete}
+          />
         ) : (
-          <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Content</TableHead>
-                  <TableHead>Importance</TableHead>
-                  <TableHead>Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((m) => (
-                  <TableRow
-                    key={m.id}
-                    className="cursor-pointer"
-                    onClick={() => onEdit(m)}
-                  >
-                    <TableCell>
-                      <Badge variant="secondary" className="text-xs">
-                        {m.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[300px] truncate">
-                      {m.content}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 w-20">
-                        <Progress
-                          value={(m.importance ?? 0.5) * 100}
-                          className="h-1.5"
-                        />
-                        <span className="text-xs text-muted-foreground w-7 text-right">
-                          {((m.importance ?? 0.5) * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {m.createdAt
-                        ? new Date(m.createdAt).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-muted-foreground">
+              Select a memory to view details
+            </p>
+          </div>
         )}
       </div>
     </div>

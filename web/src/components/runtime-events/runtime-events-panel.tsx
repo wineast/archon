@@ -8,6 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import runtimeEventsGuide from "../../../guide/runtime-events.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -165,6 +167,11 @@ export function RuntimeEventsPanel({ agentId }: RuntimeEventsPanelProps) {
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 border-b px-3 py-1.5">
+        <span className="text-sm font-semibold">Runtime</span>
+        <GuideDialog title="运行时事件" content={runtimeEventsGuide} />
+        <div className="flex-1" />
+      </div>
       {/* Filters */}
       <div className="flex flex-wrap gap-2 p-4 pb-2">
         <Select

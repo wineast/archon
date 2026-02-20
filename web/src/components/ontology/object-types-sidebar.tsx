@@ -2,6 +2,8 @@
 
 import { ImportIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import ontologyGuide from "../../../guide/ontology.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ObjectTypeRow, ObjectRelationRow } from "@/db/schema";
 import { ObjectTypeListItem } from "./object-type-list-item";
@@ -35,7 +37,10 @@ export function ObjectTypesSidebar({
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-semibold">Object Types</span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-semibold">Object Types</span>
+          <GuideDialog title="本体模块" content={ontologyGuide} />
+        </div>
         <div className="flex items-center gap-0.5">
           {onImport && (
             <Button
