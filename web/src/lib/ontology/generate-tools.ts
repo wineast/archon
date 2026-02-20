@@ -45,7 +45,7 @@ export async function generateCrudToolsForType(
       toolDescription: `Create a new ${objType.name} instance. ${objType.description}`,
       schemaKey: null, // reuse objectType's schema
       schemaParams: null,
-      handler: `return await ctx.ontology.create("${typeKey}", args);`,
+      handler: `async (args, context) => context.ontology.create("${typeKey}", args)`,
     },
     {
       toolKey: `get_${typeKey}`,
@@ -61,7 +61,7 @@ export async function generateCrudToolsForType(
           required: true,
         },
       ],
-      handler: `return await ctx.ontology.get("${typeKey}", args.id);`,
+      handler: `async (args, context) => context.ontology.get("${typeKey}", args.id)`,
     },
     {
       toolKey: `query_${typeKey}s`,
@@ -74,7 +74,7 @@ export async function generateCrudToolsForType(
           required: false,
         })
       ),
-      handler: `return await ctx.ontology.query("${typeKey}", args);`,
+      handler: `async (args, context) => context.ontology.query("${typeKey}", args)`,
     },
     {
       toolKey: `update_${typeKey}`,
@@ -96,7 +96,7 @@ export async function generateCrudToolsForType(
           })
         ),
       ],
-      handler: `const { id, ...data } = args;\nreturn await ctx.ontology.update("${typeKey}", id, data);`,
+      handler: `async (args, context) => { const { id, ...data } = args; return context.ontology.update("${typeKey}", id, data); }`,
     },
   ];
 
