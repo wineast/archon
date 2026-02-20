@@ -38,6 +38,7 @@ export async function createComponentTestCase(
     name: string;
     tool: { name: string; input: unknown; output: unknown };
     tags?: string[];
+    showAsExample?: boolean;
   },
   mutate: () => void
 ) {

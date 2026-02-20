@@ -20,7 +20,9 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { JsonEditor } from "@/components/editors/json-editor";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { DynamicToolRenderer, DynamicComponentErrorBoundary } from "@/tool-ui";
 import type { ComponentTestCaseRow } from "@/db/schema";
 
@@ -36,9 +38,10 @@ export interface ComponentTestCaseItemProps {
   onSave: (
     caseId: string,
     data: {
-      name: string;
-      tool: { name: string; input: unknown; output: unknown };
-      tags: string[];
+      name?: string;
+      tool?: { name: string; input: unknown; output: unknown };
+      tags?: string[];
+      showAsExample?: boolean;
     }
   ) => Promise<void>;
   onDelete: (caseId: string) => Promise<void>;
@@ -69,6 +72,7 @@ export function ComponentTestCaseItem({
   );
   const [tags, setTags] = useState<string[]>(testCase.tags);
   const [tagInput, setTagInput] = useState("");
+  const [showAsExample, setShowAsExample] = useState(testCase.showAsExample);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -176,6 +180,14 @@ export function ComponentTestCaseItem({
       }
     },
     [tagInput, handleAddTag]
+  );
+
+  const handleToggleExample = useCallback(
+    async (checked: boolean) => {
+      setShowAsExample(checked);
+      await onSave(testCase.id, { showAsExample: checked });
+    },
+    [testCase.id, onSave]
   );
 
   // Status icon for header
@@ -300,6 +312,22 @@ export function ComponentTestCaseItem({
                   placeholder="Add tag..."
                 />
               </div>
+            </div>
+
+            {/* Show as Example */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id={`example-${testCase.id}`}
+                checked={showAsExample}
+                onCheckedChange={handleToggleExample}
+                disabled={itemBusy}
+              />
+              <Label
+                htmlFor={`example-${testCase.id}`}
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Show as Example
+              </Label>
             </div>
 
             {/* Tool Name */}

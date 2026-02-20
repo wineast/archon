@@ -33,6 +33,7 @@ export async function PUT(
       ...(body.name !== undefined && { name: body.name }),
       ...(body.tool !== undefined && { tool: body.tool }),
       ...(body.tags !== undefined && { tags: body.tags }),
+      ...(body.showAsExample !== undefined && { showAsExample: body.showAsExample }),
     })
     .where(eq(componentTestCases.id, caseId))
     .returning();

@@ -10,7 +10,7 @@
 
 面板采用左右分栏布局：
 - **左侧**：组件列表 + 新建按钮
-- **右侧**：选中组件的详情（三个 Tab：Edit / Playground / Test Cases）
+- **右侧**：选中组件的详情（四个 Tab：Edit / Examples / Playground / Test Cases）
 
 ---
 
@@ -125,13 +125,32 @@ Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 
 ### 使用方法
 
-1. 在 **Tool Name** 输入框中填写工具名称（可选）
-2. 在 **Tool Input (JSON)** 编辑器中填写模拟输入数据
-3. 在 **Tool Output (JSON)** 编辑器中填写模拟输出数据
-4. 下方的 **Preview** 区域会实时渲染组件
-5. 点击 **Refresh** 按钮强制刷新预览
+1. 在 **Tool** 区域填写模拟数据：
+   - **Name**：工具名称（可选）
+   - **Input (JSON)**：工具输入 JSON
+   - **Output (JSON)**：工具输出 JSON
+   - 可以从右上角的 **Load** 下拉菜单加载已有数据，菜单按 Examples 和 Test Cases 分组显示
+2. 在 **State** 下拉框中选择组件状态：
+   - `output-available`（默认）— isComplete=true
+   - `input-streaming` — isLoading=true
+   - `input-available` — isLoading=true
+   - `error` — isError=true
+   - 旁边的 Badge 会实时显示 `isLoading`、`isComplete`、`isError` 的派生值
+3. 下方的 **Preview** 区域会实时渲染组件
+4. 点击 **Refresh** 按钮强制刷新预览
 
-可以从右上角的 **Test Cases** 下拉菜单加载已有测试用例的数据。
+### 保存为测试用例
+
+在 Playground 中调试好数据后，可以直接保存为 Test Case：
+
+1. 点击底部的 **Save** 按钮
+2. 在弹出的 Dialog 中填写：
+   - **Name**（必填）：测试用例名称
+   - **Tags**（可选）：标签，回车添加
+   - **Show as Example**（可选）：开启后同时作为 Example 展示
+3. 点击 **Save** 保存
+
+保存后，新的测试用例会立即出现在 Load 下拉菜单和 Test Cases Tab 中。
 
 ---
 
@@ -164,6 +183,40 @@ Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 ### 运行历史
 
 每次 Run All 都会生成一条运行记录，保存在 **Runs** 区域。可以展开查看每个用例的详细结果，也可以删除历史记录。
+
+### 标记为示例
+
+展开任意测试用例，可以看到 **Show as Example** 开关。开启后，该测试用例会同时出现在 **Examples** Tab 中，作为组件的展示示例。切换开关会立即保存，无需额外点击 Save。
+
+---
+
+## Examples Tab
+
+Examples 展示组件在真实数据下的渲染效果，方便快速预览组件样式和行为。
+
+### 数据来源
+
+Examples 的数据来自 **Test Cases**——只有被标记为 "Show as Example" 的测试用例才会在 Examples Tab 中展示。
+
+### 使用方法
+
+1. 进入 **Test Cases** Tab
+2. 展开目标测试用例，开启 **Show as Example** 开关
+3. 切换到 **Examples** Tab，即可看到该用例的渲染效果卡片
+
+每个 Example 卡片包含：
+- **标题**：测试用例名称
+- **编辑按钮**（✏️）：点击展开编辑表单，可修改 Name、Tags、Show as Example、Tool Name、Tool Input/Output，编辑时预览区域实时更新
+- **删除按钮**（🗑️）：点击弹出确认对话框，确认后删除该测试用例
+- **渲染区域**：使用组件源码 + 测试用例的 tool 数据实时渲染
+
+### 空状态
+
+当没有任何测试用例被标记为 Example 时，面板会显示引导提示，引导用户去 Test Cases Tab 标记。
+
+### 组合依赖
+
+Examples 与 Playground 一样支持组件组合（composition）——如果当前组件依赖其他组件，会自动编译依赖图并正确渲染。
 
 ---
 

@@ -45,6 +45,7 @@ export async function POST(
       name: body.name ?? "Untitled",
       tool: body.tool ?? { name: "", input: {}, output: {} },
       tags: body.tags ?? [],
+      ...(body.showAsExample !== undefined && { showAsExample: body.showAsExample }),
     })
     .returning();
 
