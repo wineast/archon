@@ -197,39 +197,44 @@ export function RequestInspectorModal({
             value="system"
             className="overflow-y-auto max-h-[calc(85vh-140px)]"
           >
-            <div className="flex items-center justify-between mb-2">
-              {agentId ? (
-                <div className="flex gap-1 rounded-md bg-muted p-0.5">
-                  <Button
-                    variant={systemView === "rendered" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setSystemView("rendered")}
-                  >
-                    Rendered
-                  </Button>
-                  <Button
-                    variant={systemView === "template" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setSystemView("template")}
-                  >
-                    Template
-                  </Button>
+            {agentId ? (
+              <Tabs
+                value={systemView}
+                onValueChange={(v) => setSystemView(v as SystemView)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <TabsList className="h-8">
+                    <TabsTrigger value="rendered" className="text-xs">Rendered</TabsTrigger>
+                    <TabsTrigger value="template" className="text-xs">Template</TabsTrigger>
+                  </TabsList>
+                  <CopyButton text={systemDisplayText} />
                 </div>
-              ) : (
-                <div />
-              )}
-              <CopyButton text={systemDisplayText} />
-            </div>
-            {renderLoading && systemView === "rendered" ? (
-              <div className="flex items-center justify-center py-12">
-                <Spinner className="size-5" />
-              </div>
+                <TabsContent value="rendered">
+                  {renderLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Spinner className="size-5" />
+                    </div>
+                  ) : (
+                    <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-4">
+                      {renderedPrompt ?? systemPrompt}
+                    </pre>
+                  )}
+                </TabsContent>
+                <TabsContent value="template">
+                  <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-4">
+                    {systemPrompt}
+                  </pre>
+                </TabsContent>
+              </Tabs>
             ) : (
-              <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-4">
-                {systemDisplayText}
-              </pre>
+              <>
+                <div className="flex justify-end mb-2">
+                  <CopyButton text={systemPrompt} />
+                </div>
+                <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-4">
+                  {systemPrompt}
+                </pre>
+              </>
             )}
           </TabsContent>
 
@@ -237,30 +242,28 @@ export function RequestInspectorModal({
             value="messages"
             className="overflow-y-auto max-h-[calc(85vh-140px)]"
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="inline-flex items-center rounded-md border p-0.5">
-                <Button
-                  variant={msgFormat === "ui" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setMsgFormat("ui")}
-                >
-                  UI
-                </Button>
-                <Button
-                  variant={msgFormat === "model" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setMsgFormat("model")}
-                >
-                  Model
-                </Button>
+            <Tabs
+              value={msgFormat}
+              onValueChange={(v) => setMsgFormat(v as "ui" | "model")}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <TabsList className="h-8">
+                  <TabsTrigger value="ui" className="text-xs">UI</TabsTrigger>
+                  <TabsTrigger value="model" className="text-xs">Model</TabsTrigger>
+                </TabsList>
+                <CopyButton text={messagesJson} />
               </div>
-              <CopyButton text={messagesJson} />
-            </div>
-            <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-4 overflow-x-auto">
-              {messagesJson}
-            </pre>
+              <TabsContent value="ui">
+                <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-4 overflow-x-auto">
+                  {JSON.stringify(messages, null, 2)}
+                </pre>
+              </TabsContent>
+              <TabsContent value="model">
+                <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-4 overflow-x-auto">
+                  {modelMessagesJson ?? "Converting..."}
+                </pre>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent

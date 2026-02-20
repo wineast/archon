@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EyeIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -28,7 +29,7 @@ interface WikiEditorProps {
 export function WikiEditor({ doc, documents, onUpdate, onDelete }: WikiEditorProps) {
   const [title, setTitle] = useState(doc.title);
   const [content, setContent] = useState(doc.content);
-  const [mode, setMode] = useState<"preview" | "edit">("preview");
+  const [activeTab, setActiveTab] = useState<"preview" | "edit">("preview");
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -39,7 +40,7 @@ export function WikiEditor({ doc, documents, onUpdate, onDelete }: WikiEditorPro
     setTitle(doc.title);
     setContent(doc.content);
     snapshotRef.current = { title: doc.title, content: doc.content };
-    setMode("preview");
+    setActiveTab("preview");
   }, [doc.id, doc.title, doc.content]);
 
   const dirty = title !== snapshotRef.current.title || content !== snapshotRef.current.content;
@@ -106,47 +107,33 @@ export function WikiEditor({ doc, documents, onUpdate, onDelete }: WikiEditorPro
         </div>
 
         {/* Content area */}
-        <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center gap-1 shrink-0 px-6 pb-2">
-            <Button
-              variant={mode === "edit" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setMode("edit")}
-            >
-              <PencilIcon className="size-3" />
-              Edit
-            </Button>
-            <Button
-              variant={mode === "preview" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setMode("preview")}
-            >
-              <EyeIcon className="size-3" />
-              Preview
-            </Button>
-          </div>
-
-          {mode === "edit" ? (
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <Textarea
-                className="h-full resize-none rounded-none border-none px-6 py-4 shadow-none focus-visible:ring-0"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your content in Markdown..."
-              />
-            </div>
-          ) : (
-            <div className="min-h-0 flex-1 overflow-auto px-6 py-4">
-              {content ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                  <Markdown>{renderedContent}</Markdown>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No content to preview</p>
-              )}
-            </div>
-          )}
-        </div>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "edit" | "preview")}
+          className="flex flex-col flex-1 min-h-0"
+        >
+          <TabsList className="shrink-0 mx-6">
+            <TabsTrigger value="edit">Edit</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+          </TabsList>
+          <TabsContent value="edit" className="flex-1 min-h-0 overflow-hidden">
+            <Textarea
+              className="h-full resize-none rounded-none border-none px-6 py-4 shadow-none focus-visible:ring-0"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Write your content in Markdown..."
+            />
+          </TabsContent>
+          <TabsContent value="preview" className="flex-1 min-h-0 overflow-auto px-6 py-4">
+            {content ? (
+              <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                <Markdown>{renderedContent}</Markdown>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No content to preview</p>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* Footer */}
         <div className="flex items-center gap-2 shrink-0 border-t px-6 py-3">
