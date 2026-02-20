@@ -144,7 +144,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
             <TabsTrigger value="edit">Edit</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
-          <TabsContent value="edit" className="flex-1 min-h-0 overflow-hidden">
+          <TabsContent value="edit" className="flex-1 min-h-0 overflow-hidden px-6 pb-4">
             <MdEditor
               value={content}
               onChange={setContent}
@@ -152,7 +152,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
               documents={completionDocs}
               tools={completionTools}
               placeholder="Write your content in Markdown..."
-              className="flex-1 rounded-none border-0 [&_[data-slot=md-editor]]:rounded-none"
+              className="h-full [&_.cm-editor]:h-full"
             />
           </TabsContent>
           <TabsContent value="preview" className="flex-1 min-h-0 overflow-auto px-6 py-4">
