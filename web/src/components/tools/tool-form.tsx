@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { KeyField } from "@/components/ui/key-field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -159,16 +160,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   return (
     <FormProvider {...form}>
       <div className="space-y-3 min-w-0">
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            Key
-          </label>
-          <Input
-            className="mt-1 h-8 text-sm font-mono bg-muted"
-            {...form.register("key")}
-            readOnly
-          />
-        </div>
+        <KeyField value={form.getValues("key")} />
         <div>
           <label className="text-xs font-medium text-muted-foreground">
             Tool Name
