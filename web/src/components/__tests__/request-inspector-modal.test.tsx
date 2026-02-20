@@ -208,12 +208,12 @@ describe("RequestInspectorModal", () => {
       );
 
       // Should show Rendered button as active
-      const renderedBtn = screen.getByRole("button", { name: /^rendered$/i });
+      const renderedBtn = screen.getByRole("tab", { name: /^rendered$/i });
       expect(renderedBtn).toBeInTheDocument();
 
       // Wait for fetch to complete
       await waitFor(() => {
-        const tabPanel = screen.getByRole("tabpanel");
+        const tabPanel = screen.getAllByRole("tabpanel")[0];
         const pre = tabPanel.querySelector("pre");
         expect(pre).not.toBeNull();
         expect(pre!.textContent).toBe("Rendered prompt");
@@ -245,13 +245,13 @@ describe("RequestInspectorModal", () => {
 
       // Wait for rendered content to load first
       await waitFor(() => {
-        expect(screen.getByRole("tabpanel").querySelector("pre")).not.toBeNull();
+        expect(screen.getAllByRole("tabpanel")[0].querySelector("pre")).not.toBeNull();
       });
 
       // Switch to Template view
-      await user.click(screen.getByRole("button", { name: /^template$/i }));
+      await user.click(screen.getByRole("tab", { name: /^template$/i }));
 
-      const tabPanel = screen.getByRole("tabpanel");
+      const tabPanel = screen.getAllByRole("tabpanel")[0];
       const pre = tabPanel.querySelector("pre");
       expect(pre).not.toBeNull();
       expect(pre!.textContent).toBe("Hello {{company}}");
@@ -265,19 +265,19 @@ describe("RequestInspectorModal", () => {
 
       // Wait for rendered content
       await waitFor(() => {
-        const pre = screen.getByRole("tabpanel").querySelector("pre");
+        const pre = screen.getAllByRole("tabpanel")[0].querySelector("pre");
         expect(pre?.textContent).toBe("Rendered prompt");
       });
 
       // Switch to Template
-      await user.click(screen.getByRole("button", { name: /^template$/i }));
-      expect(screen.getByRole("tabpanel").querySelector("pre")!.textContent).toBe(
+      await user.click(screen.getByRole("tab", { name: /^template$/i }));
+      expect(screen.getAllByRole("tabpanel")[0].querySelector("pre")!.textContent).toBe(
         "Hello {{company}}"
       );
 
       // Switch back to Rendered — should use cached result, no extra fetch
-      await user.click(screen.getByRole("button", { name: /^rendered$/i }));
-      expect(screen.getByRole("tabpanel").querySelector("pre")!.textContent).toBe(
+      await user.click(screen.getByRole("tab", { name: /^rendered$/i }));
+      expect(screen.getAllByRole("tabpanel")[0].querySelector("pre")!.textContent).toBe(
         "Rendered prompt"
       );
     });
@@ -292,7 +292,7 @@ describe("RequestInspectorModal", () => {
       );
 
       // Should show spinner (Spinner renders LoaderIcon svg)
-      const tabPanel = screen.getByRole("tabpanel");
+      const tabPanel = screen.getAllByRole("tabpanel")[0];
       expect(tabPanel.querySelector("svg")).toBeInTheDocument();
       // No pre tag while loading
       expect(tabPanel.querySelector("pre")).toBeNull();
@@ -311,11 +311,11 @@ describe("RequestInspectorModal", () => {
       await user.click(screen.getByRole("button", { name: /inspect/i }));
       await user.click(screen.getByRole("tab", { name: /^system$/i }));
 
-      expect(screen.queryByRole("button", { name: /^rendered$/i })).toBeNull();
-      expect(screen.queryByRole("button", { name: /^template$/i })).toBeNull();
+      expect(screen.queryByRole("tab", { name: /^rendered$/i })).toBeNull();
+      expect(screen.queryByRole("tab", { name: /^template$/i })).toBeNull();
 
       // Should show raw prompt
-      const tabPanel = screen.getByRole("tabpanel");
+      const tabPanel = screen.getAllByRole("tabpanel")[0];
       const pre = tabPanel.querySelector("pre");
       expect(pre).not.toBeNull();
       expect(pre!.textContent).toBe("No agent");
@@ -336,7 +336,7 @@ describe("RequestInspectorModal", () => {
 
       // Wait for rendered content to load
       await waitFor(() => {
-        const pre = screen.getByRole("tabpanel").querySelector("pre");
+        const pre = screen.getAllByRole("tabpanel")[0].querySelector("pre");
         expect(pre?.textContent).toBe("Rendered prompt");
       });
 
@@ -357,13 +357,13 @@ describe("RequestInspectorModal", () => {
 
       // Wait for rendered load
       await waitFor(() => {
-        expect(screen.getByRole("tabpanel").querySelector("pre")).not.toBeNull();
+        expect(screen.getAllByRole("tabpanel")[0].querySelector("pre")).not.toBeNull();
       });
 
       // Switch to template — verify template content is shown
-      await user.click(screen.getByRole("button", { name: /^template$/i }));
+      await user.click(screen.getByRole("tab", { name: /^template$/i }));
       expect(
-        screen.getByRole("tabpanel").querySelector("pre")!.textContent
+        screen.getAllByRole("tabpanel")[0].querySelector("pre")!.textContent
       ).toBe("Hello {{company}}");
 
       await user.click(screen.getByRole("button", { name: /copy/i }));
@@ -383,7 +383,7 @@ describe("RequestInspectorModal", () => {
       await setup({ messages: sampleMessages }, /messages/i);
 
       const expected = JSON.stringify(sampleMessages, null, 2);
-      const tabPanel = screen.getByRole("tabpanel");
+      const tabPanel = screen.getAllByRole("tabpanel")[0];
       const pre = tabPanel.querySelector("pre");
       expect(pre).not.toBeNull();
       expect(pre!.textContent).toBe(expected);
@@ -409,7 +409,7 @@ describe("RequestInspectorModal", () => {
       mockTools.push(...sampleToolRows);
       await setup({}, /^tools$/i);
 
-      const tabPanel = screen.getByRole("tabpanel");
+      const tabPanel = screen.getAllByRole("tabpanel")[0];
       const pre = tabPanel.querySelector("pre");
       expect(pre).not.toBeNull();
       // tools are filtered (enabled) and mapped to payload shape
@@ -459,7 +459,7 @@ describe("RequestInspectorModal", () => {
 
       // Wait for rendered content
       await waitFor(() => {
-        const pre = screen.getByRole("tabpanel").querySelector("pre");
+        const pre = screen.getAllByRole("tabpanel")[0].querySelector("pre");
         expect(pre).not.toBeNull();
       });
     });
@@ -476,7 +476,7 @@ describe("RequestInspectorModal", () => {
 
       // Wait for content to load
       await waitFor(() => {
-        expect(screen.getByRole("tabpanel").querySelector("pre")).not.toBeNull();
+        expect(screen.getAllByRole("tabpanel")[0].querySelector("pre")).not.toBeNull();
       });
 
       await user.click(screen.getByRole("button", { name: /copy/i }));
