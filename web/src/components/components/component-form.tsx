@@ -4,15 +4,25 @@ import { Input } from "@/components/ui/input";
 import { KeyField } from "@/components/ui/key-field";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { JsEditor } from "@/components/editors/js-editor";
+import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
 import { inferComponentDeps, keyToPascal, type ComponentRecord } from "@/tool-ui";
 import type { ComponentDefinition } from "@/lib/components/types";
+import { useSchemas } from "@/lib/schemas/hooks";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SparklesIcon } from "lucide-react";
 import {
   Controller,
   FormProvider,
   useForm,
+  useWatch,
 } from "react-hook-form";
 import deepEqual from "fast-deep-equal";
 import { Button } from "@/components/ui/button";
@@ -33,11 +43,62 @@ interface ComponentFormProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
+interface SchemaSelectProps {
+  label: string;
+  fieldName: "toolInputSchemaId" | "toolOutputSchemaId";
+  value: string | null | undefined;
+  schemas: { id: string; key: string; name: string; parameters: import("@/lib/schemas/types").SchemaProperty[] }[];
+  form: ReturnType<typeof useForm<ComponentDefinition>>;
+}
+
+function SchemaSelect({ label, fieldName, value, schemas, form }: SchemaSelectProps) {
+  const selectedSchema = schemas.find((s) => s.id === value);
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
+      <div className="mt-1 space-y-2">
+        <Controller
+          name={fieldName}
+          control={form.control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? "__none__"}
+              onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Select a schema..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {schemas.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} ({s.key})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {selectedSchema && (
+          <SchemaParameterPreview parameters={selectedSchema.parameters} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
   const originalRef = useRef<ComponentDefinition>({ ...component });
   const currentSource = form.watch("componentSource");
   const [jsxAssistOpen, setJsxAssistOpen] = useState(false);
+
+  const toolInputSchemaId = useWatch({ control: form.control, name: "toolInputSchemaId" });
+  const toolOutputSchemaId = useWatch({ control: form.control, name: "toolOutputSchemaId" });
+  const { schemas } = useSchemas(agentId);
 
   // Infer referenced components from JSX source
   const referencedComponents = useMemo(() => {
@@ -92,6 +153,20 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             placeholder="Describe what this component renders..."
           />
         </div>
+        <SchemaSelect
+          label="Tool Input Schema"
+          fieldName="toolInputSchemaId"
+          value={toolInputSchemaId}
+          schemas={schemas}
+          form={form}
+        />
+        <SchemaSelect
+          label="Tool Output Schema"
+          fieldName="toolOutputSchemaId"
+          value={toolOutputSchemaId}
+          schemas={schemas}
+          form={form}
+        />
         <div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">

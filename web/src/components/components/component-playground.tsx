@@ -49,6 +49,10 @@ import {
   useComponentTestCases,
   createComponentTestCase,
 } from "@/lib/components/test-case-hooks";
+import {
+  validateAgainstSchema,
+  type SchemaValidationResult,
+} from "@/lib/components/validate-schema";
 
 const STATE_OPTIONS = [
   { value: "output-available", label: "output-available" },
@@ -70,6 +74,8 @@ interface ComponentPlaygroundProps {
   componentSource: string;
   componentKey?: string;
   allComponents?: ComponentRecord[];
+  toolInputSchemaId?: string | null;
+  toolOutputSchemaId?: string | null;
 }
 
 export function ComponentPlayground({
@@ -77,6 +83,8 @@ export function ComponentPlayground({
   componentSource,
   componentKey,
   allComponents,
+  toolInputSchemaId,
+  toolOutputSchemaId,
 }: ComponentPlaygroundProps) {
   const [toolName, setToolName] = useState("");
   const [inputValue, setInputValue] = useState("{}");
@@ -94,6 +102,10 @@ export function ComponentPlayground({
   const [saveTagInput, setSaveTagInput] = useState("");
   const [saveShowAsExample, setSaveShowAsExample] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [inputValidation, setInputValidation] =
+    useState<SchemaValidationResult | null>(null);
+  const [outputValidation, setOutputValidation] =
+    useState<SchemaValidationResult | null>(null);
 
   const parsedInput = useMemo(() => {
     try {
@@ -141,9 +153,19 @@ export function ComponentPlayground({
     }
   }, [componentKey, allComponents, componentSource]);
 
+  const runSchemaValidation = useCallback(async () => {
+    const [inResult, outResult] = await Promise.all([
+      validateAgainstSchema(toolInputSchemaId, parsedInput),
+      validateAgainstSchema(toolOutputSchemaId, parsedOutput),
+    ]);
+    setInputValidation(inResult);
+    setOutputValidation(outResult);
+  }, [toolInputSchemaId, toolOutputSchemaId, parsedInput, parsedOutput]);
+
   const handleRefresh = useCallback(() => {
     setPreviewKey((k) => k + 1);
-  }, []);
+    runSchemaValidation();
+  }, [runSchemaValidation]);
 
   const handleLoadTestCase = useCallback(
     (tool: { name: string; input: unknown; output: unknown }) => {
@@ -151,6 +173,8 @@ export function ComponentPlayground({
       setInputValue(JSON.stringify(tool.input, null, 2));
       setOutputValue(JSON.stringify(tool.output, null, 2));
       setPreviewKey((k) => k + 1);
+      setInputValidation(null);
+      setOutputValidation(null);
     },
     []
   );
@@ -312,6 +336,15 @@ export function ComponentPlayground({
                 height="120px"
                 className="mt-1"
               />
+              {inputValidation && !inputValidation.valid && (
+                <div className="mt-1 space-y-0.5">
+                  {inputValidation.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-destructive">
+                      {e.path ? `${e.path}: ` : ""}{e.message}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Output */}
@@ -325,6 +358,15 @@ export function ComponentPlayground({
                 height="120px"
                 className="mt-1"
               />
+              {outputValidation && !outputValidation.valid && (
+                <div className="mt-1 space-y-0.5">
+                  {outputValidation.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-destructive">
+                      {e.path ? `${e.path}: ` : ""}{e.message}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

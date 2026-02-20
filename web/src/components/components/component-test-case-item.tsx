@@ -30,6 +30,7 @@ export interface ComponentTestRunResult {
   passed: boolean;
   error?: string;
   durationMs: number;
+  schemaWarnings?: string;
 }
 
 export interface ComponentTestCaseItemProps {
@@ -403,6 +404,11 @@ export function ComponentTestCaseItem({
                 {result.error && (
                   <p className="text-xs text-destructive whitespace-pre-wrap">
                     {result.error}
+                  </p>
+                )}
+                {result.schemaWarnings && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 whitespace-pre-wrap">
+                    {result.schemaWarnings}
                   </p>
                 )}
                 {result.passed && componentSource.trim() && (
