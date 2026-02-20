@@ -38,8 +38,8 @@ export function WikiPanel({ agentId }: { agentId: string }) {
   }, [activeDocId]);
 
   const handleCreateDocument = useCallback(
-    async (title: string, key: string) => {
-      const id = await createDocument(documents, mutate, agentId, title, key);
+    async (name: string, key: string) => {
+      const id = await createDocument(documents, mutate, agentId, name, key);
       if (id) {
         setActiveDocId(id);
         setCreateDialogOpen(false);
@@ -49,7 +49,7 @@ export function WikiPanel({ agentId }: { agentId: string }) {
   );
 
   const handleUpdate = useCallback(
-    async (id: string, updates: { title: string; content: string }) => {
+    async (id: string, updates: { name: string; content: string }) => {
       return updateDocument(id, updates, documents, mutate);
     },
     [documents, mutate]
@@ -88,6 +88,7 @@ export function WikiPanel({ agentId }: { agentId: string }) {
             <WikiEditor
               doc={activeDoc}
               documents={documents}
+              agentId={agentId}
               onUpdate={handleUpdate}
               onDelete={handleDelete}
             />
@@ -124,6 +125,7 @@ export function WikiPanel({ agentId }: { agentId: string }) {
               <WikiEditor
                 doc={activeDoc}
                 documents={documents}
+                agentId={agentId}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
               />

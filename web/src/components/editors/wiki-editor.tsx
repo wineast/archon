@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2Icon } from "lucide-react";
 import Markdown from "react-markdown";
+import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
@@ -15,6 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MdEditor } from "@/components/editors/md-editor";
+import { useDatasetVarsMap } from "@/lib/datasets/hooks";
+import { useTools } from "@/lib/tools/hooks";
+import { BUILTIN_VAR_NAMES } from "@/lib/template";
+import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
@@ -22,41 +27,64 @@ import type { WikiDocument } from "@/lib/wiki/types";
 interface WikiEditorProps {
   doc: WikiDocument;
   documents: WikiDocument[];
-  onUpdate: (id: string, updates: { title: string; content: string }) => Promise<boolean>;
+  agentId: string;
+  onUpdate: (id: string, updates: { name: string; content: string }) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
 }
 
-export function WikiEditor({ doc, documents, onUpdate, onDelete }: WikiEditorProps) {
-  const [title, setTitle] = useState(doc.title);
+export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: WikiEditorProps) {
+  const [name, setName] = useState(doc.name);
   const [content, setContent] = useState(doc.content);
   const [activeTab, setActiveTab] = useState<"preview" | "edit">("preview");
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const snapshotRef = useRef({ title: doc.title, content: doc.content });
+  const { tools: allTools } = useTools(agentId);
+  const { datasetVars } = useDatasetVarsMap(agentId);
+  const { data: wikiDocs = [] } = useSWR(wikiApiKey(agentId), wikiFetcher);
+
+  const allVariables = useMemo(() => {
+    const datasetKeys = Object.keys(datasetVars);
+    return [...BUILTIN_VAR_NAMES, ...datasetKeys];
+  }, [datasetVars]);
+
+  const completionTools = useMemo(
+    () =>
+      allTools
+        .filter((t) => t.enabled)
+        .map((t) => ({ name: t.name, description: t.description })),
+    [allTools]
+  );
+
+  const completionDocs = useMemo(
+    () => wikiDocs.map((d) => ({ title: d.name })),
+    [wikiDocs]
+  );
+
+  const snapshotRef = useRef({ name: doc.name, content: doc.content });
 
   useEffect(() => {
-    setTitle(doc.title);
+    setName(doc.name);
     setContent(doc.content);
-    snapshotRef.current = { title: doc.title, content: doc.content };
+    snapshotRef.current = { name: doc.name, content: doc.content };
     setActiveTab("preview");
-  }, [doc.id, doc.title, doc.content]);
+  }, [doc.id, doc.name, doc.content]);
 
-  const dirty = title !== snapshotRef.current.title || content !== snapshotRef.current.content;
+  const dirty = name !== snapshotRef.current.name || content !== snapshotRef.current.content;
   const busy = saving || deleting;
 
   const handleSave = useCallback(async () => {
     setSaving(true);
-    const ok = await onUpdate(doc.id, { title, content });
+    const ok = await onUpdate(doc.id, { name, content });
     if (ok) {
-      snapshotRef.current = { title, content };
+      snapshotRef.current = { name, content };
     }
     setSaving(false);
-  }, [doc.id, title, content, onUpdate]);
+  }, [doc.id, name, content, onUpdate]);
 
   const handleReset = useCallback(() => {
-    setTitle(snapshotRef.current.title);
+    setName(snapshotRef.current.name);
     setContent(snapshotRef.current.content);
   }, []);
 
@@ -72,9 +100,9 @@ export function WikiEditor({ doc, documents, onUpdate, onDelete }: WikiEditorPro
     const body = stripFrontmatter(content);
     return processTemplate(body, {
       documents,
-      currentDoc: { ...doc, title, content: body },
+      currentDoc: { ...doc, name, content: body },
     });
-  }, [content, title, doc, documents]);
+  }, [content, name, doc, documents]);
 
   const createdAt = new Date(doc.createdAt).toLocaleString();
   const updatedAt = new Date(doc.updatedAt).toLocaleString();
@@ -93,12 +121,12 @@ export function WikiEditor({ doc, documents, onUpdate, onDelete }: WikiEditorPro
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Title</label>
+            <label className="text-xs font-medium text-muted-foreground">Name</label>
             <Input
               className="mt-1 h-8 text-sm"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Document title"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Document name"
             />
           </div>
           <p className="text-xs text-muted-foreground">
@@ -117,11 +145,14 @@ export function WikiEditor({ doc, documents, onUpdate, onDelete }: WikiEditorPro
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
           <TabsContent value="edit" className="flex-1 min-h-0 overflow-hidden">
-            <Textarea
-              className="h-full resize-none rounded-none border-none px-6 py-4 shadow-none focus-visible:ring-0"
+            <MdEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
+              variables={allVariables}
+              documents={completionDocs}
+              tools={completionTools}
               placeholder="Write your content in Markdown..."
+              className="flex-1 rounded-none border-0 [&_[data-slot=md-editor]]:rounded-none"
             />
           </TabsContent>
           <TabsContent value="preview" className="flex-1 min-h-0 overflow-auto px-6 py-4">
@@ -160,7 +191,7 @@ export function WikiEditor({ doc, documents, onUpdate, onDelete }: WikiEditorPro
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete &ldquo;{doc.title || "Untitled"}&rdquo;?</DialogTitle>
+            <DialogTitle>Delete &ldquo;{doc.name || "Untitled"}&rdquo;?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             This will permanently delete this document.

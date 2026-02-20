@@ -46,7 +46,7 @@ export interface SchemaSnapshotItem {
 
 export interface WikiDocumentSnapshotItem {
   key: string;
-  title: string;
+  name: string;
   content: string;
   order: number;
   parentKey: string | null;

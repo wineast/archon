@@ -1,8 +1,3 @@
----
-id: wiki-uw-fabulous
-title: GMCC Fabulous 核保标准
----
-
 GMCC Fabulous 核保标准
 
 1. Transaction Type（交易类型）

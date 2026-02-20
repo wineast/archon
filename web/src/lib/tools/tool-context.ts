@@ -97,10 +97,10 @@ export interface ToolContext {
     get(id: string): Promise<WikiDoc | null>;
     findByPrefix(
       prefix: string
-    ): Promise<Array<{ id: string; title: string; meta: Record<string, unknown> | null; content: string }>>;
+    ): Promise<Array<{ id: string; name: string; meta: Record<string, unknown> | null; content: string }>>;
     search(
       query: string
-    ): Promise<Array<{ id: string; title: string; meta: Record<string, unknown> | null; content: string }>>;
+    ): Promise<Array<{ id: string; name: string; meta: Record<string, unknown> | null; content: string }>>;
   };
   dataset: {
     get(key: string): Promise<unknown>;
@@ -224,14 +224,14 @@ export function createToolContext(agentId?: string): ToolContext {
         const rows = await db
           .select({
             id: wikiDocuments.id,
-            title: wikiDocuments.title,
+            name: wikiDocuments.name,
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
           .where(like(wikiDocuments.key, `${prefix}%`));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
-          return { id: r.id, title: r.title, meta: Object.keys(meta).length > 0 ? meta : null, content };
+          return { id: r.id, name: r.name, meta: Object.keys(meta).length > 0 ? meta : null, content };
         });
       },
 
@@ -239,14 +239,14 @@ export function createToolContext(agentId?: string): ToolContext {
         const rows = await db
           .select({
             id: wikiDocuments.id,
-            title: wikiDocuments.title,
+            name: wikiDocuments.name,
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
           .where(ilike(wikiDocuments.content, `%${query}%`));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
-          return { id: r.id, title: r.title, meta: Object.keys(meta).length > 0 ? meta : null, content };
+          return { id: r.id, name: r.name, meta: Object.keys(meta).length > 0 ? meta : null, content };
         });
       },
     },

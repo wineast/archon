@@ -1,8 +1,3 @@
----
-id: wiki-uw-radiant-au
-title: GMCC Radiant AU 核保标准
----
-
 GMCC Radiant AU 核保标准
 
 1. Transaction Type（交易类型）

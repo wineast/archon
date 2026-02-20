@@ -23,7 +23,7 @@ function formatKey(raw: string): string {
 interface WikiCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (title: string, key: string) => Promise<void>;
+  onCreate: (name: string, key: string) => Promise<void>;
 }
 
 export function WikiCreateDialog({
@@ -31,15 +31,15 @@ export function WikiCreateDialog({
   onOpenChange,
   onCreate,
 }: WikiCreateDialogProps) {
-  const [title, setTitle] = useState("");
+  const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const handleTitleChange = useCallback(
+  const handleNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
-      setTitle(val);
+      setName(val);
       if (!keyManuallyEdited) {
         setKey(formatKey(val));
       }
@@ -56,22 +56,22 @@ export function WikiCreateDialog({
   );
 
   const handleCreate = useCallback(async () => {
-    if (!title.trim() || !key.trim()) return;
+    if (!name.trim() || !key.trim()) return;
     setCreating(true);
     try {
-      await onCreate(title.trim(), key.trim());
-      setTitle("");
+      await onCreate(name.trim(), key.trim());
+      setName("");
       setKey("");
       setKeyManuallyEdited(false);
     } finally {
       setCreating(false);
     }
-  }, [title, key, onCreate]);
+  }, [name, key, onCreate]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
-        setTitle("");
+        setName("");
         setKey("");
         setKeyManuallyEdited(false);
       }
@@ -80,7 +80,7 @@ export function WikiCreateDialog({
     [onOpenChange]
   );
 
-  const canSubmit = title.trim().length > 0 && key.trim().length > 0 && !creating;
+  const canSubmit = name.trim().length > 0 && key.trim().length > 0 && !creating;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -95,12 +95,12 @@ export function WikiCreateDialog({
         <div className="space-y-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground">
-              Title
+              Name
             </label>
             <Input
               className="mt-1 h-8 text-sm"
-              value={title}
-              onChange={handleTitleChange}
+              value={name}
+              onChange={handleNameChange}
               placeholder="e.g. Getting Started"
               autoFocus
             />

@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
-import { resolveTitle } from "@/lib/wiki/frontmatter";
+import { resolveName } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import type { WikiDocumentRow } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
@@ -12,7 +12,7 @@ function toWikiDocument(row: WikiDocumentRow): WikiDocument {
   return {
     id: row.id,
     key: row.key,
-    title: row.title || resolveTitle(row.content),
+    name: row.name || resolveName(row.content),
     content: row.content,
     order: row.order,
     createdAt: row.createdAt.getTime(),
@@ -46,9 +46,9 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  if (!body.title || !body.key) {
+  if (!body.name || !body.key) {
     return NextResponse.json(
-      { error: "title and key are required" },
+      { error: "name and key are required" },
       { status: 400 },
     );
   }
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     .insert(wikiDocuments)
     .values({
       agentId,
-      title: body.title,
+      name: body.name,
       key: body.key,
       content: body.content,
       order: body.order,
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       resourceType: "wiki",
       resourceId: row.id,
       resourceKey: row.key,
-      resourceName: row.title,
+      resourceName: row.name,
     });
   });
 

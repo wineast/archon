@@ -1,8 +1,3 @@
----
-id: wiki-uw-hermes-ca
-title: GMCC Hermes 核保标准 – 加州（CA）物业专用
----
-
 GMCC Hermes 核保标准 – 加州（CA）物业专用
 
 1. Transaction Type（交易类型）

@@ -1,8 +1,3 @@
----
-id: wiki-uw-celebrity
-title: GMCC Celebrity 核保标准
----
-
 GMCC Celebrity 核保标准
 
 1. Transaction Type（交易类型）

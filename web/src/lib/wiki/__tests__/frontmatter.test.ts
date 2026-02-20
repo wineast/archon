@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { parseWikiContent, stripFrontmatter } from "../frontmatter";
 
 describe("parseWikiContent", () => {
-  it("parses frontmatter with id and title", () => {
+  it("parses frontmatter with id and name", () => {
     const raw = `---
 id: wiki-uw-celebrity
-title: GMCC Celebrity 核保标准
+name: GMCC Celebrity 核保标准
 ---
 
 GMCC Celebrity 核保标准
@@ -14,7 +14,7 @@ Some content here.`;
 
     const result = parseWikiContent(raw);
     expect(result.meta.id).toBe("wiki-uw-celebrity");
-    expect(result.meta.title).toBe("GMCC Celebrity 核保标准");
+    expect(result.meta.name).toBe("GMCC Celebrity 核保标准");
     expect(result.content.trim()).toBe(
       "GMCC Celebrity 核保标准\n\nSome content here."
     );
@@ -27,15 +27,15 @@ Some content here.`;
     expect(result.content).toBe(raw);
   });
 
-  it("handles partial frontmatter (only title)", () => {
+  it("handles partial frontmatter (only name)", () => {
     const raw = `---
-title: Test Doc
+name: Test Doc
 ---
 
 Body content.`;
 
     const result = parseWikiContent(raw);
-    expect(result.meta.title).toBe("Test Doc");
+    expect(result.meta.name).toBe("Test Doc");
     expect(result.meta.id).toBeUndefined();
     expect(result.content.trim()).toBe("Body content.");
   });
@@ -49,7 +49,7 @@ Body content.`;
 
     const result = parseWikiContent(raw);
     expect(result.meta.id).toBe("custom-id");
-    expect(result.meta.title).toBeUndefined();
+    expect(result.meta.name).toBeUndefined();
     expect(result.content.trim()).toBe("Body content.");
   });
 
@@ -62,7 +62,7 @@ Body content.`;
   it("handles extra frontmatter fields", () => {
     const raw = `---
 id: doc-1
-title: My Doc
+name: My Doc
 tags: [a, b]
 ---
 
@@ -70,7 +70,7 @@ Content.`;
 
     const result = parseWikiContent(raw);
     expect(result.meta.id).toBe("doc-1");
-    expect(result.meta.title).toBe("My Doc");
+    expect(result.meta.name).toBe("My Doc");
     expect(result.meta.tags).toEqual(["a", "b"]);
     expect(result.content.trim()).toBe("Content.");
   });
@@ -80,7 +80,7 @@ describe("stripFrontmatter", () => {
   it("strips frontmatter and returns body", () => {
     const raw = `---
 id: wiki-uw-test
-title: Test
+name: Test
 ---
 
 Body content here.`;

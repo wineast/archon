@@ -6,7 +6,7 @@ function makeDoc(overrides: Partial<WikiDocument> = {}): WikiDocument {
   return {
     id: "doc-1",
     key: "",
-    title: "Test Doc",
+    name: "Test Doc",
     content: "",
     order: 0,
     createdAt: Date.now(),
@@ -26,7 +26,7 @@ function makeCtx(
 describe("processTemplate", () => {
   describe("variable interpolation", () => {
     it("replaces {{documentTitle}}", () => {
-      const doc = makeDoc({ title: "Hello" });
+      const doc = makeDoc({ name: "Hello" });
       const result = processTemplate("Title: {{documentTitle}}", makeCtx(doc));
       expect(result).toBe("Title: Hello");
     });
@@ -149,8 +149,8 @@ describe("processTemplate", () => {
     });
 
     it("iterates over built-in documentList", () => {
-      const doc1 = makeDoc({ id: "1", title: "Doc A" });
-      const doc2 = makeDoc({ id: "2", title: "Doc B" });
+      const doc1 = makeDoc({ id: "1", name: "Doc A" });
+      const doc2 = makeDoc({ id: "2", name: "Doc B" });
       const result = processTemplate(
         "{% for item in documentList %}- {{item}}\n{% endfor %}",
         makeCtx(doc1, [doc1, doc2])
@@ -164,13 +164,13 @@ describe("processTemplate", () => {
       const header = makeDoc({
         id: "header",
         key: "header",
-        title: "Header",
+        name: "Header",
         content: "# Company Wiki",
       });
       const main = makeDoc({
         id: "main",
         key: "home",
-        title: "Home",
+        name: "Home",
         content: "{% include 'header' %}\n\nBody content",
       });
       const result = processTemplate(
@@ -190,13 +190,13 @@ describe("processTemplate", () => {
       const docA = makeDoc({
         id: "a",
         key: "a",
-        title: "A",
+        name: "A",
         content: "Content A\n{% include 'b' %}",
       });
       const docB = makeDoc({
         id: "b",
         key: "b",
-        title: "B",
+        name: "B",
         content: "Content B\n{% include 'a' %}",
       });
       const result = processTemplate(
@@ -212,13 +212,13 @@ describe("processTemplate", () => {
       const partial = makeDoc({
         id: "p",
         key: "partial",
-        title: "partial",
+        name: "partial",
         content: "Doc: {{documentTitle}}",
       });
       const main = makeDoc({
         id: "m",
         key: "home",
-        title: "Home",
+        name: "Home",
         content: "{% include 'partial' %}",
       });
       const result = processTemplate(
@@ -228,17 +228,17 @@ describe("processTemplate", () => {
       expect(result).toBe("Doc: partial");
     });
 
-    it("includes document by key with different title", () => {
+    it("includes document by key with different name", () => {
       const header = makeDoc({
         id: "header",
         key: "site_header",
-        title: "Header",
+        name: "Header",
         content: "# Company Wiki",
       });
       const main = makeDoc({
         id: "main",
         key: "home",
-        title: "Home",
+        name: "Home",
         content: "{% include 'site_header' %}\n\nBody content",
       });
       const result = processTemplate(
@@ -252,13 +252,13 @@ describe("processTemplate", () => {
       const included = makeDoc({
         id: "inc",
         key: "included",
-        title: "Included",
-        content: "---\nid: inc\ntitle: Included\n---\n\nIncluded body content",
+        name: "Included",
+        content: "---\nid: inc\nname: Included\n---\n\nIncluded body content",
       });
       const main = makeDoc({
         id: "main",
         key: "main",
-        title: "Main",
+        name: "Main",
         content: "Before\n{% include 'included' %}\nAfter",
       });
       const result = processTemplate(
@@ -275,7 +275,7 @@ describe("processTemplate", () => {
 
   describe("mixed scenarios", () => {
     it("combines variables, conditionals, and loops", () => {
-      const doc = makeDoc({ title: "Report" });
+      const doc = makeDoc({ name: "Report" });
       const template = `# {{documentTitle}}
 
 {% if showAuthor %}Author: {{author}}{% endif %}

@@ -65,7 +65,7 @@ export function WikiListItem({
         <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
 
         <span className="min-w-0 flex-1 truncate text-left">
-          {doc.title || "Untitled"}
+          {doc.name || "Untitled"}
         </span>
 
         <DropdownMenu>
@@ -103,7 +103,7 @@ export function WikiListItem({
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title={`Delete "${doc.title || "Untitled"}"?`}
+        title={`Delete "${doc.name || "Untitled"}"?`}
         description="This will permanently delete this document."
         onConfirm={handleDelete}
       />

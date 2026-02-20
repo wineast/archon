@@ -17,7 +17,7 @@ export function buildWikiTools(agentId: string): Record<string, AnyTool> {
           .select({
             id: wikiDocuments.id,
             key: wikiDocuments.key,
-            title: wikiDocuments.title,
+            name: wikiDocuments.name,
             parentId: wikiDocuments.parentId,
             order: wikiDocuments.order,
           })
@@ -45,7 +45,7 @@ export function buildWikiTools(agentId: string): Record<string, AnyTool> {
       description: "创建新 Wiki 文档",
       inputSchema: z.object({
         key: z.string().describe("唯一标识，snake_case"),
-        title: z.string().describe("文档标题"),
+        name: z.string().describe("文档名称"),
         content: z.string().optional().default(""),
         parentId: z.string().uuid().optional().describe("父文档 ID"),
         order: z.number().optional().default(0),
@@ -67,7 +67,7 @@ export function buildWikiTools(agentId: string): Record<string, AnyTool> {
       inputSchema: z.object({
         id: z.string().uuid(),
         key: z.string().optional(),
-        title: z.string().optional(),
+        name: z.string().optional(),
         content: z.string().optional(),
         parentId: z.string().uuid().nullable().optional(),
         order: z.number().optional(),

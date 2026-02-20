@@ -271,7 +271,7 @@ export const wikiDocuments = pgTable(
     parentId: uuid("parent_id").references((): AnyPgColumn => wikiDocuments.id, {
       onDelete: "set null",
     }),
-    title: text("title").notNull(),
+    name: text("name").notNull(),
     key: text("key").notNull(),
     content: text("content").notNull().default(""),
     order: integer("order").notNull().default(0),

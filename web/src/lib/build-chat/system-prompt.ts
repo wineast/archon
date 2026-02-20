@@ -43,7 +43,7 @@ export function buildSystemPrompt(summary: ResourceSummary): string {
   // Wiki
   if (summary.wiki.length > 0) {
     const list = summary.wiki
-      .map((w) => `- ${w.title} (key: ${w.key}, id: ${w.id})`)
+      .map((w) => `- ${w.name} (key: ${w.key}, id: ${w.id})`)
       .join("\n");
     sections.push(`## 当前 Wiki (${summary.wiki.length})\n${list}`);
   } else {

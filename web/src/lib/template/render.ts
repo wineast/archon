@@ -54,7 +54,7 @@ async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
   const rows = await db
     .select({
       id: wikiDocuments.id,
-      title: wikiDocuments.title,
+      name: wikiDocuments.name,
       key: wikiDocuments.key,
       content: wikiDocuments.content,
       order: wikiDocuments.order,
@@ -66,7 +66,7 @@ async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
 
   return rows.map((r) => ({
     ...r,
-    title: r.title,
+    name: r.name,
     createdAt: r.createdAt.getTime(),
     updatedAt: r.updatedAt.getTime(),
   }));
@@ -326,7 +326,7 @@ export async function renderTemplate(
     const virtualDoc: WikiDocument = {
       id: "__system_prompt__",
       key: "",
-      title: "System Prompt",
+      name: "System Prompt",
       content: text,
       order: 0,
       createdAt: Date.now(),
@@ -377,7 +377,7 @@ export async function renderWikiContent(
     const currentDoc = data.docs.find((d) => d.id === currentDocId) ?? {
       id: currentDocId,
       key: "",
-      title: "Unknown",
+      name: "Unknown",
       content: strippedContent,
       order: 0,
       createdAt: Date.now(),

@@ -1,8 +1,3 @@
----
-id: wiki-uw-universe
-title: GMCC Universe 核保标准
----
-
 GMCC Universe 核保标准
 
 1. Transaction Type（交易类型）

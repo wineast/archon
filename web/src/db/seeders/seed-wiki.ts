@@ -1,8 +1,14 @@
 import { join } from "path";
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync, readdirSync, statSync } from "fs";
 import { wikiDocuments } from "../schema";
 import { logSection, log } from "../seed-utils";
 import type { Seeder } from "./types";
+
+interface WikiMeta {
+  name: string;
+  key: string;
+  order?: number;
+}
 
 export const seedWiki: Seeder = {
   name: "wiki",
@@ -10,24 +16,23 @@ export const seedWiki: Seeder = {
     logSection("Seeding wiki documents");
 
     const wikiDir = join(ctx.agentDir, "wiki");
-    const mdFiles = readdirSync(wikiDir)
-      .filter((f) => f.endsWith(".md"))
+    const slugs = readdirSync(wikiDir)
+      .filter((f) => statSync(join(wikiDir, f)).isDirectory())
       .sort();
 
-    // Parse all files synchronously, then upsert in parallel
-    const entries = mdFiles.map((filename, i) => {
-      const slug = filename.replace(/\.md$/, "");
-      const content = readFileSync(join(wikiDir, filename), "utf-8");
-      const key = `wiki_uw_${slug}`;
+    const entries = slugs.map((slug, i) => {
+      const dir = join(wikiDir, slug);
+      const content = readFileSync(join(dir, "content.md"), "utf-8");
+      const meta: WikiMeta = JSON.parse(
+        readFileSync(join(dir, "meta.json"), "utf-8"),
+      );
 
-      const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n?/);
-      let title = slug;
-      if (fmMatch) {
-        const titleMatch = fmMatch[1].match(/^title:\s*(.+)/m);
-        if (titleMatch) title = titleMatch[1].trim();
-      }
-
-      return { title, key, content, order: i };
+      return {
+        name: meta.name,
+        key: meta.key,
+        content,
+        order: meta.order ?? i,
+      };
     });
 
     await Promise.all(
@@ -37,11 +42,11 @@ export const seedWiki: Seeder = {
           .values({ ...e, agentId: ctx.agentId })
           .onConflictDoUpdate({
             target: [wikiDocuments.agentId, wikiDocuments.key],
-            set: { title: e.title, content: e.content, order: e.order },
+            set: { name: e.name, content: e.content, order: e.order },
           }),
       ),
     );
 
-    log("ok", `${mdFiles.length} wiki documents`);
+    log("ok", `${slugs.length} wiki documents`);
   },
 };

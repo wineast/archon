@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 export interface ResourceSummary {
   tools: { id: string; key: string; name: string; description: string; enabled: boolean }[];
   schemas: { id: string; key: string; name: string; description: string }[];
-  wiki: { id: string; key: string; title: string }[];
+  wiki: { id: string; key: string; name: string }[];
   datasets: { id: string; key: string; name: string; description: string }[];
   functions: { id: string; key: string; name: string; description: string }[];
   components: { id: string; key: string; name: string; description: string }[];
@@ -81,7 +81,7 @@ export async function gatherResourceSummary(
       .select({
         id: wikiDocuments.id,
         key: wikiDocuments.key,
-        title: wikiDocuments.title,
+        name: wikiDocuments.name,
       })
       .from(wikiDocuments)
       .where(eq(wikiDocuments.agentId, agentId)),

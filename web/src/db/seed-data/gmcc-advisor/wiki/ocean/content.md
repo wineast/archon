@@ -1,8 +1,3 @@
----
-id: wiki-uw-ocean
-title: GMCC Ocean 核保标准
----
-
 GMCC Ocean 核保标准
 
 1. Transaction Type（交易类型）

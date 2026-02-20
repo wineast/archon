@@ -56,7 +56,7 @@ export async function GET(
       .from(schemas).where(and(eq(schemas.agentId, agentId), isNotNull(schemas.deletedAt))),
     db.select({ id: datasets.id, key: datasets.key, name: datasets.name, deletedAt: datasets.deletedAt })
       .from(datasets).where(and(eq(datasets.agentId, agentId), isNotNull(datasets.deletedAt))),
-    db.select({ id: wikiDocuments.id, key: wikiDocuments.key, name: wikiDocuments.title, deletedAt: wikiDocuments.deletedAt })
+    db.select({ id: wikiDocuments.id, key: wikiDocuments.key, name: wikiDocuments.name, deletedAt: wikiDocuments.deletedAt })
       .from(wikiDocuments).where(and(eq(wikiDocuments.agentId, agentId), isNotNull(wikiDocuments.deletedAt))),
     db.select({ id: modelConfigs.id, key: modelConfigs.key, name: modelConfigs.name, deletedAt: modelConfigs.deletedAt })
       .from(modelConfigs).where(and(eq(modelConfigs.agentId, agentId), isNotNull(modelConfigs.deletedAt))),

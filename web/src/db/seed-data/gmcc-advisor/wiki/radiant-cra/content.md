@@ -1,8 +1,3 @@
----
-id: wiki-uw-radiant-cra
-title: GMCC Radiant CRA 核保标准
----
-
 GMCC Radiant CRA 核保标准
 
 1. Transaction Type（交易类型）

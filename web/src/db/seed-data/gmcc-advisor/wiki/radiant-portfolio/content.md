@@ -1,8 +1,3 @@
----
-id: wiki-uw-radiant-portfolio
-title: GMCC Radiant Portfolio 核保标准
----
-
 GMCC Radiant Portfolio 核保标准
 
 1. Transaction Type（交易类型）

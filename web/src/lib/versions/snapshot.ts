@@ -267,7 +267,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
     wikiDocuments: wikiRows.map(
       (w): WikiDocumentSnapshotItem => ({
         key: w.key,
-        title: w.title,
+        name: w.name,
         content: w.content,
         order: w.order,
         parentKey: w.parentId ? (wikiIdToKey.get(w.parentId) ?? null) : null,
@@ -599,7 +599,7 @@ export async function restoreSnapshot(
     const wikiValues = snapshot.wikiDocuments.map((w) => ({
       agentId,
       key: w.key,
-      title: w.title,
+      name: w.name,
       content: w.content,
       order: w.order,
       parentId: null as string | null,

@@ -1,8 +1,3 @@
----
-id: wiki-uw-hermes-non-ca
-title: GMCC Hermes 核保标准 – 非加州（AZ, CO, DC, GA, IL, NJ, NY, NV, TX, VA, WA）物业专用
----
-
 GMCC Hermes 核保标准 – 非加州（AZ, CO, DC, GA, IL, NJ, NY, NV, TX, VA, WA）物业专用
 
 1. Transaction Type（交易类型）

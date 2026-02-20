@@ -14,9 +14,9 @@ function buildContext(ctx: TemplateContext): Record<string, unknown> {
   return {
     currentDate: now.toLocaleDateString("en-US"),
     currentTime: now.toLocaleTimeString("en-US"),
-    documentTitle: ctx.currentDoc.title,
+    documentTitle: ctx.currentDoc.name,
     documentCount: ctx.documents.length,
-    documentList: ctx.documents.map((d) => d.title),
+    documentList: ctx.documents.map((d) => d.name),
     ...ctx.variables,
   };
 }
@@ -52,7 +52,7 @@ export function processTemplate(
         return;
       }
       if (visitedSet.has(doc.id)) {
-        emitter.write(`> Circular reference: ${doc.title}`);
+        emitter.write(`> Circular reference: ${doc.name}`);
         return;
       }
 

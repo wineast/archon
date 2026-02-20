@@ -1,8 +1,3 @@
----
-id: wiki-uw-thunder
-title: GMCC Thunder 核保标准
----
-
 GMCC Thunder 核保标准
 
 1. Transaction Type（交易类型）

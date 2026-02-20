@@ -19,7 +19,7 @@ export async function createDocument(
   docs: WikiDocument[],
   mutate: KeyedMutator<WikiDocument[]>,
   agentId: string,
-  title: string,
+  name: string,
   key: string
 ): Promise<string | null> {
   const order =
@@ -29,7 +29,7 @@ export async function createDocument(
     const res = await fetch("/api/wiki", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agentId, title, key, content: "", order }),
+      body: JSON.stringify({ agentId, name, key, content: "", order }),
     });
     if (!res.ok) throw new Error("Failed to create document");
     const created: WikiDocument = await res.json();
@@ -44,7 +44,7 @@ export async function createDocument(
 
 export async function updateDocument(
   id: string,
-  updates: { content: string; title: string },
+  updates: { content: string; name: string },
   docs: WikiDocument[],
   mutate: KeyedMutator<WikiDocument[]>
 ): Promise<boolean> {
