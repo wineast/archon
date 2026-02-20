@@ -87,6 +87,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - ScrollArea 内容横向溢出：Radix ScrollArea 的 Viewport 内部会自动生成一个 `display: table; min-width: 100%` 的包装 div，导致子内容可以无限水平扩展（`truncate` 失效）。修复方法：在 ScrollArea 上加 `[&_[data-slot=scroll-area-viewport]>div]:!block` 强制覆盖为 `display: block`
 - Sheet 内部不加 `border-b` / `border-t` 分割线
 - 新增按钮放在底部固定区域
+- Edit/Preview 切换统一使用 Radix `<Tabs>` 组件，禁止用 Button 自行实现模式切换——详见 `guide/edit-preview-pattern.md`
 
 ### Database
 - schema 见 `web/src/db/schema.ts`
