@@ -13,6 +13,8 @@ import {
 import type { ComponentRow } from "@/db/schema";
 import type { ComponentDefinition } from "@/lib/components/types";
 import type { ComponentRecord } from "@/tool-ui";
+import { BUILTIN_COMPONENTS } from "./builtin-components";
+import { BuiltinComponentDetail } from "./builtin-component-detail";
 import { ComponentsSidebar } from "./components-sidebar";
 import { ComponentDetail } from "./component-detail";
 import { ComponentsEmptyState } from "./components-empty-state";
@@ -28,6 +30,12 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
   const [activeComponentId, setActiveComponentId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const activeBuiltinDef = useMemo(() => {
+    if (!activeComponentId?.startsWith("builtin:")) return null;
+    const key = activeComponentId.slice("builtin:".length);
+    return BUILTIN_COMPONENTS.find((d) => d.key === key) ?? null;
+  }, [activeComponentId]);
 
   const activeComponent = useMemo(
     () => components.find((c) => c.id === activeComponentId) ?? null,
@@ -111,7 +119,12 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
           onCreate={handleOpenCreateDialog}
         />
         <div className="flex-1 min-w-0 overflow-hidden">
-          {activeComponent ? (
+          {activeBuiltinDef ? (
+            <BuiltinComponentDetail
+              key={activeBuiltinDef.key}
+              definition={activeBuiltinDef}
+            />
+          ) : activeComponent ? (
             <ComponentDetail
               key={activeComponent.id}
               component={activeComponent}
@@ -128,7 +141,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
 
       {/* Mobile layout */}
       <div className="flex h-full flex-col sm:hidden">
-        {mobileView === "sidebar" || !activeComponent ? (
+        {mobileView === "sidebar" || (!activeComponent && !activeBuiltinDef) ? (
           <ComponentsSidebar
             components={components}
             activeComponentId={activeComponentId}
@@ -148,13 +161,20 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
               <span className="text-sm font-medium">Back</span>
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
-              <ComponentDetail
-                key={activeComponent.id}
-                component={activeComponent}
-                allComponents={allComponentRecords}
-                onSave={handleSave}
-                onDelete={handleDelete}
-              />
+              {activeBuiltinDef ? (
+                <BuiltinComponentDetail
+                  key={activeBuiltinDef.key}
+                  definition={activeBuiltinDef}
+                />
+              ) : activeComponent ? (
+                <ComponentDetail
+                  key={activeComponent.id}
+                  component={activeComponent}
+                  allComponents={allComponentRecords}
+                  onSave={handleSave}
+                  onDelete={handleDelete}
+                />
+              ) : null}
             </div>
           </>
         )}
