@@ -7,6 +7,7 @@ export interface SchemaProperty {
   description: string;
   required: boolean;
   defaultValue?: unknown;
+  nullable?: boolean;
 
   // enum
   enum?: string[];
@@ -25,7 +26,7 @@ export interface SchemaProperty {
   // union
   discriminator?: string;
   discriminatorValues?: string[];
-  variants?: SchemaProperty[][];
+  variants?: SchemaProperty[];
   unionMode?: "oneOf" | "anyOf";
 
   // array

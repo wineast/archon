@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildInputSchema } from "../schema-builder";
+import { buildInputSchema, normalizeVariantItem } from "../schema-builder";
 import type { SchemaProperty } from "../types";
 
 function makeParam(overrides: Partial<SchemaProperty> = {}): SchemaProperty {
@@ -232,7 +232,7 @@ describe("schema-builder advanced types", () => {
     });
   });
 
-  // ───────── Union type ─────────
+  // ───────── Union type (new format: variants as SchemaProperty[]) ─────────
 
   describe("union type", () => {
     it("discriminated union with discriminatorValues accepts matching variant", () => {
@@ -242,12 +242,18 @@ describe("schema-builder advanced types", () => {
           discriminator: "kind",
           discriminatorValues: ["text", "image"],
           variants: [
-            [
-              makeParam({ id: "v1b", name: "content", type: "string", required: true }),
-            ],
-            [
-              makeParam({ id: "v2b", name: "url", type: "string", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1b", name: "content", type: "string", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2b", name: "url", type: "string", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
@@ -268,12 +274,18 @@ describe("schema-builder advanced types", () => {
           discriminator: "kind",
           discriminatorValues: ["text", "image"],
           variants: [
-            [
-              makeParam({ id: "v1b", name: "content", type: "string", required: true }),
-            ],
-            [
-              makeParam({ id: "v2b", name: "url", type: "string", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1b", name: "content", type: "string", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2b", name: "url", type: "string", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
@@ -291,14 +303,20 @@ describe("schema-builder advanced types", () => {
           discriminator: "kind",
           discriminatorValues: ["cat", "dog"],
           variants: [
-            [
-              makeParam({ id: "v1a", name: "kind", type: "string", required: true }),
-              makeParam({ id: "v1b", name: "legs", type: "number", required: true }),
-            ],
-            [
-              makeParam({ id: "v2a", name: "kind", type: "string", required: true }),
-              makeParam({ id: "v2b", name: "bark", type: "boolean", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1a", name: "kind", type: "string", required: true }),
+                makeParam({ id: "v1b", name: "legs", type: "number", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2a", name: "kind", type: "string", required: true }),
+                makeParam({ id: "v2b", name: "bark", type: "boolean", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
@@ -322,14 +340,20 @@ describe("schema-builder advanced types", () => {
         makeParam({
           type: "union",
           variants: [
-            [
-              makeParam({ id: "v1a", name: "name", type: "string", required: true }),
-              makeParam({ id: "v1b", name: "age", type: "number", required: true }),
-            ],
-            [
-              makeParam({ id: "v2a", name: "company", type: "string", required: true }),
-              makeParam({ id: "v2b", name: "employees", type: "number", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1a", name: "name", type: "string", required: true }),
+                makeParam({ id: "v1b", name: "age", type: "number", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2a", name: "company", type: "string", required: true }),
+                makeParam({ id: "v2b", name: "employees", type: "number", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
@@ -349,7 +373,9 @@ describe("schema-builder advanced types", () => {
         makeParam({
           type: "union",
           variants: [
-            [makeParam({ id: "v1a", name: "x", type: "string", required: true })],
+            makeParam({ id: "v1", name: "", type: "object", required: true, properties: [
+              makeParam({ id: "v1a", name: "x", type: "string", required: true }),
+            ] }),
           ],
         }),
       ]);
@@ -384,12 +410,18 @@ describe("schema-builder advanced types", () => {
           type: "union",
           unionMode: "anyOf",
           variants: [
-            [
-              makeParam({ id: "v1a", name: "name", type: "string", required: true }),
-            ],
-            [
-              makeParam({ id: "v2a", name: "count", type: "number", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1a", name: "name", type: "string", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2a", name: "count", type: "number", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
@@ -410,18 +442,244 @@ describe("schema-builder advanced types", () => {
           unionMode: "anyOf",
           discriminator: "kind", // should be ignored in anyOf mode
           variants: [
-            [
-              makeParam({ id: "v1a", name: "x", type: "string", required: true }),
-            ],
-            [
-              makeParam({ id: "v2a", name: "y", type: "number", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1a", name: "x", type: "string", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2a", name: "y", type: "number", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
 
       expect(() =>
         schema.parse({ field: { x: "hello" } })
+      ).not.toThrow();
+    });
+  });
+
+  // ───────── Primitive type unions ─────────
+
+  describe("primitive type unions", () => {
+    it("string | number union accepts both types", () => {
+      const schema = buildInputSchema([
+        makeParam({
+          type: "union",
+          variants: [
+            makeParam({ id: "v1", name: "", type: "string", required: true }),
+            makeParam({ id: "v2", name: "", type: "number", required: true }),
+          ],
+        }),
+      ]);
+
+      expect(() => schema.parse({ field: "hello" })).not.toThrow();
+      expect(() => schema.parse({ field: 42 })).not.toThrow();
+      expect(() => schema.parse({ field: true })).toThrow();
+    });
+
+    it("string | null union (via union, not nullable)", () => {
+      const schema = buildInputSchema([
+        makeParam({
+          type: "union",
+          variants: [
+            makeParam({ id: "v1", name: "", type: "string", required: true }),
+            makeParam({ id: "v2", name: "", type: "null", required: true }),
+          ],
+        }),
+      ]);
+
+      expect(() => schema.parse({ field: "hello" })).not.toThrow();
+      expect(() => schema.parse({ field: null })).not.toThrow();
+      expect(() => schema.parse({ field: 42 })).toThrow();
+    });
+
+    it("mixed string | object union", () => {
+      const schema = buildInputSchema([
+        makeParam({
+          type: "union",
+          variants: [
+            makeParam({ id: "v1", name: "", type: "string", required: true }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2a", name: "name", type: "string", required: true }),
+              ],
+            }),
+          ],
+        }),
+      ]);
+
+      expect(() => schema.parse({ field: "hello" })).not.toThrow();
+      expect(() => schema.parse({ field: { name: "Alice" } })).not.toThrow();
+      expect(() => schema.parse({ field: 42 })).toThrow();
+    });
+
+    it("discriminated union ignores discriminator for non-object variants", () => {
+      // When discriminator is set but a variant is not object, the discriminator
+      // injection is skipped for that variant. This creates a z.union fallback.
+      const schema = buildInputSchema([
+        makeParam({
+          type: "union",
+          discriminator: "kind",
+          discriminatorValues: ["text", "num"],
+          variants: [
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1a", name: "content", type: "string", required: true }),
+              ],
+            }),
+            makeParam({ id: "v2", name: "", type: "number", required: true }),
+          ],
+        }),
+      ]);
+
+      // The discriminatedUnion call will have a mix of object/non-object;
+      // Zod should still handle it (discriminatedUnion may fall back or work)
+      // At minimum it shouldn't crash
+      expect(schema).toBeDefined();
+    });
+  });
+
+  // ───────── Nullable ─────────
+
+  describe("nullable", () => {
+    it("nullable string accepts string and null", () => {
+      const schema = buildInputSchema([
+        makeParam({ type: "string", nullable: true }),
+      ]);
+      expect(() => schema.parse({ field: "hello" })).not.toThrow();
+      expect(() => schema.parse({ field: null })).not.toThrow();
+      expect(() => schema.parse({ field: 42 })).toThrow();
+    });
+
+    it("nullable number accepts number and null", () => {
+      const schema = buildInputSchema([
+        makeParam({ type: "number", nullable: true }),
+      ]);
+      expect(() => schema.parse({ field: 42 })).not.toThrow();
+      expect(() => schema.parse({ field: null })).not.toThrow();
+      expect(() => schema.parse({ field: "hello" })).toThrow();
+    });
+
+    it("nullable boolean accepts boolean and null", () => {
+      const schema = buildInputSchema([
+        makeParam({ type: "boolean", nullable: true }),
+      ]);
+      expect(() => schema.parse({ field: true })).not.toThrow();
+      expect(() => schema.parse({ field: null })).not.toThrow();
+      expect(() => schema.parse({ field: "hello" })).toThrow();
+    });
+
+    it("nullable enum accepts enum value and null", () => {
+      const schema = buildInputSchema([
+        makeParam({ type: "enum", enum: ["a", "b"], nullable: true }),
+      ]);
+      expect(() => schema.parse({ field: "a" })).not.toThrow();
+      expect(() => schema.parse({ field: null })).not.toThrow();
+      expect(() => schema.parse({ field: "c" })).toThrow();
+    });
+
+    it("nullable object accepts object and null", () => {
+      const schema = buildInputSchema([
+        makeParam({
+          type: "object", nullable: true,
+          properties: [
+            makeParam({ id: "c1", name: "x", type: "string", required: true }),
+          ],
+        }),
+      ]);
+      expect(() => schema.parse({ field: { x: "hello" } })).not.toThrow();
+      expect(() => schema.parse({ field: null })).not.toThrow();
+    });
+
+    it("nullable array accepts array and null", () => {
+      const schema = buildInputSchema([
+        makeParam({
+          type: "array", nullable: true,
+          items: makeParam({ id: "item", name: "item", type: "string" }),
+        }),
+      ]);
+      expect(() => schema.parse({ field: ["a", "b"] })).not.toThrow();
+      expect(() => schema.parse({ field: null })).not.toThrow();
+    });
+
+    it("nullable + optional: missing ok, null ok, wrong type rejects", () => {
+      const schema = buildInputSchema([
+        makeParam({ type: "string", nullable: true, required: false }),
+      ]);
+      expect(() => schema.parse({})).not.toThrow();
+      expect(() => schema.parse({ field: null })).not.toThrow();
+      expect(() => schema.parse({ field: "hello" })).not.toThrow();
+      expect(() => schema.parse({ field: 42 })).toThrow();
+    });
+
+    it("non-nullable rejects null", () => {
+      const schema = buildInputSchema([
+        makeParam({ type: "string" }),
+      ]);
+      expect(() => schema.parse({ field: null })).toThrow();
+    });
+  });
+
+  // ───────── Backward compatibility: old format SchemaProperty[][] ─────────
+
+  describe("backward compatibility (old format)", () => {
+    it("normalizeVariantItem wraps SchemaProperty[] as object variant", () => {
+      const variant = normalizeVariantItem([
+        makeParam({ id: "v1a", name: "x", type: "string", required: true }),
+        makeParam({ id: "v1b", name: "y", type: "number", required: true }),
+      ]);
+      expect(variant.type).toBe("object");
+      expect(variant.properties).toHaveLength(2);
+    });
+
+    it("normalizeVariantItem passes through new-format SchemaProperty", () => {
+      const input = makeParam({ id: "v1", name: "", type: "string", required: true });
+      const result = normalizeVariantItem(input);
+      expect(result).toBe(input);
+    });
+
+    it("normalizeVariantItem handles react-hook-form numeric-key object", () => {
+      const rhfObject = {
+        0: makeParam({ id: "v1a", name: "x", type: "string", required: true }),
+        1: makeParam({ id: "v1b", name: "y", type: "number", required: true }),
+        id: "rhf-id",
+      };
+      const result = normalizeVariantItem(rhfObject);
+      expect(result.type).toBe("object");
+      expect(result.properties).toHaveLength(2);
+    });
+
+    it("old format variants (SchemaProperty[][]) still work via normalizeVariantItem", () => {
+      // Simulate old DB data where variants is SchemaProperty[][]
+      const schema = buildInputSchema([
+        makeParam({
+          type: "union",
+          variants: [
+            // These are SchemaProperty[] arrays — normalizeVariantItem wraps them as object variants
+            [
+              makeParam({ id: "v1a", name: "name", type: "string", required: true }),
+            ],
+            [
+              makeParam({ id: "v2a", name: "count", type: "number", required: true }),
+            ],
+          ] as unknown as SchemaProperty[],
+        }),
+      ]);
+
+      expect(() =>
+        schema.parse({ field: { name: "Alice" } })
+      ).not.toThrow();
+
+      expect(() =>
+        schema.parse({ field: { count: 10 } })
       ).not.toThrow();
     });
   });

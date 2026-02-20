@@ -2,13 +2,18 @@ import { z } from "zod";
 import deepEqual from "fast-deep-equal";
 import type { SchemaProperty } from "./types";
 
-/**
- * react-hook-form's useFieldArray stores nested arrays (like `variants: SchemaProperty[][]`)
- * as plain objects with numeric keys + an injected `id` field.
- * This helper converts such objects back into proper SchemaProperty arrays.
- */
-function normalizeVariant(v: unknown): SchemaProperty[] {
-  if (Array.isArray(v)) return v;
+/** Normalize a single union variant — compatible with both old format (SchemaProperty[]) and new format (SchemaProperty). */
+export function normalizeVariantItem(v: unknown): SchemaProperty {
+  // New format: already a SchemaProperty (has `type` field)
+  if (v && typeof v === "object" && !Array.isArray(v) && "type" in v
+      && typeof (v as Record<string, unknown>).type === "string") {
+    return v as SchemaProperty;
+  }
+  // Old format: SchemaProperty[] (property list → wrap as object variant)
+  if (Array.isArray(v)) {
+    return { id: "migrated", name: "", type: "object", description: "", required: true, properties: v };
+  }
+  // Old format: react-hook-form numeric-key object → convert to array → wrap as object
   if (v && typeof v === "object") {
     const entries: SchemaProperty[] = [];
     for (const [key, val] of Object.entries(v)) {
@@ -16,9 +21,11 @@ function normalizeVariant(v: unknown): SchemaProperty[] {
         entries.push(val as SchemaProperty);
       }
     }
-    return entries;
+    if (entries.length > 0) {
+      return { id: "migrated", name: "", type: "object", description: "", required: true, properties: entries };
+    }
   }
-  return [];
+  return { id: "unknown", name: "", type: "string", description: "", required: true };
 }
 
 export interface BuildSchemaOptions {
@@ -125,6 +132,10 @@ function buildParamSchema(
       if (param.format === "ipv6") schema = (schema as z.ZodString).ipv6();
       break;
     }
+  }
+
+  if (param.nullable) {
+    schema = schema.nullable();
   }
 
   return schema;
@@ -250,15 +261,26 @@ function buildUnionSchema(
     return z.unknown();
   }
 
-  // Build variant schemas, injecting discriminator literal when discriminatorValues is provided
+  // Build variant schemas — each variant is a SchemaProperty (new format) or legacy array
   const variantSchemas = param.variants.map((raw, i) => {
-    const variantProps = normalizeVariant(raw);
-    const obj = buildNestedObject(variantProps, resolvedVars, options, ancestorSchemaIds);
-    const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
-    if (discValue) {
-      return obj.extend({ [param.discriminator!]: z.literal(discValue) });
+    const variant = normalizeVariantItem(raw);
+    let variantSchema: z.ZodTypeAny;
+
+    if (variant.type === "object") {
+      // Object variant: build as z.object(...)
+      variantSchema = buildObjectSchema(variant, resolvedVars, options, ancestorSchemaIds);
+    } else {
+      // Primitive type variant: build as z.string() / z.number() / etc.
+      variantSchema = buildParamSchema(variant, resolvedVars, options, ancestorSchemaIds);
     }
-    return obj;
+
+    // Inject discriminator literal (only for object variants)
+    const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
+    if (discValue && variant.type === "object") {
+      variantSchema = (variantSchema as z.ZodObject<Record<string, z.ZodTypeAny>>)
+        .extend({ [param.discriminator!]: z.literal(discValue) });
+    }
+    return variantSchema;
   });
 
   // anyOf mode: always use z.union (anyOf semantics = try in order)
@@ -368,6 +390,8 @@ interface JsonSchemaCtx {
 
 /** Build a single JSON Schema 7 property from a SchemaProperty. */
 function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
+  let result: JsonSchema7;
+
   switch (param.type) {
     case "string": {
       const s: JsonSchema7 = { type: "string" };
@@ -376,7 +400,8 @@ function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): Jso
       if (param.pattern) s.pattern = param.pattern;
       if (param.format) s.format = param.format;
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      return s;
+      result = s;
+      break;
     }
     case "number": {
       const s: JsonSchema7 = { type: param.integer ? "integer" : "number" };
@@ -386,20 +411,24 @@ function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): Jso
       if (param.exclusiveMaximum != null) s.exclusiveMaximum = param.exclusiveMaximum;
       if (param.multipleOf != null) s.multipleOf = param.multipleOf;
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      return s;
+      result = s;
+      break;
     }
     case "boolean": {
       const s: JsonSchema7 = { type: "boolean" };
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      return s;
+      result = s;
+      break;
     }
     case "null": {
-      return { type: "null" };
+      result = { type: "null" };
+      break;
     }
     case "const": {
       const s: JsonSchema7 = {};
       if (param.constValue !== undefined) s.const = param.constValue;
-      return s;
+      result = s;
+      break;
     }
     case "enum": {
       const s: JsonSchema7 = { type: "string" };
@@ -408,10 +437,12 @@ function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): Jso
         s.enum = resolved;
       }
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      return s;
+      result = s;
+      break;
     }
     case "object": {
-      return buildJsonSchemaObject(param, ctx);
+      result = buildJsonSchemaObject(param, ctx);
+      break;
     }
     case "array": {
       const s: JsonSchema7 = { type: "array" };
@@ -426,14 +457,21 @@ function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): Jso
         if (param.uniqueItems != null) s.uniqueItems = param.uniqueItems;
       }
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      return s;
+      result = s;
+      break;
     }
     case "union": {
-      return buildJsonSchemaUnion(param, ctx);
+      result = buildJsonSchemaUnion(param, ctx);
+      break;
     }
     default:
-      return { type: "string" };
+      result = { type: "string" };
   }
+
+  if (param.nullable) {
+    return { anyOf: [result, { type: "null" }] };
+  }
+  return result;
 }
 
 /** Build JSON Schema object from an object-type SchemaProperty, with schemaId/$ref, allOf, and additionalProperties support. */
@@ -536,12 +574,20 @@ function buildJsonSchemaUnion(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSc
     return {};
   }
 
-  // Build variant schemas, injecting discriminator const when discriminatorValues is provided
+  // Build variant schemas — each variant is a SchemaProperty (new format) or legacy array
   const variantSchemas = param.variants.map((raw, i) => {
-    const variantProps = normalizeVariant(raw);
-    const schema = buildJsonSchemaNestedObject(variantProps, ctx);
+    const variant = normalizeVariantItem(raw);
+    let schema: JsonSchema7;
+
+    if (variant.type === "object") {
+      schema = buildJsonSchemaObject(variant, ctx);
+    } else {
+      schema = buildJsonSchemaProperty(variant, ctx);
+    }
+
+    // Inject discriminator const (only for object variants)
     const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
-    if (discValue) {
+    if (discValue && variant.type === "object") {
       schema.properties = schema.properties || {};
       (schema.properties as Record<string, unknown>)[param.discriminator!] = { const: discValue };
       if (!(schema.required as string[] | undefined)?.includes(param.discriminator!)) {

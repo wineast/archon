@@ -53,6 +53,7 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 | `description` | string | 是 | 参数描述，LLM 会看到 |
 | `required` | boolean | 是 | 是否必填 |
 | `defaultValue` | unknown | 否 | 默认值，缺失时自动填充（Zod `.default()`） |
+| `nullable` | boolean | 否 | 是否可空（接受 `T \| null`） |
 
 > **注意**：`description` 非常重要——它会通过 JSON Schema 的 `description` 字段传递给 LLM，直接影响 LLM 对参数语义的理解。
 
@@ -64,6 +65,24 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 
 当 `required: false` 且没有 `defaultValue` 时：
 - Zod 使用 `.optional()` — 字段缺失时值为 `undefined`
+
+### nullable（可空）
+
+当 `nullable: true` 时，字段接受 `T | null`：
+- Zod：`.nullable()` — 在原始类型基础上追加 `.nullable()`，接受原类型值和 `null`
+- JSON Schema：`anyOf: [原类型, {type:"null"}]`
+
+```
+参数: middle_name (type: string, nullable: true)
+→ z.string().nullable()
+→ 接受 "John"、null；拒绝 undefined、42
+```
+
+`nullable` 可以和 `required`/`optional` 组合：
+- `required: true, nullable: true` — 字段必须存在，值可以是 `T` 或 `null`
+- `required: false, nullable: true` — 字段可以缺失（`undefined`），也可以是 `null` 或 `T`
+
+**与 `null` 类型的区别**：`type: "null"` 表示该字段只能是 `null`，而 `nullable: true` 表示该字段可以是原类型或 `null`。
 
 ---
 
@@ -292,23 +311,41 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 | `unionMode` | `"oneOf"` \| `"anyOf"` | 匹配规则，默认 `"oneOf"` |
 | `discriminator` | string | 判别字段名（仅 oneOf 模式可选，有则用 discriminated union） |
 | `discriminatorValues` | string[] | 每个变体的判别字段值（与 `variants` 一一对应） |
-| `variants` | SchemaProperty[][] | 每个变体的参数列表（至少 2 个） |
+| `variants` | SchemaProperty[] | 每个变体是一个独立的 SchemaProperty（至少 2 个） |
+
+每个变体是一个独立的 `SchemaProperty`，支持任意类型：
+- **原始类型变体**：`{ type: "string" }` → `z.string()`
+- **对象类型变体**：`{ type: "object", properties: [...] }` → `z.object({...})`
+- **混合**：`string | number | {name, age}` 全部支持
 
 **匹配规则**：
 
 - **oneOf**（默认）：恰好匹配一个变体。JSON Schema 输出 `{"oneOf":[...]}`
 - **anyOf**：至少匹配一个变体。JSON Schema 输出 `{"anyOf":[...]}`。anyOf 模式下不需要 discriminator。
 
-**oneOf + discriminator 时**：使用 `z.discriminatedUnion()`——通过 `discriminatorValues` 指定每个变体的判别值，系统自动为每个变体注入 `z.literal()` 判别字段：
+**oneOf + discriminator 时**：使用 `z.discriminatedUnion()`——通过 `discriminatorValues` 指定每个变体的判别值，系统自动为每个对象变体注入 `z.literal()` 判别字段：
 
 ```
 参数: payment (type: union, discriminator: "method", discriminatorValues: ["card", "bank"])
   variants:
-    ├── [card_number: string, expiry: string]        ← 自动注入 method: z.literal("card")
-    └── [account_number: string, routing: string]    ← 自动注入 method: z.literal("bank")
+    ├── { type: "object", properties: [card_number, expiry] }   ← 自动注入 method: z.literal("card")
+    └── { type: "object", properties: [account_number, routing] } ← 自动注入 method: z.literal("bank")
 ```
 
 > **注意**：`discriminatorValues` 数组的每个元素与 `variants` 数组一一对应。判别字段（如 `method`）不需要手动定义在 variant 的参数列表中，系统会自动注入。
+>
+> **判别字段仅在全部变体都是 Object 类型时可用**。当存在原始类型变体（string、number 等）时，判别字段输入框会自动隐藏，并清空已有的 discriminator/discriminatorValues 数据。设了 discriminator 后，变体类型选择器会锁定为 Object。
+
+**原始类型联合**：支持 `string | number` 等非对象类型联合：
+
+```
+参数: flexible_value (type: union)
+  variants:
+    ├── { type: "string" }
+    └── { type: "number" }
+→ z.union([z.string(), z.number()])
+→ JSON Schema: { "oneOf": [{"type":"string"}, {"type":"number"}] }
+```
 
 **oneOf 无 discriminator 时**：使用 `z.union()`——Zod 按顺序尝试匹配。
 
@@ -317,11 +354,13 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 ```
 参数: flexible_input (type: union, unionMode: "anyOf")
   variants:
-    ├── [name: string]
-    └── [count: number]
+    ├── { type: "object", properties: [name: string] }
+    └── { type: "object", properties: [count: number] }
 ```
 
 **不足 2 个变体时**：退化为 `z.unknown()`（打印警告）。
+
+**向后兼容**：旧格式 `SchemaProperty[][]`（每个变体是属性列表）仍受支持，运行时通过 `normalizeVariantItem` 自动包装为 `{ type: "object", properties: [...] }`。
 
 ---
 
@@ -439,8 +478,9 @@ AI SDK 的 `tool()` 内部用 `zod-to-json-schema` 将 Zod 自动转为 JSON Sch
 | `schemaId` 引用 | `$ref: "#/$defs/<schemaId>"` + 顶层 `$defs` |
 | 递归自引用 | `$ref`（相同 key，不无限展开） |
 | `additionalProperties` | `"additionalProperties": {...}` |
-| `union` + `variants` | `"oneOf": [...]` |
+| `union` + `variants` | `"oneOf": [...]`（支持原始类型和对象类型变体） |
 | `union` + `discriminator` | `"discriminator": { "propertyName": "..." }` |
+| `nullable: true` | `anyOf: [原类型, {type:"null"}]` |
 | `enumDatasetId` | 从 `options.datasetsById` 解析为 `"enum": [...]` |
 
 ### 代码预览与导出
@@ -594,6 +634,12 @@ Archon Schema 的设计目标是尽可能对齐 JSON Schema 标准（Draft 7）�
 | `uniqueItems` | ✅ | `.refine()` | ⚠️ | 标签不能重复 | Zod→AI SDK 路径丢失；`buildJsonSchema()` 显式路径正确输出 |
 | `prefixItems`（tuple） | ✅ | `z.tuple()` | ✅ | 固定位置固定类型，如 `[经度, 纬度]` | `tuple: true` + `prefixItems` |
 | `contains` | ❌ | 无直接 API | ✅ | 数组中至少有一个元素满足某条件 | |
+
+### 可空（nullable）
+
+| JSON Schema | Archon | Zod | LLM 可见 | 场景 | 说明 |
+|---|---|---|---|---|---|
+| `anyOf: [T, {type:"null"}]` | ✅ | `.nullable()` | ✅ | 字段可为空，如 `middle_name` 可能为 null | `nullable: true` |
 
 ### 通用关键字
 

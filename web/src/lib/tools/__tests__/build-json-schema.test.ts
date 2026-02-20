@@ -416,8 +416,12 @@ describe("buildJsonSchema", () => {
         makeParam({
           type: "union",
           variants: [
-            [makeParam({ id: "v1a", name: "x", type: "string", required: true })],
-            [makeParam({ id: "v2a", name: "y", type: "number", required: true })],
+            makeParam({ id: "v1", name: "", type: "object", required: true, properties: [
+              makeParam({ id: "v1a", name: "x", type: "string", required: true }),
+            ] }),
+            makeParam({ id: "v2", name: "", type: "object", required: true, properties: [
+              makeParam({ id: "v2a", name: "y", type: "number", required: true }),
+            ] }),
           ],
         }),
       ]);
@@ -432,8 +436,12 @@ describe("buildJsonSchema", () => {
           type: "union",
           unionMode: "anyOf",
           variants: [
-            [makeParam({ id: "v1a", name: "x", type: "string", required: true })],
-            [makeParam({ id: "v2a", name: "y", type: "number", required: true })],
+            makeParam({ id: "v1", name: "", type: "object", required: true, properties: [
+              makeParam({ id: "v1a", name: "x", type: "string", required: true }),
+            ] }),
+            makeParam({ id: "v2", name: "", type: "object", required: true, properties: [
+              makeParam({ id: "v2a", name: "y", type: "number", required: true }),
+            ] }),
           ],
         }),
       ]);
@@ -720,20 +728,26 @@ describe("buildJsonSchema", () => {
   });
 
   describe("union type", () => {
-    it("outputs oneOf for union with variants", () => {
+    it("outputs oneOf for union with object variants", () => {
       const result = buildJsonSchema([
         makeParam({
           name: "payment",
           type: "union",
           variants: [
-            [
-              makeParam({ id: "v1a", name: "method", type: "string", required: true }),
-              makeParam({ id: "v1b", name: "card_number", type: "string", required: true }),
-            ],
-            [
-              makeParam({ id: "v2a", name: "method", type: "string", required: true }),
-              makeParam({ id: "v2b", name: "account", type: "string", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1a", name: "method", type: "string", required: true }),
+                makeParam({ id: "v1b", name: "card_number", type: "string", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2a", name: "method", type: "string", required: true }),
+                makeParam({ id: "v2b", name: "account", type: "string", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
@@ -767,12 +781,18 @@ describe("buildJsonSchema", () => {
           discriminator: "kind",
           discriminatorValues: ["circle", "square"],
           variants: [
-            [
-              makeParam({ id: "v1b", name: "radius", type: "number", required: true }),
-            ],
-            [
-              makeParam({ id: "v2b", name: "side", type: "number", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1b", name: "radius", type: "number", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2b", name: "side", type: "number", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
@@ -799,12 +819,18 @@ describe("buildJsonSchema", () => {
           discriminator: "type",
           discriminatorValues: ["cat", "dog"],
           variants: [
-            [
-              makeParam({ id: "v1a", name: "lives", type: "number", required: true }),
-            ],
-            [
-              makeParam({ id: "v2a", name: "breed", type: "string", required: true }),
-            ],
+            makeParam({
+              id: "v1", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v1a", name: "lives", type: "number", required: true }),
+              ],
+            }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2a", name: "breed", type: "string", required: true }),
+              ],
+            }),
           ],
         }),
       ]);
@@ -832,12 +858,112 @@ describe("buildJsonSchema", () => {
         makeParam({
           name: "bad",
           type: "union",
-          variants: [[makeParam({ id: "v1", name: "a", type: "string", required: true })]],
+          variants: [
+            makeParam({ id: "v1", name: "", type: "object", required: true, properties: [
+              makeParam({ id: "v1a", name: "a", type: "string", required: true }),
+            ] }),
+          ],
         }),
       ]);
 
       const props = result.properties as Record<string, Record<string, unknown>>;
       expect(props.bad).toEqual({});
+    });
+  });
+
+  // ───────── Nullable ─────────
+
+  describe("nullable", () => {
+    it("nullable string outputs anyOf with null", () => {
+      const result = buildJsonSchema([
+        makeParam({ type: "string", nullable: true }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({
+        anyOf: [{ type: "string" }, { type: "null" }],
+      });
+    });
+
+    it("nullable number outputs anyOf with null", () => {
+      const result = buildJsonSchema([
+        makeParam({ type: "number", nullable: true }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({
+        anyOf: [{ type: "number" }, { type: "null" }],
+      });
+    });
+
+    it("nullable boolean outputs anyOf with null", () => {
+      const result = buildJsonSchema([
+        makeParam({ type: "boolean", nullable: true }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({
+        anyOf: [{ type: "boolean" }, { type: "null" }],
+      });
+    });
+
+    it("nullable enum outputs anyOf with null", () => {
+      const result = buildJsonSchema([
+        makeParam({ type: "enum", enum: ["a", "b"], nullable: true }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({
+        anyOf: [{ type: "string", enum: ["a", "b"] }, { type: "null" }],
+      });
+    });
+
+    it("non-nullable does not add anyOf wrapper", () => {
+      const result = buildJsonSchema([
+        makeParam({ type: "string" }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field).toEqual({ type: "string" });
+      expect(props.field.anyOf).toBeUndefined();
+    });
+  });
+
+  // ───────── Primitive type unions ─────────
+
+  describe("primitive type unions", () => {
+    it("string | number outputs oneOf with primitive types", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          type: "union",
+          variants: [
+            makeParam({ id: "v1", name: "", type: "string", required: true }),
+            makeParam({ id: "v2", name: "", type: "number", required: true }),
+          ],
+        }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.oneOf).toEqual([
+        { type: "string" },
+        { type: "number" },
+      ]);
+    });
+
+    it("mixed string | object union", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          type: "union",
+          variants: [
+            makeParam({ id: "v1", name: "", type: "string", required: true }),
+            makeParam({
+              id: "v2", name: "", type: "object", required: true,
+              properties: [
+                makeParam({ id: "v2a", name: "name", type: "string", required: true }),
+              ],
+            }),
+          ],
+        }),
+      ]);
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      expect(props.field.oneOf).toEqual([
+        { type: "string" },
+        { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+      ]);
     });
   });
 

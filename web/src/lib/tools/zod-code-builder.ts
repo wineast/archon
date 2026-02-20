@@ -1,5 +1,5 @@
 import type { SchemaProperty } from "@/lib/schemas/types";
-import type { BuildSchemaOptions } from "./schema-builder";
+import { normalizeVariantItem, type BuildSchemaOptions } from "./schema-builder";
 
 /* ─────────── Zod code string generation ─────────── */
 
@@ -26,28 +26,40 @@ function buildParamCode(
   ctx: ZodCodeCtx,
   depth: number
 ): string {
+  let code: string;
   switch (param.type) {
     case "string":
-      return buildStringCode(param);
+      code = buildStringCode(param);
+      break;
     case "number":
-      return buildNumberCode(param);
+      code = buildNumberCode(param);
+      break;
     case "boolean":
-      return "z.boolean()";
+      code = "z.boolean()";
+      break;
     case "null":
-      return "z.null()";
+      code = "z.null()";
+      break;
     case "const":
-      return buildConstCode(param);
+      code = buildConstCode(param);
+      break;
     case "enum":
-      return buildEnumCode(param, ctx);
+      code = buildEnumCode(param, ctx);
+      break;
     case "object":
-      return buildObjectCode(param, ctx, depth);
+      code = buildObjectCode(param, ctx, depth);
+      break;
     case "array":
-      return buildArrayCode(param, ctx, depth);
+      code = buildArrayCode(param, ctx, depth);
+      break;
     case "union":
-      return buildUnionCode(param, ctx, depth);
+      code = buildUnionCode(param, ctx, depth);
+      break;
     default:
-      return "z.string()";
+      code = "z.string()";
   }
+  if (param.nullable) code += ".nullable()";
+  return code;
 }
 
 function buildStringCode(param: SchemaProperty): string {
@@ -266,20 +278,23 @@ function buildUnionCode(
   const variants = Array.isArray(param.variants) ? param.variants : [];
   if (variants.length < 2) return "z.unknown()";
 
-  const variantCodes = variants.map((variantProps, i) => {
-    let obj = buildNestedObjectCode(
-      Array.isArray(variantProps) ? variantProps : [],
-      ctx,
-      depth + 1
-    );
+  const variantCodes = variants.map((raw, i) => {
+    const variant = normalizeVariantItem(raw);
+    let code: string;
+
+    if (variant.type === "object") {
+      code = buildObjectCode(variant, ctx, depth + 1);
+    } else {
+      code = buildParamCode(variant, ctx, depth + 1);
+    }
+
     const discValue = param.discriminator
       ? param.discriminatorValues?.[i]
       : undefined;
-    if (discValue) {
-      // Extend the object with discriminator literal
-      obj += `.extend({ ${param.discriminator!}: z.literal(${escStr(discValue)}) })`;
+    if (discValue && variant.type === "object") {
+      code += `.extend({ ${param.discriminator!}: z.literal(${escStr(discValue)}) })`;
     }
-    return obj;
+    return code;
   });
 
   if (param.unionMode === "anyOf" || !param.discriminator) {

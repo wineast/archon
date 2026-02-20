@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import type { SchemaPropertyType } from "@/lib/schemas/types";
 import type { SchemaRow } from "@/db/schema";
 import { BracesIcon, PlusIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Controller,
   useFieldArray,
@@ -51,6 +51,18 @@ const MAP_VALUE_TYPES: { value: SchemaPropertyType; label: string }[] = [
   { value: "number", label: "Number" },
   { value: "boolean", label: "Boolean" },
   { value: "object", label: "Object" },
+];
+
+/** Types available for union variant entries */
+const UNION_VARIANT_TYPES: { value: SchemaPropertyType; label: string }[] = [
+  { value: "string", label: "String" },
+  { value: "number", label: "Number" },
+  { value: "boolean", label: "Boolean" },
+  { value: "enum", label: "Enum" },
+  { value: "object", label: "Object" },
+  { value: "array", label: "Array" },
+  { value: "null", label: "Null" },
+  { value: "const", label: "Const" },
 ];
 
 const MAX_DEPTH = 3;
@@ -213,7 +225,7 @@ function AdditionalPropertiesEditor({
   );
 }
 
-/** Union variant editor — each variant is a list of properties (like an object). */
+/** Union variant editor — each variant is a SchemaProperty with its own type. */
 function UnionVariants({
   fieldPath,
   enumDatasetOptions,
@@ -229,7 +241,7 @@ function UnionVariants({
   depth: number;
   schemas?: SchemaRow[];
 }) {
-  const { control, register, setValue, getValues } = useFormContext();
+  const { control, register, setValue } = useFormContext();
   const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
     control,
     name: `${fieldPath}.variants`,
@@ -237,51 +249,39 @@ function UnionVariants({
   const discriminator = useWatch({ control, name: `${fieldPath}.discriminator` }) as string | undefined;
   const unionMode = useWatch({ control, name: `${fieldPath}.unionMode` }) as string | undefined;
   const showDiscriminatorValue = !!discriminator && unionMode !== "anyOf";
+  const hasDiscriminator = !!discriminator;
 
   return (
     <div className="border-l-2 border-muted pl-4 ml-2 space-y-3 min-w-0">
       {variantFields.map((vf, vIndex) => (
-        <div key={vf.id} className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              变体 {vIndex + 1}
-            </span>
-            {showDiscriminatorValue && (
-              <Input
-                className="h-7 w-[120px] text-xs font-mono"
-                {...register(`${fieldPath}.discriminatorValues.${vIndex}`)}
-                placeholder={`${discriminator} 值`}
-              />
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => removeVariant(vIndex)}
-              className="size-6 p-0"
-            >
-              <Trash2Icon className="size-3" />
-            </Button>
-          </div>
-          <NestedPropertiesForVariant
-            fieldPath={`${fieldPath}.variants.${vIndex}`}
-            enumDatasetOptions={enumDatasetOptions}
-            enumDatasetValues={enumDatasetValues}
-            hideDefault={hideDefault}
-            depth={depth}
-            schemas={schemas}
-          />
-        </div>
+        <UnionVariantRow
+          key={vf.id}
+          fieldPath={fieldPath}
+          vIndex={vIndex}
+          showDiscriminatorValue={showDiscriminatorValue}
+          hasDiscriminator={hasDiscriminator}
+          discriminator={discriminator}
+          onRemove={() => removeVariant(vIndex)}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
+          hideDefault={hideDefault}
+          depth={depth}
+          schemas={schemas}
+          register={register}
+          control={control}
+          setValue={setValue}
+        />
       ))}
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => appendVariant([{
+        onClick={() => appendVariant({
           id: nanoid(),
           name: "",
           type: "string" as const,
           description: "",
-          required: false,
-        }])}
+          required: true,
+        })}
         className="gap-1 text-xs h-7"
       >
         <PlusIcon className="size-3" />
@@ -291,63 +291,122 @@ function UnionVariants({
   );
 }
 
-/**
- * Variant-level nested properties editor.
- * Variants are stored as SchemaProperty[][] — each variant is an array of properties.
- * The fieldPath points to `variants.N` which is an array.
- */
-function NestedPropertiesForVariant({
+/** Single union variant row — watches its own type to conditionally render sub-editors. */
+function UnionVariantRow({
   fieldPath,
+  vIndex,
+  showDiscriminatorValue,
+  hasDiscriminator,
+  discriminator,
+  onRemove,
   enumDatasetOptions,
   enumDatasetValues,
   hideDefault,
   depth,
   schemas,
+  register,
+  control,
+  setValue,
 }: {
   fieldPath: string;
+  vIndex: number;
+  showDiscriminatorValue: boolean;
+  hasDiscriminator: boolean;
+  discriminator?: string;
+  onRemove: () => void;
   enumDatasetOptions: EnumDatasetOption[];
   enumDatasetValues: Record<string, string[]>;
   hideDefault: boolean;
   depth: number;
   schemas?: SchemaRow[];
+  register: ReturnType<typeof useFormContext>["register"];
+  control: ReturnType<typeof useFormContext>["control"];
+  setValue: ReturnType<typeof useFormContext>["setValue"];
 }) {
-  const { control } = useFormContext();
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: fieldPath,
-  });
+  const variantType = useWatch({ control, name: `${fieldPath}.variants.${vIndex}.type` }) as SchemaPropertyType | undefined;
 
   return (
-    <div className="border-l-2 border-muted/50 pl-3 ml-1 space-y-1.5 min-w-0">
-      {fields.map((field, index) => (
-        <ParameterRow
-          key={field.id}
-          fieldPath={`${fieldPath}.${index}`}
-          onDelete={() => remove(index)}
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">
+          变体 {vIndex + 1}
+        </span>
+        {showDiscriminatorValue && (
+          <Input
+            className="h-7 w-[120px] text-xs font-mono"
+            {...register(`${fieldPath}.discriminatorValues.${vIndex}`)}
+            placeholder={`${discriminator} 值`}
+          />
+        )}
+        <Controller
+          name={`${fieldPath}.variants.${vIndex}.type`}
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? "string"}
+              onValueChange={(v: SchemaPropertyType) => {
+                field.onChange(v);
+                if (v !== "object") {
+                  setValue(`${fieldPath}.variants.${vIndex}.properties`, undefined);
+                }
+                if (v !== "enum") {
+                  setValue(`${fieldPath}.variants.${vIndex}.enum`, undefined);
+                }
+              }}
+            >
+              <SelectTrigger className="w-[100px]" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(hasDiscriminator ? UNION_VARIANT_TYPES.filter(t => t.value === "object") : UNION_VARIANT_TYPES)
+                  .map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          className="size-6 p-0"
+        >
+          <Trash2Icon className="size-3" />
+        </Button>
+      </div>
+      {/* Object variant: show nested properties editor */}
+      {variantType === "object" && depth < MAX_DEPTH && (
+        <NestedProperties
+          fieldPath={`${fieldPath}.variants.${vIndex}`}
           enumDatasetOptions={enumDatasetOptions}
           enumDatasetValues={enumDatasetValues}
           hideDefault={hideDefault}
-          depth={depth + 1}
+          depth={depth}
           schemas={schemas}
         />
-      ))}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() =>
-          append({
-            id: nanoid(),
-            name: "",
-            type: "string",
-            description: "",
-            required: false,
-          })
-        }
-        className="gap-1 text-xs h-7"
-      >
-        <PlusIcon className="size-3" />
-        添加字段
-      </Button>
+      )}
+      {/* Enum variant: show inline enum values editor */}
+      {variantType === "enum" && (
+        <div className="flex items-center gap-2 pl-4 min-w-0">
+          <Controller
+            name={`${fieldPath}.variants.${vIndex}.enum`}
+            control={control}
+            render={({ field }) => (
+              <Input
+                className="h-7 flex-1 text-xs"
+                value={(field.value ?? []).join(", ")}
+                onChange={(e) => {
+                  const values = e.target.value
+                    .split(",")
+                    .map((v: string) => v.trim())
+                    .filter(Boolean);
+                  field.onChange(values.length > 0 ? values : undefined);
+                }}
+                placeholder="逗号分隔值，如 a, b, c"
+              />
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -431,7 +490,25 @@ function UnionEditor({
 }) {
   const { register, control, setValue } = useFormContext();
   const unionMode = useWatch({ control, name: `${fieldPath}.unionMode` }) as string | undefined;
+  const variants = useWatch({ control, name: `${fieldPath}.variants` }) as
+    | { type?: string }[]
+    | undefined;
   const isAnyOf = unionMode === "anyOf";
+
+  // Discriminator only makes sense when ALL variants are object type
+  const allVariantsAreObjects =
+    !variants ||
+    variants.length === 0 ||
+    variants.every((v) => v?.type === "object");
+  const showDiscriminator = !isAnyOf && allVariantsAreObjects;
+
+  // Auto-clear discriminator data when it should be hidden
+  useEffect(() => {
+    if (!showDiscriminator) {
+      setValue(`${fieldPath}.discriminator`, undefined);
+      setValue(`${fieldPath}.discriminatorValues`, undefined);
+    }
+  }, [showDiscriminator, fieldPath, setValue]);
 
   return (
     <>
@@ -462,7 +539,7 @@ function UnionEditor({
           )}
         />
       </div>
-      {!isAnyOf && (
+      {showDiscriminator && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0">
           <span className="text-xs text-muted-foreground shrink-0">判别字段</span>
           <Input
@@ -470,7 +547,7 @@ function UnionEditor({
             {...register(`${fieldPath}.discriminator`)}
             placeholder="如 type（可选）"
           />
-          <span className="text-xs text-muted-foreground/60 shrink-0">不填则按结构逐一匹配</span>
+          <span className="text-xs text-muted-foreground/60 shrink-0">仅全部变体为 Object 时可用</span>
         </div>
       )}
       <UnionVariants
@@ -492,6 +569,16 @@ function RequiredLabel({ fieldPath }: { fieldPath: string }) {
   return (
     <span className="text-[10px] text-muted-foreground w-8">
       {required ? "req" : "opt"}
+    </span>
+  );
+}
+
+function NullableLabel({ fieldPath }: { fieldPath: string }) {
+  const { control } = useFormContext();
+  const nullable = useWatch({ control, name: `${fieldPath}.nullable` }) as boolean | undefined;
+  return (
+    <span className="text-[10px] text-muted-foreground w-8">
+      {nullable ? "T|null" : "T"}
     </span>
   );
 }
@@ -890,6 +977,22 @@ export function ParameterRow({
           />
           <RequiredLabel fieldPath={fieldPath} />
         </div>
+        {type !== "null" && (
+          <div className="flex items-center gap-1">
+            <Controller
+              name={`${fieldPath}.nullable`}
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  size="sm"
+                  checked={field.value ?? false}
+                  onCheckedChange={(checked: boolean) => field.onChange(checked || undefined)}
+                />
+              )}
+            />
+            <NullableLabel fieldPath={fieldPath} />
+          </div>
+        )}
         <Button
           variant="ghost"
           size="sm"
