@@ -271,6 +271,39 @@ export async function deleteObjectInstance(id: string, mutate: () => void) {
   }
 }
 
+/* ─────────── Batch Create Instances ─────────── */
+
+export async function batchCreateObjectInstances(
+  data: {
+    agentId: string;
+    objectTypeId: string;
+    items: Array<{ data: Record<string, unknown> }>;
+  },
+  mutate: () => void
+): Promise<{ created: number; errors: Array<{ index: number; message: string }> } | null> {
+  try {
+    const res = await fetch("/api/object-instances/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const result = await res.json();
+    mutate();
+    if (result.created > 0) {
+      toast.success(`Imported ${result.created} instance(s)`);
+    }
+    if (result.errors?.length > 0) {
+      toast.error(`${result.errors.length} row(s) failed to import`);
+    }
+    return result;
+  } catch (e) {
+    console.error("batchCreateObjectInstances failed:", e);
+    toast.error("Failed to batch import instances");
+    return null;
+  }
+}
+
 /* ─────────── Object Links ─────────── */
 
 export function objectLinksApiKey(agentId?: string, instanceId?: string) {

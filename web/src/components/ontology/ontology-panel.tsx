@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeftIcon, ListIcon, NetworkIcon, PlusIcon } from "lucide-react";
+import { ArrowLeftIcon, FileSpreadsheetIcon, ListIcon, NetworkIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useObjectTypes,
@@ -13,12 +13,14 @@ import {
   deleteObjectRelation,
   generateCrudTools,
 } from "@/lib/ontology/hooks";
+import { useSchemas } from "@/lib/schemas/hooks";
 import type { ObjectTypeFormValues } from "./object-type-form";
 import { ObjectTypesSidebar } from "./object-types-sidebar";
 import { ObjectTypeDetail } from "./object-type-detail";
 import { OntologyEmptyState } from "./ontology-empty-state";
 import { ObjectTypeCreateDialog } from "./object-type-create-dialog";
 import { OntologyGraph } from "./ontology-graph";
+import { ImportTypeDialog } from "./import-type-dialog";
 
 type DesktopViewMode = "list" | "graph";
 
@@ -26,9 +28,11 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
   const { objectTypes, mutate: mutateTypes } = useObjectTypes(agentId);
   const { objectRelations, mutate: mutateRelations } =
     useObjectRelations(agentId);
+  const { schemas, mutate: mutateSchemas } = useSchemas(agentId);
   const [activeTypeId, setActiveTypeId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [importTypeDialogOpen, setImportTypeDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<DesktopViewMode>("list");
 
   const activeType = useMemo(
@@ -113,6 +117,7 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
       objectType={activeType}
       allObjectTypes={objectTypes}
       relations={objectRelations}
+      schemas={schemas}
       onSave={handleSave}
       onDelete={handleDelete}
       onCreateRelation={handleCreateRelation}
@@ -127,6 +132,13 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreate={handleCreate}
+      />
+      <ImportTypeDialog
+        open={importTypeDialogOpen}
+        onOpenChange={setImportTypeDialogOpen}
+        agentId={agentId}
+        onCreated={mutateTypes}
+        mutateSchemas={mutateSchemas}
       />
 
       {/* Desktop layout */}
@@ -153,6 +165,14 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
               <NetworkIcon className="size-3.5" />
             </Button>
           </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => setImportTypeDialogOpen(true)}
+            title="Import from File"
+          >
+            <FileSpreadsheetIcon className="size-3.5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon-xs"
@@ -229,6 +249,7 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
                 objectType={activeType}
                 allObjectTypes={objectTypes}
                 relations={objectRelations}
+                schemas={schemas}
                 onSave={handleSave}
                 onDelete={handleDelete}
                 onCreateRelation={handleCreateRelation}
