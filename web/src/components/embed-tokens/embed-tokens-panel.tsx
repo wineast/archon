@@ -12,14 +12,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useEmbedTokens,
   createEmbedToken,
@@ -84,10 +77,8 @@ export function EmbedTokensPanel({ agentId }: EmbedTokensPanelProps) {
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
-    setBusy(true);
     await deleteEmbedToken(agentId, deleteTarget.id, mutate);
     setDeleteTarget(null);
-    setBusy(false);
   }, [agentId, deleteTarget, mutate]);
 
   if (isLoading) {
@@ -230,36 +221,13 @@ export function EmbedTokensPanel({ agentId }: EmbedTokensPanelProps) {
       )}
 
       {/* Delete confirmation */}
-      <Dialog
+      <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Token</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete &quot;{deleteTarget?.name}&quot;? Any
-              websites using this token will no longer be able to access the chat.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setDeleteTarget(null)}
-              disabled={busy}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={busy}
-            >
-              {busy ? <Spinner className="size-4" /> : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Delete Token"
+        description={`Are you sure you want to delete "${deleteTarget?.name}"? Any websites using this token will no longer be able to access the chat.`}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
@@ -48,6 +49,7 @@ export function JudgeConfigDetail({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [settingDefault, setSettingDefault] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting || settingDefault;
 
   const { datasetVars } = useDatasetVarsMap(agentId);
@@ -352,7 +354,7 @@ export function JudgeConfigDetail({
         <Button
           variant="destructive"
           size="sm"
-          onClick={handleDelete}
+          onClick={() => setConfirmOpen(true)}
           disabled={busy || config.isDefault}
         >
           {deleting ? (
@@ -363,6 +365,14 @@ export function JudgeConfigDetail({
           {deleting ? "Deleting..." : "Delete"}
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete Judge Config"
+        description={`Are you sure you want to delete "${config.name}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

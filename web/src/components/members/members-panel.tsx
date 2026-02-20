@@ -14,14 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -78,18 +71,14 @@ export function MembersPanel({
 
   const handleRemove = useCallback(async () => {
     if (!confirmDialog || confirmDialog.type !== "remove") return;
-    setBusy(true);
     await removeMember(agentId, confirmDialog.member.id, mutate);
     setConfirmDialog(null);
-    setBusy(false);
   }, [agentId, confirmDialog, mutate]);
 
   const handleTransfer = useCallback(async () => {
     if (!confirmDialog || confirmDialog.type !== "transfer") return;
-    setBusy(true);
     await transferOwnership(agentId, confirmDialog.member.userId, mutate);
     setConfirmDialog(null);
-    setBusy(false);
   }, [agentId, confirmDialog, mutate]);
 
   const handleTogglePublic = useCallback(
@@ -241,41 +230,22 @@ export function MembersPanel({
       </div>
 
       {/* Confirm dialog */}
-      <Dialog
+      <ConfirmDialog
         open={confirmDialog !== null}
         onOpenChange={(open) => {
           if (!open) setConfirmDialog(null);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {confirmDialog?.type === "transfer" ? "转让所有权" : "移除成员"}
-            </DialogTitle>
-            <DialogDescription>
-              {confirmDialog?.type === "transfer"
-                ? `确定将 Owner 转让给 ${confirmDialog.member.nickname || confirmDialog.member.email}？你将变为 Admin。`
-                : `确定移除 ${confirmDialog?.member.nickname || confirmDialog?.member.email}？`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmDialog(null)}
-              disabled={busy}
-            >
-              取消
-            </Button>
-            <Button
-              variant={confirmDialog?.type === "transfer" ? "default" : "destructive"}
-              onClick={confirmDialog?.type === "transfer" ? handleTransfer : handleRemove}
-              disabled={busy}
-            >
-              {busy ? <Spinner className="size-4" /> : "确定"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={confirmDialog?.type === "transfer" ? "转让所有权" : "移除成员"}
+        description={
+          confirmDialog?.type === "transfer"
+            ? `确定将 Owner 转让给 ${confirmDialog.member.nickname || confirmDialog.member.email}？你将变为 Admin。`
+            : `确定移除 ${confirmDialog?.member.nickname || confirmDialog?.member.email}？`
+        }
+        cancelLabel="取消"
+        confirmLabel="确定"
+        confirmVariant={confirmDialog?.type === "transfer" ? "default" : "destructive"}
+        onConfirm={confirmDialog?.type === "transfer" ? handleTransfer : handleRemove}
+      />
     </div>
   );
 }

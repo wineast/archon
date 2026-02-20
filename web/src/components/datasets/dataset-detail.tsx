@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -29,6 +30,7 @@ export function DatasetDetail({
   const [deleting, setDeleting] = useState(false);
   const [draftRef, setDraftRef] = useState<DatasetFormHandle | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting;
 
   const handleSave = useCallback(async () => {
@@ -102,7 +104,7 @@ export function DatasetDetail({
         <Button
           variant="destructive"
           size="sm"
-          onClick={handleDelete}
+          onClick={() => setConfirmOpen(true)}
           disabled={busy}
         >
           {deleting ? (
@@ -113,6 +115,14 @@ export function DatasetDetail({
           {deleting ? "Deleting..." : "Delete"}
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete Dataset"
+        description={`Are you sure you want to delete "${dataset.name}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

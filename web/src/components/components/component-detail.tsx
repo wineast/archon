@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +30,7 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
     draftRef.current = ref;
   }, []);
   const [dirty, setDirty] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting;
 
   const handleSave = useCallback(async () => {
@@ -116,7 +118,7 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
           <Button
             variant="destructive"
             size="sm"
-            onClick={handleDelete}
+            onClick={() => setConfirmOpen(true)}
             disabled={busy}
           >
             {deleting ? (
@@ -127,6 +129,14 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
             {deleting ? "Deleting..." : "Delete"}
           </Button>
         </div>
+
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Delete Component"
+          description={`Are you sure you want to delete "${component.name}"? This action cannot be undone.`}
+          onConfirm={handleDelete}
+        />
       </TabsContent>
 
       <TabsContent value="playground" className="flex min-h-0 flex-1 flex-col">

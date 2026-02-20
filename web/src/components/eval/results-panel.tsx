@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -453,6 +454,7 @@ function RunHistoryItem({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const passRate =
     run.totalCases > 0
       ? `${run.passedAssertions}/${run.totalCases}`
@@ -495,7 +497,7 @@ function RunHistoryItem({
           size="icon-xs"
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            setConfirmOpen(true);
           }}
           disabled={deletingRun}
         >
@@ -506,6 +508,15 @@ function RunHistoryItem({
           )}
         </Button>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete Eval Run"
+        description="Are you sure you want to delete this eval run? This action cannot be undone."
+        onConfirm={async () => {
+          onDelete();
+        }}
+      />
       {expanded && (
         <div className="border-t px-3 py-2">
           {loadingDetail && (

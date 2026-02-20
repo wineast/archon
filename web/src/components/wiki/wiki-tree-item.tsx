@@ -16,14 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import type { WikiDocument } from "@/lib/wiki/types";
 
@@ -43,17 +36,13 @@ export function WikiListItem({
   onReorder,
 }: WikiListItemProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const handleSelect = useCallback(() => {
     onSelect(doc.id);
   }, [doc.id, onSelect]);
 
   const handleDelete = useCallback(async () => {
-    setDeleting(true);
     await onDelete(doc.id);
-    setDeleting(false);
-    setDeleteDialogOpen(false);
   }, [doc.id, onDelete]);
 
   return (
@@ -111,25 +100,13 @@ export function WikiListItem({
         </DropdownMenu>
       </div>
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete &ldquo;{doc.title || "Untitled"}&rdquo;?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            This will permanently delete this document.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting && <Spinner className="mr-2 size-4" />}
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title={`Delete "${doc.title || "Untitled"}"?`}
+        description="This will permanently delete this document."
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

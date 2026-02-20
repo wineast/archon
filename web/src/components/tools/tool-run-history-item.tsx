@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import {
   ChevronDownIcon,
@@ -29,6 +31,7 @@ export function ToolRunHistoryItem({
   onToggle,
   onDelete,
 }: ToolRunHistoryItemProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const passRate =
     run.totalCases > 0
       ? `${run.passedCases}/${run.totalCases}`
@@ -66,7 +69,7 @@ export function ToolRunHistoryItem({
           className="rounded p-0.5 hover:bg-muted-foreground/20 text-muted-foreground hover:text-destructive"
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            setConfirmOpen(true);
           }}
           disabled={deletingRun}
         >
@@ -94,6 +97,15 @@ export function ToolRunHistoryItem({
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete Run"
+        description="Are you sure you want to delete this test run? This action cannot be undone."
+        onConfirm={async () => {
+          onDelete();
+        }}
+      />
     </div>
   );
 }

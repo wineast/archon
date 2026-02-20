@@ -25,14 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   useTrash,
@@ -86,7 +79,6 @@ export function TrashSheet({ agentId, open, onOpenChange }: TrashSheetProps) {
 
   const handlePermanentDelete = useCallback(async () => {
     if (!confirmDelete) return;
-    setBusy(true);
     await permanentDeleteResources(
       agentId,
       confirmDelete.type,
@@ -94,14 +86,11 @@ export function TrashSheet({ agentId, open, onOpenChange }: TrashSheetProps) {
       trashMutate
     );
     setConfirmDelete(null);
-    setBusy(false);
   }, [agentId, confirmDelete, trashMutate]);
 
   const handleClearTrash = useCallback(async () => {
-    setBusy(true);
     await clearTrash(agentId, trashMutate);
     setConfirmClear(false);
-    setBusy(false);
   }, [agentId, trashMutate]);
 
   return (
@@ -209,71 +198,30 @@ export function TrashSheet({ agentId, open, onOpenChange }: TrashSheetProps) {
       </Sheet>
 
       {/* Confirm permanent delete single item */}
-      <Dialog
+      <ConfirmDialog
         open={confirmDelete !== null}
         onOpenChange={(v) => {
           if (!v) setConfirmDelete(null);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>永久删除</DialogTitle>
-            <DialogDescription>
-              确定永久删除 <strong>{confirmDelete?.item.name}</strong>
-              ？此操作不可撤销。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmDelete(null)}
-              disabled={busy}
-            >
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handlePermanentDelete}
-              disabled={busy}
-            >
-              {busy ? <Spinner className="size-4" /> : "永久删除"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="永久删除"
+        description={`确定永久删除 ${confirmDelete?.item.name}？此操作不可撤销。`}
+        cancelLabel="取消"
+        confirmLabel="永久删除"
+        onConfirm={handlePermanentDelete}
+      />
 
       {/* Confirm clear all */}
-      <Dialog
+      <ConfirmDialog
         open={confirmClear}
         onOpenChange={(v) => {
           if (!v) setConfirmClear(false);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>清空回收站</DialogTitle>
-            <DialogDescription>
-              确定永久删除回收站中的所有 {totalCount} 项资源？此操作不可撤销。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmClear(false)}
-              disabled={busy}
-            >
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleClearTrash}
-              disabled={busy}
-            >
-              {busy ? <Spinner className="size-4" /> : "清空回收站"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="清空回收站"
+        description={`确定永久删除回收站中的所有 ${totalCount} 项资源？此操作不可撤销。`}
+        cancelLabel="取消"
+        confirmLabel="清空回收站"
+        onConfirm={handleClearTrash}
+      />
     </>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { BracesIcon, CodeIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./schema-form";
@@ -28,6 +29,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
   const [dirty, setDirty] = useState(false);
   const [jsonOpen, setJsonOpen] = useState(false);
   const [zodOpen, setZodOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting;
 
   const handleSave = useCallback(async () => {
@@ -119,7 +121,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
         <Button
           variant="destructive"
           size="sm"
-          onClick={handleDelete}
+          onClick={() => setConfirmOpen(true)}
           disabled={busy}
         >
           {deleting ? (
@@ -130,6 +132,14 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
           {deleting ? "Deleting..." : "Delete"}
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete Schema"
+        description={`Are you sure you want to delete "${schema.key}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+      />
 
       <SchemaJsonDialog
         open={jsonOpen}

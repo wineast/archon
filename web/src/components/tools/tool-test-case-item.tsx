@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Collapsible,
   CollapsibleContent,
@@ -65,6 +66,7 @@ export function ToolTestCaseItem({
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [localResult, setLocalResult] = useState<RunTestCaseResult | undefined>(
     undefined
@@ -212,7 +214,7 @@ export function ToolTestCaseItem({
                 disabled={itemBusy}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete();
+                  setConfirmOpen(true);
                 }}
               >
                 {deleting ? (
@@ -351,6 +353,13 @@ export function ToolTestCaseItem({
           </div>
         </CollapsibleContent>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete Test Case"
+        description={`Are you sure you want to delete "${testCase.name}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+      />
     </Collapsible>
   );
 }

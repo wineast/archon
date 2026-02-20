@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { ArrowRightIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import type { ObjectTypeRow, ObjectRelationRow } from "@/db/schema";
 
@@ -22,6 +23,7 @@ export function RelationList({
   onDelete,
 }: RelationListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const typeMap = new Map(objectTypes.map((t) => [t.id, t]));
 
   const handleDelete = useCallback(
@@ -80,7 +82,7 @@ export function RelationList({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  onClick={() => handleDelete(rel.id)}
+                  onClick={() => setDeleteTarget({ id: rel.id, name: label })}
                   disabled={deletingId === rel.id}
                 >
                   {deletingId === rel.id ? (
@@ -94,6 +96,17 @@ export function RelationList({
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Relation"
+        description={`Are you sure you want to delete relation "${deleteTarget?.name}"? This action cannot be undone.`}
+        onConfirm={async () => {
+          if (deleteTarget) await handleDelete(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

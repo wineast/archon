@@ -19,15 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import type { VersionListItem } from "@/lib/versions/types";
 
@@ -66,13 +58,10 @@ export function VersionsSidebar({
   const [deleteTarget, setDeleteTarget] = useState<VersionListItem | null>(
     null
   );
-  const [deleting, setDeleting] = useState(false);
 
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
-    setDeleting(true);
     await onDelete(deleteTarget.id);
-    setDeleting(false);
     setDeleteTarget(null);
   }
 
@@ -175,40 +164,15 @@ export function VersionsSidebar({
       </div>
 
       {/* Delete confirmation dialog */}
-      <Dialog
+      <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Version</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{" "}
-              <strong>v{deleteTarget?.version}</strong>? This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={deleting}
-            >
-              {deleting && <Spinner className="mr-1.5 size-3" />}
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Delete Version"
+        description={`Are you sure you want to delete v${deleteTarget?.version}? This action cannot be undone.`}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 }

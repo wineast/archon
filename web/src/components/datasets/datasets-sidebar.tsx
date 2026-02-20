@@ -2,7 +2,6 @@
 
 import { useCallback } from "react";
 import { PlusIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -37,9 +36,6 @@ function DatasetListItem({
       onClick={handleSelect}
     >
       <span className="min-w-0 flex-1 truncate">{dataset.name}</span>
-      <Badge variant="secondary" className="shrink-0 text-[10px] font-mono">
-        {dataset.key}
-      </Badge>
     </button>
   );
 }

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { FileIcon, Trash2Icon, UploadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -30,6 +31,7 @@ function formatDate(dateStr: string | Date) {
 export function FilesPanel({ agentId }: { agentId: string }) {
   const { files, isLoading, mutate } = useAgentFiles(agentId);
   const [busy, setBusy] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -98,7 +100,7 @@ export function FilesPanel({ agentId }: { agentId: string }) {
                       size="icon"
                       className="size-7"
                       disabled={busy !== null}
-                      onClick={() => handleDelete(f.id)}
+                      onClick={() => setDeleteTarget({ id: f.id, name: f.name })}
                     >
                       {busy === f.id ? (
                         <Spinner className="size-3.5" />
@@ -136,6 +138,17 @@ export function FilesPanel({ agentId }: { agentId: string }) {
           Upload PDF
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete File"
+        description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        onConfirm={async () => {
+          if (deleteTarget) await handleDelete(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

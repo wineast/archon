@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -72,6 +73,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [running, setRunning] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [runResults, setRunResults] = useState<RunResultEntry[]>([]);
 
   // Hooks for running
@@ -512,7 +514,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         <Button
           variant="destructive"
           size="sm"
-          onClick={handleDelete}
+          onClick={() => setConfirmOpen(true)}
           disabled={busy}
         >
           {deleting ? (
@@ -523,6 +525,14 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           {deleting ? "Deleting..." : "Delete"}
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete Eval Case"
+        description={`Are you sure you want to delete "${evalCase.name}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+      />
 
       {/* Run results */}
       {runResults.length > 0 && (

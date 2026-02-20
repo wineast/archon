@@ -13,6 +13,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
@@ -56,6 +57,7 @@ export function ModelConfigDetail({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("edit");
   const [promptAssistOpen, setPromptAssistOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting || activating;
 
   const { tools: allTools } = useTools(agentId);
@@ -296,7 +298,7 @@ export function ModelConfigDetail({
         <Button
           variant="destructive"
           size="sm"
-          onClick={handleDelete}
+          onClick={() => setConfirmOpen(true)}
           disabled={busy || config.isActive}
         >
           {deleting ? (
@@ -307,6 +309,14 @@ export function ModelConfigDetail({
           {deleting ? "Deleting..." : "Delete"}
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete Model Config"
+        description={`Are you sure you want to delete "${config.name}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
