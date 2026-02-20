@@ -15,7 +15,6 @@ export interface ToolDefinition {
   description: string;
   parametersSchemaId?: string | null;
   returnParametersSchemaId?: string | null;
-  output: string;
   handler: string;
   componentId: string | null;
   enabled: boolean;

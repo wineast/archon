@@ -12,7 +12,6 @@
 |------|------|---------|---------|
 | **系统提示词** | 模型配置的 `systemPrompt` 字段 | 全部（内置变量、数据集、tool、`{% include %}` Wiki） | `renderTemplate()` — `chat/route.ts`、`eval/.../case/route.ts`、`template/preview/route.ts` |
 | **Wiki 文档内容** | Wiki 编辑器中的文档正文 | 全部 + Wiki 专属变量（`documentTitle`、`documentCount`、`documentList`、`currentDate`、`currentTime`）；支持 `{% include '标题' %}` | `processTemplate()` — `wiki-editor.tsx`（预览）、`tool-context.ts`（工具运行时读取） |
-| **工具静态输出** | 工具定义的 `output` 字段（无 handler 时作为返回值） | 全部 | `renderTemplate()` — `build-dynamic-tools.ts` |
 | **评估 Judge 提示词** | Eval Judge 的 `systemPrompt` 字段 | 全部 + 额外变量（`model`、`caseName`、`toolNames`） | `renderTemplate()` — `eval/.../case/route.ts` |
 | **Layer 1 数据集** | layer=1 的 data 字段内的值 | **仅 layer 0 数据集**（不含 tool 命名空间，不支持 `{% include %}`） | `renderField()` / `renderObjectField()` — `datasets/queries.ts` |
 | **工具 JS Handler** | handler 为 JS 代码时，第二个参数 `context` 提供运行时数据访问 API | 通过 API 访问 wiki、dataset（返回值已经过模板渲染） | `createToolContext()` — `tool-context.ts` |

@@ -110,7 +110,6 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   // Watch only fields needed for validation / conditional rendering
   const name = useWatch({ control: form.control, name: "name" });
   const handler = useWatch({ control: form.control, name: "handler" });
-  const output = useWatch({ control: form.control, name: "output" });
   const executionTarget = useWatch({ control: form.control, name: "executionTarget" });
   const sandboxMode = useWatch({ control: form.control, name: "sandboxMode" });
   const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });

@@ -41,7 +41,6 @@ export async function POST(req: Request) {
       description: body.description,
       parametersSchemaId: body.parametersSchemaId ?? null,
       returnParametersSchemaId: body.returnParametersSchemaId ?? null,
-      output: body.output ?? null,
       handler: body.handler ?? null,
       componentId: body.componentId ?? null,
       enabled: body.enabled ?? true,

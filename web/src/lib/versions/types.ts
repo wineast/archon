@@ -9,7 +9,6 @@ export interface ToolSnapshotItem {
   description: string;
   parametersSchemaKey: string | null;
   returnParametersSchemaKey: string | null;
-  output: string | null;
   handler: string | null;
   componentKey: string | null;
   enabled: boolean;
