@@ -12,6 +12,7 @@ export { seedDatasets } from "./seed-datasets";
 export { seedFunctions } from "./seed-functions";
 export { seedEval } from "./seed-eval";
 export { seedVersion } from "./seed-version";
+export { seedMemory } from "./seed-memory";
 
 export type { SeedContext, SeedResult, Seeder } from "./types";
 
@@ -30,6 +31,7 @@ import { seedDatasets } from "./seed-datasets";
 import { seedFunctions } from "./seed-functions";
 import { seedEval } from "./seed-eval";
 import { seedVersion } from "./seed-version";
+import { seedMemory } from "./seed-memory";
 
 /** The full seed pipeline in execution order. */
 export const pipeline: Seeder[] = [
@@ -46,5 +48,6 @@ export const pipeline: Seeder[] = [
   seedChatConfig,
   seedFunctions,
   seedEval,
+  seedMemory,
   seedVersion,
 ];

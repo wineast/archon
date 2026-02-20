@@ -1235,6 +1235,7 @@ export const auditLogResourceTypes = [
   "tool", "function", "component", "schema", "dataset", "wiki",
   "model_config", "eval_case", "eval_judge_config",
   "object_type", "object_relation", "chat_config",
+  "memory_config", "memory",
 ] as const;
 export type AuditLogResourceType = (typeof auditLogResourceTypes)[number];
 
@@ -1308,4 +1309,90 @@ export const runtimeEvents = pgTable(
 
 export type RuntimeEventRow = typeof runtimeEvents.$inferSelect;
 export type NewRuntimeEventRow = typeof runtimeEvents.$inferInsert;
+
+/* ─────────── Memory Types ─────────── */
+
+export interface MemoryTypeDef {
+  key: string;
+  description: string;
+}
+
+/** Quick-add presets shown in the UI (not stored in DB) */
+export const MEMORY_TYPE_PRESETS: MemoryTypeDef[] = [
+  { key: "preference", description: "用户偏好和习惯，如回复风格、语言偏好等" },
+  { key: "fact", description: "关于用户或业务的客观事实信息" },
+  { key: "event", description: "发生过的重要事件和时间节点" },
+  { key: "skill", description: "用户具备的技能和能力" },
+  { key: "requirement", description: "用户提出的功能需求或业务要求" },
+  { key: "feedback", description: "用户对产品或服务的反馈意见" },
+];
+
+/* ─────────── Memory Configs (1:1 per agent) ─────────── */
+
+export const memoryConfigs = pgTable("memory_configs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  agentId: uuid("agent_id")
+    .references(() => agents.id, { onDelete: "cascade" })
+    .unique(),
+  enabled: boolean("enabled").notNull().default(false),
+  autoExtract: boolean("auto_extract").notNull().default(false),
+  extractionPrompt: text("extraction_prompt").notNull().default(""),
+  maxMemoriesPerUser: integer("max_memories_per_user").notNull().default(100),
+  maxGlobalMemories: integer("max_global_memories").notNull().default(1000),
+  injectionMode: text("injection_mode")
+    .notNull()
+    .default("system_prompt")
+    .$type<"system_prompt" | "context" | "none">(),
+  maxInjectedMemories: integer("max_injected_memories").notNull().default(10),
+  decayEnabled: boolean("decay_enabled").notNull().default(false),
+  decayDays: integer("decay_days").notNull().default(90),
+  memoryTypeDefs: jsonb("memory_type_defs").$type<MemoryTypeDef[]>().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export type MemoryConfigRow = typeof memoryConfigs.$inferSelect;
+export type NewMemoryConfigRow = typeof memoryConfigs.$inferInsert;
+
+/* ─────────── Memories ─────────── */
+
+export const memories = pgTable(
+  "memories",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    userId: text("user_id"),
+    sessionId: uuid("session_id").references(() => chatSessions.id, {
+      onDelete: "set null",
+    }),
+    type: text("type").notNull(),
+    content: text("content").notNull(),
+    importance: real("importance").notNull().default(0.5),
+    lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("memories_agent_id_user_id_idx").on(t.agentId, t.userId),
+    index("memories_agent_id_type_idx").on(t.agentId, t.type),
+  ]
+);
+
+export type MemoryRow = typeof memories.$inferSelect;
+export type NewMemoryRow = typeof memories.$inferInsert;
 

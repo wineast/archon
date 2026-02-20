@@ -38,6 +38,8 @@ export const RESOURCE_TYPE_LABELS: Record<AuditLogResourceType, string> = {
   object_type: "对象类型",
   object_relation: "对象关系",
   chat_config: "对话配置",
+  memory_config: "记忆配置",
+  memory: "记忆",
 };
 
 export const ACTION_LABELS: Record<AuditLogAction, string> = {
