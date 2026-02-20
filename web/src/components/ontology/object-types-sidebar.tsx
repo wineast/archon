@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusIcon } from "lucide-react";
+import { ImportIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ObjectTypeRow, ObjectRelationRow } from "@/db/schema";
@@ -12,6 +12,7 @@ interface ObjectTypesSidebarProps {
   activeTypeId: string | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
+  onImport?: () => void;
 }
 
 export function ObjectTypesSidebar({
@@ -20,6 +21,7 @@ export function ObjectTypesSidebar({
   activeTypeId,
   onSelect,
   onCreate,
+  onImport,
 }: ObjectTypesSidebarProps) {
   // Count relations per type (as source or target)
   const relationCounts = new Map<string, number>();
@@ -34,14 +36,26 @@ export function ObjectTypesSidebar({
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <span className="text-sm font-semibold">Object Types</span>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={onCreate}
-          title="New Object Type"
-        >
-          <PlusIcon className="size-4" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          {onImport && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onImport}
+              title="Import from File"
+            >
+              <ImportIcon className="size-3.5" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onCreate}
+            title="New Object Type"
+          >
+            <PlusIcon className="size-4" />
+          </Button>
+        </div>
       </div>
       <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="p-1">

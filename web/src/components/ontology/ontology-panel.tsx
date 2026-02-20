@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeftIcon, FileSpreadsheetIcon, ListIcon, NetworkIcon, PlusIcon } from "lucide-react";
+import { ArrowLeftIcon, ListIcon, NetworkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useObjectTypes,
@@ -165,22 +165,6 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
               <NetworkIcon className="size-3.5" />
             </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => setImportTypeDialogOpen(true)}
-            title="Import from File"
-          >
-            <FileSpreadsheetIcon className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleOpenCreateDialog}
-            title="New Object Type"
-          >
-            <PlusIcon className="size-4" />
-          </Button>
         </div>
 
         {/* Content area */}
@@ -193,6 +177,7 @@ export function OntologyPanel({ agentId }: { agentId: string }) {
                 activeTypeId={activeTypeId}
                 onSelect={setActiveTypeId}
                 onCreate={handleOpenCreateDialog}
+                onImport={() => setImportTypeDialogOpen(true)}
               />
               <div className="flex-1 min-w-0 overflow-hidden">
                 {detailPanel ?? (

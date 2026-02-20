@@ -129,9 +129,6 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
               placeholder="Document name"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Created {createdAt} &middot; Updated {updatedAt}
-          </p>
         </div>
 
         {/* Content area */}
@@ -140,6 +137,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
           onValueChange={(v) => setActiveTab(v as "edit" | "preview")}
           className="flex flex-col flex-1 min-h-0"
         >
+          <label className="shrink-0 mx-6 text-xs font-medium text-muted-foreground">Content</label>
           <TabsList className="shrink-0 mx-6">
             <TabsTrigger value="edit">Edit</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
@@ -176,7 +174,9 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
             <RotateCcwIcon className="mr-1 size-3" />
             Reset
           </Button>
-          <div className="flex-1" />
+          <p className="flex-1 text-xs text-muted-foreground text-right">
+            Created {createdAt} &middot; Updated {updatedAt}
+          </p>
           <Button
             variant="destructive"
             size="sm"
