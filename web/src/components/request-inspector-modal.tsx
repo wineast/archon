@@ -203,7 +203,7 @@ export function RequestInspectorModal({
                 onValueChange={(v) => setSystemView(v as SystemView)}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <TabsList className="h-8">
+                  <TabsList className="h-7">
                     <TabsTrigger value="rendered" className="text-xs">Rendered</TabsTrigger>
                     <TabsTrigger value="template" className="text-xs">Template</TabsTrigger>
                   </TabsList>
@@ -247,7 +247,7 @@ export function RequestInspectorModal({
               onValueChange={(v) => setMsgFormat(v as "ui" | "model")}
             >
               <div className="flex items-center justify-between mb-2">
-                <TabsList className="h-8">
+                <TabsList className="h-7">
                   <TabsTrigger value="ui" className="text-xs">UI</TabsTrigger>
                   <TabsTrigger value="model" className="text-xs">Model</TabsTrigger>
                 </TabsList>

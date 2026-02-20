@@ -156,32 +156,32 @@ export function ModelConfigDetail({
       <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="space-y-4 p-4">
           <div>
-            <label className="text-sm font-medium">Key</label>
+            <label className="text-xs font-medium text-muted-foreground">Key</label>
             <Input
-              className="mt-1.5 h-8 text-sm font-mono bg-muted"
+              className="mt-1 h-8 text-sm font-mono bg-muted"
               value={config.key}
               readOnly
             />
           </div>
           <div>
-            <label className="text-sm font-medium">Name</label>
+            <label className="text-xs font-medium text-muted-foreground">Name</label>
             <Input
-              className="mt-1.5 h-8 text-sm"
+              className="mt-1 h-8 text-sm"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div>
-            <label className="text-sm font-medium">Model ID</label>
+            <label className="text-xs font-medium text-muted-foreground">Model ID</label>
             <ModelCombobox
-              className="mt-1.5"
+              className="mt-1"
               value={modelId}
               onChange={setModelId}
             />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">System Prompt</label>
+              <label className="text-xs font-medium text-muted-foreground">System Prompt</label>
               <Button
                 variant="ghost"
                 size="sm"
@@ -198,8 +198,8 @@ export function ModelConfigDetail({
               systemPrompt={systemPrompt}
               onApply={setSystemPrompt}
             />
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1.5">
-              <TabsList className="h-8">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
+              <TabsList className="h-7">
                 <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
                 <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
               </TabsList>
@@ -233,8 +233,8 @@ export function ModelConfigDetail({
             </Tabs>
           </div>
           <div>
-            <label className="text-sm font-medium">Temperature</label>
-            <div className="mt-1.5 flex items-center gap-3">
+            <label className="text-xs font-medium text-muted-foreground">Temperature</label>
+            <div className="mt-1 flex items-center gap-3">
               <Input
                 className="h-8 w-20 text-sm"
                 type="number"

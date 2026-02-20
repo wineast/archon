@@ -93,9 +93,9 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
                 value={innerTab}
                 onValueChange={(v) => setInnerTab(v as "edit" | "preview")}
               >
-                <TabsList>
-                  <TabsTrigger value="edit">Edit</TabsTrigger>
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                <TabsList className="h-7">
+                  <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
+                  <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
                 </TabsList>
               </Tabs>
             </SchemaForm>
@@ -243,9 +243,9 @@ function SchemaPreviewPanel({ schemaKey, getParameters, allSchemas }: SchemaPrev
       className="mt-3"
     >
       <div className="flex items-center gap-2">
-        <TabsList>
-          <TabsTrigger value="zod">Zod Code</TabsTrigger>
-          <TabsTrigger value="json">JSON Schema</TabsTrigger>
+        <TabsList className="h-7">
+          <TabsTrigger value="zod" className="text-xs">Zod Code</TabsTrigger>
+          <TabsTrigger value="json" className="text-xs">JSON Schema</TabsTrigger>
         </TabsList>
         <div className="flex-1" />
         <Button size="icon" variant="ghost" className="size-7" onClick={handleCopy}>

@@ -90,7 +90,7 @@ export function UserSettingsModal({ open: controlledOpen, onOpenChange }: UserSe
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nickname</label>
+              <label className="text-xs font-medium text-muted-foreground">Nickname</label>
               <Input
                 value={draft.nickname}
                 onChange={(e) =>
@@ -100,7 +100,7 @@ export function UserSettingsModal({ open: controlledOpen, onOpenChange }: UserSe
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Bio</label>
+              <label className="text-xs font-medium text-muted-foreground">Bio</label>
               <Textarea
                 value={draft.bio}
                 onChange={(e) =>
