@@ -229,11 +229,14 @@ function UnionVariants({
   depth: number;
   schemas?: SchemaRow[];
 }) {
-  const { control, setValue, getValues } = useFormContext();
+  const { control, register, setValue, getValues } = useFormContext();
   const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
     control,
     name: `${fieldPath}.variants`,
   });
+  const discriminator = useWatch({ control, name: `${fieldPath}.discriminator` }) as string | undefined;
+  const unionMode = useWatch({ control, name: `${fieldPath}.unionMode` }) as string | undefined;
+  const showDiscriminatorValue = !!discriminator && unionMode !== "anyOf";
 
   return (
     <div className="border-l-2 border-muted pl-4 ml-2 space-y-3 min-w-0">
@@ -243,6 +246,13 @@ function UnionVariants({
             <span className="text-xs font-medium text-muted-foreground">
               变体 {vIndex + 1}
             </span>
+            {showDiscriminatorValue && (
+              <Input
+                className="h-7 w-[120px] text-xs font-mono"
+                {...register(`${fieldPath}.discriminatorValues.${vIndex}`)}
+                placeholder={`${discriminator} 值`}
+              />
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -437,6 +447,7 @@ function UnionEditor({
                 field.onChange(value === "oneOf" ? undefined : value);
                 if (value === "anyOf") {
                   setValue(`${fieldPath}.discriminator`, undefined);
+                  setValue(`${fieldPath}.discriminatorValues`, undefined);
                 }
               }}
             >
@@ -824,6 +835,7 @@ export function ParameterRow({
                 }
                 if (value !== "union") {
                   setValue(`${fieldPath}.discriminator`, undefined);
+                  setValue(`${fieldPath}.discriminatorValues`, undefined);
                   setValue(`${fieldPath}.variants`, undefined);
                   setValue(`${fieldPath}.unionMode`, undefined);
                 }

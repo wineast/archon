@@ -765,13 +765,12 @@ describe("buildJsonSchema", () => {
           name: "shape",
           type: "union",
           discriminator: "kind",
+          discriminatorValues: ["circle", "square"],
           variants: [
             [
-              makeParam({ id: "v1a", name: "kind", type: "string", required: true }),
               makeParam({ id: "v1b", name: "radius", type: "number", required: true }),
             ],
             [
-              makeParam({ id: "v2a", name: "kind", type: "string", required: true }),
               makeParam({ id: "v2b", name: "side", type: "number", required: true }),
             ],
           ],
@@ -780,6 +779,52 @@ describe("buildJsonSchema", () => {
 
       const props = result.properties as Record<string, Record<string, unknown>>;
       expect(props.shape.discriminator).toEqual({ propertyName: "kind" });
+
+      // Each variant should have the injected const discriminator field
+      const variants = props.shape.oneOf as Record<string, unknown>[];
+      const v0Props = (variants[0] as Record<string, unknown>).properties as Record<string, Record<string, unknown>>;
+      expect(v0Props.kind).toEqual({ const: "circle" });
+      expect((variants[0] as Record<string, unknown>).required).toContain("kind");
+
+      const v1Props = (variants[1] as Record<string, unknown>).properties as Record<string, Record<string, unknown>>;
+      expect(v1Props.kind).toEqual({ const: "square" });
+      expect((variants[1] as Record<string, unknown>).required).toContain("kind");
+    });
+
+    it("discriminatorValues injects const and required into each variant", () => {
+      const result = buildJsonSchema([
+        makeParam({
+          name: "animal",
+          type: "union",
+          discriminator: "type",
+          discriminatorValues: ["cat", "dog"],
+          variants: [
+            [
+              makeParam({ id: "v1a", name: "lives", type: "number", required: true }),
+            ],
+            [
+              makeParam({ id: "v2a", name: "breed", type: "string", required: true }),
+            ],
+          ],
+        }),
+      ]);
+
+      const props = result.properties as Record<string, Record<string, unknown>>;
+      const variants = props.animal.oneOf as Record<string, unknown>[];
+
+      // Variant 0: should have { type: { const: "cat" } } injected
+      const v0 = variants[0] as Record<string, unknown>;
+      const v0Props = v0.properties as Record<string, Record<string, unknown>>;
+      expect(v0Props.type).toEqual({ const: "cat" });
+      expect(v0Props.lives).toEqual({ type: "number" });
+      expect(v0.required).toEqual(["lives", "type"]);
+
+      // Variant 1: should have { type: { const: "dog" } } injected
+      const v1 = variants[1] as Record<string, unknown>;
+      const v1Props = v1.properties as Record<string, Record<string, unknown>>;
+      expect(v1Props.type).toEqual({ const: "dog" });
+      expect(v1Props.breed).toEqual({ type: "string" });
+      expect(v1.required).toEqual(["breed", "type"]);
     });
 
     it("returns empty object for union with < 2 variants", () => {

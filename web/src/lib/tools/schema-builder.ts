@@ -231,9 +231,15 @@ function buildUnionSchema(
     return z.unknown();
   }
 
-  const variantSchemas = param.variants.map((variantProps) =>
-    buildNestedObject(variantProps, resolvedVars, options, ancestorSchemaIds)
-  );
+  // Build variant schemas, injecting discriminator literal when discriminatorValues is provided
+  const variantSchemas = param.variants.map((variantProps, i) => {
+    const obj = buildNestedObject(variantProps, resolvedVars, options, ancestorSchemaIds);
+    const discValue = param.discriminator && param.discriminatorValues?.[i];
+    if (discValue != null) {
+      return obj.extend({ [param.discriminator!]: z.literal(discValue) });
+    }
+    return obj;
+  });
 
   // anyOf mode: always use z.union (anyOf semantics = try in order)
   if (param.unionMode === "anyOf") {
@@ -510,9 +516,19 @@ function buildJsonSchemaUnion(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSc
     return {};
   }
 
-  const variantSchemas = param.variants.map((variantProps) =>
-    buildJsonSchemaNestedObject(variantProps, ctx)
-  );
+  // Build variant schemas, injecting discriminator const when discriminatorValues is provided
+  const variantSchemas = param.variants.map((variantProps, i) => {
+    const schema = buildJsonSchemaNestedObject(variantProps, ctx);
+    const discValue = param.discriminator && param.discriminatorValues?.[i];
+    if (discValue != null) {
+      schema.properties = schema.properties || {};
+      (schema.properties as Record<string, unknown>)[param.discriminator!] = { const: discValue };
+      if (!(schema.required as string[] | undefined)?.includes(param.discriminator!)) {
+        schema.required = [...((schema.required as string[]) || []), param.discriminator!];
+      }
+    }
+    return schema;
+  });
 
   const keyword = param.unionMode === "anyOf" ? "anyOf" : "oneOf";
   const s: JsonSchema7 = { [keyword]: variantSchemas };

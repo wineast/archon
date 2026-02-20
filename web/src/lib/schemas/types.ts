@@ -24,6 +24,7 @@ export interface SchemaProperty {
 
   // union
   discriminator?: string;
+  discriminatorValues?: string[];
   variants?: SchemaProperty[][];
   unionMode?: "oneOf" | "anyOf";
 
