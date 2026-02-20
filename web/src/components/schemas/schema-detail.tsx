@@ -63,8 +63,8 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
       </div>
 
       <TabsContent value="edit" className="flex flex-1 flex-col min-h-0">
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-4 min-w-0 overflow-hidden">
+        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
+          <div className="p-4 min-w-0">
             <SchemaForm
               schema={{
                 key: schema.key,

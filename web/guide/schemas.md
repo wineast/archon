@@ -395,6 +395,109 @@ Schema 详情页提供 **JSON Schema** 预览 tab，可查看当前 Schema 的�
 
 ---
 
+## JSON Schema 对齐清单
+
+Archon Schema 的设计目标是尽可能对齐 JSON Schema 标准（Draft 7）。下表列出各特性的支持状态。
+
+**图例**：✅ 已支持　⚠️ 部分支持　❌ 未支持
+
+> **LLM 可见** 列说明：LLM 在 tool calling 时，收到的是 JSON Schema 格式的参数定义。只有出现在 JSON Schema 里的约束，LLM 才能"看到"并遵守。Zod 的 `.refine()` 等运行时校验不会出现在 JSON Schema 中，LLM 看不到。
+
+### 类型
+
+| JSON Schema | Archon | Zod | LLM 可见 | 场景 | 说明 |
+|---|---|---|---|---|---|
+| `string` | ✅ | `z.string()` | ✅ | 姓名、地址、备注等文本字段 | |
+| `number` | ✅ | `z.number()` | ✅ | 金额、价格、评分等数值 | |
+| `integer` | ✅ | `.int()` | ✅ | 数量、年龄、楼层等整数 | 通过 `number` + `integer: true` 实现 |
+| `boolean` | ✅ | `z.boolean()` | ✅ | 是否同意、是否启用等开关 | |
+| `object` | ✅ | `z.object()` | ✅ | 地址、联系人等结构化数据 | 支持嵌套、Schema 引用、additionalProperties |
+| `array` | ✅ | `z.array()` | ✅ | 标签列表、联系人列表等集合 | 支持 items 递归 |
+| `null` | ❌ | `z.null()` | ✅ | 表示"值存在但为空"，区别于"字段缺失" | |
+| `enum`（值约束） | ⚠️ | `z.enum()` | ✅ | 省份、状态、类型等固定选项 | Archon 作为独立 type；JSON Schema 中 enum 是关键字而非 type |
+| `const` | ❌ | `z.literal()` | ✅ | 固定值字段，如 `version: "1.0"` 永远不变 | union discriminator 内部隐式使用了 literal，但未暴露为通用能力 |
+
+### 组合关键字
+
+| JSON Schema | Archon | Zod | LLM 可见 | 场景 | 说明 |
+|---|---|---|---|---|---|
+| `oneOf` | ✅ | `z.discriminatedUnion()` / `z.union()` | ✅ | 支付方式二选一：信用卡 or 银行转账，字段完全不同 | 对应 `union` 类型 |
+| `anyOf` | ❌ | `z.union()` | ✅ | 联系方式填至少一种：邮箱 or 手机 or 座机 | |
+| `allOf` | ❌ | `z.intersection()` | ✅ | 组合多个定义：基础信息 + 扩展信息合并为一个对象 | Schema Includes 功能类似但不等价 |
+| `not` | ❌ | 无直接 API | ✅ | 排除特定值，如"不能是空字符串" | |
+| `if` / `then` / `else` | ❌ | 无直接 API | ✅ | 条件字段：如果国家=美国，则必须填州；否则填省 | |
+
+### String 约束
+
+| JSON Schema | Archon | Zod | LLM 可见 | 场景 | 说明 |
+|---|---|---|---|---|---|
+| `minLength` | ✅ | `.min(n)` | ✅ | 密码至少 8 位、姓名不能为空 | |
+| `maxLength` | ✅ | `.max(n)` | ✅ | 备注不超过 500 字、短信不超过 70 字 | |
+| `pattern` | ✅ | `.regex(r)` | ✅ | 身份证号、邮编、手机号等固定格式 | |
+| `format: email` | ✅ | `.email()` | ✅ | 邮箱地址 | |
+| `format: url` | ✅ | `.url()` | ✅ | 网站链接、回调地址 | |
+| `format: uuid` | ✅ | `.uuid()` | ✅ | 系统 ID、关联外键 | |
+| `format: date` | ✅ | `.date()` | ✅ | 出生日期、入职日期 | |
+| `format: date-time` | ✅ | `.datetime()` | ✅ | 带时间的时间戳，如订单创建时间 | |
+| `format: time` | ❌ | `.time()` | ✅ | 纯时间，如营业时间 "09:00" | |
+| `format: ipv4` / `ipv6` | ❌ | `.ip()` | ✅ | 服务器 IP 地址 | |
+| `format: hostname` | ❌ | 无直接 API | ✅ | 域名，如 `api.example.com` | |
+| `contentEncoding` | ❌ | 无直接 API | ✅ | Base64 编码的文件内容 | |
+| `contentMediaType` | ❌ | 无直接 API | ✅ | 指定内容 MIME 类型，如 `image/png` | |
+
+### Number 约束
+
+| JSON Schema | Archon | Zod | LLM 可见 | 场景 | 说明 |
+|---|---|---|---|---|---|
+| `minimum` | ✅ | `.min(n)` | ✅ | 年龄 ≥ 0、价格 ≥ 0 | |
+| `maximum` | ✅ | `.max(n)` | ✅ | 评分 ≤ 5、折扣率 ≤ 100 | |
+| `exclusiveMinimum` | ✅ | `.gt(n)` | ✅ | 利率 > 0（不能为零） | |
+| `exclusiveMaximum` | ✅ | `.lt(n)` | ✅ | 概率 < 1（不能等于 1） | |
+| `multipleOf` | ✅ | `.multipleOf(n)` | ✅ | 金额精确到分（multipleOf: 0.01）、数量为 12 的倍数 | |
+
+### Object 约束
+
+| JSON Schema | Archon | Zod | LLM 可见 | 场景 | 说明 |
+|---|---|---|---|---|---|
+| `properties` | ✅ | `z.object({...})` | ✅ | 定义对象的固定字段列表 | |
+| `required` | ✅ | 默认必填，`.optional()` 取消 | ✅ | 标记哪些字段必填 | 每个属性单独标记 |
+| `additionalProperties` | ✅ | `z.record()` / `.catchall()` | ✅ | 动态标签 `{"color":"red","size":"L"}`，key 不固定 | UI 中的"动态 Key" |
+| `minProperties` | ❌ | `.refine()` | ❌ | 至少填 N 个字段 | refine 不转 JSON Schema |
+| `maxProperties` | ❌ | `.refine()` | ❌ | 最多填 N 个字段 | refine 不转 JSON Schema |
+| `patternProperties` | ❌ | 无直接 API | ✅ | key 名匹配正则的字段统一约束，如 `^S_` 开头的都是 string | |
+| `propertyNames` | ❌ | 无直接 API | ✅ | 限制 key 名格式，如只允许小写字母 | |
+| `dependencies` / `dependentRequired` | ❌ | `.refine()` | ❌ | 填了信用卡号就必须填有效期 | refine 不转 JSON Schema |
+
+### Array 约束
+
+| JSON Schema | Archon | Zod | LLM 可见 | 场景 | 说明 |
+|---|---|---|---|---|---|
+| `items`（单一类型） | ✅ | `z.array(schema)` | ✅ | 所有元素同类型，如字符串标签列表 | |
+| `minItems` | ✅ | `.min(n)` | ✅ | 至少选 1 个标签、至少上传 1 张图 | |
+| `maxItems` | ✅ | `.max(n)` | ✅ | 最多选 5 个兴趣爱好 | |
+| `uniqueItems` | ✅ | `.refine()` | ⚠️ | 标签不能重复 | Zod→AI SDK 路径丢失；`buildJsonSchema()` 显式路径正确输出 |
+| `prefixItems`（tuple） | ❌ | `z.tuple()` | ✅ | 固定位置固定类型，如 `[经度, 纬度]` | |
+| `contains` | ❌ | 无直接 API | ✅ | 数组中至少有一个元素满足某条件 | |
+
+### 通用关键字
+
+| JSON Schema | Archon | Zod | LLM 可见 | 场景 | 说明 |
+|---|---|---|---|---|---|
+| `description` | ✅ | `.describe(text)` | ✅ | 告诉 LLM 这个参数的含义和填写规则 | |
+| `default` | ✅ | `.default(value)` | ✅ | 用户不传时自动填充，如 `country` 默认 "CN" | |
+| `title` | ❌ | 无直接 API | ✅ | 给参数起一个人类友好的显示名 | |
+| `examples` | ❌ | 无直接 API | ✅ | 给 LLM 看示例值，帮助理解格式 | |
+| `readOnly` / `writeOnly` | ❌ | `.readonly()` | ✅ | 标记字段只读（如系统生成的 ID）或只写（如密码） | |
+| `$ref` / `$defs` | ⚠️ | `z.lazy()` | ✅ 展开后可见 | 复用定义，如"地址"在多处引用 | 通过 `schemaId` 引用实现，非标准 `$ref` 语法 |
+
+### 小结
+
+常用于 LLM tool calling 的特性（基础类型 + string/number/array/object 约束）覆盖完整。缺失的 `null`、`anyOf`/`allOf`/`not`、`if/then/else`、tuple 等在 LLM 场景中较少用到。
+
+需要注意的关键区别：Zod 的 `.refine()` 只在**运行时校验**生效，LLM 看不到这类约束（如 `uniqueItems`、`minProperties`、`dependencies`）。如果需要 LLM 也看到，必须走 `buildJsonSchema()` 显式路径，或在 `description` 中用自然语言描述约束。
+
+---
+
 ## 已知问题
 
 - `enum` 作为独立 type 与 JSON Schema 标准存在语义差异：JSON Schema 中 `enum` 不是 type 而是 `string` 的值约束。当前功能上无影响，但做 JSON Schema 导入时需要映射。

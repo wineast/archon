@@ -74,6 +74,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - API 错误用 `toast.error()`（sonner），在 API 层 try/catch 内调用
 - 父组件用 `useRef` 而非 `useState` 存储子组件传回的 ref/handle，避免无限循环
 - flex 布局中 ScrollArea 必须加 `min-h-0`
+- ScrollArea 内容横向溢出：Radix ScrollArea 的 Viewport 内部会自动生成一个 `display: table; min-width: 100%` 的包装 div，导致子内容可以无限水平扩展（`truncate` 失效）。修复方法：在 ScrollArea 上加 `[&_[data-slot=scroll-area-viewport]>div]:!block` 强制覆盖为 `display: block`
 - Sheet 内部不加 `border-b` / `border-t` 分割线
 - 新增按钮放在底部固定区域
 
