@@ -748,6 +748,7 @@ export const toolTestCases = pgTable(
     input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
     expectedOutput: jsonb("expected_output").$type<unknown>(),
     tags: text("tags").array().notNull().default([]),
+    showAsExample: boolean("show_as_example").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
