@@ -86,6 +86,8 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
         {
           name: updated.name,
           description: updated.description,
+          toolInputSchemaId: updated.toolInputSchemaId,
+          toolOutputSchemaId: updated.toolOutputSchemaId,
           componentSource: updated.componentSource,
         },
         mutate

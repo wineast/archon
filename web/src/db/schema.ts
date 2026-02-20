@@ -823,6 +823,14 @@ export const components = pgTable(
     description: text("description").notNull().default(""),
     componentSource: text("component_source").notNull().default(""),
     generatedCss: text("generated_css").notNull().default(""),
+    toolInputSchemaId: uuid("tool_input_schema_id").references(
+      () => schemas.id,
+      { onDelete: "set null" }
+    ),
+    toolOutputSchemaId: uuid("tool_output_schema_id").references(
+      () => schemas.id,
+      { onDelete: "set null" }
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

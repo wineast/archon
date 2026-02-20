@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import type { ComponentTestRunResultRow } from "@/db/schema";
 
 interface ComponentRunResultCardProps {
-  result: ComponentTestRunResultRow;
+  result: ComponentTestRunResultRow & { schemaWarnings?: string };
   defaultOpen?: boolean;
 }
 
@@ -35,6 +35,14 @@ export function ComponentRunResultCard({
           className={`size-3 shrink-0 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
         />
         <span className="flex-1 truncate font-medium">{result.caseName}</span>
+        {result.schemaWarnings && (
+          <Badge
+            variant="secondary"
+            className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0 text-[10px]"
+          >
+            Schema
+          </Badge>
+        )}
         {result.error ? (
           <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
             Error
@@ -62,6 +70,11 @@ export function ComponentRunResultCard({
           {result.error && (
             <div className="rounded bg-destructive/10 p-2 text-xs text-destructive whitespace-pre-wrap">
               {result.error}
+            </div>
+          )}
+          {result.schemaWarnings && (
+            <div className="rounded bg-amber-50 dark:bg-amber-900/20 p-2 text-xs text-amber-700 dark:text-amber-400 whitespace-pre-wrap">
+              {result.schemaWarnings}
             </div>
           )}
 

@@ -29,12 +29,15 @@ import { ComponentRunResultCard } from "./component-run-result-card";
 import { ComponentRunHistoryItem } from "./component-run-history-item";
 import type { ComponentTestRunResultRow } from "@/db/schema";
 import { compileComponentGraph, keyToPascal, type ComponentRecord } from "@/tool-ui";
+import { validateAgainstSchema } from "@/lib/components/validate-schema";
 
 interface ComponentTestCasesPanelProps {
   componentId: string;
   componentSource: string;
   componentKey?: string;
   allComponents?: ComponentRecord[];
+  toolInputSchemaId?: string | null;
+  toolOutputSchemaId?: string | null;
 }
 
 /** Execute a component render test on the client side. */
@@ -77,6 +80,8 @@ export function ComponentTestCasesPanel({
   componentSource,
   componentKey,
   allComponents,
+  toolInputSchemaId,
+  toolOutputSchemaId,
 }: ComponentTestCasesPanelProps) {
   const { testCases, mutate: mutateCases } =
     useComponentTestCases(componentId);
@@ -86,7 +91,7 @@ export function ComponentTestCasesPanel({
   const [runAllRunning, setRunAllRunning] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [currentRunResults, setCurrentRunResults] = useState<
-    ComponentTestRunResultRow[]
+    (ComponentTestRunResultRow & { schemaWarnings?: string })[]
   >([]);
   const [currentRunOpen, setCurrentRunOpen] = useState(true);
   const [runProgress, setRunProgress] = useState<{
@@ -172,13 +177,47 @@ export function ComponentTestCasesPanel({
 
   // ── Single test run (client-side) ──
 
+  const appendSchemaWarnings = useCallback(
+    async (
+      result: ComponentTestRunResult,
+      tool: { input: unknown; output: unknown }
+    ): Promise<ComponentTestRunResult> => {
+      if (!toolInputSchemaId && !toolOutputSchemaId) return result;
+      const [inResult, outResult] = await Promise.all([
+        validateAgainstSchema(toolInputSchemaId, tool.input),
+        validateAgainstSchema(toolOutputSchemaId, tool.output),
+      ]);
+      const warnings: string[] = [];
+      if (inResult && !inResult.valid) {
+        warnings.push(
+          ...inResult.errors.map(
+            (e) => `[input] ${e.path ? `${e.path}: ` : ""}${e.message}`
+          )
+        );
+      }
+      if (outResult && !outResult.valid) {
+        warnings.push(
+          ...outResult.errors.map(
+            (e) => `[output] ${e.path ? `${e.path}: ` : ""}${e.message}`
+          )
+        );
+      }
+      if (warnings.length > 0) {
+        return { ...result, schemaWarnings: warnings.join("\n") };
+      }
+      return result;
+    },
+    [toolInputSchemaId, toolOutputSchemaId]
+  );
+
   const handleRun = useCallback(
     async (
       tool: { name: string; input: unknown; output: unknown }
     ): Promise<ComponentTestRunResult> => {
-      return executeRenderTest(componentSource, tool, compositionDeps);
+      const result = await executeRenderTest(componentSource, tool, compositionDeps);
+      return appendSchemaWarnings(result, tool);
     },
-    [componentSource, compositionDeps]
+    [componentSource, compositionDeps, appendSchemaWarnings]
   );
 
   // ── Run All ──
@@ -209,7 +248,8 @@ export function ComponentTestCasesPanel({
       let passed = 0;
       for (let i = 0; i < filteredCases.length; i++) {
         const tc = filteredCases[i];
-        const result = await executeRenderTest(componentSource, tc.tool, compositionDeps);
+        const renderResult = await executeRenderTest(componentSource, tc.tool, compositionDeps);
+        const result = await appendSchemaWarnings(renderResult, tc.tool);
         if (result.passed) passed++;
 
         // 3. Save result
@@ -229,6 +269,10 @@ export function ComponentTestCasesPanel({
           }
         );
         const { result: savedResult } = await saveRes.json();
+        // Merge schema warnings from local validation into the saved result for UI display
+        if (result.schemaWarnings) {
+          savedResult.schemaWarnings = result.schemaWarnings;
+        }
         setCurrentRunResults((prev) => [...prev, savedResult]);
         setRunProgress({
           done: i + 1,
@@ -246,7 +290,7 @@ export function ComponentTestCasesPanel({
     } finally {
       setRunAllRunning(false);
     }
-  }, [filteredCases, componentId, componentSource, selectedTag, mutateRuns, compositionDeps]);
+  }, [filteredCases, componentId, componentSource, selectedTag, mutateRuns, compositionDeps, appendSchemaWarnings]);
 
   // ── Run history handlers ──
 
