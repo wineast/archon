@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { JsonEditor } from "@/components/editors/json-editor";
 import {
@@ -31,6 +32,8 @@ const PARAM_TYPES: { value: SchemaPropertyType; label: string }[] = [
   { value: "object", label: "Object" },
   { value: "array", label: "Array" },
   { value: "union", label: "Union" },
+  { value: "null", label: "Null" },
+  { value: "const", label: "Const" },
 ];
 
 /** Item types available when type === "array" */
@@ -58,6 +61,9 @@ const STRING_FORMATS = [
   { value: "uuid", label: "uuid" },
   { value: "date", label: "date" },
   { value: "date-time", label: "date-time" },
+  { value: "time", label: "time" },
+  { value: "ipv4", label: "ipv4" },
+  { value: "ipv6", label: "ipv6" },
 ];
 
 export interface EnumDatasetOption {
@@ -79,7 +85,7 @@ interface ParameterRowProps {
 }
 
 type EnumSource = "manual" | "ref";
-type ObjectSource = "manual" | "ref";
+type ObjectSource = "manual" | "ref" | "merge";
 
 /** Nested properties — separated to avoid conditional useFieldArray calls. */
 function NestedProperties({
@@ -336,6 +342,137 @@ function NestedPropertiesForVariant({
   );
 }
 
+/** Tuple prefixItems editor — each position has its own type and constraints. */
+function TuplePrefixItems({
+  fieldPath,
+  enumDatasetOptions,
+  enumDatasetValues,
+  hideDefault,
+  depth,
+  schemas,
+}: {
+  fieldPath: string;
+  enumDatasetOptions: EnumDatasetOption[];
+  enumDatasetValues: Record<string, string[]>;
+  hideDefault: boolean;
+  depth: number;
+  schemas?: SchemaRow[];
+}) {
+  const { control } = useFormContext();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: `${fieldPath}.prefixItems`,
+  });
+
+  return (
+    <div className="border-l-2 border-muted pl-4 ml-2 space-y-1.5 min-w-0">
+      {fields.map((field, index) => (
+        <div key={field.id} className="space-y-1">
+          <span className="text-[10px] text-muted-foreground ml-1">
+            [{index}]
+          </span>
+          <ParameterRow
+            fieldPath={`${fieldPath}.prefixItems.${index}`}
+            onDelete={() => remove(index)}
+            enumDatasetOptions={enumDatasetOptions}
+            enumDatasetValues={enumDatasetValues}
+            hideDefault={hideDefault}
+            depth={depth + 1}
+            schemas={schemas}
+          />
+        </div>
+      ))}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() =>
+          append({
+            id: nanoid(),
+            name: `item${fields.length}`,
+            type: "string",
+            description: "",
+            required: true,
+          })
+        }
+        className="gap-1 text-xs h-7"
+      >
+        <PlusIcon className="size-3" />
+        添加位置
+      </Button>
+    </div>
+  );
+}
+
+/** Union editor: unionMode switch + discriminator + variants. */
+function UnionEditor({
+  fieldPath,
+  enumDatasetOptions,
+  enumDatasetValues,
+  hideDefault,
+  depth,
+  schemas,
+}: {
+  fieldPath: string;
+  enumDatasetOptions: EnumDatasetOption[];
+  enumDatasetValues: Record<string, string[]>;
+  hideDefault: boolean;
+  depth: number;
+  schemas?: SchemaRow[];
+}) {
+  const { register, control, setValue } = useFormContext();
+  const unionMode = useWatch({ control, name: `${fieldPath}.unionMode` }) as string | undefined;
+  const isAnyOf = unionMode === "anyOf";
+
+  return (
+    <>
+      <div className="flex items-center gap-2 pl-[128px] min-w-0">
+        <span className="text-xs text-muted-foreground shrink-0">匹配规则</span>
+        <Controller
+          name={`${fieldPath}.unionMode`}
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? "oneOf"}
+              onValueChange={(value: string) => {
+                field.onChange(value === "oneOf" ? undefined : value);
+                if (value === "anyOf") {
+                  setValue(`${fieldPath}.discriminator`, undefined);
+                }
+              }}
+            >
+              <SelectTrigger className="w-[160px]" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="oneOf">恰好一个 (oneOf)</SelectItem>
+                <SelectItem value="anyOf">至少一个 (anyOf)</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+      {!isAnyOf && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0">
+          <span className="text-xs text-muted-foreground shrink-0">判别字段</span>
+          <Input
+            className="h-8 w-[160px] text-sm"
+            {...register(`${fieldPath}.discriminator`)}
+            placeholder="type (可选)"
+          />
+        </div>
+      )}
+      <UnionVariants
+        fieldPath={fieldPath}
+        enumDatasetOptions={enumDatasetOptions}
+        enumDatasetValues={enumDatasetValues}
+        hideDefault={hideDefault}
+        depth={depth}
+        schemas={schemas}
+      />
+    </>
+  );
+}
+
 /** Only re-renders when `required` changes. */
 function RequiredLabel({ fieldPath }: { fieldPath: string }) {
   const { control } = useFormContext();
@@ -486,6 +623,71 @@ function DefaultValueEditor({
   );
 }
 
+/** Schema merge editor — multi-select schemas with merged preview. */
+function SchemaMergeEditor({
+  fieldPath,
+  schemas,
+}: {
+  fieldPath: string;
+  schemas: SchemaRow[];
+}) {
+  const { control, setValue } = useFormContext();
+  const selectedIds = (useWatch({ control, name: `${fieldPath}.schemaIds` }) as string[] | undefined) ?? [];
+
+  const toggleSchema = (id: string) => {
+    const next = selectedIds.includes(id)
+      ? selectedIds.filter((s) => s !== id)
+      : [...selectedIds, id];
+    setValue(`${fieldPath}.schemaIds`, next.length > 0 ? next : undefined);
+  };
+
+  // Compute merged preview
+  const mergedParams: { name: string; type: string; required: boolean; source: string }[] = [];
+  const seen = new Set<string>();
+  for (const sid of selectedIds) {
+    const schema = schemas.find((s) => s.id === sid);
+    if (!schema) continue;
+    for (const p of schema.parameters) {
+      if (seen.has(p.name)) {
+        const idx = mergedParams.findIndex((m) => m.name === p.name);
+        if (idx >= 0) mergedParams[idx] = { name: p.name, type: p.type, required: p.required, source: schema.name };
+      } else {
+        seen.add(p.name);
+        mergedParams.push({ name: p.name, type: p.type, required: p.required, source: schema.name });
+      }
+    }
+  }
+
+  return (
+    <div className="pl-[128px] space-y-2 min-w-0">
+      <div className="space-y-1">
+        {schemas.map((s) => (
+          <label key={s.id} className="flex items-center gap-2 text-xs cursor-pointer">
+            <Checkbox
+              checked={selectedIds.includes(s.id)}
+              onCheckedChange={() => toggleSchema(s.id)}
+            />
+            {s.name}
+          </label>
+        ))}
+      </div>
+      {mergedParams.length > 0 && (
+        <div className="border-l-2 border-muted pl-4 ml-2 space-y-0.5">
+          <span className="text-[10px] text-muted-foreground">合并预览</span>
+          {mergedParams.map((p) => (
+            <div key={p.name} className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-mono">{p.name}</span>
+              <span>{p.type}</span>
+              {p.required && <span className="text-orange-500 text-[10px]">req</span>}
+              <span className="text-[10px] opacity-60">← {p.source}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Read-only preview of schema parameters for object ref mode. */
 function SchemaRefPreview({ schemas, schemaId }: { schemas: SchemaRow[]; schemaId: string }) {
   const schema = schemas.find((s) => s.id === schemaId);
@@ -520,6 +722,7 @@ export function ParameterRow({
   const enumDatasetId = useWatch({ control, name: `${fieldPath}.enumDatasetId` }) as string | undefined;
   const schemaId = useWatch({ control, name: `${fieldPath}.schemaId` }) as string | undefined;
   const itemsType = useWatch({ control, name: `${fieldPath}.items.type` }) as SchemaPropertyType | undefined;
+  const isTuple = useWatch({ control, name: `${fieldPath}.tuple` }) as boolean | undefined;
 
   const isString = type === "string";
   const isNumber = type === "number";
@@ -527,6 +730,7 @@ export function ParameterRow({
   const isObject = type === "object";
   const isArray = type === "array";
   const isUnion = type === "union";
+  const isConst = type === "const";
   const canNestObject = isObject && depth < MAX_DEPTH;
   const canNestArrayItems = isArray && depth < MAX_DEPTH;
   const canNestUnion = isUnion && depth < MAX_DEPTH;
@@ -534,8 +738,9 @@ export function ParameterRow({
   const [enumSource, setEnumSource] = useState<EnumSource>(() =>
     enumDatasetId ? "ref" : "manual"
   );
+  const schemaIds = useWatch({ control, name: `${fieldPath}.schemaIds` }) as string[] | undefined;
   const [objectSource, setObjectSource] = useState<ObjectSource>(() =>
-    schemaId ? "ref" : "manual"
+    schemaIds && schemaIds.length > 0 ? "merge" : schemaId ? "ref" : "manual"
   );
   // Read initial defaultValue once (no subscription) to set initial expand state
   const [showDefault, setShowDefault] = useState(
@@ -567,14 +772,21 @@ export function ParameterRow({
                 if (value !== "object") {
                   setValue(`${fieldPath}.properties`, undefined);
                   setValue(`${fieldPath}.schemaId`, undefined);
+                  setValue(`${fieldPath}.schemaIds`, undefined);
                   setValue(`${fieldPath}.additionalProperties`, undefined);
                 }
                 if (value !== "array") {
                   setValue(`${fieldPath}.items`, undefined);
+                  setValue(`${fieldPath}.tuple`, undefined);
+                  setValue(`${fieldPath}.prefixItems`, undefined);
                 }
                 if (value !== "union") {
                   setValue(`${fieldPath}.discriminator`, undefined);
                   setValue(`${fieldPath}.variants`, undefined);
+                  setValue(`${fieldPath}.unionMode`, undefined);
+                }
+                if (value !== "const") {
+                  setValue(`${fieldPath}.constValue`, undefined);
                 }
               }}
             >
@@ -719,6 +931,37 @@ export function ParameterRow({
         </div>
       )}
 
+      {/* Const value editor */}
+      {isConst && (
+        <div className="flex items-center gap-2 pl-[128px] min-w-0">
+          <span className="text-xs text-muted-foreground shrink-0">固定值</span>
+          <Controller
+            name={`${fieldPath}.constValue`}
+            control={control}
+            render={({ field }) => (
+              <Input
+                className="h-8 flex-1 text-xs font-mono"
+                value={field.value != null ? String(field.value) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    field.onChange(undefined);
+                    return;
+                  }
+                  // Try parsing as JSON (number, boolean, null, string)
+                  try {
+                    field.onChange(JSON.parse(raw));
+                  } catch {
+                    field.onChange(raw);
+                  }
+                }}
+                placeholder='值，如 "1.0" 或 42 或 true'
+              />
+            )}
+          />
+        </div>
+      )}
+
       {/* String constraints */}
       {isString && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0 flex-wrap">
@@ -822,36 +1065,44 @@ export function ParameterRow({
         </div>
       )}
 
-      {/* Array: items type selector */}
+      {/* Array: mode switch (items vs tuple) */}
       {canNestArrayItems && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0">
-          <span className="text-xs text-muted-foreground shrink-0">元素类型</span>
+          <span className="text-xs text-muted-foreground shrink-0">模式</span>
           <Controller
-            name={`${fieldPath}.items.type`}
+            name={`${fieldPath}.tuple`}
             control={control}
             render={({ field }) => (
               <Select
-                value={field.value ?? "string"}
-                onValueChange={(value: SchemaPropertyType) => {
-                  // Reset items to a minimal object with the new type
-                  setValue(`${fieldPath}.items`, {
-                    id: getValues(`${fieldPath}.items.id`) || nanoid(),
-                    name: "item",
-                    type: value,
-                    description: "",
-                    required: true,
-                  });
+                value={field.value ? "tuple" : "items"}
+                onValueChange={(value: string) => {
+                  const isTupleMode = value === "tuple";
+                  field.onChange(isTupleMode || undefined);
+                  if (isTupleMode) {
+                    setValue(`${fieldPath}.items`, undefined);
+                    setValue(`${fieldPath}.minItems`, undefined);
+                    setValue(`${fieldPath}.maxItems`, undefined);
+                    setValue(`${fieldPath}.uniqueItems`, undefined);
+                    if (!getValues(`${fieldPath}.prefixItems`)?.length) {
+                      setValue(`${fieldPath}.prefixItems`, [{
+                        id: nanoid(),
+                        name: "item0",
+                        type: "string",
+                        description: "",
+                        required: true,
+                      }]);
+                    }
+                  } else {
+                    setValue(`${fieldPath}.prefixItems`, undefined);
+                  }
                 }}
               >
-                <SelectTrigger className="w-[100px]" size="sm">
+                <SelectTrigger className="w-[180px]" size="sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ARRAY_ITEM_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="items">同类型元素 (items)</SelectItem>
+                  <SelectItem value="tuple">固定位置 (tuple)</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -859,42 +1110,76 @@ export function ParameterRow({
         </div>
       )}
 
-      {/* Array constraints */}
-      {canNestArrayItems && (
-        <div className="flex items-center gap-2 pl-[128px] min-w-0">
-          <span className="text-xs text-muted-foreground shrink-0">minItems</span>
-          <Input
-            className="h-8 w-[80px] text-xs font-mono"
-            type="number"
-            placeholder="0"
-            {...register(`${fieldPath}.minItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
-          />
-          <span className="text-xs text-muted-foreground shrink-0">maxItems</span>
-          <Input
-            className="h-8 w-[80px] text-xs font-mono"
-            type="number"
-            placeholder="∞"
-            {...register(`${fieldPath}.maxItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
-          />
-          <Controller
-            name={`${fieldPath}.uniqueItems`}
-            control={control}
-            render={({ field }) => (
-              <Switch
-                size="sm"
-                checked={field.value ?? false}
-                onCheckedChange={(checked: boolean) => {
-                  field.onChange(checked || undefined);
-                }}
-              />
-            )}
-          />
-          <span className="text-xs text-muted-foreground shrink-0">uniqueItems</span>
-        </div>
+      {/* Array items mode: type selector + constraints */}
+      {canNestArrayItems && !isTuple && (
+        <>
+          <div className="flex items-center gap-2 pl-[128px] min-w-0">
+            <span className="text-xs text-muted-foreground shrink-0">元素类型</span>
+            <Controller
+              name={`${fieldPath}.items.type`}
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? "string"}
+                  onValueChange={(value: SchemaPropertyType) => {
+                    setValue(`${fieldPath}.items`, {
+                      id: getValues(`${fieldPath}.items.id`) || nanoid(),
+                      name: "item",
+                      type: value,
+                      description: "",
+                      required: true,
+                    });
+                  }}
+                >
+                  <SelectTrigger className="w-[100px]" size="sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ARRAY_ITEM_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="flex items-center gap-2 pl-[128px] min-w-0">
+            <span className="text-xs text-muted-foreground shrink-0">minItems</span>
+            <Input
+              className="h-8 w-[80px] text-xs font-mono"
+              type="number"
+              placeholder="0"
+              {...register(`${fieldPath}.minItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+            />
+            <span className="text-xs text-muted-foreground shrink-0">maxItems</span>
+            <Input
+              className="h-8 w-[80px] text-xs font-mono"
+              type="number"
+              placeholder="∞"
+              {...register(`${fieldPath}.maxItems`, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
+            />
+            <Controller
+              name={`${fieldPath}.uniqueItems`}
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  size="sm"
+                  checked={field.value ?? false}
+                  onCheckedChange={(checked: boolean) => {
+                    field.onChange(checked || undefined);
+                  }}
+                />
+              )}
+            />
+            <span className="text-xs text-muted-foreground shrink-0">uniqueItems</span>
+          </div>
+        </>
       )}
 
-      {/* Array items: object nested properties */}
-      {canNestArrayItems && itemsType === "object" && (
+      {/* Array items mode: object nested properties */}
+      {canNestArrayItems && !isTuple && itemsType === "object" && (
         <NestedProperties
           fieldPath={`${fieldPath}.items`}
           enumDatasetOptions={enumDatasetOptions}
@@ -905,7 +1190,19 @@ export function ParameterRow({
         />
       )}
 
-      {/* Object: schema ref or manual properties */}
+      {/* Array tuple mode: prefixItems editor */}
+      {canNestArrayItems && isTuple && (
+        <TuplePrefixItems
+          fieldPath={fieldPath}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
+          hideDefault={hideDefault}
+          depth={depth}
+          schemas={schemas}
+        />
+      )}
+
+      {/* Object: source selector (manual / ref / merge) */}
       {canNestObject && hasSchemas && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0">
           <Select
@@ -914,8 +1211,14 @@ export function ParameterRow({
               setObjectSource(value);
               if (value === "manual") {
                 setValue(`${fieldPath}.schemaId`, undefined);
-              } else {
+                setValue(`${fieldPath}.schemaIds`, undefined);
+              } else if (value === "ref") {
                 setValue(`${fieldPath}.properties`, undefined);
+                setValue(`${fieldPath}.schemaIds`, undefined);
+              } else {
+                // merge
+                setValue(`${fieldPath}.properties`, undefined);
+                setValue(`${fieldPath}.schemaId`, undefined);
               }
             }}
           >
@@ -925,6 +1228,7 @@ export function ParameterRow({
             <SelectContent>
               <SelectItem value="manual">手动</SelectItem>
               <SelectItem value="ref">引用</SelectItem>
+              <SelectItem value="merge">合并</SelectItem>
             </SelectContent>
           </Select>
 
@@ -954,6 +1258,11 @@ export function ParameterRow({
             />
           )}
         </div>
+      )}
+
+      {/* Object merge mode: multi-select schemas */}
+      {canNestObject && objectSource === "merge" && (
+        <SchemaMergeEditor fieldPath={fieldPath} schemas={schemas} />
       )}
 
       {/* Object ref preview */}
@@ -992,26 +1301,16 @@ export function ParameterRow({
         />
       )}
 
-      {/* Union: discriminator + variants */}
+      {/* Union: unionMode + discriminator + variants */}
       {canNestUnion && (
-        <>
-          <div className="flex items-center gap-2 pl-[128px] min-w-0">
-            <span className="text-xs text-muted-foreground shrink-0">判别字段</span>
-            <Input
-              className="h-8 w-[160px] text-sm"
-              {...register(`${fieldPath}.discriminator`)}
-              placeholder="type (可选)"
-            />
-          </div>
-          <UnionVariants
-            fieldPath={fieldPath}
-            enumDatasetOptions={enumDatasetOptions}
-            enumDatasetValues={enumDatasetValues}
-            hideDefault={hideDefault}
-            depth={depth}
-            schemas={schemas}
-          />
-        </>
+        <UnionEditor
+          fieldPath={fieldPath}
+          enumDatasetOptions={enumDatasetOptions}
+          enumDatasetValues={enumDatasetValues}
+          hideDefault={hideDefault}
+          depth={depth}
+          schemas={schemas}
+        />
       )}
     </div>
   );

@@ -35,22 +35,35 @@ function buildParamSchema(
     case "boolean":
       schema = z.boolean();
       break;
+    case "null":
+      schema = z.null();
+      break;
+    case "const":
+      schema = param.constValue !== undefined ? z.literal(param.constValue as string | number | boolean) : z.unknown();
+      break;
     case "object":
       schema = buildObjectSchema(param, resolvedVars, options, ancestorSchemaIds);
       break;
     case "array": {
-      let itemSchema: z.ZodTypeAny = z.unknown();
-      if (param.items) {
-        itemSchema = buildParamSchema(param.items, resolvedVars, options, ancestorSchemaIds);
-      }
-      schema = z.array(itemSchema);
-      if (param.minItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).min(param.minItems);
-      if (param.maxItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).max(param.maxItems);
-      if (param.uniqueItems) {
-        schema = (schema as z.ZodArray<z.ZodTypeAny>).refine(
-          (arr) => new Set(arr.map((v) => JSON.stringify(v))).size === arr.length,
-          { message: "Array items must be unique" }
+      if (param.tuple && param.prefixItems && param.prefixItems.length > 0) {
+        const tupleSchemas = param.prefixItems.map((item) =>
+          buildParamSchema(item, resolvedVars, options, ancestorSchemaIds)
         );
+        schema = z.tuple(tupleSchemas as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
+      } else {
+        let itemSchema: z.ZodTypeAny = z.unknown();
+        if (param.items) {
+          itemSchema = buildParamSchema(param.items, resolvedVars, options, ancestorSchemaIds);
+        }
+        schema = z.array(itemSchema);
+        if (param.minItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).min(param.minItems);
+        if (param.maxItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).max(param.maxItems);
+        if (param.uniqueItems) {
+          schema = (schema as z.ZodArray<z.ZodTypeAny>).refine(
+            (arr) => new Set(arr.map((v) => JSON.stringify(v))).size === arr.length,
+            { message: "Array items must be unique" }
+          );
+        }
       }
       break;
     }
@@ -80,6 +93,9 @@ function buildParamSchema(
       if (param.format === "uuid") schema = (schema as z.ZodString).uuid();
       if (param.format === "date") schema = (schema as z.ZodString).date();
       if (param.format === "date-time") schema = (schema as z.ZodString).datetime();
+      if (param.format === "time") schema = (schema as z.ZodString).time();
+      if (param.format === "ipv4") schema = (schema as z.ZodString).ipv4();
+      if (param.format === "ipv6") schema = (schema as z.ZodString).ipv6();
       break;
     }
   }
@@ -120,6 +136,34 @@ function buildObjectSchema(
       return obj.catchall(valSchema);
     }
     return obj;
+  }
+
+  // --- allOf: merge multiple schemas via schemaIds ---
+  if (param.schemaIds && param.schemaIds.length > 0 && options?.schemaMap) {
+    const mergedParams: SchemaProperty[] = [];
+    const seen = new Set<string>();
+    for (const sid of param.schemaIds) {
+      const refParams = options.schemaMap[sid];
+      if (refParams) {
+        for (const p of refParams) {
+          if (seen.has(p.name)) {
+            const idx = mergedParams.findIndex((m) => m.name === p.name);
+            if (idx >= 0) mergedParams[idx] = p;
+          } else {
+            seen.add(p.name);
+            mergedParams.push(p);
+          }
+        }
+      }
+    }
+    if (mergedParams.length > 0) {
+      const obj = buildNestedObject(mergedParams, resolvedVars, options, ancestorSchemaIds);
+      if (param.additionalProperties) {
+        const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, ancestorSchemaIds);
+        return obj.catchall(valSchema);
+      }
+      return obj;
+    }
   }
 
   // --- Inline properties ---
@@ -183,7 +227,14 @@ function buildUnionSchema(
     buildNestedObject(variantProps, resolvedVars, options, ancestorSchemaIds)
   );
 
-  // discriminatedUnion requires a discriminator key present as z.literal in each variant
+  // anyOf mode: always use z.union (anyOf semantics = try in order)
+  if (param.unionMode === "anyOf") {
+    return z.union(
+      variantSchemas as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]
+    );
+  }
+
+  // oneOf (default): discriminatedUnion when discriminator is set
   if (param.discriminator) {
     return z.discriminatedUnion(
       param.discriminator,
@@ -308,6 +359,14 @@ function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): Jso
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
       return s;
     }
+    case "null": {
+      return { type: "null" };
+    }
+    case "const": {
+      const s: JsonSchema7 = {};
+      if (param.constValue !== undefined) s.const = param.constValue;
+      return s;
+    }
     case "enum": {
       const s: JsonSchema7 = { type: "string" };
       const resolved = resolveEnumValues(param, undefined, ctx.options);
@@ -322,12 +381,16 @@ function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): Jso
     }
     case "array": {
       const s: JsonSchema7 = { type: "array" };
-      if (param.items) {
-        s.items = buildJsonSchemaProperty(param.items, ctx);
+      if (param.tuple && param.prefixItems && param.prefixItems.length > 0) {
+        s.items = param.prefixItems.map((item) => buildJsonSchemaProperty(item, ctx));
+      } else {
+        if (param.items) {
+          s.items = buildJsonSchemaProperty(param.items, ctx);
+        }
+        if (param.minItems != null) s.minItems = param.minItems;
+        if (param.maxItems != null) s.maxItems = param.maxItems;
+        if (param.uniqueItems != null) s.uniqueItems = param.uniqueItems;
       }
-      if (param.minItems != null) s.minItems = param.minItems;
-      if (param.maxItems != null) s.maxItems = param.maxItems;
-      if (param.uniqueItems != null) s.uniqueItems = param.uniqueItems;
       if (param.defaultValue !== undefined) s.default = param.defaultValue;
       return s;
     }
@@ -339,8 +402,36 @@ function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): Jso
   }
 }
 
-/** Build JSON Schema object from an object-type SchemaProperty, with schemaId/$ref and additionalProperties support. */
+/** Build JSON Schema object from an object-type SchemaProperty, with schemaId/$ref, allOf, and additionalProperties support. */
 function buildJsonSchemaObject(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
+  // --- allOf: merge multiple schemas via schemaIds ---
+  if (param.schemaIds && param.schemaIds.length > 0 && ctx.options?.schemaMap) {
+    const mergedChildren: SchemaProperty[] = [];
+    const seen = new Set<string>();
+    for (const sid of param.schemaIds) {
+      const refParams = ctx.options.schemaMap[sid];
+      if (refParams) {
+        for (const p of refParams) {
+          if (seen.has(p.name)) {
+            const idx = mergedChildren.findIndex((m) => m.name === p.name);
+            if (idx >= 0) mergedChildren[idx] = p;
+          } else {
+            seen.add(p.name);
+            mergedChildren.push(p);
+          }
+        }
+      }
+    }
+    if (mergedChildren.length > 0) {
+      const obj = buildJsonSchemaNestedObject(mergedChildren, ctx);
+      if (param.additionalProperties) {
+        obj.additionalProperties = buildJsonSchemaProperty(param.additionalProperties, ctx);
+      }
+      if (param.defaultValue !== undefined) obj.default = param.defaultValue;
+      return obj;
+    }
+  }
+
   // --- schemaId reference → $ref + $defs ---
   if (param.schemaId && ctx.options?.schemaMap?.[param.schemaId]) {
     // Recursive self-reference → just $ref (def is being built up the stack)
@@ -405,7 +496,7 @@ function buildJsonSchemaNestedObject(children: SchemaProperty[], ctx: JsonSchema
   return s;
 }
 
-/** Build JSON Schema oneOf from a union-type SchemaProperty. */
+/** Build JSON Schema oneOf/anyOf from a union-type SchemaProperty. */
 function buildJsonSchemaUnion(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
   if (!param.variants || param.variants.length < 2) {
     return {};
@@ -415,7 +506,8 @@ function buildJsonSchemaUnion(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSc
     buildJsonSchemaNestedObject(variantProps, ctx)
   );
 
-  const s: JsonSchema7 = { oneOf: variantSchemas };
+  const keyword = param.unionMode === "anyOf" ? "anyOf" : "oneOf";
+  const s: JsonSchema7 = { [keyword]: variantSchemas };
   if (param.discriminator) {
     s.discriminator = { propertyName: param.discriminator };
   }
