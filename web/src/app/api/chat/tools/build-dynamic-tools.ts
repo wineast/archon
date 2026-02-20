@@ -7,63 +7,45 @@ import { executeToolHandler } from "@/lib/tools/execute-handler";
 import type { TemplateData } from "@/lib/template/render";
 import type { RuntimeEventInput } from "@/lib/runtime-events/record";
 
-function isUrl(s: string): boolean {
-  return s.startsWith("http://") || s.startsWith("https://");
-}
-
-function isJsCode(s: string): boolean {
-  return s.includes("=>") || s.includes("function");
-}
-
 /**
  * Resolve the execute function for a tool definition.
  *
  * Priority:
- *   1. handler is a URL     → HTTP POST to that URL
- *   2. handler is JS code   → dynamic execution
- *   3. no handler           → error
+ *   1. url field set   → HTTP POST to that URL
+ *   2. handler field set → JS sandbox execution
+ *   3. neither         → error
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function resolveExecutor(def: ToolDefinitionPayload, agentId?: string): (args: any) => Promise<any> {
-  const handler = def.handler?.trim();
-
-  if (handler) {
-    // 1. URL handler → remote API call
-    if (isUrl(handler)) {
-      return async (args) => {
-        const res = await fetch(handler, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(args),
-        });
-        if (!res.ok) {
-          return { error: `Handler returned ${res.status}: ${await res.text()}` };
-        }
-        return res.json();
-      };
-    }
-
-    // 2. JS code handler → sandbox execution
-    if (isJsCode(handler)) {
-      const context = createToolContext(agentId);
-      const sandboxMode = def.sandboxMode ?? "light";
-      return async (args) => {
-        try {
-          return await executeToolHandler(handler, args, context, sandboxMode);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          return { error: `JS handler execution error: ${msg}` };
-        }
-      };
-    }
-
-    // Unrecognized handler format
-    return async () => ({
-      error: `Invalid handler: must be a URL (http/https) or JS code (arrow function / function)`,
-    });
+  const url = def.url?.trim();
+  if (url) {
+    return async (args) => {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(args),
+      });
+      if (!res.ok) {
+        return { error: `Handler returned ${res.status}: ${await res.text()}` };
+      }
+      return res.json();
+    };
   }
 
-  // No handler → error
+  const handler = def.handler?.trim();
+  if (handler) {
+    const context = createToolContext(agentId);
+    const sandboxMode = def.sandboxMode ?? "light";
+    return async (args) => {
+      try {
+        return await executeToolHandler(handler, args, context, sandboxMode);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { error: `JS handler execution error: ${msg}` };
+      }
+    };
+  }
+
   return async () => ({
     error: `Tool "${def.name}" has no handler configured`,
   });

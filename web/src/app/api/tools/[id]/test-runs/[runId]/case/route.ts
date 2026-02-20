@@ -69,7 +69,7 @@ export async function POST(
   let passed = false;
 
   try {
-    if (!tool.handler?.trim()) {
+    if (!tool.handler?.trim() && !tool.url?.trim()) {
       throw new Error("Tool has no handler defined");
     }
 
@@ -86,9 +86,22 @@ export async function POST(
       }
     }
 
-    // Execute in sandbox
-    const context = createToolContext(tool.agentId ?? undefined);
-    output = await executeToolHandler(tool.handler, validatedInput, context, tool.sandboxMode);
+    // Execute handler
+    const url = tool.url?.trim();
+    if (url) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validatedInput),
+      });
+      if (!res.ok) {
+        throw new Error(`Handler returned ${res.status}: ${await res.text()}`);
+      }
+      output = await res.json();
+    } else {
+      const context = createToolContext(tool.agentId ?? undefined);
+      output = await executeToolHandler(tool.handler!, validatedInput, context, tool.sandboxMode);
+    }
 
     // Exact match comparison
     passed =

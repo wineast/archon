@@ -56,7 +56,7 @@ export async function POST(
     });
   }
 
-  if (!tool.handler?.trim()) {
+  if (!tool.handler?.trim() && !tool.url?.trim()) {
     return NextResponse.json({
       success: false,
       error: "Tool has no handler defined",
@@ -95,11 +95,24 @@ export async function POST(
     }
   }
 
-  // Execute in sandbox
+  // Execute handler
   let result: unknown;
   try {
-    const context = createToolContext(tool.agentId ?? undefined);
-    result = await executeToolHandler(tool.handler, validatedInput, context, tool.sandboxMode);
+    const url = tool.url?.trim();
+    if (url) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validatedInput),
+      });
+      if (!res.ok) {
+        throw new Error(`Handler returned ${res.status}: ${await res.text()}`);
+      }
+      result = await res.json();
+    } else {
+      const context = createToolContext(tool.agentId ?? undefined);
+      result = await executeToolHandler(tool.handler!, validatedInput, context, tool.sandboxMode);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({

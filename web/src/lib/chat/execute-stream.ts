@@ -104,6 +104,7 @@ export async function executeChatStream(
         ? (templateData.schemaMap[row.returnParametersSchemaId] ?? undefined)
         : undefined,
       handler: row.handler ?? "",
+      url: row.url ?? "",
       executionTarget: row.executionTarget ?? "server",
       sandboxMode: row.sandboxMode ?? "light",
     }));

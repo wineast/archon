@@ -42,6 +42,7 @@ export async function POST(req: Request) {
       parametersSchemaId: body.parametersSchemaId ?? null,
       returnParametersSchemaId: body.returnParametersSchemaId ?? null,
       handler: body.handler ?? null,
+      url: body.url ?? null,
       componentId: body.componentId ?? null,
       enabled: body.enabled ?? true,
       executionTarget: body.executionTarget ?? "server",
