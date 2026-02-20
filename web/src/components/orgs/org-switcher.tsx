@@ -22,9 +22,9 @@ export function OrgSwitcher({ onCreateOrg }: OrgSwitcherProps) {
   const { orgs } = useOrgs();
   const { currentOrgId, setCurrentOrgId } = useOrgStore();
 
-  // Auto-select first org if none selected
+  // Auto-select first org if none selected or stored org no longer exists
   useEffect(() => {
-    if (!currentOrgId && orgs.length > 0) {
+    if (orgs.length > 0 && (!currentOrgId || !orgs.some((o) => o.id === currentOrgId))) {
       setCurrentOrgId(orgs[0].id);
     }
   }, [currentOrgId, orgs, setCurrentOrgId]);
