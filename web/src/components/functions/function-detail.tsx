@@ -77,7 +77,7 @@ export function FunctionDetail({
       </TabsList>
 
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
-        <ScrollArea className="flex-1 min-h-0 overflow-hidden">
+        <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 space-y-3">
             <FunctionForm
               key={fn.id}

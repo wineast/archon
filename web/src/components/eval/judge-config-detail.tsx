@@ -135,7 +135,7 @@ export function JudgeConfigDetail({
 
   return (
     <div className="flex h-full flex-col">
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="space-y-4 p-4">
           <div>
             <label className="text-xs font-medium text-muted-foreground">

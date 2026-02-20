@@ -106,7 +106,7 @@ export function OrgMembersPanel({ orgId }: OrgMembersPanelProps) {
       </div>
 
       {/* Members list */}
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="flex flex-col gap-1 px-4 pb-4">
           {members.map((member) => (
             <div
