@@ -5,9 +5,12 @@ import { BracesIcon, CodeIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucid
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./schema-form";
 import { SchemaJsonDialog } from "./schema-json-dialog";
 import { SchemaZodDialog } from "./schema-zod-dialog";
+import { SchemaPlayground } from "./schema-playground";
+import { SchemaTestCasesPanel } from "./schema-test-cases-panel";
 import type { SchemaWithIncludes } from "@/db/schema";
 
 interface SchemaDetailProps {
@@ -57,94 +60,110 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
   }, [schema.id, onDelete]);
 
   return (
-    <div className="flex h-full flex-col">
-      <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
-        <div className="p-4 min-w-0">
-          <SchemaForm
-            schema={{
-              key: schema.key,
-              name: schema.name,
-              description: schema.description,
-              parameters: schema.parameters,
-              includeSchemaIds: schema.includeSchemaIds,
-            }}
-            onDraftRef={handleDraftRef}
-            onDirtyChange={setDirty}
-            allSchemas={allSchemas}
-            currentSchemaId={schema.id}
-            agentId={agentId}
-          />
+    <Tabs defaultValue="edit" className="flex h-full flex-col">
+      <TabsList variant="line" className="shrink-0 px-4 pt-1">
+        <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="playground">Playground</TabsTrigger>
+        <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
+        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
+          <div className="p-4 min-w-0">
+            <SchemaForm
+              schema={{
+                key: schema.key,
+                name: schema.name,
+                description: schema.description,
+                parameters: schema.parameters,
+                includeSchemaIds: schema.includeSchemaIds,
+              }}
+              onDraftRef={handleDraftRef}
+              onDirtyChange={setDirty}
+              allSchemas={allSchemas}
+              currentSchemaId={schema.id}
+              agentId={agentId}
+            />
+          </div>
+        </ScrollArea>
+
+        <div className="flex items-center gap-2 border-t px-4 py-2">
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={busy || !dirty}
+          >
+            {saving ? (
+              <Spinner className="mr-1 size-3" />
+            ) : (
+              <SaveIcon className="mr-1 size-3" />
+            )}
+            {saving ? "Saving..." : "Save"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => draftRef.current?.reset()}
+            disabled={busy || !dirty}
+          >
+            <RotateCcwIcon className="mr-1 size-3" />
+            Reset
+          </Button>
+          <div className="flex-1" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setZodOpen(true)}
+          >
+            <CodeIcon className="mr-1 size-3" />
+            Zod Code
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setJsonOpen(true)}
+          >
+            <BracesIcon className="mr-1 size-3" />
+            JSON Schema
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={busy}
+          >
+            {deleting ? (
+              <Spinner className="mr-1 size-3" />
+            ) : (
+              <Trash2Icon className="mr-1 size-3" />
+            )}
+            {deleting ? "Deleting..." : "Delete"}
+          </Button>
         </div>
-      </ScrollArea>
 
-      <div className="flex items-center gap-2 border-t px-4 py-2">
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={busy || !dirty}
-        >
-          {saving ? (
-            <Spinner className="mr-1 size-3" />
-          ) : (
-            <SaveIcon className="mr-1 size-3" />
-          )}
-          {saving ? "Saving..." : "Save"}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => draftRef.current?.reset()}
-          disabled={busy || !dirty}
-        >
-          <RotateCcwIcon className="mr-1 size-3" />
-          Reset
-        </Button>
-        <div className="flex-1" />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setZodOpen(true)}
-        >
-          <CodeIcon className="mr-1 size-3" />
-          Zod Code
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setJsonOpen(true)}
-        >
-          <BracesIcon className="mr-1 size-3" />
-          JSON Schema
-        </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={handleDelete}
-          disabled={busy}
-        >
-          {deleting ? (
-            <Spinner className="mr-1 size-3" />
-          ) : (
-            <Trash2Icon className="mr-1 size-3" />
-          )}
-          {deleting ? "Deleting..." : "Delete"}
-        </Button>
-      </div>
+        <SchemaJsonDialog
+          open={jsonOpen}
+          onOpenChange={setJsonOpen}
+          schemaKey={schema.key}
+          getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
+          allSchemas={allSchemas}
+        />
+        <SchemaZodDialog
+          open={zodOpen}
+          onOpenChange={setZodOpen}
+          schemaKey={schema.key}
+          getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
+          allSchemas={allSchemas}
+        />
+      </TabsContent>
 
-      <SchemaJsonDialog
-        open={jsonOpen}
-        onOpenChange={setJsonOpen}
-        schemaKey={schema.key}
-        getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
-        allSchemas={allSchemas}
-      />
-      <SchemaZodDialog
-        open={zodOpen}
-        onOpenChange={setZodOpen}
-        schemaKey={schema.key}
-        getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
-        allSchemas={allSchemas}
-      />
-    </div>
+      <TabsContent value="playground" className="flex min-h-0 flex-1 flex-col">
+        <SchemaPlayground schemaId={schema.id} />
+      </TabsContent>
+
+      <TabsContent value="test-cases" className="flex min-h-0 flex-1 flex-col">
+        <SchemaTestCasesPanel schemaId={schema.id} />
+      </TabsContent>
+    </Tabs>
   );
 }

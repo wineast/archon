@@ -351,6 +351,84 @@ export const schemaIncludes = pgTable(
 export type SchemaIncludeRow = typeof schemaIncludes.$inferSelect;
 export type NewSchemaIncludeRow = typeof schemaIncludes.$inferInsert;
 
+/* ─────────── Schema Test Cases ─────────── */
+
+export const schemaTestCases = pgTable(
+  "schema_test_cases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    schemaId: uuid("schema_id")
+      .notNull()
+      .references(() => schemas.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
+    shouldPass: boolean("should_pass").notNull().default(true),
+    expectedErrors: jsonb("expected_errors").$type<Array<{ path: string; message: string }>>(),
+    tags: text("tags").array().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("schema_test_cases_schema_id_idx").on(table.schemaId),
+  ]
+);
+
+export type SchemaTestCaseRow = typeof schemaTestCases.$inferSelect;
+export type NewSchemaTestCaseRow = typeof schemaTestCases.$inferInsert;
+
+/* ─────────── Schema Test Runs ─────────── */
+
+export const schemaTestRuns = pgTable("schema_test_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schemaId: uuid("schema_id")
+    .notNull()
+    .references(() => schemas.id, { onDelete: "cascade" }),
+  filterTags: text("filter_tags").array().notNull().default([]),
+  totalCases: integer("total_cases").notNull(),
+  passedCases: integer("passed_cases").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type SchemaTestRunRow = typeof schemaTestRuns.$inferSelect;
+export type NewSchemaTestRunRow = typeof schemaTestRuns.$inferInsert;
+
+/* ─────────── Schema Test Run Results ─────────── */
+
+export const schemaTestRunResults = pgTable(
+  "schema_test_run_results",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => schemaTestRuns.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id").notNull(),
+    caseName: text("case_name").notNull(),
+    input: jsonb("input").$type<Record<string, unknown>>().notNull(),
+    shouldPass: boolean("should_pass").notNull(),
+    expectedErrors: jsonb("expected_errors").$type<Array<{ path: string; message: string }>>(),
+    actualValid: boolean("actual_valid").notNull(),
+    actualErrors: jsonb("actual_errors").$type<Array<{ path: string; message: string }>>(),
+    passed: boolean("passed").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("schema_test_run_results_run_id_idx").on(table.runId),
+  ]
+);
+
+export type SchemaTestRunResultRow = typeof schemaTestRunResults.$inferSelect;
+export type NewSchemaTestRunResultRow = typeof schemaTestRunResults.$inferInsert;
+
 /* ─────────── Tools ─────────── */
 
 export const tools = pgTable(
