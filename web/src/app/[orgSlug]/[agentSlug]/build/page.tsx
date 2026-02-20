@@ -267,7 +267,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
       {/* Header */}
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
         <Button variant="ghost" size="icon" className="size-8" asChild>
-          <Link href={`${basePath}/chat`}>
+          <Link href="/">
             <ArrowLeftIcon className="size-4" />
           </Link>
         </Button>
