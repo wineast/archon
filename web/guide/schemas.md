@@ -28,7 +28,7 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 
 每个参数（SchemaProperty）有一个 `type` 字段，决定其数据类型和可用约束。
 
-### 七种基础类型
+### 九种基础类型
 
 | 类型 | 说明 | Zod 映射 | JSON Schema 映射 |
 |------|------|---------|-----------------|
@@ -37,8 +37,10 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 | `boolean` | 布尔值 | `z.boolean()` | `{"type":"boolean"}` |
 | `enum` | 枚举（固定可选值） | `z.enum([...])` | `{"type":"string","enum":[...]}` |
 | `object` | 嵌套对象 | `z.object({...})` | `{"type":"object","properties":{...}}` |
-| `array` | 数组 | `z.array(...)` | `{"type":"array","items":{...}}` |
-| `union` | 联合类型（A 或 B） | `z.discriminatedUnion()` / `z.union()` | `{"oneOf":[...]}` |
+| `array` | 数组 | `z.array(...)` / `z.tuple([...])` | `{"type":"array","items":{...}}` |
+| `union` | 联合类型（A 或 B） | `z.discriminatedUnion()` / `z.union()` | `{"oneOf":[...]}` / `{"anyOf":[...]}` |
+| `null` | 空值 | `z.null()` | `{"type":"null"}` |
+| `const` | 固定值 | `z.literal(value)` | `{"const":value}` |
 
 ### 参数公共字段
 
@@ -87,6 +89,9 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 | `uuid` | `550e8400-e29b-41d4-a716-446655440000` | `.uuid()` |
 | `date` | `2026-02-19` | `.date()` |
 | `date-time` | `2026-02-19T10:30:00Z` | `.datetime()` |
+| `time` | `14:30:00` | `.time()` |
+| `ipv4` | `192.168.1.1` | `.ipv4()` |
+| `ipv6` | `::1` | `.ipv6()` |
 
 ### number
 
@@ -106,6 +111,35 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 ### boolean
 
 布尔类型，无额外约束。接受 `true` 或 `false`。
+
+### null
+
+空值类型，表示"值存在但为空"。
+
+- Zod：`z.null()`
+- JSON Schema：`{"type":"null"}`
+- 无额外约束，仅接受 `null`
+
+**场景**：表示某个字段显式为空，区别于"字段不存在"（`undefined`/`optional`）。
+
+### const
+
+固定值类型，限制参数必须等于指定的常量值。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `constValue` | unknown | 固定值（字符串、数字或布尔） |
+
+- Zod：`z.literal(constValue)`
+- JSON Schema：`{"const": constValue}`
+
+**场景**：版本标识（`version: "1.0"`）、固定 API 版本号等。
+
+```
+参数: api_version (type: const, constValue: "v2")
+→ z.literal("v2")
+→ 仅接受 "v2"，其他值均校验失败
+```
 
 ### enum
 
@@ -175,11 +209,30 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 → z.object({ name: z.string(), version: z.string() }).catchall(z.string())
 ```
 
-**无 properties、无 schemaId、无 additionalProperties 时**：退化为 `z.unknown()`，接受任意数据。
+**方式四：合并多个 Schema（allOf / schemaIds）**
+
+通过 `schemaIds` 引用多个 Schema，运行时将所有 Schema 的参数合并为一个对象：
+
+```
+参数: full_profile (type: object, schemaIds: ["<person-schema>", "<address-schema>"])
+```
+
+合并规则：按 schemaIds 数组顺序遍历，同名字段后者覆盖前者。
+
+- Zod：直接合并所有 Schema 的 properties 构建 `z.object({...all merged...})`
+- JSON Schema：展开为合并后的 properties（不输出 `allOf` 关键字，直接展开）
+
+**UI**：Object 来源选择新增"合并"选项，可勾选多个 Schema，下方显示合并预览（只读，带来源标签）。
+
+**无 properties、无 schemaId、无 schemaIds、无 additionalProperties 时**：退化为 `z.unknown()`，接受任意数据。
 
 ### array
 
-数组类型，通过 `items` 字段定义元素的类型。
+数组类型，支持两种模式：
+
+**模式一：同类型元素（items，默认）**
+
+通过 `items` 字段定义元素的类型。
 
 | 约束 | 类型 | Zod | JSON Schema | 说明 |
 |------|------|-----|-------------|------|
@@ -205,6 +258,29 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
           └── phone (type: string)
 ```
 
+**模式二：固定位置（tuple / prefixItems）**
+
+当 `tuple: true` 时，使用 `prefixItems` 定义每个位置的类型，替代 `items`：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `tuple` | boolean | 开启 tuple 模式 |
+| `prefixItems` | SchemaProperty[] | 每个位置的类型定义 |
+
+- Zod：`z.tuple([z.string(), z.number(), ...])`
+- JSON Schema Draft 7：`{"type":"array","items":[{...},{...}]}`
+
+```
+参数: coordinate (type: array, tuple: true)
+  └── prefixItems:
+      ├── [0] latitude (type: number)
+      └── [1] longitude (type: number)
+→ z.tuple([z.number(), z.number()])
+→ 仅接受 [lat, lng] 形式的两元素数组
+```
+
+> Tuple 模式下，`minItems`/`maxItems`/`uniqueItems` 约束不生效，数组长度由 `prefixItems` 的元素数决定。
+
 ### union
 
 联合类型，表达"值是 A 或 B 其中之一"的语义。
@@ -213,10 +289,16 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `discriminator` | string | 判别字段名（可选，有则用 discriminated union） |
+| `unionMode` | `"oneOf"` \| `"anyOf"` | 匹配规则，默认 `"oneOf"` |
+| `discriminator` | string | 判别字段名（仅 oneOf 模式可选，有则用 discriminated union） |
 | `variants` | SchemaProperty[][] | 每个变体的参数列表（至少 2 个） |
 
-**有 discriminator 时**：使用 `z.discriminatedUnion()`——每个变体必须有一个相同名称的 literal 字段作为判别：
+**匹配规则**：
+
+- **oneOf**（默认）：恰好匹配一个变体。JSON Schema 输出 `{"oneOf":[...]}`
+- **anyOf**：至少匹配一个变体。JSON Schema 输出 `{"anyOf":[...]}`。anyOf 模式下不需要 discriminator。
+
+**oneOf + discriminator 时**：使用 `z.discriminatedUnion()`——每个变体必须有一个相同名称的 literal 字段作为判别：
 
 ```
 参数: payment (type: union, discriminator: "method")
@@ -225,7 +307,16 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
     └── [method: "bank", account_number: string, routing: string]
 ```
 
-**无 discriminator 时**：使用 `z.union()`——Zod 按顺序尝试匹配。
+**oneOf 无 discriminator 时**：使用 `z.union()`——Zod 按顺序尝试匹配。
+
+**anyOf 模式**：统一使用 `z.union()`（Zod 的 union 本身就是 anyOf 语义，按顺序匹配）：
+
+```
+参数: flexible_input (type: union, unionMode: "anyOf")
+  variants:
+    ├── [name: string]
+    └── [count: number]
+```
 
 **不足 2 个变体时**：退化为 `z.unknown()`（打印警告）。
 
@@ -428,3 +519,20 @@ Schema: borrower_profile
 - 一个 Schema 对应一个业务概念（如"地址"、"借款人信息"）
 - 避免把所有参数都堆在一个巨型 Schema 里
 - 但也不要过度拆分——每个 Schema 至少应该有 2-3 个参数
+
+---
+
+## JSON Schema 对齐清单
+
+Archon Schema 对 JSON Schema 7 标准特性的支持状态：
+
+| 特性 | 状态 | Archon 实现 |
+|------|------|------------|
+| `type: "null"` | ✅ | `SchemaPropertyType: "null"` → `z.null()` |
+| `const` | ✅ | `SchemaPropertyType: "const"` + `constValue` → `z.literal()` |
+| `format: "time"` | ✅ | string format → `.time()` |
+| `format: "ipv4"` | ✅ | string format → `.ipv4()` |
+| `format: "ipv6"` | ✅ | string format → `.ipv6()` |
+| `anyOf` | ✅ | `unionMode: "anyOf"` → `z.union()` + JSON Schema `{"anyOf":[...]}` |
+| `allOf` | ✅ | `schemaIds: string[]` → 多 Schema 合并为展开的 properties |
+| `prefixItems` (tuple) | ✅ | `tuple: true` + `prefixItems` → `z.tuple([...])` + Draft 7 items 数组 |
