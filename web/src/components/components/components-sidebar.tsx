@@ -2,10 +2,13 @@
 
 import { useMemo } from "react";
 import { PlusIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { inferComponentDeps } from "@/tool-ui";
 import type { ComponentRow } from "@/db/schema";
+import { BUILTIN_COMPONENTS } from "./builtin-components";
 import { ComponentListItem } from "./component-list-item";
 
 interface ComponentsSidebarProps {
@@ -48,6 +51,36 @@ export function ComponentsSidebar({
       </div>
       <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="p-1">
+          {/* Built-in group */}
+          <p className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Built-in
+          </p>
+          {BUILTIN_COMPONENTS.map((def) => {
+            const id = `builtin:${def.key}`;
+            return (
+              <button
+                key={id}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent text-left",
+                  activeComponentId === id && "bg-muted font-medium"
+                )}
+                onClick={() => onSelect(id)}
+              >
+                <span className="min-w-0 flex-1 truncate">{def.name}</span>
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 text-[10px] px-1.5 py-0"
+                >
+                  Built-in
+                </Badge>
+              </button>
+            );
+          })}
+
+          {/* Custom group */}
+          <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Custom
+          </p>
           {components.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No components yet
