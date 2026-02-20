@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { BracesIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./schema-form";
-import { SchemaJsonPreview } from "./schema-json-preview";
+import { SchemaJsonDialog } from "./schema-json-dialog";
 import type { SchemaWithIncludes } from "@/db/schema";
 
 interface SchemaDetailProps {
@@ -26,6 +25,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
     draftRef.current = ref;
   }, []);
   const [dirty, setDirty] = useState(false);
+  const [jsonOpen, setJsonOpen] = useState(false);
   const busy = saving || deleting;
 
   const handleSave = useCallback(async () => {
@@ -54,76 +54,79 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
   }, [schema.id, onDelete]);
 
   return (
-    <Tabs defaultValue="edit" className="flex h-full flex-col">
-      <div className="px-4 pt-2">
-        <TabsList>
-          <TabsTrigger value="edit">Edit</TabsTrigger>
-          <TabsTrigger value="json-schema">JSON Schema</TabsTrigger>
-        </TabsList>
+    <div className="flex h-full flex-col">
+      <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
+        <div className="p-4 min-w-0">
+          <SchemaForm
+            schema={{
+              key: schema.key,
+              name: schema.name,
+              description: schema.description,
+              parameters: schema.parameters,
+              includeSchemaIds: schema.includeSchemaIds,
+            }}
+            onDraftRef={handleDraftRef}
+            onDirtyChange={setDirty}
+            allSchemas={allSchemas}
+            currentSchemaId={schema.id}
+            agentId={agentId}
+          />
+        </div>
+      </ScrollArea>
+
+      <div className="flex items-center gap-2 border-t px-4 py-2">
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={busy || !dirty}
+        >
+          {saving ? (
+            <Spinner className="mr-1 size-3" />
+          ) : (
+            <SaveIcon className="mr-1 size-3" />
+          )}
+          {saving ? "Saving..." : "Save"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => draftRef.current?.reset()}
+          disabled={busy || !dirty}
+        >
+          <RotateCcwIcon className="mr-1 size-3" />
+          Reset
+        </Button>
+        <div className="flex-1" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setJsonOpen(true)}
+        >
+          <BracesIcon className="mr-1 size-3" />
+          JSON Schema
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleDelete}
+          disabled={busy}
+        >
+          {deleting ? (
+            <Spinner className="mr-1 size-3" />
+          ) : (
+            <Trash2Icon className="mr-1 size-3" />
+          )}
+          {deleting ? "Deleting..." : "Delete"}
+        </Button>
       </div>
 
-      <TabsContent value="edit" className="flex flex-1 flex-col min-h-0">
-        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
-          <div className="p-4 min-w-0">
-            <SchemaForm
-              schema={{
-                key: schema.key,
-                name: schema.name,
-                description: schema.description,
-                parameters: schema.parameters,
-                includeSchemaIds: schema.includeSchemaIds,
-              }}
-              onDraftRef={handleDraftRef}
-              onDirtyChange={setDirty}
-              allSchemas={allSchemas}
-              currentSchemaId={schema.id}
-              agentId={agentId}
-            />
-          </div>
-        </ScrollArea>
-
-        <div className="flex items-center gap-2 border-t px-4 py-2">
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={busy || !dirty}
-          >
-            {saving ? (
-              <Spinner className="mr-1 size-3" />
-            ) : (
-              <SaveIcon className="mr-1 size-3" />
-            )}
-            {saving ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => draftRef.current?.reset()}
-            disabled={busy || !dirty}
-          >
-            <RotateCcwIcon className="mr-1 size-3" />
-            Reset
-          </Button>
-          <div className="flex-1" />
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleDelete}
-            disabled={busy}
-          >
-            {deleting ? (
-              <Spinner className="mr-1 size-3" />
-            ) : (
-              <Trash2Icon className="mr-1 size-3" />
-            )}
-            {deleting ? "Deleting..." : "Delete"}
-          </Button>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="json-schema" className="flex flex-1 flex-col min-h-0">
-        <SchemaJsonPreview schema={schema} allSchemas={allSchemas} />
-      </TabsContent>
-    </Tabs>
+      <SchemaJsonDialog
+        open={jsonOpen}
+        onOpenChange={setJsonOpen}
+        schemaKey={schema.key}
+        getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
+        allSchemas={allSchemas}
+      />
+    </div>
   );
 }

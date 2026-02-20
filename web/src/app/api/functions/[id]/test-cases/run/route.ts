@@ -2,30 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { functions, schemas } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import deepEqual from "fast-deep-equal";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import type { SchemaProperty } from "@/lib/schemas/types";
-
-/** Stable JSON stringify with sorted keys for deep equality comparison.
- *  Skips keys whose value is `undefined` (matching JSON.stringify behaviour). */
-function stableStringify(val: unknown): string {
-  if (val === undefined) return "null";
-  if (val === null) return "null";
-  if (typeof val !== "object") return JSON.stringify(val);
-  if (Array.isArray(val))
-    return "[" + val.map(stableStringify).join(",") + "]";
-  const obj = val as Record<string, unknown>;
-  const keys = Object.keys(obj)
-    .filter((k) => obj[k] !== undefined)
-    .sort();
-  return (
-    "{" +
-    keys
-      .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]))
-      .join(",") +
-    "}"
-  );
-}
 
 export async function POST(
   req: Request,
@@ -104,7 +84,7 @@ export async function POST(
   // Exact match comparison
   const passed =
     expectedOutput == null ||
-    stableStringify(result) === stableStringify(expectedOutput);
+    deepEqual(result, expectedOutput);
 
   return NextResponse.json({
     success: true,

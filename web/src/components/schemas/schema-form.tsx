@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { FormProvider, useForm } from "react-hook-form";
+import deepEqual from "fast-deep-equal";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ParameterList } from "@/components/parameters/parameter-list";
@@ -43,15 +44,24 @@ export function SchemaForm({
   agentId,
 }: SchemaFormProps) {
   const form = useForm<SchemaFormValues>({ defaultValues: { ...schema } });
-  const originalRef = useRef(JSON.stringify(schema));
+  const originalRef = useRef<SchemaFormValues>({ ...schema });
+
+  // Sync form when schema prop changes (after save + SWR refetch, or switching schemas)
+  useEffect(() => {
+    if (!deepEqual(schema, originalRef.current)) {
+      originalRef.current = { ...schema };
+      form.reset({ ...schema });
+      onDirtyChange?.(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schema]);
 
   useEffect(() => {
     onDraftRef({
       getDraft: () => form.getValues(),
-      isDirty: () => JSON.stringify(form.getValues()) !== originalRef.current,
+      isDirty: () => !deepEqual(form.getValues(), originalRef.current),
       reset: () => {
-        const original = JSON.parse(originalRef.current);
-        form.reset(original);
+        form.reset({ ...originalRef.current });
       },
     });
   }, [onDraftRef, form]);
@@ -59,8 +69,7 @@ export function SchemaForm({
   useEffect(() => {
     let wasDirty = false;
     const subscription = form.watch(() => {
-      const isDirty =
-        JSON.stringify(form.getValues()) !== originalRef.current;
+      const isDirty = !deepEqual(form.getValues(), originalRef.current);
       if (isDirty !== wasDirty) {
         wasDirty = isDirty;
         onDirtyChange?.(isDirty);

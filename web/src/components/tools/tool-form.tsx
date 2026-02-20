@@ -21,6 +21,7 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
+import deepEqual from "fast-deep-equal";
 import { BoxIcon, CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, ZapIcon } from "lucide-react";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import toolHandlerDoc from "../../../guide/tool-handler.md";
@@ -106,7 +107,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   const [handlerTab, setHandlerTab] = useState<HandlerTab>(() =>
     detectHandlerTab(tool)
   );
-  const originalRef = useRef(JSON.stringify(tool));
+  const originalRef = useRef<ToolDefinition>({ ...tool });
 
   // Watch only fields needed for validation / conditional rendering
   const name = useWatch({ control: form.control, name: "name" });
@@ -128,11 +129,10 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   useEffect(() => {
     onDraftRef({
       getDraft: () => form.getValues(),
-      isDirty: () => JSON.stringify(form.getValues()) !== originalRef.current,
+      isDirty: () => !deepEqual(form.getValues(), originalRef.current),
       reset: () => {
-        const original = JSON.parse(originalRef.current);
-        form.reset(original);
-        setHandlerTab(detectHandlerTab(original));
+        form.reset({ ...originalRef.current });
+        setHandlerTab(detectHandlerTab(originalRef.current));
       },
     });
   }, [onDraftRef, form]);
@@ -140,8 +140,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   useEffect(() => {
     let wasDirty = false;
     const subscription = form.watch(() => {
-      const isDirty =
-        JSON.stringify(form.getValues()) !== originalRef.current;
+      const isDirty = !deepEqual(form.getValues(), originalRef.current);
       if (isDirty !== wasDirty) {
         wasDirty = isDirty;
         onDirtyChange?.(isDirty);

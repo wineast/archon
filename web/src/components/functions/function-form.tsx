@@ -7,6 +7,7 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
+import deepEqual from "fast-deep-equal";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -125,7 +126,7 @@ export function FunctionForm({
   };
 
   const form = useForm<FunctionFormValues>({ defaultValues });
-  const originalRef = useRef(JSON.stringify(defaultValues));
+  const originalRef = useRef<FunctionFormValues>({ ...defaultValues });
 
   const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });
   const returnParametersSchemaId = useWatch({ control: form.control, name: "returnParametersSchemaId" });
@@ -149,11 +150,9 @@ export function FunctionForm({
   useEffect(() => {
     onDraftRef({
       getDraft: () => form.getValues(),
-      isDirty: () =>
-        JSON.stringify(form.getValues()) !== originalRef.current,
+      isDirty: () => !deepEqual(form.getValues(), originalRef.current),
       reset: () => {
-        const original = JSON.parse(originalRef.current);
-        form.reset(original);
+        form.reset({ ...originalRef.current });
       },
     });
   }, [onDraftRef, form]);
@@ -162,8 +161,7 @@ export function FunctionForm({
   useEffect(() => {
     let wasDirty = false;
     const subscription = form.watch(() => {
-      const isDirty =
-        JSON.stringify(form.getValues()) !== originalRef.current;
+      const isDirty = !deepEqual(form.getValues(), originalRef.current);
       if (isDirty !== wasDirty) {
         wasDirty = isDirty;
         onDirtyChange?.(isDirty);

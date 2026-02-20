@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import deepEqual from "fast-deep-equal";
 import {
   PlusIcon,
   RotateCcwIcon,
@@ -66,9 +67,9 @@ export function ChatConfigDetail({
     title !== config.title ||
     welcomeTitle !== config.welcomeTitle ||
     welcomeIcon !== config.welcomeIcon ||
-    JSON.stringify(quickActions) !== JSON.stringify(config.quickActions) ||
+    !deepEqual(quickActions, config.quickActions) ||
     placeholder !== config.placeholder ||
-    JSON.stringify(suggestions) !== JSON.stringify(config.suggestions);
+    !deepEqual(suggestions, config.suggestions);
 
   const handleReset = useCallback(() => {
     setTitle(config.title);

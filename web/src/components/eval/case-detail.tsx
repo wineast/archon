@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import deepEqual from "fast-deep-equal";
 import { nanoid } from "nanoid";
 import {
   PlusIcon,
@@ -86,10 +87,10 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   const dirty =
     name !== evalCase.name ||
     mode !== evalCase.mode ||
-    JSON.stringify(turns) !== JSON.stringify(evalCase.turns) ||
+    !deepEqual(turns, evalCase.turns) ||
     expectedOutput !== (evalCase.expectedOutput ?? "") ||
-    JSON.stringify(assertions) !== JSON.stringify(evalCase.assertions) ||
-    JSON.stringify(tags) !== JSON.stringify(evalCase.tags ?? []);
+    !deepEqual(assertions, evalCase.assertions) ||
+    !deepEqual(tags, evalCase.tags ?? []);
 
   const handleAssertionChange = useCallback(
     (idx: number, updated: Assertion) => {

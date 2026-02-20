@@ -13,6 +13,7 @@ import {
   FormProvider,
   useForm,
 } from "react-hook-form";
+import deepEqual from "fast-deep-equal";
 import { Button } from "@/components/ui/button";
 import { ComponentHelpButton } from "./component-help-dialog";
 import { JsxAssistDialog } from "./jsx-assist-dialog";
@@ -33,7 +34,7 @@ interface ComponentFormProps {
 
 export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
-  const originalRef = useRef(JSON.stringify(component));
+  const originalRef = useRef<ComponentDefinition>({ ...component });
   const currentSource = form.watch("componentSource");
   const [jsxAssistOpen, setJsxAssistOpen] = useState(false);
 
@@ -47,10 +48,9 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
   useEffect(() => {
     onDraftRef({
       getDraft: () => form.getValues(),
-      isDirty: () => JSON.stringify(form.getValues()) !== originalRef.current,
+      isDirty: () => !deepEqual(form.getValues(), originalRef.current),
       reset: () => {
-        const original = JSON.parse(originalRef.current);
-        form.reset(original);
+        form.reset({ ...originalRef.current });
       },
     });
   }, [onDraftRef, form]);
@@ -58,8 +58,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
   useEffect(() => {
     let wasDirty = false;
     const subscription = form.watch(() => {
-      const isDirty =
-        JSON.stringify(form.getValues()) !== originalRef.current;
+      const isDirty = !deepEqual(form.getValues(), originalRef.current);
       if (isDirty !== wasDirty) {
         wasDirty = isDirty;
         onDirtyChange?.(isDirty);

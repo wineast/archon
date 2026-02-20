@@ -468,8 +468,9 @@ function UnionEditor({
           <Input
             className="h-8 w-[160px] text-sm"
             {...register(`${fieldPath}.discriminator`)}
-            placeholder="type (可选)"
+            placeholder="如 type（可选）"
           />
+          <span className="text-xs text-muted-foreground/60 shrink-0">不填则按结构逐一匹配</span>
         </div>
       )}
       <UnionVariants

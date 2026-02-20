@@ -2,30 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { functions, schemas, functionTestRuns, functionTestRunResults } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import deepEqual from "fast-deep-equal";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import type { SchemaProperty } from "@/lib/schemas/types";
-
-/** Stable JSON stringify with sorted keys for deep equality comparison.
- *  Skips keys whose value is `undefined` (matching JSON.stringify behaviour). */
-function stableStringify(val: unknown): string {
-  if (val === undefined) return "null";
-  if (val === null) return "null";
-  if (typeof val !== "object") return JSON.stringify(val);
-  if (Array.isArray(val))
-    return "[" + val.map(stableStringify).join(",") + "]";
-  const obj = val as Record<string, unknown>;
-  const keys = Object.keys(obj)
-    .filter((k) => obj[k] !== undefined)
-    .sort();
-  return (
-    "{" +
-    keys
-      .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]))
-      .join(",") +
-    "}"
-  );
-}
 
 export const maxDuration = 120;
 
@@ -90,7 +70,7 @@ export async function POST(
     // Exact match comparison
     passed =
       expectedOutput == null ||
-      stableStringify(output) === stableStringify(expectedOutput);
+      deepEqual(output, expectedOutput);
   } catch (e) {
     if (e instanceof SandboxCompilationError) {
       error = `Compilation error: ${e.message}`;

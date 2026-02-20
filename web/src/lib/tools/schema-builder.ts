@@ -1,13 +1,6 @@
 import { z } from "zod";
+import deepEqual from "fast-deep-equal";
 import type { SchemaProperty } from "./types";
-
-/** Recursively sort object keys for order-independent deep comparison. */
-function stableStringify(val: unknown): string {
-  if (val === null || typeof val !== "object") return JSON.stringify(val);
-  if (Array.isArray(val)) return `[${val.map(stableStringify).join(",")}]`;
-  const sorted = Object.keys(val as Record<string, unknown>).sort();
-  return `{${sorted.map((k) => `${JSON.stringify(k)}:${stableStringify((val as Record<string, unknown>)[k])}`).join(",")}}`;
-}
 
 export interface BuildSchemaOptions {
   /** Datasets by UUID: id → resolved data. */
@@ -68,7 +61,14 @@ function buildParamSchema(
         if (param.maxItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).max(param.maxItems);
         if (param.uniqueItems) {
           schema = (schema as z.ZodArray<z.ZodTypeAny>).refine(
-            (arr) => new Set(arr.map(stableStringify)).size === arr.length,
+            (arr) => {
+              for (let i = 0; i < arr.length; i++) {
+                for (let j = i + 1; j < arr.length; j++) {
+                  if (deepEqual(arr[i], arr[j])) return false;
+                }
+              }
+              return true;
+            },
             { message: "Array items must be unique" }
           );
         }
@@ -234,8 +234,8 @@ function buildUnionSchema(
   // Build variant schemas, injecting discriminator literal when discriminatorValues is provided
   const variantSchemas = param.variants.map((variantProps, i) => {
     const obj = buildNestedObject(variantProps, resolvedVars, options, ancestorSchemaIds);
-    const discValue = param.discriminator && param.discriminatorValues?.[i];
-    if (discValue != null) {
+    const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
+    if (discValue) {
       return obj.extend({ [param.discriminator!]: z.literal(discValue) });
     }
     return obj;
@@ -519,8 +519,8 @@ function buildJsonSchemaUnion(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSc
   // Build variant schemas, injecting discriminator const when discriminatorValues is provided
   const variantSchemas = param.variants.map((variantProps, i) => {
     const schema = buildJsonSchemaNestedObject(variantProps, ctx);
-    const discValue = param.discriminator && param.discriminatorValues?.[i];
-    if (discValue != null) {
+    const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
+    if (discValue) {
       schema.properties = schema.properties || {};
       (schema.properties as Record<string, unknown>)[param.discriminator!] = { const: discValue };
       if (!(schema.required as string[] | undefined)?.includes(param.discriminator!)) {

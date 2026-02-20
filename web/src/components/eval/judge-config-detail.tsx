@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import deepEqual from "fast-deep-equal";
 import {
   CheckIcon,
   PlusIcon,
@@ -71,7 +72,7 @@ export function JudgeConfigDetail({
     systemPrompt !== config.systemPrompt ||
     model !== config.model ||
     temperature !== config.temperature ||
-    JSON.stringify(dimensions) !== JSON.stringify(config.dimensions);
+    !deepEqual(dimensions, config.dimensions);
 
   const handleReset = useCallback(() => {
     setName(config.name);

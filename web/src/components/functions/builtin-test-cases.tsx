@@ -7,6 +7,7 @@ import {
   PlayIcon,
   XCircleIcon,
 } from "lucide-react";
+import deepEqual from "fast-deep-equal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,23 +20,6 @@ interface RunResult {
   error?: string;
   durationMs: number;
   passed: boolean;
-}
-
-function stableStringify(val: unknown): string {
-  if (val === undefined) return "null";
-  if (val === null) return "null";
-  if (typeof val !== "object") return JSON.stringify(val);
-  if (Array.isArray(val))
-    return "[" + val.map(stableStringify).join(",") + "]";
-  const obj = val as Record<string, unknown>;
-  const keys = Object.keys(obj)
-    .filter((k) => obj[k] !== undefined)
-    .sort();
-  return (
-    "{" +
-    keys.map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k])).join(",") +
-    "}"
-  );
 }
 
 interface BuiltinTestCaseItemProps {
@@ -69,8 +53,7 @@ function BuiltinTestCaseItem({
       });
       const data = await res.json();
       const passed = data.success
-        ? stableStringify(data.result) ===
-          stableStringify(testCase.expectedOutput)
+        ? deepEqual(data.result, testCase.expectedOutput)
         : false;
       setLocalResult({ ...data, passed });
     } catch (e) {
@@ -228,8 +211,7 @@ export function BuiltinTestCases({
         });
         const data = await res.json();
         const passed = data.success
-          ? stableStringify(data.result) ===
-            stableStringify(tc.expectedOutput)
+          ? deepEqual(data.result, tc.expectedOutput)
           : false;
         results[i] = { ...data, passed };
       } catch (e) {

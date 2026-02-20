@@ -68,6 +68,16 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 常用命令统一使用 `make` 执行，所有可用 target 见 @Makefile
 - 如果需要的 make target 不存在，先在 Makefile 中补充，再执行
 
+### Forms（react-hook-form）
+- 所有表单必须使用 react-hook-form，采用**非受控模式**以保证大表单/动态列表场景零卡顿
+- 优先用 `register()` 绑定原生 input；仅在需要自定义组件（Select、Switch、Checkbox 等）时使用 `Controller`
+- 动态列表用 `useFieldArray`，禁止手动 `setValue` 拼索引来增删项
+- 局部订阅用 `useWatch({ name })`，不要 `watch()` 全量订阅——避免整棵表单树重渲染
+- 脏值检测：用 deep equal（如 `fast-deep-equal`）对比 `originalRef` 与 `form.getValues()`，不要用 `JSON.stringify` 比较（属性插入顺序不同会导致假阳性）；服务端数据刷新时必须同步 `originalRef` + `form.reset()` + 通知 dirty=false
+- 子表单通过 `useFormContext()` 获取同一个 form 实例，不要 props 透传 form 对象
+- 深层嵌套组件拆分为独立组件 + 独立 `useWatch`，让 React 只重渲染真正变化的子树
+- 禁止在 `onChange` 回调中调用 `setState` 来镜像表单值——这会造成双重渲染且破坏非受控模式
+
 ### UI
 - Loading 统一使用 `<Spinner />` 组件（`@/components/ui/spinner`），不用 `Loader2Icon`
 - 异步按钮：操作中显示 `<Spinner />`，多按钮通过 `busy` 互斥 disabled
@@ -96,6 +106,9 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 非阻塞原则：用 Next.js `after()` 异步保存，绝不阻塞流式响应
 - 正确：`Request → streamText → return → after() { save }`
 - 错误：`Request → await save → streamText`（❌）
+
+### 收尾检查
+- 代码修改完成后，必须依次执行 `make typecheck` 和 `make test`，确认类型无报错 + 测试通过后才算任务完成
 
 ### 测试账号
 
