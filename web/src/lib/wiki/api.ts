@@ -20,16 +20,20 @@ export async function createDocument(
   mutate: KeyedMutator<WikiDocument[]>,
   agentId: string,
   name: string,
-  key: string
+  key: string,
+  parentId?: string | null
 ): Promise<string | null> {
+  // Calculate order among siblings (same parentId)
+  const resolvedParentId = parentId ?? null;
+  const siblings = docs.filter((d) => d.parentId === resolvedParentId);
   const order =
-    docs.length === 0 ? 0 : Math.max(...docs.map((d) => d.order)) + 1;
+    siblings.length === 0 ? 0 : Math.max(...siblings.map((d) => d.order)) + 1;
 
   try {
     const res = await fetch("/api/wiki", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agentId, name, key, content: "", order }),
+      body: JSON.stringify({ agentId, name, key, content: "", order, parentId: resolvedParentId }),
     });
     if (!res.ok) throw new Error("Failed to create document");
     const created: WikiDocument = await res.json();
@@ -79,8 +83,12 @@ export async function deleteDocument(
   try {
     const res = await fetch(`/api/wiki/${id}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Failed to delete document");
+    // Children get parentId set to null by DB onDelete: "set null"
+    // Reflect this in optimistic update
     await mutate(
-      docs.filter((d) => d.id !== id),
+      docs
+        .filter((d) => d.id !== id)
+        .map((d) => (d.parentId === id ? { ...d, parentId: null } : d)),
       { revalidate: false }
     );
     toast.success("已移至回收站");
@@ -92,6 +100,38 @@ export async function deleteDocument(
   }
 }
 
+export async function moveDocument(
+  id: string,
+  parentId: string | null,
+  docs: WikiDocument[],
+  mutate: KeyedMutator<WikiDocument[]>
+): Promise<boolean> {
+  // Calculate order at end of new parent's children
+  const siblings = docs.filter((d) => d.parentId === parentId && d.id !== id);
+  const order =
+    siblings.length === 0 ? 0 : Math.max(...siblings.map((d) => d.order)) + 1;
+
+  try {
+    const res = await fetch(`/api/wiki/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentId, order }),
+    });
+    if (!res.ok) throw new Error("Failed to move document");
+    await mutate(
+      docs.map((d) =>
+        d.id === id ? { ...d, parentId, order, updatedAt: Date.now() } : d
+      ),
+      { revalidate: false }
+    );
+    return true;
+  } catch (e) {
+    console.error("moveDocument failed:", e);
+    toast.error("Failed to move document");
+    return false;
+  }
+}
+
 export async function reorderDocument(
   id: string,
   direction: "up" | "down",
@@ -99,15 +139,20 @@ export async function reorderDocument(
   mutate: KeyedMutator<WikiDocument[]>,
   agentId?: string
 ): Promise<void> {
-  const sorted = [...docs].sort((a, b) => a.order - b.order);
-  const idx = sorted.findIndex((d) => d.id === id);
+  // Find the document to get its parentId, then sort only siblings
+  const doc = docs.find((d) => d.id === id);
+  if (!doc) return;
+
+  const siblings = docs
+    .filter((d) => d.parentId === doc.parentId)
+    .sort((a, b) => a.order - b.order);
+  const idx = siblings.findIndex((d) => d.id === id);
   if (idx < 0) return;
 
   const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-  if (swapIdx < 0 || swapIdx >= sorted.length) return;
+  if (swapIdx < 0 || swapIdx >= siblings.length) return;
 
-  const doc = sorted[idx];
-  const swapDoc = sorted[swapIdx];
+  const swapDoc = siblings[swapIdx];
 
   try {
     const res = await fetch("/api/wiki/reorder", {

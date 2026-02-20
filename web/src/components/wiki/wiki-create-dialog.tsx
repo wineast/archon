@@ -24,12 +24,14 @@ interface WikiCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (name: string, key: string) => Promise<void>;
+  parentName?: string;
 }
 
 export function WikiCreateDialog({
   open,
   onOpenChange,
   onCreate,
+  parentName,
 }: WikiCreateDialogProps) {
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
@@ -82,14 +84,17 @@ export function WikiCreateDialog({
 
   const canSubmit = name.trim().length > 0 && key.trim().length > 0 && !creating;
 
+  const title = parentName ? "New Child Document" : "New Document";
+  const description = parentName
+    ? `Create a child document under "${parentName}".`
+    : "Create a new wiki document.";
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Document</DialogTitle>
-          <DialogDescription>
-            Create a new wiki document.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">

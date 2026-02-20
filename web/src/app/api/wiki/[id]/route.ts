@@ -29,6 +29,7 @@ export async function PATCH(
   if (body.content !== undefined) updates.content = body.content;
   if (body.name !== undefined) updates.name = body.name;
   if (body.order !== undefined) updates.order = body.order;
+  if ("parentId" in body) updates.parentId = body.parentId ?? null;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
