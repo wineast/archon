@@ -24,6 +24,8 @@ export interface SchemaFormHandle {
   getDraft: () => SchemaFormValues;
   isDirty: () => boolean;
   reset: () => void;
+  /** Mark current form values as the new baseline (clears dirty state). */
+  markClean: () => void;
 }
 
 interface SchemaFormProps {
@@ -33,6 +35,18 @@ interface SchemaFormProps {
   allSchemas?: SchemaWithIncludes[];
   currentSchemaId?: string;
   agentId?: string;
+}
+
+/**
+ * Compare two values ignoring `undefined` properties that react-hook-form
+ * adds internally for registered-but-empty fields.
+ * JSON round-trip strips `undefined`, then deepEqual handles key ordering.
+ */
+function formEqual(a: unknown, b: unknown): boolean {
+  return deepEqual(
+    JSON.parse(JSON.stringify(a)),
+    JSON.parse(JSON.stringify(b))
+  );
 }
 
 export function SchemaForm({
@@ -48,7 +62,7 @@ export function SchemaForm({
 
   // Sync form when schema prop changes (after save + SWR refetch, or switching schemas)
   useEffect(() => {
-    if (!deepEqual(schema, originalRef.current)) {
+    if (!formEqual(schema, originalRef.current)) {
       originalRef.current = { ...schema };
       form.reset({ ...schema });
       onDirtyChange?.(false);
@@ -59,17 +73,21 @@ export function SchemaForm({
   useEffect(() => {
     onDraftRef({
       getDraft: () => form.getValues(),
-      isDirty: () => !deepEqual(form.getValues(), originalRef.current),
+      isDirty: () => !formEqual(form.getValues(), originalRef.current),
       reset: () => {
         form.reset({ ...originalRef.current });
       },
+      markClean: () => {
+        originalRef.current = { ...form.getValues() };
+        onDirtyChange?.(false);
+      },
     });
-  }, [onDraftRef, form]);
+  }, [onDraftRef, form, onDirtyChange]);
 
   useEffect(() => {
     let wasDirty = false;
     const subscription = form.watch(() => {
-      const isDirty = !deepEqual(form.getValues(), originalRef.current);
+      const isDirty = !formEqual(form.getValues(), originalRef.current);
       if (isDirty !== wasDirty) {
         wasDirty = isDirty;
         onDirtyChange?.(isDirty);

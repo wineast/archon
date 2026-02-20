@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { BracesIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { BracesIcon, CodeIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./schema-form";
 import { SchemaJsonDialog } from "./schema-json-dialog";
+import { SchemaZodDialog } from "./schema-zod-dialog";
 import type { SchemaWithIncludes } from "@/db/schema";
 
 interface SchemaDetailProps {
@@ -26,6 +27,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
   }, []);
   const [dirty, setDirty] = useState(false);
   const [jsonOpen, setJsonOpen] = useState(false);
+  const [zodOpen, setZodOpen] = useState(false);
   const busy = saving || deleting;
 
   const handleSave = useCallback(async () => {
@@ -39,6 +41,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
         parameters: draft.parameters,
         includeSchemaIds: draft.includeSchemaIds,
       });
+      draftRef.current?.markClean();
     } finally {
       setSaving(false);
     }
@@ -100,6 +103,14 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
         <Button
           variant="outline"
           size="sm"
+          onClick={() => setZodOpen(true)}
+        >
+          <CodeIcon className="mr-1 size-3" />
+          Zod Code
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => setJsonOpen(true)}
         >
           <BracesIcon className="mr-1 size-3" />
@@ -123,6 +134,13 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
       <SchemaJsonDialog
         open={jsonOpen}
         onOpenChange={setJsonOpen}
+        schemaKey={schema.key}
+        getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
+        allSchemas={allSchemas}
+      />
+      <SchemaZodDialog
+        open={zodOpen}
+        onOpenChange={setZodOpen}
         schemaKey={schema.key}
         getParameters={() => draftRef.current?.getDraft().parameters ?? schema.parameters}
         allSchemas={allSchemas}

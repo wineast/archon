@@ -2,6 +2,25 @@ import { z } from "zod";
 import deepEqual from "fast-deep-equal";
 import type { SchemaProperty } from "./types";
 
+/**
+ * react-hook-form's useFieldArray stores nested arrays (like `variants: SchemaProperty[][]`)
+ * as plain objects with numeric keys + an injected `id` field.
+ * This helper converts such objects back into proper SchemaProperty arrays.
+ */
+function normalizeVariant(v: unknown): SchemaProperty[] {
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === "object") {
+    const entries: SchemaProperty[] = [];
+    for (const [key, val] of Object.entries(v)) {
+      if (/^\d+$/.test(key) && val && typeof val === "object") {
+        entries.push(val as SchemaProperty);
+      }
+    }
+    return entries;
+  }
+  return [];
+}
+
 export interface BuildSchemaOptions {
   /** Datasets by UUID: id → resolved data. */
   datasetsById?: Record<string, unknown>;
@@ -232,7 +251,8 @@ function buildUnionSchema(
   }
 
   // Build variant schemas, injecting discriminator literal when discriminatorValues is provided
-  const variantSchemas = param.variants.map((variantProps, i) => {
+  const variantSchemas = param.variants.map((raw, i) => {
+    const variantProps = normalizeVariant(raw);
     const obj = buildNestedObject(variantProps, resolvedVars, options, ancestorSchemaIds);
     const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
     if (discValue) {
@@ -517,7 +537,8 @@ function buildJsonSchemaUnion(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSc
   }
 
   // Build variant schemas, injecting discriminator const when discriminatorValues is provided
-  const variantSchemas = param.variants.map((variantProps, i) => {
+  const variantSchemas = param.variants.map((raw, i) => {
+    const variantProps = normalizeVariant(raw);
     const schema = buildJsonSchemaNestedObject(variantProps, ctx);
     const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
     if (discValue) {
