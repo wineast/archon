@@ -235,18 +235,17 @@ describe("schema-builder advanced types", () => {
   // ───────── Union type ─────────
 
   describe("union type", () => {
-    it("discriminated union accepts matching variant", () => {
+    it("discriminated union with discriminatorValues accepts matching variant", () => {
       const schema = buildInputSchema([
         makeParam({
           type: "union",
           discriminator: "kind",
+          discriminatorValues: ["text", "image"],
           variants: [
             [
-              makeParam({ id: "v1a", name: "kind", type: "enum", enum: ["text"], required: true }),
               makeParam({ id: "v1b", name: "content", type: "string", required: true }),
             ],
             [
-              makeParam({ id: "v2a", name: "kind", type: "enum", enum: ["image"], required: true }),
               makeParam({ id: "v2b", name: "url", type: "string", required: true }),
             ],
           ],
@@ -262,18 +261,17 @@ describe("schema-builder advanced types", () => {
       ).not.toThrow();
     });
 
-    it("discriminated union rejects invalid discriminator value", () => {
+    it("discriminated union with discriminatorValues rejects invalid value", () => {
       const schema = buildInputSchema([
         makeParam({
           type: "union",
           discriminator: "kind",
+          discriminatorValues: ["text", "image"],
           variants: [
             [
-              makeParam({ id: "v1a", name: "kind", type: "enum", enum: ["text"], required: true }),
               makeParam({ id: "v1b", name: "content", type: "string", required: true }),
             ],
             [
-              makeParam({ id: "v2a", name: "kind", type: "enum", enum: ["image"], required: true }),
               makeParam({ id: "v2b", name: "url", type: "string", required: true }),
             ],
           ],
@@ -282,6 +280,40 @@ describe("schema-builder advanced types", () => {
 
       expect(() =>
         schema.parse({ field: { kind: "video", src: "foo" } })
+      ).toThrow();
+    });
+
+    it("discriminatorValues injects z.literal and overrides manual discriminator field", () => {
+      // Variant has a manually defined "kind" field — discriminatorValues should override it
+      const schema = buildInputSchema([
+        makeParam({
+          type: "union",
+          discriminator: "kind",
+          discriminatorValues: ["cat", "dog"],
+          variants: [
+            [
+              makeParam({ id: "v1a", name: "kind", type: "string", required: true }),
+              makeParam({ id: "v1b", name: "legs", type: "number", required: true }),
+            ],
+            [
+              makeParam({ id: "v2a", name: "kind", type: "string", required: true }),
+              makeParam({ id: "v2b", name: "bark", type: "boolean", required: true }),
+            ],
+          ],
+        }),
+      ]);
+
+      expect(() =>
+        schema.parse({ field: { kind: "cat", legs: 4 } })
+      ).not.toThrow();
+
+      expect(() =>
+        schema.parse({ field: { kind: "dog", bark: true } })
+      ).not.toThrow();
+
+      // "fish" is not a valid discriminator value
+      expect(() =>
+        schema.parse({ field: { kind: "fish", legs: 0 } })
       ).toThrow();
     });
 
