@@ -5,6 +5,7 @@ import type { WikiDocument } from "../types";
 function makeDoc(overrides: Partial<WikiDocument> = {}): WikiDocument {
   return {
     id: "doc-1",
+    parentId: null,
     key: "",
     name: "Test Doc",
     content: "",

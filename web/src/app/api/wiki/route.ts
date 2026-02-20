@@ -11,6 +11,7 @@ import { logAudit } from "@/lib/audit/log";
 function toWikiDocument(row: WikiDocumentRow): WikiDocument {
   return {
     id: row.id,
+    parentId: row.parentId,
     key: row.key,
     name: row.name || resolveName(row.content),
     content: row.content,
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
     .insert(wikiDocuments)
     .values({
       agentId,
+      parentId: body.parentId ?? null,
       name: body.name,
       key: body.key,
       content: body.content,

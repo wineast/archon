@@ -11,6 +11,7 @@ import {
   updateDocument,
   deleteDocument,
   reorderDocument,
+  moveDocument,
 } from "@/lib/wiki/api";
 import { WikiEditor } from "@/components/editors/wiki-editor";
 import { WikiEmptyState } from "./wiki-empty-state";
@@ -25,11 +26,17 @@ export function WikiPanel({ agentId }: { agentId: string }) {
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "editor">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createParentId, setCreateParentId] = useState<string | undefined>();
 
   const activeDoc = useMemo(
     () => documents.find((d) => d.id === activeDocId) ?? null,
     [documents, activeDocId]
   );
+
+  const createParentName = useMemo(() => {
+    if (!createParentId) return undefined;
+    return documents.find((d) => d.id === createParentId)?.name;
+  }, [documents, createParentId]);
 
   useEffect(() => {
     if (activeDocId) {
@@ -37,15 +44,21 @@ export function WikiPanel({ agentId }: { agentId: string }) {
     }
   }, [activeDocId]);
 
+  const handleOpenCreateDialog = useCallback((parentId?: string) => {
+    setCreateParentId(parentId);
+    setCreateDialogOpen(true);
+  }, []);
+
   const handleCreateDocument = useCallback(
     async (name: string, key: string) => {
-      const id = await createDocument(documents, mutate, agentId, name, key);
+      const id = await createDocument(documents, mutate, agentId, name, key, createParentId);
       if (id) {
         setActiveDocId(id);
         setCreateDialogOpen(false);
+        setCreateParentId(undefined);
       }
     },
-    [documents, mutate, agentId]
+    [documents, mutate, agentId, createParentId]
   );
 
   const handleUpdate = useCallback(
@@ -71,6 +84,18 @@ export function WikiPanel({ agentId }: { agentId: string }) {
     [documents, mutate, agentId]
   );
 
+  const handleMove = useCallback(
+    async (id: string, targetParentId: string | null) => {
+      await moveDocument(id, targetParentId, documents, mutate);
+    },
+    [documents, mutate]
+  );
+
+  const handleCreateDialogOpenChange = useCallback((open: boolean) => {
+    setCreateDialogOpen(open);
+    if (!open) setCreateParentId(undefined);
+  }, []);
+
   return (
     <div className="flex h-full flex-col">
       {/* Desktop layout */}
@@ -79,9 +104,10 @@ export function WikiPanel({ agentId }: { agentId: string }) {
           documents={documents}
           activeDocId={activeDocId}
           onSelect={setActiveDocId}
-          onCreate={() => setCreateDialogOpen(true)}
+          onCreate={handleOpenCreateDialog}
           onDelete={handleDelete}
           onReorder={handleReorder}
+          onMove={handleMove}
         />
         <div className="flex-1 overflow-hidden">
           {activeDoc ? (
@@ -93,7 +119,7 @@ export function WikiPanel({ agentId }: { agentId: string }) {
               onDelete={handleDelete}
             />
           ) : (
-            <WikiEmptyState onCreate={() => setCreateDialogOpen(true)} />
+            <WikiEmptyState onCreate={() => handleOpenCreateDialog()} />
           )}
         </div>
       </div>
@@ -105,9 +131,10 @@ export function WikiPanel({ agentId }: { agentId: string }) {
             documents={documents}
             activeDocId={activeDocId}
             onSelect={setActiveDocId}
-            onCreate={() => setCreateDialogOpen(true)}
+            onCreate={handleOpenCreateDialog}
             onDelete={handleDelete}
             onReorder={handleReorder}
+            onMove={handleMove}
           />
         ) : (
           <>
@@ -136,8 +163,9 @@ export function WikiPanel({ agentId }: { agentId: string }) {
 
       <WikiCreateDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChange={handleCreateDialogOpenChange}
         onCreate={handleCreateDocument}
+        parentName={createParentName}
       />
     </div>
   );
