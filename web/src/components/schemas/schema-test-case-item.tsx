@@ -32,11 +32,12 @@ export interface SchemaTestCaseItemProps {
   onSave: (
     caseId: string,
     data: {
-      name: string;
-      input: Record<string, unknown>;
-      shouldPass: boolean;
+      name?: string;
+      input?: Record<string, unknown>;
+      shouldPass?: boolean;
       expectedErrors?: Array<{ path: string; message: string }>;
-      tags: string[];
+      tags?: string[];
+      showAsExample?: boolean;
     }
   ) => Promise<void>;
   onDelete: (caseId: string) => Promise<void>;
@@ -66,6 +67,7 @@ export function SchemaTestCaseItem({
   >(testCase.expectedErrors ?? []);
   const [tags, setTags] = useState<string[]>(testCase.tags);
   const [tagInput, setTagInput] = useState("");
+  const [showAsExample, setShowAsExample] = useState(testCase.showAsExample);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [running, setRunning] = useState(false);
@@ -88,11 +90,12 @@ export function SchemaTestCaseItem({
         shouldPass,
         expectedErrors: !shouldPass && expectedErrors.length > 0 ? expectedErrors : undefined,
         tags,
+        showAsExample,
       });
     } finally {
       setSaving(false);
     }
-  }, [testCase.id, name, inputValue, shouldPass, expectedErrors, tags, onSave]);
+  }, [testCase.id, name, inputValue, shouldPass, expectedErrors, tags, showAsExample, onSave]);
 
   const handleDelete = useCallback(async () => {
     setDeleting(true);
@@ -142,6 +145,14 @@ export function SchemaTestCaseItem({
       }
     },
     [tagInput, handleAddTag]
+  );
+
+  const handleToggleExample = useCallback(
+    async (checked: boolean) => {
+      setShowAsExample(checked);
+      await onSave(testCase.id, { showAsExample: checked });
+    },
+    [testCase.id, onSave]
   );
 
   const handleAddExpectedError = useCallback(() => {
@@ -292,6 +303,22 @@ export function SchemaTestCaseItem({
                   placeholder="Add tag..."
                 />
               </div>
+            </div>
+
+            {/* Show as Example */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id={`example-${testCase.id}`}
+                checked={showAsExample}
+                onCheckedChange={handleToggleExample}
+                disabled={itemBusy}
+              />
+              <Label
+                htmlFor={`example-${testCase.id}`}
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Show as Example
+              </Label>
             </div>
 
             {/* Input JSON */}

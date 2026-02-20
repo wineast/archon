@@ -40,6 +40,7 @@ export async function createSchemaTestCase(
     shouldPass: boolean;
     expectedErrors?: Array<{ path: string; message: string }>;
     tags?: string[];
+    showAsExample?: boolean;
   },
   mutate: () => void
 ) {

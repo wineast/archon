@@ -47,6 +47,7 @@ export async function POST(
       shouldPass: body.shouldPass ?? true,
       expectedErrors: body.expectedErrors ?? null,
       tags: body.tags ?? [],
+      showAsExample: body.showAsExample ?? false,
     })
     .returning();
 
