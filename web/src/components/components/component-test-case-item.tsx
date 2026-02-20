@@ -19,8 +19,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { JsonEditor } from "@/components/editors/json-editor";
 import { Label } from "@/components/ui/label";
+import { ToolDataCard } from "@/components/components/tool-data-card";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { DynamicToolRenderer, DynamicComponentErrorBoundary } from "@/tool-ui";
@@ -331,43 +331,17 @@ export function ComponentTestCaseItem({
               </Label>
             </div>
 
-            {/* Tool Name */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                Tool Name
-              </label>
-              <Input
-                className="mt-1 h-8 text-sm"
-                value={toolName}
-                onChange={(e) => setToolName(e.target.value)}
-              />
-            </div>
-
-            {/* Tool Input JSON */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                Tool Input (JSON)
-              </label>
-              <JsonEditor
-                value={inputValue}
-                onChange={setInputValue}
-                height="100px"
-                className="mt-1"
-              />
-            </div>
-
-            {/* Tool Output JSON */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                Tool Output (JSON)
-              </label>
-              <JsonEditor
-                value={outputValue}
-                onChange={setOutputValue}
-                height="100px"
-                className="mt-1"
-              />
-            </div>
+            {/* Tool */}
+            <ToolDataCard
+              toolName={toolName}
+              inputValue={inputValue}
+              outputValue={outputValue}
+              onToolNameChange={setToolName}
+              onInputChange={setInputValue}
+              onOutputChange={setOutputValue}
+              inputHeight="100px"
+              outputHeight="100px"
+            />
 
             {/* Save button */}
             <Button

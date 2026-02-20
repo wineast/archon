@@ -27,7 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { JsonEditor } from "@/components/editors/json-editor";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -39,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { ToolDataCard } from "@/components/components/tool-data-card";
 import {
   DynamicToolRenderer,
   DynamicComponentErrorBoundary,
@@ -260,12 +260,15 @@ export function ComponentPlayground({
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-3 p-4">
           {/* Tool */}
-          <div className="space-y-2 rounded-lg border p-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-foreground">
-                Tool
-              </label>
-              {testCases.length > 0 && (
+          <ToolDataCard
+            toolName={toolName}
+            inputValue={inputValue}
+            outputValue={outputValue}
+            onToolNameChange={setToolName}
+            onInputChange={setInputValue}
+            onOutputChange={setOutputValue}
+            headerExtra={
+              testCases.length > 0 ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -309,34 +312,10 @@ export function ComponentPlayground({
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-              )}
-            </div>
-
-            {/* Name */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                Name
-              </label>
-              <Input
-                className="mt-1 h-8 text-sm"
-                value={toolName}
-                onChange={(e) => setToolName(e.target.value)}
-                placeholder="e.g. get_weather"
-              />
-            </div>
-
-            {/* Input */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                Input (JSON)
-              </label>
-              <JsonEditor
-                value={inputValue}
-                onChange={setInputValue}
-                height="120px"
-                className="mt-1"
-              />
-              {inputValidation && !inputValidation.valid && (
+              ) : undefined
+            }
+            inputExtra={
+              inputValidation && !inputValidation.valid ? (
                 <div className="mt-1 space-y-0.5">
                   {inputValidation.errors.map((e, i) => (
                     <p key={i} className="text-xs text-destructive">
@@ -344,21 +323,10 @@ export function ComponentPlayground({
                     </p>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Output */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                Output (JSON)
-              </label>
-              <JsonEditor
-                value={outputValue}
-                onChange={setOutputValue}
-                height="120px"
-                className="mt-1"
-              />
-              {outputValidation && !outputValidation.valid && (
+              ) : undefined
+            }
+            outputExtra={
+              outputValidation && !outputValidation.valid ? (
                 <div className="mt-1 space-y-0.5">
                   {outputValidation.errors.map((e, i) => (
                     <p key={i} className="text-xs text-destructive">
@@ -366,9 +334,9 @@ export function ComponentPlayground({
                     </p>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
+              ) : undefined
+            }
+          />
 
           {/* State */}
           <div>
