@@ -21,7 +21,9 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
-import { BoxIcon, CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, TypeIcon, ZapIcon } from "lucide-react";
+import { BoxIcon, CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, ZapIcon } from "lucide-react";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import toolHandlerDoc from "../../../guide/tool-handler.md";
 
 export interface ToolFormHandle {
   getDraft: () => ToolDefinition;
@@ -38,12 +40,11 @@ interface ToolFormProps {
 
 const VALID_NAME_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
-type HandlerMode = "simple" | "code";
+type HandlerTab = "url" | "code";
 
-function detectHandlerMode(handler: string): HandlerMode {
-  const h = handler.trim();
-  if (h.includes("=>") || h.includes("function")) return "code";
-  return "simple";
+function detectHandlerTab(tool: ToolDefinition): HandlerTab {
+  if (tool.url?.trim()) return "url";
+  return "code";
 }
 
 interface ParameterSectionProps {
@@ -102,14 +103,13 @@ function ParameterSection({
 
 export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormProps) {
   const form = useForm<ToolDefinition>({ defaultValues: { ...tool } });
-  const [handlerMode, setHandlerMode] = useState<HandlerMode>(() =>
-    detectHandlerMode(tool.handler)
+  const [handlerTab, setHandlerTab] = useState<HandlerTab>(() =>
+    detectHandlerTab(tool)
   );
   const originalRef = useRef(JSON.stringify(tool));
 
   // Watch only fields needed for validation / conditional rendering
   const name = useWatch({ control: form.control, name: "name" });
-  const handler = useWatch({ control: form.control, name: "handler" });
   const executionTarget = useWatch({ control: form.control, name: "executionTarget" });
   const sandboxMode = useWatch({ control: form.control, name: "sandboxMode" });
   const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });
@@ -132,6 +132,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
       reset: () => {
         const original = JSON.parse(originalRef.current);
         form.reset(original);
+        setHandlerTab(detectHandlerTab(original));
       },
     });
   }, [onDraftRef, form]);
@@ -155,13 +156,6 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
       return "Must start with a letter/underscore and contain only letters, digits, underscores";
     return null;
   }, [name]);
-
-  const handlerHint = useMemo(() => {
-    const h = handler?.trim();
-    if (!h) return null;
-    if (h.startsWith("http://") || h.startsWith("https://")) return "remote";
-    return null;
-  }, [handler]);
 
   return (
     <FormProvider {...form}>
@@ -266,24 +260,25 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               <label className="text-xs font-medium text-muted-foreground">
                 Handler
               </label>
+              <GuideDialog title="工具 Handler 编写指南" content={toolHandlerDoc} />
               <div className="flex items-center rounded-md border border-border p-0.5">
                 <button
                   type="button"
-                  onClick={() => setHandlerMode("simple")}
+                  onClick={() => setHandlerTab("url")}
                   className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                    handlerMode === "simple"
+                    handlerTab === "url"
                       ? "bg-muted text-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <TypeIcon className="size-3" />
-                  简单
+                  <GlobeIcon className="size-3" />
+                  URL
                 </button>
                 <button
                   type="button"
-                  onClick={() => setHandlerMode("code")}
+                  onClick={() => setHandlerTab("code")}
                   className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                    handlerMode === "code"
+                    handlerTab === "code"
                       ? "bg-muted text-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -294,20 +289,12 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               </div>
             </div>
 
-            {handlerMode === "simple" ? (
-              <>
-                <Input
-                  className="mt-1 h-8 text-sm font-mono"
-                  {...form.register("handler")}
-                  placeholder="填写 URL"
-                />
-                {handlerHint === "remote" && (
-                  <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
-                    <GlobeIcon className="size-3" />
-                    远程 API — 调用时将 POST 参数到此 URL
-                  </p>
-                )}
-              </>
+            {handlerTab === "url" ? (
+              <Input
+                className="mt-1 h-8 text-sm font-mono"
+                {...form.register("url")}
+                placeholder="https://api.example.com/tool"
+              />
             ) : (
               <>
                 <Controller
@@ -315,23 +302,13 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                   control={form.control}
                   render={({ field }) => (
                     <JsEditor
-                      value={field.value}
+                      value={field.value ?? ""}
                       onChange={field.onChange}
                       height="300px"
                       className="mt-1"
                     />
                   )}
                 />
-                <p className="text-xs text-purple-500 mt-1">
-                  {executionTarget === "client"
-                    ? "JS 代码 — 在用户浏览器中执行"
-                    : "JS 代码 — 在安全沙盒中执行"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {executionTarget === "client"
-                    ? "浏览器端工具无法访问 wiki、数据集等服务端资源"
-                    : <>可用 context API：wiki.get/findByPrefix/search, dataset.get/getEntries, fn(key), ontology.types/type/query/get/create/update/delete/link/unlink/graph</>}
-                </p>
                 {executionTarget === "server" && (
                   <div className="flex items-center gap-2 mt-2">
                     <label className="text-xs font-medium text-muted-foreground">

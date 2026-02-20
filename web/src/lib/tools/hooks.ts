@@ -30,7 +30,8 @@ export async function createTool(
     key: string;
     name: string;
     description: string;
-    handler?: string;
+    handler?: string | null;
+    url?: string | null;
     enabled?: boolean;
   },
   mutate: () => void

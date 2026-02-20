@@ -10,6 +10,7 @@ export interface ToolSnapshotItem {
   parametersSchemaKey: string | null;
   returnParametersSchemaKey: string | null;
   handler: string | null;
+  url: string | null;
   componentKey: string | null;
   enabled: boolean;
   executionTarget: "server" | "client" | "host";

@@ -366,6 +366,7 @@ export const tools = pgTable(
     parametersSchemaId: uuid("parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
     returnParametersSchemaId: uuid("return_parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
     handler: text("handler"),
+    url: text("url"),
     componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),
     enabled: boolean("enabled").notNull().default(true),
     executionTarget: text("execution_target").notNull().default("server").$type<"server" | "client" | "host">(),

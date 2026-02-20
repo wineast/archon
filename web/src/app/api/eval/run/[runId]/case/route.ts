@@ -109,6 +109,7 @@ export async function POST(
       description: row.description,
       parameters: row.parametersSchemaId ? (schemaMap[row.parametersSchemaId] ?? []) : [],
       handler: row.handler ?? "",
+      url: row.url ?? "",
       sandboxMode: row.sandboxMode ?? "light",
     }));
 

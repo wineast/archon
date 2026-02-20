@@ -87,22 +87,6 @@ describe("buildDynamicTools", () => {
     });
   });
 
-  describe("invalid handler format", () => {
-    it("returns error for unrecognized handler string", async () => {
-      const payload: ToolDefinitionPayload = {
-        name: "myTool",
-        description: "A tool",
-        parameters: [],
-        handler: "nonexistent_handler",
-      };
-      const tools = buildDynamicTools([payload]);
-      const result = await tools.myTool.execute!({}, opts);
-      expect(result).toEqual({
-        error: "Invalid handler: must be a URL (http/https) or JS code (arrow function / function)",
-      });
-    });
-  });
-
   describe("remote handler (URL)", () => {
     beforeEach(() => {
       vi.restoreAllMocks();
@@ -121,7 +105,7 @@ describe("buildDynamicTools", () => {
         name: "weather",
         description: "Get weather",
         parameters: [],
-        handler: "https://api.weather.io/v1",
+        url: "https://api.weather.io/v1",
       };
       const tools = buildDynamicTools([payload]);
       const result = await tools.weather.execute!({ city: "NYC" }, opts);
@@ -146,7 +130,7 @@ describe("buildDynamicTools", () => {
         name: "broken_api",
         description: "Broken API",
         parameters: [],
-        handler: "https://api.example.com/broken",
+        url: "https://api.example.com/broken",
       };
       const tools = buildDynamicTools([payload]);
       const result = await tools.broken_api.execute!({}, opts);

@@ -52,7 +52,8 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
           key,
           name,
           description: "",
-          handler: "",
+          handler: null,
+          url: null,
           enabled: true,
         },
         mutate
@@ -75,6 +76,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
           parametersSchemaId: updated.parametersSchemaId ?? null,
           returnParametersSchemaId: updated.returnParametersSchemaId ?? null,
           handler: updated.handler,
+          url: updated.url,
           componentId: updated.componentId,
           sandboxMode: updated.sandboxMode,
         },

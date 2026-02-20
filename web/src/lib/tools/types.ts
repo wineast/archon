@@ -15,7 +15,8 @@ export interface ToolDefinition {
   description: string;
   parametersSchemaId?: string | null;
   returnParametersSchemaId?: string | null;
-  handler: string;
+  handler: string | null;
+  url: string | null;
   componentId: string | null;
   enabled: boolean;
   executionTarget: "server" | "client" | "host";
@@ -28,7 +29,8 @@ export interface ToolDefinitionPayload {
   description: string;
   parameters: SchemaProperty[];
   returnParameters?: SchemaProperty[];
-  handler: string;
+  handler?: string | null;
+  url?: string | null;
   executionTarget?: "server" | "client" | "host";
   sandboxMode?: "light" | "full";
 }

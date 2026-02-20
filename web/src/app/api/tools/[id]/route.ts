@@ -31,6 +31,7 @@ export async function PATCH(
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.handler !== undefined && { handler: body.handler }),
+      ...(body.url !== undefined && { url: body.url }),
       ...(body.componentId !== undefined && { componentId: body.componentId }),
       ...(body.parametersSchemaId !== undefined && { parametersSchemaId: body.parametersSchemaId }),
       ...(body.returnParametersSchemaId !== undefined && { returnParametersSchemaId: body.returnParametersSchemaId }),

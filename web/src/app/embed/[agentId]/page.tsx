@@ -343,6 +343,7 @@ function EmbedChat({
         returnParametersSchemaId: null,
         output: null,
         handler: null,
+        url: null,
         componentId: null,
         enabled: true,
         executionTarget: t.executionTarget as "server" | "client" | "host",
