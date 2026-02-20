@@ -37,6 +37,7 @@ export async function PUT(
         expectedErrors: body.expectedErrors,
       }),
       ...(body.tags !== undefined && { tags: body.tags }),
+      ...(body.showAsExample !== undefined && { showAsExample: body.showAsExample }),
     })
     .where(eq(schemaTestCases.id, caseId))
     .returning();

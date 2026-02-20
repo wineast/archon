@@ -660,6 +660,37 @@ Archon Schema 的设计目标是尽可能对齐 JSON Schema 标准（Draft 7）�
 
 ---
 
+## Examples（用例示范）
+
+Schema 的测试用例可以标记为 **Example**，在 Examples 标签页中集中展示，用于向 FDA 或团队成员演示 Schema 的典型输入。
+
+### 标记为 Example
+
+1. 打开 Schema 详情页 → **Test Cases** 标签
+2. 展开任意测试用例，打开 **Show as Example** 开关
+3. 该用例会立即出现在 **Examples** 标签页中
+
+### Examples 标签页
+
+位于 Edit 和 Playground 之间。展示所有标记为 Example 的测试用例，包含：
+- 名称、标签（Badge）
+- 校验预期（Valid / Invalid）
+- 输入 JSON（只读）
+- 预期错误（如有）
+
+空状态提示用户去 Test Cases 标签勾选。
+
+### Playground 保存
+
+Playground 底部新增 **Save** 按钮，可将当前输入保存为测试用例：
+- 填写名称、标签
+- 可选开启 **Show as Example**
+- 保存后自动刷新测试用例列表
+
+Playground 的 **Load** 下拉菜单按 Examples 和 Test Cases 分组展示。
+
+---
+
 ## 已知问题
 
 - `enum` 作为独立 type 与 JSON Schema 标准存在语义差异：JSON Schema 中 `enum` 不是 type 而是 `string` 的值约束。当前功能上无影响，但做 JSON Schema 导入时需要映射。

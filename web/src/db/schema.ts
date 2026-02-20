@@ -365,6 +365,7 @@ export const schemaTestCases = pgTable(
     shouldPass: boolean("should_pass").notNull().default(true),
     expectedErrors: jsonb("expected_errors").$type<Array<{ path: string; message: string }>>(),
     tags: text("tags").array().notNull().default([]),
+    showAsExample: boolean("show_as_example").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

@@ -100,11 +100,12 @@ export function SchemaTestCasesPanel({
     async (
       caseId: string,
       data: {
-        name: string;
-        input: Record<string, unknown>;
-        shouldPass: boolean;
+        name?: string;
+        input?: Record<string, unknown>;
+        shouldPass?: boolean;
         expectedErrors?: Array<{ path: string; message: string }>;
-        tags: string[];
+        tags?: string[];
+        showAsExample?: boolean;
       }
     ) => {
       await updateSchemaTestCase(schemaId, caseId, data, mutate);

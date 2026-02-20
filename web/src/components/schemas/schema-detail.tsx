@@ -12,6 +12,7 @@ import { JsonEditor } from "@/components/editors/json-editor";
 import { JsEditor } from "@/components/editors/js-editor";
 import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./schema-form";
 import { SchemaPlayground } from "./schema-playground";
+import { SchemaExamplesPanel } from "./schema-examples-panel";
 import { SchemaTestCasesPanel } from "./schema-test-cases-panel";
 import { buildZodCode } from "@/lib/tools/zod-code-builder";
 import { buildJsonSchema } from "@/lib/tools/schema-builder";
@@ -67,6 +68,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
     <Tabs defaultValue="edit" className="flex h-full flex-col">
       <TabsList variant="line" className="shrink-0 px-4 pt-1">
         <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="examples">Examples</TabsTrigger>
         <TabsTrigger value="playground">Playground</TabsTrigger>
         <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
       </TabsList>
@@ -155,6 +157,10 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
           description={`Are you sure you want to delete "${schema.key}"? This action cannot be undone.`}
           onConfirm={handleDelete}
         />
+      </TabsContent>
+
+      <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">
+        <SchemaExamplesPanel schemaId={schema.id} />
       </TabsContent>
 
       <TabsContent value="playground" className="flex min-h-0 flex-1 flex-col">
