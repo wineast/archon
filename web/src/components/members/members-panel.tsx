@@ -112,7 +112,7 @@ export function MembersPanel({
       </div>
 
       {/* Invite section */}
-      <div className="flex items-center gap-2 px-4 pb-3">
+      <div className="flex items-center gap-2 px-4 py-3">
         <Input
           className="flex-1"
           placeholder="输入邮箱邀请..."
