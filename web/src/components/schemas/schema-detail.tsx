@@ -179,7 +179,7 @@ interface SchemaPreviewPanelProps {
 }
 
 function SchemaPreviewPanel({ schemaKey, getParameters, allSchemas }: SchemaPreviewPanelProps) {
-  const [codeTab, setCodeTab] = useState<"zod" | "json">("zod");
+  const [codeTab, setCodeTab] = useState<"zod" | "json">("json");
 
   const parameters = getParameters();
 
@@ -244,8 +244,8 @@ function SchemaPreviewPanel({ schemaKey, getParameters, allSchemas }: SchemaPrev
     >
       <div className="flex items-center gap-2">
         <TabsList className="h-7">
-          <TabsTrigger value="zod" className="text-xs">Zod Code</TabsTrigger>
           <TabsTrigger value="json" className="text-xs">JSON Schema</TabsTrigger>
+          <TabsTrigger value="zod" className="text-xs">Zod Code</TabsTrigger>
         </TabsList>
         <div className="flex-1" />
         <Button size="icon" variant="ghost" className="size-7" onClick={handleCopy}>
