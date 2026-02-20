@@ -92,7 +92,7 @@ export function DatasetDetail({
           {saving ? "Saving..." : "Save"}
         </Button>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={handleReset}
           disabled={busy || !dirty}

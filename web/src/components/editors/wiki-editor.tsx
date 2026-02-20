@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Trash2Icon } from "lucide-react";
+import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import Markdown from "react-markdown";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
@@ -167,12 +167,13 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
         </Tabs>
 
         {/* Footer */}
-        <div className="flex items-center gap-2 shrink-0 border-t px-6 py-3">
-          <Button size="sm" onClick={handleSave} disabled={!dirty || busy}>
-            {saving && <Spinner className="mr-1.5 size-3" />}
-            Save
+        <div className="flex items-center gap-2 shrink-0 border-t px-4 py-2">
+          <Button size="sm" onClick={handleSave} disabled={busy || !dirty}>
+            {saving ? <Spinner className="mr-1 size-3" /> : <SaveIcon className="mr-1 size-3" />}
+            {saving ? "Saving..." : "Save"}
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleReset} disabled={!dirty || busy}>
+          <Button variant="ghost" size="sm" onClick={handleReset} disabled={busy || !dirty}>
+            <RotateCcwIcon className="mr-1 size-3" />
             Reset
           </Button>
           <div className="flex-1" />
@@ -182,8 +183,8 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
             onClick={() => setDeleteDialogOpen(true)}
             disabled={busy}
           >
-            <Trash2Icon className="size-3" />
-            Delete
+            {deleting ? <Spinner className="mr-1 size-3" /> : <Trash2Icon className="mr-1 size-3" />}
+            {deleting ? "Deleting..." : "Delete"}
           </Button>
         </div>
       </div>

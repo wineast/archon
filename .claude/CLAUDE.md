@@ -88,6 +88,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - Sheet 内部不加 `border-b` / `border-t` 分割线
 - 新增按钮放在底部固定区域
 - Edit/Preview 切换统一使用 Radix `<Tabs>` 组件，禁止用 Button 自行实现模式切换——详见 `guide/edit-preview-pattern.md`
+- 详情页底部操作栏统一样式：容器 `flex items-center gap-2 border-t px-4 py-2`；Save 按钮带 `SaveIcon` + "Saving..." 文字切换；Reset 按钮 `variant="ghost"` 带 `RotateCcwIcon`；Delete 按钮 `variant="destructive"` 用 `flex-1` 隔开靠右，带 "Deleting..." 文字切换
 
 ### Database
 - schema 见 `web/src/db/schema.ts`
