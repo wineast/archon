@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToolForm, type ToolFormHandle } from "./tool-form";
+import { ToolExamplesPanel } from "./tool-examples-panel";
 import { ToolPlayground } from "./tool-playground";
 import { ToolTestCasesPanel } from "./tool-test-cases-panel";
 import type { ToolRow } from "@/db/schema";
@@ -69,6 +70,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
     <Tabs defaultValue="edit" className="flex h-full flex-col">
       <TabsList variant="line" className="shrink-0 px-4 pt-1">
         <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="examples">Examples</TabsTrigger>
         <TabsTrigger value="playground">Playground</TabsTrigger>
         <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
       </TabsList>
@@ -160,6 +162,10 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
           description={`Are you sure you want to delete "${tool.name}"? This action cannot be undone.`}
           onConfirm={handleDelete}
         />
+      </TabsContent>
+
+      <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">
+        <ToolExamplesPanel toolId={tool.id} />
       </TabsContent>
 
       <TabsContent value="playground" className="flex min-h-0 flex-1 flex-col">

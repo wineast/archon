@@ -99,10 +99,11 @@ export function ToolTestCasesPanel({
     async (
       caseId: string,
       data: {
-        name: string;
-        input: Record<string, unknown>;
-        expectedOutput: unknown;
-        tags: string[];
+        name?: string;
+        input?: Record<string, unknown>;
+        expectedOutput?: unknown;
+        tags?: string[];
+        showAsExample?: boolean;
       }
     ) => {
       await updateToolTestCase(toolId, caseId, data, mutate);
