@@ -5,6 +5,7 @@
 - [数据集](datasets.md) — JSON 数据集的创建、编辑、层级设计与模板引用
 - [模板引擎](template-engine.md) — LiquidJS 模板语法与数据源说明
 - [用户权限](user-permissions.md) — 平台角色、Agent 角色、成员管理、访问模式
+- [函数](functions.md) — 可复用 JS 逻辑单元：Playground、Test Cases、Examples
 - [组件](components.md) — 工具结果可视化渲染器：创建、编写 JSX、关联工具、Tailwind CSS 支持
 - [组件测试](testing.md) — 三层测试模型、适用场景与最佳实践
 - [嵌入式 Widget](embed-widget.md) — 将 Agent 聊天嵌入第三方网站：Token 管理、配置选项、API 参考
