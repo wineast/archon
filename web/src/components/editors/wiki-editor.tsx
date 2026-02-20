@@ -138,9 +138,9 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
           className="flex flex-col flex-1 min-h-0"
         >
           <label className="shrink-0 mx-6 text-xs font-medium text-muted-foreground">Content</label>
-          <TabsList className="shrink-0 mx-6">
-            <TabsTrigger value="edit">Edit</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
+          <TabsList className="h-7 shrink-0 mx-6">
+            <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
+            <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
           </TabsList>
           <TabsContent value="edit" className="flex-1 min-h-0 overflow-hidden px-6 pb-4">
             <MdEditor

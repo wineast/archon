@@ -86,7 +86,7 @@ export function ChatConfigDetail({
         <div className="space-y-4 p-4">
           {/* Title */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Title</label>
+            <label className="text-xs font-medium text-muted-foreground">Title</label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -96,7 +96,7 @@ export function ChatConfigDetail({
 
           {/* Welcome Title */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Welcome Title</label>
+            <label className="text-xs font-medium text-muted-foreground">Welcome Title</label>
             <Input
               value={welcomeTitle}
               onChange={(e) => setWelcomeTitle(e.target.value)}
@@ -106,7 +106,7 @@ export function ChatConfigDetail({
 
           {/* Welcome Icon */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Welcome Icon</label>
+            <label className="text-xs font-medium text-muted-foreground">Welcome Icon</label>
             <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
@@ -144,7 +144,7 @@ export function ChatConfigDetail({
 
           {/* Quick Actions */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Quick Actions</label>
+            <label className="text-xs font-medium text-muted-foreground">Quick Actions</label>
             <p className="text-muted-foreground text-xs">Click to send directly</p>
             <div className="space-y-2">
               {quickActions.map((action, index) => (
@@ -183,7 +183,7 @@ export function ChatConfigDetail({
 
           {/* Input Placeholder */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Input Placeholder</label>
+            <label className="text-xs font-medium text-muted-foreground">Input Placeholder</label>
             <Input
               value={placeholder}
               onChange={(e) => setPlaceholder(e.target.value)}
@@ -193,7 +193,7 @@ export function ChatConfigDetail({
 
           {/* Suggestions */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Suggestion Questions</label>
+            <label className="text-xs font-medium text-muted-foreground">Suggestion Questions</label>
             <p className="text-muted-foreground text-xs">Click to fill input</p>
             <div className="space-y-2">
               {suggestions.map((suggestion, index) => (
