@@ -1,6 +1,14 @@
 import { z } from "zod";
 import type { SchemaProperty } from "./types";
 
+/** Recursively sort object keys for order-independent deep comparison. */
+function stableStringify(val: unknown): string {
+  if (val === null || typeof val !== "object") return JSON.stringify(val);
+  if (Array.isArray(val)) return `[${val.map(stableStringify).join(",")}]`;
+  const sorted = Object.keys(val as Record<string, unknown>).sort();
+  return `{${sorted.map((k) => `${JSON.stringify(k)}:${stableStringify((val as Record<string, unknown>)[k])}`).join(",")}}`;
+}
+
 export interface BuildSchemaOptions {
   /** Datasets by UUID: id → resolved data. */
   datasetsById?: Record<string, unknown>;
@@ -60,7 +68,7 @@ function buildParamSchema(
         if (param.maxItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).max(param.maxItems);
         if (param.uniqueItems) {
           schema = (schema as z.ZodArray<z.ZodTypeAny>).refine(
-            (arr) => new Set(arr.map((v) => JSON.stringify(v))).size === arr.length,
+            (arr) => new Set(arr.map(stableStringify)).size === arr.length,
             { message: "Array items must be unique" }
           );
         }

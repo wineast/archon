@@ -509,6 +509,71 @@ describe("schema-builder", () => {
       });
     });
 
+    describe("uniqueItems", () => {
+      it("rejects duplicate primitives", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "array", uniqueItems: true, items: makeParam({ type: "number" }) }),
+        ]);
+        expect(() => schema.parse({ field: [1, 2, 3] })).not.toThrow();
+        expect(() => schema.parse({ field: [1, 2, 1] })).toThrow();
+      });
+
+      it("rejects duplicate objects regardless of key order", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "array",
+            uniqueItems: true,
+            items: makeParam({
+              type: "object",
+              properties: [
+                makeParam({ id: "a", name: "a", type: "number" }),
+                makeParam({ id: "b", name: "b", type: "number" }),
+              ],
+            }),
+          }),
+        ]);
+        // Same keys, different insertion order → should be detected as duplicate
+        expect(() =>
+          schema.parse({ field: [{ a: 1, b: 2 }, { b: 2, a: 1 }] })
+        ).toThrow();
+      });
+
+      it("accepts distinct objects", () => {
+        const schema = buildInputSchema([
+          makeParam({
+            type: "array",
+            uniqueItems: true,
+            items: makeParam({
+              type: "object",
+              properties: [
+                makeParam({ id: "a", name: "a", type: "number" }),
+                makeParam({ id: "b", name: "b", type: "number" }),
+              ],
+            }),
+          }),
+        ]);
+        expect(() =>
+          schema.parse({ field: [{ a: 1, b: 2 }, { a: 1, b: 3 }] })
+        ).not.toThrow();
+      });
+
+      it("handles nested objects", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "array", uniqueItems: true }),
+        ]);
+        expect(() =>
+          schema.parse({ field: [{ x: { b: 2, a: 1 } }, { x: { a: 1, b: 2 } }] })
+        ).toThrow();
+      });
+
+      it("allows duplicates when uniqueItems is false", () => {
+        const schema = buildInputSchema([
+          makeParam({ type: "array", items: makeParam({ type: "number" }) }),
+        ]);
+        expect(() => schema.parse({ field: [1, 1, 1] })).not.toThrow();
+      });
+    });
+
     describe("description", () => {
       it("applies description to the schema field", () => {
         const schema = buildInputSchema([

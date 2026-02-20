@@ -14,7 +14,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import type { SchemaPropertyType } from "@/lib/schemas/types";
 import type { SchemaRow } from "@/db/schema";
-import { BracesIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { BracesIcon, PlusIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import {
   Controller,
@@ -506,6 +506,42 @@ function DefaultValueToggleButton({
   );
 }
 
+/** Constraint fields per type — used to detect "has any constraint". */
+const CONSTRAINT_KEYS: Record<string, string[]> = {
+  string: ["minLength", "maxLength", "pattern", "format"],
+  number: ["integer", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf"],
+  array: ["minItems", "maxItems", "uniqueItems"],
+};
+
+/** Only re-renders when constraint-related fields change (for icon highlight). */
+function ConstraintsToggleButton({
+  fieldPath,
+  type,
+  onClick,
+}: {
+  fieldPath: string;
+  type: SchemaPropertyType;
+  onClick: () => void;
+}) {
+  const { control } = useFormContext();
+  const keys = CONSTRAINT_KEYS[type] ?? [];
+  const watched = useWatch({
+    control,
+    name: keys.map((k) => `${fieldPath}.${k}`),
+  });
+  const hasConstraints = (watched as unknown[]).some((v) => v != null && v !== false);
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      className={`size-8 p-0 ${hasConstraints ? "text-foreground" : "text-muted-foreground/50"}`}
+    >
+      <SlidersHorizontalIcon className="size-3.5" />
+    </Button>
+  );
+}
+
 /** Type-specific default value editor — watches its own fields. */
 function DefaultValueEditor({
   type,
@@ -746,6 +782,12 @@ export function ParameterRow({
   const [showDefault, setShowDefault] = useState(
     () => getValues(`${fieldPath}.defaultValue`) != null
   );
+  // Read initial constraints once to set initial expand state
+  const [showConstraints, setShowConstraints] = useState(() => {
+    const keys = CONSTRAINT_KEYS[type] ?? [];
+    const values = getValues(fieldPath) as Record<string, unknown> | undefined;
+    return keys.some((k) => values?.[k] != null && values[k] !== false);
+  });
 
   const hasSchemas = schemas.length > 0;
 
@@ -812,6 +854,13 @@ export function ParameterRow({
           <DefaultValueToggleButton
             fieldPath={fieldPath}
             onClick={() => setShowDefault((v) => !v)}
+          />
+        )}
+        {(isString || isNumber || isArray) && (
+          <ConstraintsToggleButton
+            fieldPath={fieldPath}
+            type={type}
+            onClick={() => setShowConstraints((v) => !v)}
           />
         )}
         <div className="flex items-center gap-1">
@@ -963,7 +1012,7 @@ export function ParameterRow({
       )}
 
       {/* String constraints */}
-      {isString && (
+      {showConstraints && isString && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0 flex-wrap">
           <span className="text-xs text-muted-foreground shrink-0">minLength</span>
           <Input
@@ -1014,7 +1063,7 @@ export function ParameterRow({
       )}
 
       {/* Number constraints */}
-      {isNumber && (
+      {showConstraints && isNumber && (
         <div className="flex items-center gap-2 pl-[128px] min-w-0 flex-wrap">
           <Controller
             name={`${fieldPath}.integer`}
@@ -1145,7 +1194,7 @@ export function ParameterRow({
               )}
             />
           </div>
-          <div className="flex items-center gap-2 pl-[128px] min-w-0">
+          {showConstraints && <div className="flex items-center gap-2 pl-[128px] min-w-0">
             <span className="text-xs text-muted-foreground shrink-0">minItems</span>
             <Input
               className="h-8 w-[80px] text-xs font-mono"
@@ -1174,7 +1223,7 @@ export function ParameterRow({
               )}
             />
             <span className="text-xs text-muted-foreground shrink-0">uniqueItems</span>
-          </div>
+          </div>}
         </>
       )}
 
