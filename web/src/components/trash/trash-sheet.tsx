@@ -106,7 +106,7 @@ export function TrashSheet({ agentId, open, onOpenChange }: TrashSheetProps) {
             <SheetDescription>已删除的资源，可恢复或永久删除</SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="min-h-0 flex-1 px-4">
+          <ScrollArea className="min-h-0 flex-1 px-4 [&_[data-slot=scroll-area-viewport]>div]:!block">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Spinner className="size-5" />

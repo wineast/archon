@@ -63,7 +63,7 @@ export function DatasetDetail({
 
   return (
     <div className="flex h-full flex-col">
-      <ScrollArea className="flex-1 min-h-0 overflow-hidden">
+      <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="p-4">
           <DatasetForm
             key={dataset.id}

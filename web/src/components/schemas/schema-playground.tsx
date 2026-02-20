@@ -77,7 +77,7 @@ export function SchemaPlayground({ schemaId }: SchemaPlaygroundProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="space-y-3 p-4">
           <div>
             <div className="flex items-center justify-between">

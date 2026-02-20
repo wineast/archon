@@ -82,7 +82,7 @@ export function SchemaZodDialog({
         <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle>Zod Schema</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <CodeBlockContent code={zodCode} language="typescript" />
         </ScrollArea>
         <div className="flex items-center gap-2 border-t px-4 py-2">

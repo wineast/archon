@@ -75,7 +75,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
 
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
         {/* Form body */}
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 min-w-0 overflow-hidden">
             <ToolForm
               tool={{

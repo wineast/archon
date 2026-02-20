@@ -63,7 +63,7 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
 
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
         {/* Form body */}
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 min-w-0 overflow-hidden">
             <ComponentForm
               component={{
