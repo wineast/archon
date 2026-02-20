@@ -10,6 +10,7 @@ import {
   ArrowLeftIcon,
   BarChart3Icon,
   BookOpenIcon,
+  BrainIcon,
   BracesIcon,
   CodeIcon,
   DatabaseIcon,
@@ -40,6 +41,7 @@ import { ModelConfigPanel } from "@/components/model-config/model-config-panel";
 import { ComponentsPanel } from "@/components/components/components-panel";
 import { MembersPanel } from "@/components/members/members-panel";
 import { OntologyPanel } from "@/components/ontology/ontology-panel";
+import { MemoryPanel } from "@/components/memory/memory-panel";
 import { UsagePanel } from "@/components/usage/usage-panel";
 import { SessionsPanel } from "@/components/sessions/sessions-panel";
 import { VersionsSidebar } from "@/components/versions/versions-sidebar";
@@ -79,6 +81,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "wiki", label: "Wiki", icon: BookOpenIcon },
   { value: "datasets", label: "Datasets", icon: DatabaseIcon },
   { value: "ontology", label: "Ontology", icon: NetworkIcon },
+  { value: "memory", label: "Memory", icon: BrainIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
   { value: "files", label: "Files", icon: FileIcon },
   { value: "sessions", label: "Sessions", icon: MessageSquareIcon },
@@ -237,6 +240,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return <DatasetsPanel agentId={agent.id} />;
       case "ontology":
         return <OntologyPanel agentId={agent.id} />;
+      case "memory":
+        return <MemoryPanel agentId={agent.id} />;
       case "functions":
         return <FunctionsPanel agentId={agent.id} />;
       case "files":
