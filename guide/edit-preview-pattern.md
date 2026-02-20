@@ -25,6 +25,20 @@
 
 ---
 
+## 小尺寸样式标准
+
+表单内嵌的 default variant Tabs 统一使用小尺寸样式（以 `dataset-form.tsx` 为基准）：
+
+| 组件 | className | 说明 |
+|------|-----------|------|
+| `Tabs` | `className="mt-1"` | 与上方 label 的间距 |
+| `TabsList` | `className="h-7"` | 高度 28px（默认 h-9 = 36px） |
+| `TabsTrigger` | `className="text-xs"` | 字号 12px（默认 text-sm = 14px） |
+
+> **注意**：`variant="line"` 的导航级 Tabs（如 tool-detail、function-detail、component-detail、schema-detail 外层）不适用此规则，保持默认尺寸。
+
+---
+
 ## 标准实现模板
 
 ```tsx
@@ -38,11 +52,11 @@ function MyEditor() {
     <Tabs
       value={activeTab}
       onValueChange={(v) => setActiveTab(v as "edit" | "preview")}
-      className="flex flex-col flex-1 min-h-0"
+      className="mt-1 flex flex-col flex-1 min-h-0"
     >
-      <TabsList>
-        <TabsTrigger value="edit">Edit</TabsTrigger>
-        <TabsTrigger value="preview">Preview</TabsTrigger>
+      <TabsList className="h-7">
+        <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
+        <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
       </TabsList>
 
       <TabsContent value="edit" className="flex-1 min-h-0 overflow-hidden">
@@ -92,9 +106,9 @@ const handleTabChange = (value: string) => {
   <TabsContent value="system">
     {/* 内层 Tabs —— 独立实例，不冲突 */}
     <Tabs value={systemView} onValueChange={setSystemView}>
-      <TabsList>
-        <TabsTrigger value="rendered">Rendered</TabsTrigger>
-        <TabsTrigger value="template">Template</TabsTrigger>
+      <TabsList className="h-7">
+        <TabsTrigger value="rendered" className="text-xs">Rendered</TabsTrigger>
+        <TabsTrigger value="template" className="text-xs">Template</TabsTrigger>
       </TabsList>
       <TabsContent value="rendered">...</TabsContent>
       <TabsContent value="template">...</TabsContent>

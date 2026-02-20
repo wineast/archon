@@ -198,8 +198,8 @@ export function ModelConfigDetail({
               systemPrompt={systemPrompt}
               onApply={setSystemPrompt}
             />
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1.5">
-              <TabsList className="h-8">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
+              <TabsList className="h-7">
                 <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
                 <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
               </TabsList>
