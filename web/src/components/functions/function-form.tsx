@@ -9,6 +9,7 @@ import {
 } from "react-hook-form";
 import deepEqual from "fast-deep-equal";
 import { Input } from "@/components/ui/input";
+import { KeyField } from "@/components/ui/key-field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -173,16 +174,7 @@ export function FunctionForm({
   return (
     <FormProvider {...form}>
       <div className="space-y-3">
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            Key
-          </label>
-          <Input
-            className="mt-1 h-8 text-sm font-mono bg-muted"
-            value={functionKey}
-            readOnly
-          />
-        </div>
+        <KeyField value={functionKey} />
         <div>
           <label className="text-xs font-medium text-muted-foreground">
             Name

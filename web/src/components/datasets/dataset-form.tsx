@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { KeyField } from "@/components/ui/key-field";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JsonEditor } from "@/components/editors/json-editor";
@@ -175,14 +176,7 @@ export function DatasetForm({
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">Key</label>
-        <Input
-          className="mt-1 h-8 text-sm font-mono bg-muted"
-          value={datasetKey}
-          readOnly
-        />
-      </div>
+      <KeyField value={datasetKey} />
       <div>
         <label className="text-xs font-medium text-muted-foreground">
           Name

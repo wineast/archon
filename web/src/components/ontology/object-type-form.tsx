@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { KeyField } from "@/components/ui/key-field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -120,16 +121,7 @@ export function ObjectTypeForm({
 
   return (
     <div className="space-y-4">
-      {/* Key (read-only) */}
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">Key</label>
-        <Input
-          className="mt-1 h-8 text-sm font-mono"
-          value={values.key}
-          readOnly
-          disabled
-        />
-      </div>
+      <KeyField value={values.key} />
 
       {/* Name */}
       <div>
