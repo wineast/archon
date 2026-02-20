@@ -18,6 +18,12 @@ export interface AssertionResult {
   message: string;
 }
 
+export interface AssertionFailConfig {
+  judgeOnFail?: boolean;      // 案例级断言失败时仍执行 Judge（默认 false）
+  judgeTurnOnFail?: boolean;   // 多轮单轮断言失败时仍执行该轮 Judge（默认 false）
+  stopOnTurnFail?: boolean;   // 多轮单轮断言失败时停止后续轮（默认 false）
+}
+
 export type EvalCaseMode = "single" | "injected" | "sequential";
 
 export interface EvalTurn {
@@ -52,6 +58,7 @@ export interface EvalCase {
   assertions: Assertion[];
   expectedOutput: string;
   tags?: string[];
+  assertionFailConfig?: AssertionFailConfig;
 }
 
 export interface Dimension {
@@ -113,6 +120,7 @@ export function toEvalCase(row: EvalCaseRow): EvalCase {
     assertions: row.assertions,
     expectedOutput: row.expectedOutput ?? "",
     tags: row.tags,
+    assertionFailConfig: row.assertionFailConfig ?? undefined,
   };
 }
 

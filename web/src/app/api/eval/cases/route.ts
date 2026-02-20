@@ -42,6 +42,7 @@ export async function POST(req: Request) {
       turns: body.turns ?? [],
       expectedOutput: body.expectedOutput ?? null,
       assertions: body.assertions ?? [],
+      assertionFailConfig: body.assertionFailConfig ?? null,
     })
     .returning();
 

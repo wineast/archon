@@ -119,6 +119,7 @@ export async function POST(
 
     const mode = evalCase.mode ?? "single";
     const turns = evalCase.turns ?? [];
+    const { judgeOnFail = false, judgeTurnOnFail = false, stopOnTurnFail = false } = evalCase.assertionFailConfig ?? {};
 
     // ── Execute based on mode ──
     const chatMessages: ChatMessage[] = [];
@@ -231,8 +232,11 @@ export async function POST(
             });
           }
 
-          // Per-turn judge (skip if per-turn assertions failed)
-          if (turn.judge && perTurnAssertionsPassed && dimensions.length > 0) {
+          // Stop subsequent turns if configured
+          if (!perTurnAssertionsPassed && stopOnTurnFail) break;
+
+          // Per-turn judge (skip if per-turn assertions failed, unless configured otherwise)
+          if (turn.judge && (perTurnAssertionsPassed || judgeTurnOnFail) && dimensions.length > 0) {
             const conversationLog = chatMessages
               .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.content}`)
               .join("\n");
@@ -282,9 +286,9 @@ export async function POST(
     const assertionResults = runAllAssertions(evalCase.assertions, chatResponse);
     const allAssertionsPassed = assertionResults.every((r) => r.passed);
 
-    // Case-level judge (only if assertions pass)
+    // Case-level judge (only if assertions pass, unless configured otherwise)
     let judgeResult = null;
-    if (allAssertionsPassed && dimensions.length > 0) {
+    if ((allAssertionsPassed || judgeOnFail) && dimensions.length > 0) {
       const conversationLog = chatMessages
         .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.content}`)
         .join("\n");

@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import type { SchemaProperty } from "@/lib/schemas/types";
-import type { Assertion, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
+import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
 
 /* ─────────── Org Role Constants ─────────── */
 
@@ -559,6 +559,7 @@ export const evalCases = pgTable(
     expectedOutput: text("expected_output"),
     assertions: jsonb("assertions").$type<Assertion[]>().notNull().default([]),
     tags: text("tags").array().notNull().default([]),
+    assertionFailConfig: jsonb("assertion_fail_config").$type<AssertionFailConfig>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
