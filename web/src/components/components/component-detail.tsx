@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ComponentExamplesPanel } from "./component-examples-panel";
 import { ComponentForm, type ComponentFormHandle } from "./component-form";
 import { ComponentPlayground } from "./component-playground";
 import { ComponentTestCasesPanel } from "./component-test-cases-panel";
@@ -57,6 +58,7 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
     <Tabs defaultValue="edit" className="flex h-full flex-col">
       <TabsList variant="line" className="shrink-0 px-4 pt-1">
         <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="examples">Examples</TabsTrigger>
         <TabsTrigger value="playground">Playground</TabsTrigger>
         <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
       </TabsList>
@@ -136,6 +138,15 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
           title="Delete Component"
           description={`Are you sure you want to delete "${component.name}"? This action cannot be undone.`}
           onConfirm={handleDelete}
+        />
+      </TabsContent>
+
+      <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">
+        <ComponentExamplesPanel
+          componentId={component.id}
+          componentSource={component.componentSource}
+          componentKey={component.key}
+          allComponents={allComponents}
         />
       </TabsContent>
 

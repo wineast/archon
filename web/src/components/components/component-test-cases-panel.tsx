@@ -152,9 +152,10 @@ export function ComponentTestCasesPanel({
     async (
       caseId: string,
       data: {
-        name: string;
-        tool: { name: string; input: unknown; output: unknown };
-        tags: string[];
+        name?: string;
+        tool?: { name: string; input: unknown; output: unknown };
+        tags?: string[];
+        showAsExample?: boolean;
       }
     ) => {
       await updateComponentTestCase(componentId, caseId, data, mutateCases);
@@ -337,9 +338,9 @@ export function ComponentTestCasesPanel({
 
       {/* Main scroll area */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-3 pt-3">
           {/* Test Cases */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             {filteredCases.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 {testCases.length === 0

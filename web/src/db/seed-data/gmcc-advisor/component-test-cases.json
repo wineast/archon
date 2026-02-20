@@ -1,0 +1,105 @@
+{
+  "pricing-result": [
+    {
+      "name": "Single category pricing",
+      "tool": {
+        "name": "pricing_universe",
+        "input": { "ficoScore": 750, "state": "CA" },
+        "output": {
+          "success": true,
+          "productName": "Universe",
+          "options": [
+            {
+              "category": "30yr Fixed",
+              "baseRate": 6.5,
+              "finalRate": 6.5,
+              "basePrice": 100.25,
+              "finalPrice": 100.25,
+              "adjustments": []
+            },
+            {
+              "category": "30yr Fixed",
+              "baseRate": 6.625,
+              "finalRate": 6.625,
+              "basePrice": 100.75,
+              "finalPrice": 100.75,
+              "adjustments": []
+            },
+            {
+              "category": "30yr Fixed",
+              "baseRate": 6.75,
+              "finalRate": 6.75,
+              "basePrice": 101.0,
+              "finalPrice": 101.0,
+              "adjustments": []
+            }
+          ],
+          "rateSheets": [],
+          "skippedAdjustments": []
+        }
+      },
+      "tags": ["pricing", "basic"],
+      "showAsExample": true
+    },
+    {
+      "name": "Multi-category with adjustments",
+      "tool": {
+        "name": "pricing_universe",
+        "input": { "ficoScore": 720, "state": "NY" },
+        "output": {
+          "success": true,
+          "productName": "Universe",
+          "options": [
+            {
+              "category": "30yr Fixed",
+              "baseRate": 6.5,
+              "finalRate": 6.625,
+              "basePrice": 99.5,
+              "finalPrice": 99.25,
+              "adjustments": [
+                { "name": "FICO < 740", "rateAdj": 0.125, "priceAdj": -0.25 }
+              ]
+            },
+            {
+              "category": "30yr Fixed",
+              "baseRate": 6.75,
+              "finalRate": 6.875,
+              "basePrice": 100.5,
+              "finalPrice": 100.25,
+              "adjustments": [
+                { "name": "FICO < 740", "rateAdj": 0.125, "priceAdj": -0.25 }
+              ]
+            },
+            {
+              "category": "15yr Fixed",
+              "baseRate": 6.0,
+              "finalRate": 6.125,
+              "basePrice": 100.0,
+              "finalPrice": 99.75,
+              "adjustments": [
+                { "name": "FICO < 740", "rateAdj": 0.125, "priceAdj": -0.25 }
+              ]
+            }
+          ],
+          "rateSheets": [],
+          "skippedAdjustments": []
+        }
+      },
+      "tags": ["pricing", "adjustments"],
+      "showAsExample": true
+    },
+    {
+      "name": "Error response",
+      "tool": {
+        "name": "pricing_universe",
+        "input": { "ficoScore": 400, "state": "XX" },
+        "output": {
+          "success": false,
+          "error": "FICO score below minimum threshold (500)"
+        }
+      },
+      "tags": ["pricing", "error"],
+      "showAsExample": false
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { join } from "path";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { eq } from "drizzle-orm";
-import { components } from "../schema";
+import { components, componentTestCases } from "../schema";
 import { readDirSafe, logSection, log } from "../seed-utils";
 import { compileCssForComponent } from "@/lib/components/compile-css";
 import type { Seeder } from "./types";
@@ -55,6 +55,55 @@ export const seedComponents: Seeder = {
       .where(eq(components.agentId, ctx.agentId));
     for (const c of allComponentRows) {
       ctx.componentKeyToId[c.key] = c.id;
+    }
+
+    // ── Component test cases ──
+    const testCasesPath = join(ctx.agentDir, "component-test-cases.json");
+    if (existsSync(testCasesPath)) {
+      logSection("Seeding component test cases");
+      try {
+        const testCasesSeed = JSON.parse(
+          readFileSync(testCasesPath, "utf-8")
+        ) as Record<
+          string,
+          Array<{
+            name: string;
+            tool: { name: string; input: unknown; output: unknown };
+            tags?: string[];
+            showAsExample?: boolean;
+          }>
+        >;
+
+        let total = 0;
+        for (const [compKey, cases] of Object.entries(testCasesSeed)) {
+          const compId = ctx.componentKeyToId[compKey];
+          if (!compId) {
+            log("warn", `component "${compKey}" not found, skipping test cases`);
+            continue;
+          }
+
+          await ctx.db
+            .delete(componentTestCases)
+            .where(eq(componentTestCases.componentId, compId));
+
+          if (cases.length > 0) {
+            await ctx.db.insert(componentTestCases).values(
+              cases.map((tc) => ({
+                componentId: compId,
+                name: tc.name,
+                tool: tc.tool,
+                tags: tc.tags ?? [],
+                showAsExample: tc.showAsExample ?? false,
+              }))
+            );
+          }
+          total += cases.length;
+          log("info", `${compKey}: ${cases.length} test cases`);
+        }
+        log("ok", `${total} component test cases`);
+      } catch (e) {
+        log("warn", `seeding component test cases: ${e}`);
+      }
     }
   },
 };
