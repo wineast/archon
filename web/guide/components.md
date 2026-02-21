@@ -44,6 +44,8 @@
 
 描述组件在 **Component 场景**下接收的自定义数据结构（JSON Schema 7 格式）。
 
+两个 Schema 的根类型必须为 object，详见 [Schema 编辑指南](schema.md#根类型约束)。
+
 两个 Schema 的作用：
 - **Playground**：根据当前选择的场景，使用对应的 Schema 验证数据
 - **Test Cases**：运行测试时按测试用例的场景自动校验数据并显示 Schema 告警

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { tools } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { logAudit } from "@/lib/audit/log";
 
 export async function GET(req: Request) {
@@ -31,6 +32,14 @@ export async function POST(req: Request) {
 
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
+
+  for (const [field, label] of [
+    ["parametersSchema", "parametersSchema"],
+    ["returnParametersSchema", "returnParametersSchema"],
+  ] as const) {
+    const err = validateObjectSchema(body[field], label);
+    if (err) return NextResponse.json({ error: err }, { status: 400 });
+  }
 
   const [row] = await db
     .insert(tools)

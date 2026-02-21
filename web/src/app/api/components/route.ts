@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { components } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { compileCssForComponent } from "@/lib/components/compile-css";
 import { logAudit } from "@/lib/audit/log";
 
@@ -32,6 +33,14 @@ export async function POST(req: Request) {
 
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
+
+  for (const [field, label] of [
+    ["toolInputSchema", "toolInputSchema"],
+    ["componentInputSchema", "componentInputSchema"],
+  ] as const) {
+    const err = validateObjectSchema(body[field], label);
+    if (err) return NextResponse.json({ error: err }, { status: 400 });
+  }
 
   const componentSource = body.componentSource ?? "";
   const generatedCss = await compileCssForComponent(componentSource);

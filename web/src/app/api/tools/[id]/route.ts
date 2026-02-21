@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { tools } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { logAudit } from "@/lib/audit/log";
 
 export async function PATCH(
@@ -23,6 +24,14 @@ export async function PATCH(
 
   const ctx = await requireAgentRole(existing.agentId!, "editor");
   if (ctx instanceof NextResponse) return ctx;
+
+  for (const [field, label] of [
+    ["parametersSchema", "parametersSchema"],
+    ["returnParametersSchema", "returnParametersSchema"],
+  ] as const) {
+    const err = validateObjectSchema(body[field], label);
+    if (err) return NextResponse.json({ error: err }, { status: 400 });
+  }
 
   const [updated] = await db
     .update(tools)

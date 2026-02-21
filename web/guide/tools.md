@@ -21,8 +21,8 @@
 | key | text | 工具唯一标识（同 Agent 内唯一） |
 | name | text | 工具名称 |
 | description | text | 工具描述（供 LLM 理解何时调用） |
-| parametersSchema | jsonb | 输入参数 Schema（内联 JsonSchema7 或 `$ref`） |
-| returnParametersSchema | jsonb | 返回值 Schema（内联 JsonSchema7 或 `$ref`） |
+| parametersSchema | jsonb | 输入参数 Schema（内联 JsonSchema7 或 `$ref`，根类型必须为 object） |
+| returnParametersSchema | jsonb | 返回值 Schema（内联 JsonSchema7 或 `$ref`，根类型必须为 object） |
 | handler | text | JavaScript handler 代码 |
 | url | text | 外部 API 地址（与 handler 二选一） |
 | componentId | uuid | 关联的 UI 组件 |

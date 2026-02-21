@@ -29,6 +29,22 @@ Schema 使用标准 JSON Schema 7 格式：
 
 ---
 
+## 根类型约束
+
+工具、函数、组件的所有 Schema 字段**必须是 object 根类型**。以下写法均被视为合法的 object 根 Schema：
+
+- `{ "type": "object", "properties": { ... } }` — 显式 object 类型
+- `{ "properties": { ... } }` — 隐式 object（有 properties 即为 object）
+- `{ "allOf": [...] }` / `{ "anyOf": [...] }` / `{ "oneOf": [...] }` — 组合类型
+- `{ "$ref": "#/$defs/xxx" }` — 引用
+
+以下写法将被前端编辑器和后端 API 拒绝：
+
+- `{ "type": "string" }` — 字符串类型不能作为根 Schema
+- `{ "type": "array", "items": { ... } }` — 数组类型不能作为根 Schema
+
+---
+
 ## 模板语法
 
 在 enum 中使用 `{{ }}` 引用数据集变量，运行时自动展开为枚举值：
