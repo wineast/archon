@@ -27,7 +27,7 @@ export function useSessions(agentId?: string, showAll?: boolean) {
   };
 }
 
-export async function deleteSession(id: string, mutate: () => void) {
+export async function deleteSession(id: string, mutate: () => void, t?: (key: string) => string) {
   try {
     const res = await fetch(`/api/sessions/${id}`, { method: "DELETE" });
     if (!res.ok) throw new Error(await res.text());
@@ -35,7 +35,7 @@ export async function deleteSession(id: string, mutate: () => void) {
     return true;
   } catch (e) {
     console.error("deleteSession failed:", e);
-    toast.error("删除会话失败");
+    toast.error(t?.("deleteSessionFailed") ?? "删除会话失败");
     return false;
   }
 }

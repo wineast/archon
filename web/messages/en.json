@@ -1,0 +1,326 @@
+{
+  "common": {
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "reset": "Reset",
+    "create": "Create",
+    "edit": "Edit",
+    "or": "or",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "loading": "Loading...",
+    "noData": "No data",
+    "saveSuccess": "Saved successfully",
+    "saveFailed": "Failed to save",
+    "movedToTrash": "Moved to trash",
+    "restored": "Restored",
+    "permanentlyDeleted": "Permanently deleted",
+    "deleteFailed": "Failed to delete",
+    "restoreFailed": "Failed to restore",
+    "permanentDeleteFailed": "Failed to permanently delete",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "default": "Default"
+  },
+  "nav": {
+    "agents": "Agents",
+    "admin": "Admin",
+    "trash": "Trash",
+    "settings": "Settings"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Welcome back",
+      "description": "Sign in to your account",
+      "submit": "Sign in",
+      "google": "Sign in with Google",
+      "noAccount": "Don't have an account?",
+      "error": "Sign in failed"
+    },
+    "signUp": {
+      "title": "Create account",
+      "description": "Create a new account",
+      "submit": "Sign up",
+      "google": "Sign up with Google",
+      "hasAccount": "Already have an account?",
+      "link": "Sign in",
+      "error": "Sign up failed",
+      "googleError": "Google sign up failed"
+    },
+    "verify": {
+      "title": "Verify identity",
+      "emailTitle": "Verify email",
+      "description": "We've sent a verification code to {email}",
+      "button": "Verify",
+      "error": "Verification failed"
+    },
+    "code": {
+      "label": "Verification code",
+      "placeholder": "Enter 6-digit code"
+    },
+    "resend": {
+      "question": "Didn't receive the code?",
+      "button": "Resend",
+      "success": "Verification code resent",
+      "error": "Failed to send"
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "name@example.com"
+    },
+    "password": {
+      "label": "Password"
+    },
+    "googleError": "Google sign in failed"
+  },
+  "user": {
+    "settings": "Settings",
+    "logout": "Sign out"
+  },
+  "agent": {
+    "createNew": "New Agent",
+    "createFirst": "Create your first Agent",
+    "noAgents": "No agents yet",
+    "editAgent": "Edit Agent",
+    "newAgent": "New Agent",
+    "editDescription": "Edit Agent configuration",
+    "newDescription": "Create a new Agent",
+    "name": "Name",
+    "namePlaceholder": "My Agent",
+    "slug": "Slug",
+    "slugPlaceholder": "my-agent",
+    "slugHint": "URL path identifier, only lowercase letters, numbers and hyphens",
+    "description": "Description",
+    "descriptionPlaceholder": "What this Agent does...",
+    "icon": "Icon",
+    "settings": "Settings",
+    "createFailed": "Failed to create Agent",
+    "updateFailed": "Failed to update Agent",
+    "deleteFailed": "Failed to delete Agent",
+    "restoreFailed": "Failed to restore Agent"
+  },
+  "trash": {
+    "title": "Trash",
+    "description": "Deleted Agents that can be restored or permanently deleted",
+    "empty": "Trash is empty",
+    "restore": "Restore",
+    "permanentDelete": "Permanently delete",
+    "confirmMessage": "This action cannot be undone. All associated data will be removed.",
+    "cleared": "Trash emptied",
+    "clearFailed": "Failed to empty trash"
+  },
+  "chat": {
+    "clear": "Clear Chat",
+    "export": "Export Chat",
+    "import": "Import Chat",
+    "inspect": "Inspect",
+    "attachmentTooltip": "Add attachment",
+    "sessionNotFound": "Session does not exist or has not been saved",
+    "sessionAgentMismatch": "Session does not belong to the current Agent",
+    "sessionLoadError": "Failed to load session",
+    "exportFetchError": "Export failed: unable to fetch session data",
+    "importInvalidFormat": "Invalid chat export file",
+    "importError": "Import failed",
+    "importSuccess": "Session imported successfully",
+    "importFormatError": "Import failed: invalid file format",
+    "deleteSessionFailed": "Failed to delete session"
+  },
+  "build": {
+    "titleSuffix": "· Settings",
+    "disabledBadge": "Disabled",
+    "auditLog": "Audit Log",
+    "config": "Config",
+    "schemas": "Schemas",
+    "wiki": "Wiki",
+    "datasets": "Datasets",
+    "functions": "Functions",
+    "components": "Components",
+    "tools": "Tools",
+    "skills": "Skills",
+    "ontology": "Ontology",
+    "memory": "Memory",
+    "mcp": "MCP",
+    "files": "Files",
+    "sessions": "Sessions",
+    "evaluate": "Evaluate",
+    "modelConfig": "Model Config",
+    "embed": "Embed",
+    "usage": "Usage",
+    "runtime": "Runtime",
+    "members": "Members",
+    "newComponent": "New Component",
+    "noComponents": "No components yet",
+    "newDataset": "New Dataset",
+    "noDatasets": "No datasets yet",
+    "newFunction": "New Function",
+    "noFunctions": "No functions yet",
+    "newTool": "New Tool",
+    "noTools": "No tools yet",
+    "newSkill": "New Skill",
+    "noSkills": "No skills yet",
+    "disableSkills": "Disable Skills",
+    "newSchema": "New Schema",
+    "noSchemas": "No schemas yet",
+    "newMcpServer": "New MCP Server",
+    "noMcpServers": "No MCP servers yet",
+    "newModelConfig": "New Config",
+    "noModelConfigs": "No configs yet",
+    "newObjectType": "New Object Type",
+    "importFromFile": "Import from File",
+    "noObjectTypes": "No object types yet",
+    "newDocument": "New Document",
+    "noDocuments": "No documents yet",
+    "newVersion": "New Version",
+    "noVersions": "No versions",
+    "unpublished": "Unpublished",
+    "detail": "Detail",
+    "publish": "Publish",
+    "deleteVersion": "Delete Version",
+    "evalCases": "Cases",
+    "newCase": "New Case",
+    "noCases": "No cases yet",
+    "noMatchingCases": "No matching cases",
+    "judge": "Judge",
+    "newJudgeConfig": "New Judge Config",
+    "noJudgeConfigs": "No configs yet",
+    "results": "Results",
+    "benchmark": "Benchmark"
+  },
+  "admin": {
+    "title": "Admin",
+    "buildChatSettings": "Build Assistant Settings",
+    "model": "Model",
+    "temperature": "Temperature",
+    "usersList": "Users ({count})",
+    "superAdmin": "Super Admin",
+    "userRole": "User",
+    "removeAdmin": "Remove Admin",
+    "setAdmin": "Set as Admin"
+  },
+  "org": {
+    "settingsSuffix": "· Organization Settings",
+    "info": "General",
+    "members": "Members",
+    "apiKeys": "API Keys",
+    "credits": "Credits",
+    "usage": "Usage",
+    "name": "Name",
+    "slugLabel": "Slug",
+    "slugHint": "URL path identifier, only lowercase letters, numbers and hyphens"
+  },
+  "share": {
+    "preview": "Share Preview",
+    "notFound": "This share link does not exist or has expired",
+    "loadError": "Failed to load, please try again later",
+    "backHome": "Back to Home"
+  },
+  "embed": {
+    "invalidToken": "Invalid token",
+    "originNotAllowed": "Origin not allowed",
+    "loadFailed": "Failed to load chat",
+    "missingToken": "Missing token parameter"
+  },
+  "message": {
+    "prevBranch": "Previous branch",
+    "nextBranch": "Next branch",
+    "branchOf": "{current} of {total}"
+  },
+  "datasets": {
+    "createFailed": "Failed to create dataset",
+    "saveFailed": "Failed to save dataset",
+    "deleteFailed": "Failed to delete dataset"
+  },
+  "tools": {
+    "createFailed": "Failed to create tool",
+    "saveFailed": "Failed to save tool",
+    "deleteFailed": "Failed to delete tool"
+  },
+  "components": {
+    "createFailed": "Failed to create component",
+    "saveFailed": "Failed to save component",
+    "deleteFailed": "Failed to delete component"
+  },
+  "functions": {
+    "createFailed": "Failed to create function",
+    "saveFailed": "Failed to save function",
+    "deleteFailed": "Failed to delete function"
+  },
+  "mcpServers": {
+    "createFailed": "Failed to create MCP server",
+    "saveFailed": "Failed to save MCP server",
+    "deleteFailed": "Failed to delete MCP server"
+  },
+  "skills": {
+    "createFailed": "Failed to create skill",
+    "saveFailed": "Failed to save skill",
+    "deleteFailed": "Failed to delete skill",
+    "toggleFailed": "Failed to toggle skills feature"
+  },
+  "schemas": {
+    "createFailed": "Failed to create schema",
+    "saveFailed": "Failed to save schema",
+    "deleteFailed": "Failed to delete schema"
+  },
+  "modelConfigs": {
+    "createFailed": "Failed to create model config",
+    "saveFailed": "Failed to save model config",
+    "deleteFailed": "Failed to delete model config",
+    "activateFailed": "Failed to activate model config"
+  },
+  "eval": {
+    "createCaseFailed": "Failed to create case",
+    "saveCaseFailed": "Failed to save case",
+    "deleteCaseFailed": "Failed to delete case",
+    "createJudgeFailed": "Failed to create judge config",
+    "saveJudgeFailed": "Failed to save judge config",
+    "deleteJudgeFailed": "Failed to delete judge config",
+    "setDefaultJudgeFailed": "Failed to set default judge config",
+    "loadRunFailed": "Failed to load run detail",
+    "deleteRunFailed": "Failed to delete run"
+  },
+  "versions": {
+    "switchFailed": "Failed to switch version",
+    "publishFailed": "Failed to publish version",
+    "rollbackFailed": "Failed to rollback version",
+    "deleteFailed": "Failed to delete version"
+  },
+  "ontology": {
+    "createTypeFailed": "Failed to create object type",
+    "saveTypeFailed": "Failed to save object type",
+    "deleteTypeFailed": "Failed to delete object type",
+    "createRelationFailed": "Failed to create relation",
+    "saveRelationFailed": "Failed to save relation",
+    "deleteRelationFailed": "Failed to delete relation",
+    "createInstanceFailed": "Failed to create instance",
+    "saveInstanceFailed": "Failed to save instance",
+    "deleteInstanceFailed": "Failed to delete instance",
+    "importFailed": "Failed to batch import instances",
+    "importSuccess": "Imported {count} instance(s)",
+    "importSkipped": "Skipped (already exist): {names}",
+    "createLinkFailed": "Failed to create link",
+    "deleteLinkFailed": "Failed to delete link",
+    "generateCrudFailed": "Failed to generate CRUD tools"
+  },
+  "embedTokens": {
+    "createFailed": "Failed to create token",
+    "updateFailed": "Failed to update token",
+    "deleteFailed": "Failed to delete token"
+  },
+  "agentFiles": {
+    "deleteFailed": "Failed to delete file"
+  },
+  "chatConfig": {
+    "saveFailed": "Failed to save config"
+  },
+  "memoryConfig": {
+    "toggleFailed": "Failed to toggle memory feature",
+    "saveFailed": "Failed to save memory config",
+    "createFailed": "Failed to create memory",
+    "saveMemoryFailed": "Failed to save memory",
+    "deleteFailed": "Failed to delete memory"
+  }
+}

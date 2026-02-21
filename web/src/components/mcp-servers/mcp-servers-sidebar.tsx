@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +25,7 @@ export function McpServersSidebar({
   onCreate,
   onToggleMcp,
 }: McpServersSidebarProps) {
+  const t = useTranslations("build");
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
@@ -38,7 +40,7 @@ export function McpServersSidebar({
             variant="ghost"
             size="icon-xs"
             onClick={onCreate}
-            title="New MCP Server"
+            title={t("newMcpServer")}
           >
             <PlusIcon className="size-4" />
           </Button>
@@ -48,7 +50,7 @@ export function McpServersSidebar({
         <div className="p-1">
           {mcpServers.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No MCP servers yet
+              {t("noMcpServers")}
             </p>
           ) : (
             mcpServers.map((server) => (

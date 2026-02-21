@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -48,18 +49,19 @@ export function DatasetsSidebar({
   onSelect,
   onCreate,
 }: DatasetsSidebarProps) {
+  const t = useTranslations("build");
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Datasets</span>
+          <span className="text-sm font-semibold">{t("datasets")}</span>
           <GuideDialog title="数据集模块" content={datasetsGuide} />
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={onCreate}
-          title="New Dataset"
+          title={t("newDataset")}
         >
           <PlusIcon className="size-4" />
         </Button>
@@ -68,7 +70,7 @@ export function DatasetsSidebar({
         <div className="p-1">
           {datasets.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No datasets yet
+              {t("noDatasets")}
             </p>
           ) : (
             datasets.map((ds) => (

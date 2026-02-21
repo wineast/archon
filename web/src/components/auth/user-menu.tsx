@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { LogOutIcon, SettingsIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +16,7 @@ import { UserSettingsModal } from "@/components/user/user-settings-modal";
 import { useCurrentUser } from "@/lib/auth/hooks";
 
 export function UserMenu() {
+  const t = useTranslations("user");
   const { user } = useUser();
   const { signOut } = useClerk();
   const { user: currentUser } = useCurrentUser();
@@ -51,12 +53,12 @@ export function UserMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
             <SettingsIcon className="size-4" />
-            个人设置
+            {t("settings")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut({ redirectUrl: "/sign-in" })}>
             <LogOutIcon className="size-4" />
-            退出登录
+            {t("logout")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

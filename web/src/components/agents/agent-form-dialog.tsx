@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,8 @@ export function AgentFormDialog({
   mutate,
   orgId,
 }: AgentFormDialogProps) {
+  const t = useTranslations("agent");
+  const tc = useTranslations("common");
   const isEdit = !!agent;
 
   const [name, setName] = useState("");
@@ -115,10 +118,11 @@ export function AgentFormDialog({
           await updateAgent(
             agent.id,
             { name, slug, description, icon },
-            mutate
+            mutate,
+            t
           );
         } else {
-          await createAgent({ name, slug, description, icon, orgId }, mutate);
+          await createAgent({ name, slug, description, icon, orgId }, mutate, t);
         }
         onOpenChange(false);
       } finally {
@@ -132,60 +136,60 @@ export function AgentFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? "编辑 Agent" : "新建 Agent"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("editAgent") : t("newAgent")}</DialogTitle>
           <DialogDescription>
-            {isEdit ? "修改 Agent 的配置信息" : "创建一个新的 Agent"}
+            {isEdit ? t("editDescription") : t("newDescription")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="space-y-2">
-            <Label htmlFor="agent-name">名称</Label>
+            <Label htmlFor="agent-name">{t("name")}</Label>
             <Input
               id="agent-name"
               value={name}
               onChange={handleNameChange}
-              placeholder="我的 Agent"
+              placeholder={t("namePlaceholder")}
               autoFocus
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="agent-slug">Slug</Label>
+            <Label htmlFor="agent-slug">{t("slug")}</Label>
             <Input
               id="agent-slug"
               value={slug}
               onChange={handleSlugChange}
-              placeholder="my-agent"
+              placeholder={t("slugPlaceholder")}
             />
             <p className="text-xs text-muted-foreground">
-              URL 路径标识，仅支持小写字母、数字和连字符
+              {t("slugHint")}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="agent-desc">描述</Label>
+            <Label htmlFor="agent-desc">{t("description")}</Label>
             <Textarea
               id="agent-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="这个 Agent 的用途..."
+              placeholder={t("descriptionPlaceholder")}
               rows={3}
             />
           </div>
           <div className="space-y-2">
-            <Label>图标</Label>
+            <Label>{t("icon")}</Label>
             <IconPicker value={icon} onChange={setIcon} />
           </div>
           <DialogFooter>
             {isEdit && (
               <Button type="button" variant="outline" onClick={handleReset} disabled={busy}>
-                重置
+                {tc("reset")}
               </Button>
             )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
-              取消
+              {tc("cancel")}
             </Button>
             <Button type="submit" disabled={!name.trim() || busy}>
               {busy && <Spinner className="mr-2" />}
-              {isEdit ? "保存" : "创建"}
+              {isEdit ? tc("save") : tc("create")}
             </Button>
           </DialogFooter>
         </form>

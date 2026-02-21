@@ -74,6 +74,7 @@ import {
 } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { AgentRow } from "@/db/schema";
 import { useSessionParam } from "@/lib/session/use-session-param";
 
@@ -116,8 +117,9 @@ function AttachmentPreviewBar() {
 
 function AttachmentButton() {
   const { openFileDialog } = usePromptInputAttachments();
+  const t = useTranslations("chat");
   return (
-    <PromptInputButton onClick={openFileDialog} tooltip="添加附件">
+    <PromptInputButton onClick={openFileDialog} tooltip={t("attachmentTooltip")}>
       <PaperclipIcon className="size-4" />
     </PromptInputButton>
   );
@@ -136,6 +138,7 @@ function ChatInputSubmit({ input, isStreaming }: { input: string; isStreaming: b
 /* ─────────── Chat content ─────────── */
 
 function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string }) {
+  const t = useTranslations("chat");
   const [input, setInput] = useState("");
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
@@ -310,20 +313,20 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
         const res = await fetch(`/api/sessions/${urlSessionId}`);
         if (!res.ok) {
           setSessionParam(null, { replace: true });
-          toast.error("会话不存在或尚未保存");
+          toast.error(t("sessionNotFound"));
           return;
         }
         const session = await res.json();
         if (session.agentId && session.agentId !== agent.id) {
           setSessionParam(null, { replace: true });
-          toast.error("会话不属于当前 Agent");
+          toast.error(t("sessionAgentMismatch"));
           return;
         }
         // URL already has session param, just load messages (no URL push)
         await loadSessionMessages(urlSessionId);
       } catch {
         setSessionParam(null, { replace: true });
-        toast.error("会话加载失败");
+        toast.error(t("sessionLoadError"));
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -412,7 +415,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
         fetch(`/api/sessions/${activeSessionId}/messages`),
       ]);
       if (!sessionRes.ok || !msgsRes.ok) {
-        toast.error("导出失败：无法获取会话数据");
+        toast.error(t("exportFetchError"));
         return;
       }
       const session = await sessionRes.json();
@@ -464,7 +467,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
       const data = JSON.parse(text);
 
       if (data.version !== 1 || !data.session || !Array.isArray(data.messages)) {
-        toast.error("无效的聊天导出文件");
+        toast.error(t("importInvalidFormat"));
         return;
       }
 
@@ -476,7 +479,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || "导入失败");
+        toast.error(err.error || t("importError"));
         return;
       }
 
@@ -484,9 +487,9 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
       await loadSessionMessages(newId);
       mutateSessions();
       setSessionParam(newId);
-      toast.success("会话导入成功");
+      toast.success(t("importSuccess"));
     } catch {
-      toast.error("导入失败：文件格式错误");
+      toast.error(t("importFormatError"));
     }
   }, [agent.id, loadSessionMessages, mutateSessions, setSessionParam]);
 
@@ -548,24 +551,24 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
                   <>
                     <DropdownMenuItem onClick={handleNewChat}>
                       <Trash2Icon className="size-4" />
-                      Clear Chat
+                      {t("clear")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleExportChat}>
                       <DownloadIcon className="size-4" />
-                      Export Chat
+                      {t("export")}
                     </DropdownMenuItem>
                   </>
                 )}
                 <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                   <UploadIcon className="size-4" />
-                  Import Chat
+                  {t("import")}
                 </DropdownMenuItem>
                 {canEdit && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setInspectorOpen(true)}>
                       <SearchCodeIcon className="size-4" />
-                      Inspect
+                      {t("inspect")}
                     </DropdownMenuItem>
                   </>
                 )}

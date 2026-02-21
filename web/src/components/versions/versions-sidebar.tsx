@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   CheckCircleIcon,
   EllipsisVerticalIcon,
@@ -55,6 +56,7 @@ export function VersionsSidebar({
   onRollback,
   onDelete,
 }: VersionsSidebarProps) {
+  const t = useTranslations("build");
   const [deleteTarget, setDeleteTarget] = useState<VersionListItem | null>(
     null
   );
@@ -73,14 +75,14 @@ export function VersionsSidebar({
           <div className="flex items-center gap-1.5">
             <TagIcon className="size-3.5 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">
-              {latestVersion ? `v${latestVersion}` : "未发布"}
+              {latestVersion ? `v${latestVersion}` : t("unpublished")}
             </span>
           </div>
           <Button
             variant="ghost"
             size="icon-xs"
             onClick={onCreate}
-            title="New Version"
+            title={t("newVersion")}
           >
             <PlusIcon className="size-4" />
           </Button>
@@ -91,7 +93,7 @@ export function VersionsSidebar({
           <div className="p-1">
             {versions.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-                No versions
+                {t("noVersions")}
               </p>
             ) : (
               versions.map((v) => {
@@ -135,14 +137,14 @@ export function VersionsSidebar({
                       <DropdownMenuContent align="end" className="w-36">
                         <DropdownMenuItem onClick={() => onViewDetail(v.id)}>
                           <EyeIcon className="mr-2 size-3.5" />
-                          Detail
+                          {t("detail")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onPublish(v.id)}
                           disabled={isPublished}
                         >
                           <RocketIcon className="mr-2 size-3.5" />
-                          Publish
+                          {t("publish")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -151,7 +153,7 @@ export function VersionsSidebar({
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2Icon className="mr-2 size-3.5" />
-                          Delete
+                          {t("deleteVersion")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -169,7 +171,7 @@ export function VersionsSidebar({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Delete Version"
+        title={t("deleteVersion")}
         description={`Are you sure you want to delete v${deleteTarget?.version}? This action cannot be undone.`}
         onConfirm={handleConfirmDelete}
       />

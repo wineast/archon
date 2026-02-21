@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { UserMenu } from "@/components/auth/user-menu";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { PlusIcon, SettingsIcon, ShieldIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -19,6 +21,8 @@ import { useCurrentUser, useOrgRole } from "@/lib/auth/hooks";
 import { useOrgStore } from "@/stores/org-store";
 
 export default function AgentsPage() {
+  const t = useTranslations("agent");
+  const tn = useTranslations("nav");
   const { currentOrgId } = useOrgStore();
   const { orgs, mutate: mutateOrgs } = useOrgs();
   const { agents, isLoading, mutate } = useAgents(currentOrgId ?? undefined);
@@ -41,11 +45,13 @@ export default function AgentsPage() {
     setSheetOpen(true);
   }, []);
 
+  const tc = useTranslations("common");
+
   const handleDelete = useCallback(
     (agent: AgentWithRole) => {
-      deleteAgent(agent.id, mutate);
+      deleteAgent(agent.id, mutate, tc);
     },
-    [mutate]
+    [mutate, tc]
   );
 
   return (
@@ -53,7 +59,7 @@ export default function AgentsPage() {
       {/* Header */}
       <header className="flex h-14 shrink-0 items-center justify-between border-b px-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold">Agents</h1>
+          <h1 className="text-lg font-semibold">{tn("agents")}</h1>
           <OrgSwitcher onCreateOrg={() => setOrgDialogOpen(true)} />
           {currentOrg && canManage && (
             <Button size="sm" variant="ghost" asChild>
@@ -68,20 +74,21 @@ export default function AgentsPage() {
             <Link href="/admin">
               <Button size="sm" variant="outline">
                 <ShieldIcon className="size-4" />
-                管理后台
+                {tn("admin")}
               </Button>
             </Link>
           )}
           <Button size="sm" variant="outline" onClick={() => setTrashOpen(true)}>
             <Trash2Icon className="size-4" />
-            回收站
+            {tn("trash")}
           </Button>
           {currentOrgId && (
             <Button size="sm" onClick={handleCreate}>
               <PlusIcon className="size-4" />
-              新建 Agent
+              {t("createNew")}
             </Button>
           )}
+          <LocaleSwitcher />
           <UserMenu />
         </div>
       </header>
@@ -94,11 +101,11 @@ export default function AgentsPage() {
           </div>
         ) : agents.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-            <p className="text-muted-foreground">还没有 Agent</p>
+            <p className="text-muted-foreground">{t("noAgents")}</p>
             {currentOrgId && (
               <Button onClick={handleCreate}>
                 <PlusIcon className="size-4" />
-                创建第一个 Agent
+                {t("createFirst")}
               </Button>
             )}
           </div>

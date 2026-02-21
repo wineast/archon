@@ -48,7 +48,8 @@ export async function restoreResources(
   type: ResourceType,
   ids: string[],
   trashMutate: KeyedMutator<TrashData>,
-  globalMutate: ReturnType<typeof useSWRConfig>["mutate"]
+  globalMutate: ReturnType<typeof useSWRConfig>["mutate"],
+  t?: (key: string) => string
 ) {
   try {
     const res = await fetch(`/api/agents/${agentId}/trash`, {
@@ -64,11 +65,11 @@ export async function restoreResources(
       undefined,
       { revalidate: true }
     );
-    toast.success("已恢复");
+    toast.success(t?.("restored") ?? "已恢复");
     return true;
   } catch (e) {
     console.error("restoreResources failed:", e);
-    toast.error("恢复失败");
+    toast.error(t?.("restoreFailed") ?? "恢复失败");
     return false;
   }
 }
@@ -77,7 +78,8 @@ export async function permanentDeleteResources(
   agentId: string,
   type: ResourceType,
   ids: string[],
-  trashMutate: KeyedMutator<TrashData>
+  trashMutate: KeyedMutator<TrashData>,
+  t?: (key: string) => string
 ) {
   try {
     const res = await fetch(`/api/agents/${agentId}/trash`, {
@@ -87,18 +89,19 @@ export async function permanentDeleteResources(
     });
     if (!res.ok) throw new Error(await res.text());
     trashMutate();
-    toast.success("已永久删除");
+    toast.success(t?.("permanentlyDeleted") ?? "已永久删除");
     return true;
   } catch (e) {
     console.error("permanentDeleteResources failed:", e);
-    toast.error("永久删除失败");
+    toast.error(t?.("permanentDeleteFailed") ?? "永久删除失败");
     return false;
   }
 }
 
 export async function clearTrash(
   agentId: string,
-  trashMutate: KeyedMutator<TrashData>
+  trashMutate: KeyedMutator<TrashData>,
+  t?: (key: string) => string
 ) {
   try {
     const res = await fetch(`/api/agents/${agentId}/trash/all`, {
@@ -106,11 +109,11 @@ export async function clearTrash(
     });
     if (!res.ok) throw new Error(await res.text());
     trashMutate();
-    toast.success("回收站已清空");
+    toast.success(t?.("cleared") ?? "回收站已清空");
     return true;
   } catch (e) {
     console.error("clearTrash failed:", e);
-    toast.error("清空回收站失败");
+    toast.error(t?.("clearFailed") ?? "清空回收站失败");
     return false;
   }
 }

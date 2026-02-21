@@ -42,7 +42,8 @@ export function useTrashAgents() {
 
 export async function createAgent(
   data: { name: string; description?: string; icon?: string; slug?: string; orgId: string },
-  mutate: KeyedMutator<AgentWithRole[]>
+  mutate: KeyedMutator<AgentWithRole[]>,
+  t: (key: string) => string
 ) {
   try {
     const res = await fetch("/api/agents", {
@@ -55,7 +56,7 @@ export async function createAgent(
     return res.json();
   } catch (e) {
     console.error("createAgent failed:", e);
-    toast.error("创建 Agent 失败");
+    toast.error(t("createFailed"));
     return null;
   }
 }
@@ -63,7 +64,8 @@ export async function createAgent(
 export async function updateAgent(
   id: string,
   data: Record<string, unknown>,
-  mutate: KeyedMutator<AgentWithRole[]>
+  mutate: KeyedMutator<AgentWithRole[]>,
+  t: (key: string) => string
 ) {
   try {
     const res = await fetch(`/api/agents/${id}`, {
@@ -76,14 +78,15 @@ export async function updateAgent(
     return res.json();
   } catch (e) {
     console.error("updateAgent failed:", e);
-    toast.error("更新 Agent 失败");
+    toast.error(t("updateFailed"));
     return null;
   }
 }
 
 export async function deleteAgent(
   id: string,
-  mutate: KeyedMutator<AgentWithRole[]>
+  mutate: KeyedMutator<AgentWithRole[]>,
+  t?: (key: string) => string
 ) {
   try {
     const res = await fetch(`/api/agents/${id}`, {
@@ -91,11 +94,11 @@ export async function deleteAgent(
     });
     if (!res.ok) throw new Error(await res.text());
     mutate();
-    toast.success("已移至回收站");
+    toast.success(t?.("movedToTrash") ?? "已移至回收站");
     return true;
   } catch (e) {
     console.error("deleteAgent failed:", e);
-    toast.error("删除 Agent 失败");
+    toast.error(t?.("deleteFailed") ?? "删除 Agent 失败");
     return false;
   }
 }
@@ -103,7 +106,8 @@ export async function deleteAgent(
 export async function restoreAgent(
   id: string,
   trashMutate: KeyedMutator<AgentRow[]>,
-  agentsMutate: KeyedMutator<AgentWithRole[]>
+  agentsMutate: KeyedMutator<AgentWithRole[]>,
+  t?: (key: string) => string
 ) {
   try {
     const res = await fetch(`/api/agents/${id}/restore`, {
@@ -112,18 +116,19 @@ export async function restoreAgent(
     if (!res.ok) throw new Error(await res.text());
     trashMutate();
     agentsMutate();
-    toast.success("已恢复");
+    toast.success(t?.("restored") ?? "已恢复");
     return true;
   } catch (e) {
     console.error("restoreAgent failed:", e);
-    toast.error("恢复 Agent 失败");
+    toast.error(t?.("restoreFailed") ?? "恢复 Agent 失败");
     return false;
   }
 }
 
 export async function permanentDeleteAgent(
   id: string,
-  mutate: KeyedMutator<AgentRow[]>
+  mutate: KeyedMutator<AgentRow[]>,
+  t?: (key: string) => string
 ) {
   try {
     const res = await fetch(`/api/agents/${id}/permanent`, {
@@ -131,11 +136,11 @@ export async function permanentDeleteAgent(
     });
     if (!res.ok) throw new Error(await res.text());
     mutate();
-    toast.success("已永久删除");
+    toast.success(t?.("permanentlyDeleted") ?? "已永久删除");
     return true;
   } catch (e) {
     console.error("permanentDeleteAgent failed:", e);
-    toast.error("永久删除失败");
+    toast.error(t?.("permanentDeleteFailed") ?? "永久删除失败");
     return false;
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { EllipsisVerticalIcon, PencilIcon, SettingsIcon, Trash2Icon } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ interface AgentCardProps {
 }
 
 export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
+  const tc = useTranslations("common");
+  const tn = useTranslations("nav");
   const level = agent.myRole ? AGENT_ROLE_LEVELS[agent.myRole] : -1;
   const canEdit = level >= AGENT_ROLE_LEVELS.admin;
   const canDelete = level >= AGENT_ROLE_LEVELS.owner;
@@ -66,12 +69,12 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
                     }}
                   >
                     <PencilIcon className="size-4" />
-                    编辑
+                    {tc("edit")}
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href={`/${orgSlug}/${agent.slug}/build`} onClick={(e) => e.stopPropagation()}>
                       <SettingsIcon className="size-4" />
-                      设置
+                      {tn("settings")}
                     </Link>
                   </DropdownMenuItem>
                   {canDelete && (
@@ -83,7 +86,7 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
                       className="text-destructive"
                     >
                       <Trash2Icon className="size-4" />
-                      删除
+                      {tc("delete")}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>

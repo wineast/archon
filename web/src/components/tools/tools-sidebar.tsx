@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -27,18 +28,20 @@ export function ToolsSidebar({
   onSelectBuiltin,
   activeBuiltinToolKey,
 }: ToolsSidebarProps) {
+  const t = useTranslations("build");
+  const tc = useTranslations("common");
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Tools</span>
+          <span className="text-sm font-semibold">{t("tools")}</span>
           <GuideDialog title="工具模块" content={toolsGuide} />
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={onCreate}
-          title="New Tool"
+          title={t("newTool")}
         >
           <PlusIcon className="size-4" />
         </Button>
@@ -47,7 +50,7 @@ export function ToolsSidebar({
         <div className="p-1">
           {tools.length === 0 && !hasEnabledSkills ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No tools yet
+              {t("noTools")}
             </p>
           ) : (
             <>
@@ -55,7 +58,7 @@ export function ToolsSidebar({
                 <>
                   <div className="mb-1 px-2">
                     <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Built-in
+                      {tc("builtIn")}
                     </span>
                   </div>
                   <button
@@ -73,7 +76,7 @@ export function ToolsSidebar({
                   {tools.length > 0 && (
                     <div className="mt-2 mb-1 px-2">
                       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Custom
+                        {tc("custom")}
                       </span>
                     </div>
                   )}
