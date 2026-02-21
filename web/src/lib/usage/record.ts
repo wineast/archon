@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { usageRecords } from "@/db/schema";
 import { getUsage } from "tokenlens";
 
-export type UsageSource = "chat" | "embed" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "schema-code-assist" | "tool-code-assist" | "eval" | "wiki-assist";
+export type UsageSource = "chat" | "embed" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "schema-code-assist" | "tool-code-assist" | "wiki-assist" | "dataset-assist" | "eval";
 
 interface RecordUsageParams {
   orgId?: string | null;
