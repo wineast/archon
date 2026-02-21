@@ -1,0 +1,13 @@
+{
+  "title": "Archon 小助手",
+  "welcomeTitle": "你好！我是 Archon 小助手",
+  "welcomeIcon": "headset",
+  "quickActions": [],
+  "placeholder": "问我关于 Archon 的任何问题...",
+  "suggestions": [
+    "如何创建一个新的 Agent？",
+    "怎么给 Agent 配置工具？",
+    "如何把 Agent 嵌入到我的网站？",
+    "什么是 Model Config？"
+  ]
+}

@@ -31,10 +31,10 @@
 
   // Configurable options
   var position = script.getAttribute("data-position") || "bottom-right";
-  var buttonColor = script.getAttribute("data-button-color") || "#6366f1";
-  var buttonSize = script.getAttribute("data-button-size") || "56";
-  var widgetWidth = script.getAttribute("data-width") || "400";
-  var widgetHeight = script.getAttribute("data-height") || "600";
+  var buttonColor = script.getAttribute("data-button-color") || "";
+  var buttonSize = script.getAttribute("data-button-size") || "48";
+  var widgetWidth = script.getAttribute("data-width") || "380";
+  var widgetHeight = script.getAttribute("data-height") || "560";
 
   var btnSizePx = parseInt(buttonSize, 10);
   var isOpen = false;
@@ -77,14 +77,21 @@
     }
   }
 
+  // ─── Styles (CSS variables with fallbacks for external sites) ───
+
+  var btnBg = buttonColor || "var(--primary, #18181b)";
+  var btnFg = "var(--primary-foreground, #fafafa)";
+  var winBg = "var(--background, #ffffff)";
+  var winBorder = "var(--border, #e4e4e7)";
+
   // ─── UI: Create container ───
 
   var container = document.createElement("div");
   container.id = "archon-widget-container";
   container.style.cssText =
     "position:fixed;z-index:2147483647;" +
-    (position.indexOf("left") >= 0 ? "left:20px;" : "right:20px;") +
-    (position.indexOf("top") >= 0 ? "top:20px;" : "bottom:20px;") +
+    (position.indexOf("left") >= 0 ? "left:16px;" : "right:16px;") +
+    (position.indexOf("top") >= 0 ? "top:16px;" : "bottom:16px;") +
     "font-family:system-ui,-apple-system,sans-serif;";
 
   // Create bubble button
@@ -92,55 +99,56 @@
   button.id = "archon-widget-button";
   button.setAttribute("aria-label", "Open chat");
   button.style.cssText =
-    "width:" +
-    btnSizePx +
-    "px;height:" +
-    btnSizePx +
-    "px;" +
+    "width:" + btnSizePx + "px;" +
+    "height:" + btnSizePx + "px;" +
     "border-radius:50%;border:none;cursor:pointer;" +
-    "background:" +
-    buttonColor +
-    ";color:#fff;" +
+    "background:" + btnBg + ";" +
+    "color:" + btnFg + ";" +
     "display:flex;align-items:center;justify-content:center;" +
-    "box-shadow:0 4px 12px rgba(0,0,0,0.15);" +
-    "transition:transform 0.2s,box-shadow 0.2s;";
+    "box-shadow:0 1px 3px 0 rgba(0,0,0,0.1),0 1px 2px -1px rgba(0,0,0,0.1);" +
+    "transition:opacity 0.15s ease,box-shadow 0.15s ease;";
 
+  var iconSize = Math.round(btnSizePx * 0.42);
   var chatSvg =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + iconSize + '" height="' + iconSize + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>' +
     "</svg>";
   var closeSvg =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + iconSize + '" height="' + iconSize + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 
   button.innerHTML = chatSvg;
 
   button.addEventListener("mouseenter", function () {
-    button.style.transform = "scale(1.1)";
-    button.style.boxShadow = "0 6px 16px rgba(0,0,0,0.2)";
+    button.style.opacity = "0.9";
+    button.style.boxShadow =
+      "0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1)";
   });
   button.addEventListener("mouseleave", function () {
-    button.style.transform = "scale(1)";
-    button.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    button.style.opacity = "1";
+    button.style.boxShadow =
+      "0 1px 3px 0 rgba(0,0,0,0.1),0 1px 2px -1px rgba(0,0,0,0.1)";
   });
 
   // Create chat window
   var chatWindow = document.createElement("div");
   chatWindow.id = "archon-widget-window";
   chatWindow.style.cssText =
-    "display:none;position:absolute;" +
+    "position:absolute;" +
     (position.indexOf("top") >= 0
       ? "top:" + (btnSizePx + 12) + "px;"
       : "bottom:" + (btnSizePx + 12) + "px;") +
     (position.indexOf("left") >= 0 ? "left:0;" : "right:0;") +
-    "width:" +
-    widgetWidth +
-    "px;height:" +
-    widgetHeight +
-    "px;" +
-    "border-radius:12px;overflow:hidden;" +
-    "box-shadow:0 8px 32px rgba(0,0,0,0.15);" +
-    "border:1px solid rgba(0,0,0,0.1);" +
-    "background:#fff;";
+    "width:" + widgetWidth + "px;" +
+    "height:" + widgetHeight + "px;" +
+    "border-radius:var(--radius-xl, 12px);" +
+    "overflow:hidden;" +
+    "box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);" +
+    "border:1px solid " + winBorder + ";" +
+    "background:" + winBg + ";" +
+    "opacity:0;transform:translateY(8px) scale(0.98);" +
+    "pointer-events:none;" +
+    "transition:opacity 0.2s ease,transform 0.2s ease;";
 
   // Create iframe
   var iframe = document.createElement("iframe");
@@ -155,7 +163,9 @@
   function openWidget() {
     if (isOpen) return;
     isOpen = true;
-    chatWindow.style.display = "block";
+    chatWindow.style.opacity = "1";
+    chatWindow.style.transform = "translateY(0) scale(1)";
+    chatWindow.style.pointerEvents = "auto";
     button.innerHTML = closeSvg;
     button.setAttribute("aria-label", "Close chat");
     emit("open");
@@ -164,7 +174,9 @@
   function closeWidget() {
     if (!isOpen) return;
     isOpen = false;
-    chatWindow.style.display = "none";
+    chatWindow.style.opacity = "0";
+    chatWindow.style.transform = "translateY(8px) scale(0.98)";
+    chatWindow.style.pointerEvents = "none";
     button.innerHTML = chatSvg;
     button.setAttribute("aria-label", "Open chat");
     emit("close");

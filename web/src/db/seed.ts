@@ -1,20 +1,32 @@
 import { join } from "path";
+import { readdirSync, existsSync } from "fs";
 import { withClient, logSection, type SeedDb } from "./seed-utils";
-import { pipeline } from "./seeders";
+import { globalPipeline, agentPipeline } from "./seeders";
 import type { SeedContext, SeedResult } from "./seeders/types";
 
 // Re-export for consumers (e.g. tests)
 export type { SeedResult } from "./seeders/types";
 
+// ── Discover agent directories ──
+
+function discoverAgentDirs(seedDataDir: string): string[] {
+  return readdirSync(seedDataDir, { withFileTypes: true })
+    .filter(
+      (d) => d.isDirectory() && existsSync(join(seedDataDir, d.name, "agent.json"))
+    )
+    .map((d) => join(seedDataDir, d.name));
+}
+
 // ── seed ──
 
 export async function seed(db?: SeedDb): Promise<SeedResult> {
   const run = async (database: SeedDb) => {
-    const ctx: SeedContext = {
+    // ── Phase 1: Global seeders (run once) ──
+    const globalCtx: SeedContext = {
       db: database,
       orgId: "",
       agentId: "",
-      agentDir: join(__dirname, "seed-data/gmcc-advisor"),
+      agentDir: "",
       componentKeyToId: {},
       toolNameToId: {},
       datasetKeyToId: {},
@@ -30,16 +42,52 @@ export async function seed(db?: SeedDb): Promise<SeedResult> {
       },
     };
 
-    for (const seeder of pipeline) {
-      await seeder.run(ctx);
+    for (const seeder of globalPipeline) {
+      await seeder.run(globalCtx);
+    }
+
+    // ── Phase 2: Per-agent seeders ──
+    const seedDataDir = join(__dirname, "seed-data");
+    const agentDirs = discoverAgentDirs(seedDataDir);
+
+    let firstResult: SeedResult | null = null;
+
+    for (const agentDir of agentDirs) {
+      const ctx: SeedContext = {
+        db: database,
+        orgId: globalCtx.orgId,
+        agentId: "",
+        agentDir,
+        componentKeyToId: {},
+        toolNameToId: {},
+        datasetKeyToId: {},
+        ids: {
+          toolIds: [],
+          schemaIds: [],
+          modelConfigIds: [],
+          chatConfigId: "",
+          datasetIds: [],
+          functionIds: [],
+          evalJudgeConfigId: "",
+          evalCaseIds: [],
+        },
+      };
+
+      for (const step of agentPipeline) {
+        if (step.requires && !existsSync(join(agentDir, step.requires))) {
+          continue;
+        }
+        await step.seeder.run(ctx);
+      }
+
+      if (!firstResult) {
+        firstResult = { agentId: ctx.agentId, ...ctx.ids };
+      }
     }
 
     logSection("Seed complete");
 
-    return {
-      agentId: ctx.agentId,
-      ...ctx.ids,
-    };
+    return firstResult!;
   };
 
   if (db) return run(db);

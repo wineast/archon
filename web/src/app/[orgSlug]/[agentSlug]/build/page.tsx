@@ -70,6 +70,7 @@ import type { AgentRow } from "@/db/schema";
 import { TrashSheet } from "@/components/trash/trash-sheet";
 import { useTrash } from "@/lib/trash/hooks";
 import { toggleSkillsFeature } from "@/lib/skills/hooks";
+import { SupportBubble } from "@/components/support-bubble/support-bubble";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -489,6 +490,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         open={auditLogOpen}
         onOpenChange={setAuditLogOpen}
       />
+
+      <SupportBubble />
     </div>
   );
 }
