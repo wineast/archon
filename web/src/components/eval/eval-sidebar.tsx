@@ -12,12 +12,14 @@ import {
   FlaskConicalIcon,
   GavelIcon,
   PlusIcon,
+  TrendingUpIcon,
 } from "lucide-react";
 
 export type ActiveView =
   | { type: "case"; id: string }
   | { type: "judge"; id: string }
   | { type: "results" }
+  | { type: "benchmark" }
   | null;
 
 interface EvalSidebarProps {
@@ -160,8 +162,8 @@ export function EvalSidebar({
         </div>
       </ScrollArea>
 
-      {/* Results entry - fixed at bottom */}
-      <div className="border-t p-2">
+      {/* Results & Benchmark entries - fixed at bottom */}
+      <div className="border-t p-2 space-y-0.5">
         <button
           className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent ${
             activeView?.type === "results" ? "bg-accent" : ""
@@ -170,6 +172,15 @@ export function EvalSidebar({
         >
           <BarChart3Icon className="size-4 text-muted-foreground" />
           <span>Results</span>
+        </button>
+        <button
+          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent ${
+            activeView?.type === "benchmark" ? "bg-accent" : ""
+          }`}
+          onClick={() => onSelect({ type: "benchmark" })}
+        >
+          <TrendingUpIcon className="size-4 text-muted-foreground" />
+          <span>Benchmark</span>
         </button>
       </div>
     </div>

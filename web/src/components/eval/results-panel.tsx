@@ -41,7 +41,15 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ClockIcon,
+  BookmarkIcon,
 } from "lucide-react";
+import {
+  setBaseline,
+  clearBaseline,
+  benchmarkTrendsKey,
+  benchmarkModelsKey,
+} from "@/lib/eval/benchmark-hooks";
+import { useSWRConfig } from "swr";
 import type { AssertionFailConfig } from "@/lib/eval/types";
 
 interface ResultsPanelProps {
@@ -458,12 +466,14 @@ export function ResultsPanel({
                   <RunHistoryItem
                     key={run.id}
                     run={run}
+                    agentId={agentId}
                     expanded={expandedRunId === run.id}
                     detail={runDetailCache[run.id]}
                     loadingDetail={loadingDetail === run.id}
                     deletingRun={deletingRunId === run.id}
                     onToggle={() => handleToggleRunDetail(run.id)}
                     onDelete={() => handleDeleteRun(run.id)}
+                    onBaselineChanged={mutateRuns}
                   />
                 ))}
               </div>
@@ -483,26 +493,43 @@ export function ResultsPanel({
 
 function RunHistoryItem({
   run,
+  agentId,
   expanded,
   detail,
   loadingDetail,
   deletingRun,
   onToggle,
   onDelete,
+  onBaselineChanged,
 }: {
   run: EvalRunRow;
+  agentId?: string;
   expanded: boolean;
   detail?: EvalRunDetail;
   loadingDetail: boolean;
   deletingRun: boolean;
   onToggle: () => void;
   onDelete: () => void;
+  onBaselineChanged: () => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const { mutate: globalMutate } = useSWRConfig();
   const passRate =
     run.totalCases > 0
       ? `${run.passedAssertions}/${run.totalCases}`
       : "0/0";
+
+  const handleToggleBaseline = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const fn = run.isBaseline ? clearBaseline : setBaseline;
+    await fn(run.id, () => {
+      onBaselineChanged();
+      if (agentId) {
+        globalMutate(benchmarkTrendsKey(agentId));
+        globalMutate(benchmarkModelsKey(agentId));
+      }
+    });
+  };
 
   return (
     <div className="rounded-md border">
@@ -536,6 +563,16 @@ function RunHistoryItem({
             {run.averageScore}/10
           </span>
         )}
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={handleToggleBaseline}
+          title={run.isBaseline ? "Remove baseline" : "Set as baseline"}
+        >
+          <BookmarkIcon
+            className={`size-3 ${run.isBaseline ? "fill-primary text-primary" : ""}`}
+          />
+        </Button>
         <Button
           variant="ghost"
           size="icon-xs"
