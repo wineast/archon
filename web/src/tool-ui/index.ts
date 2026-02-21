@@ -1,12 +1,12 @@
 export {
-  registerDynamicToolSource,
-  getDynamicToolSource,
-  registerCompiledToolComponent,
-  getCompiledToolComponent,
+  registerDynamicComponentSource,
+  getDynamicComponentSource,
+  registerCompiledComponent,
+  getCompiledComponent,
   clearCompiledRegistry,
 } from "./_registry";
-export type { ToolRendererProps } from "./_registry";
-export { DynamicToolRenderer } from "./_dynamic-renderer";
+export type { ComponentRendererProps } from "./_registry";
+export { DynamicComponentRenderer } from "./_dynamic-renderer";
 export { DynamicComponentErrorBoundary } from "./_error-boundary";
 export {
   compileComponentGraph,

@@ -20,8 +20,8 @@
 | name | text | 函数名称 |
 | description | text | 函数描述 |
 | code | text | JavaScript 实现代码 |
-| parametersSchemaId | uuid | 输入参数 Schema |
-| returnParametersSchemaId | uuid | 返回值 Schema |
+| parametersSchema | jsonb | 输入参数 Schema（内联 JsonSchema7 或 `$ref`） |
+| returnParametersSchema | jsonb | 返回值 Schema（内联 JsonSchema7 或 `$ref`） |
 
 ## API
 

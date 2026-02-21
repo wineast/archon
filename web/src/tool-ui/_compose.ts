@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { compileSourceWithDeps } from "./_dynamic-renderer";
-import type { ToolRendererProps } from "./_registry";
+import type { ComponentRendererProps } from "./_registry";
 
 // ── Naming helpers ──
 
@@ -116,11 +116,11 @@ export function topoSortComponents(
 
 export function compileComponentGraph(
   records: ComponentRecord[]
-): Map<string, ComponentType<ToolRendererProps>> {
+): Map<string, ComponentType<ComponentRendererProps>> {
   if (records.length === 0) return new Map();
 
   const sorted = topoSortComponents(records);
-  const compiled = new Map<string, ComponentType<ToolRendererProps>>();
+  const compiled = new Map<string, ComponentType<ComponentRendererProps>>();
   const knownKeys = new Set(records.map((r) => r.key));
 
   for (const r of sorted) {

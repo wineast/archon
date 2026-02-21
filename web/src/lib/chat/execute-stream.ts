@@ -24,6 +24,7 @@ import {
   responseMessagesToUIParts,
 } from "@/db/chat-persistence";
 import { renderTemplate, gatherTemplateData } from "@/lib/template/render";
+import { resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 import { recordUsage } from "@/lib/usage/record";
 import type { RuntimeEventInput } from "@/lib/runtime-events/record";
 import { recordRuntimeEvents } from "@/lib/runtime-events/record";
@@ -94,7 +95,6 @@ export async function executeChatStream(
   // Gather template data once (includes resolved schemas and defsMap)
   const templateData = await gatherTemplateData(agentId);
 
-  // Use resolved schema parameters from templateData.schemaMap
   const toolPayloads: ToolDefinitionPayload[] = enabledRows
     .filter((row) => {
       // Exclude host tools that are not registered by the host page
@@ -106,10 +106,8 @@ export async function executeChatStream(
     .map((row) => ({
       name: row.name,
       description: row.description,
-      parameters: row.parametersSchemaId ? (templateData.schemaMap[row.parametersSchemaId] ?? { type: "object", properties: {}, required: [] }) : { type: "object", properties: {}, required: [] },
-      returnParameters: row.returnParametersSchemaId
-        ? (templateData.schemaMap[row.returnParametersSchemaId] ?? undefined)
-        : undefined,
+      parameters: resolveInlineSchema(row.parametersSchema ?? null, templateData.defsMap) ?? { type: "object", properties: {}, required: [] },
+      returnParameters: resolveInlineSchema(row.returnParametersSchema ?? null, templateData.defsMap) ?? undefined,
       handler: row.handler ?? "",
       url: row.url ?? "",
       executionTarget: row.executionTarget ?? "server",

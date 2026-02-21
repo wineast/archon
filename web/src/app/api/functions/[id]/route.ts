@@ -60,8 +60,8 @@ export async function PATCH(
       ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.code !== undefined && { code: body.code }),
-      ...(body.parametersSchemaId !== undefined && { parametersSchemaId: body.parametersSchemaId }),
-      ...(body.returnParametersSchemaId !== undefined && { returnParametersSchemaId: body.returnParametersSchemaId }),
+      ...(body.parametersSchema !== undefined && { parametersSchema: body.parametersSchema }),
+      ...(body.returnParametersSchema !== undefined && { returnParametersSchema: body.returnParametersSchema }),
     })
     .where(eq(functions.id, id))
     .returning();

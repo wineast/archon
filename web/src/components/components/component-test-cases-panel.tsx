@@ -29,6 +29,7 @@ import { ComponentRunResultCard } from "./component-run-result-card";
 import { ComponentRunHistoryItem } from "./component-run-history-item";
 import type { ComponentTestRunResultRow } from "@/db/schema";
 import { compileComponentGraph, keyToPascal, type ComponentRecord } from "@/tool-ui";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import { validateAgainstSchema } from "@/lib/components/validate-schema";
 
 interface ComponentTestCasesPanelProps {
@@ -36,14 +37,13 @@ interface ComponentTestCasesPanelProps {
   componentSource: string;
   componentKey?: string;
   allComponents?: ComponentRecord[];
-  toolInputSchemaId?: string | null;
-  toolOutputSchemaId?: string | null;
+  inputSchema?: JsonSchema7 | null;
 }
 
 /** Execute a component render test on the client side. */
 async function executeRenderTest(
   componentSource: string,
-  tool: { name: string; input: unknown; output: unknown },
+  data: unknown,
   extraDeps?: Record<string, unknown>
 ): Promise<ComponentTestRunResult> {
   const start = performance.now();
@@ -58,7 +58,7 @@ async function executeRenderTest(
     // Render to string to check for errors
     renderToStaticMarkup(
       createElement(Comp, {
-        tool,
+        data,
         state: "output-available",
         isLoading: false,
         isComplete: true,
@@ -80,8 +80,7 @@ export function ComponentTestCasesPanel({
   componentSource,
   componentKey,
   allComponents,
-  toolInputSchemaId,
-  toolOutputSchemaId,
+  inputSchema,
 }: ComponentTestCasesPanelProps) {
   const { testCases, mutate: mutateCases } =
     useComponentTestCases(componentId);
@@ -142,12 +141,12 @@ export function ComponentTestCasesPanel({
   // ── CRUD handlers ──
 
   const handleCreate = useCallback(
-    async (data: {
+    async (payload: {
       name: string;
-      tool: { name: string; input: unknown; output: unknown };
+      data: unknown;
       tags: string[];
     }) => {
-      await createComponentTestCase(componentId, data, mutateCases);
+      await createComponentTestCase(componentId, payload, mutateCases);
       setShowCreateForm(false);
     },
     [componentId, mutateCases]
@@ -156,14 +155,14 @@ export function ComponentTestCasesPanel({
   const handleSave = useCallback(
     async (
       caseId: string,
-      data: {
+      payload: {
         name?: string;
-        tool?: { name: string; input: unknown; output: unknown };
+        data?: unknown;
         tags?: string[];
         showAsExample?: boolean;
       }
     ) => {
-      await updateComponentTestCase(componentId, caseId, data, mutateCases);
+      await updateComponentTestCase(componentId, caseId, payload, mutateCases);
     },
     [componentId, mutateCases]
   );
@@ -180,42 +179,25 @@ export function ComponentTestCasesPanel({
   const appendSchemaWarnings = useCallback(
     async (
       result: ComponentTestRunResult,
-      tool: { input: unknown; output: unknown }
+      data: unknown
     ): Promise<ComponentTestRunResult> => {
-      if (!toolInputSchemaId && !toolOutputSchemaId) return result;
-      const [inResult, outResult] = await Promise.all([
-        validateAgainstSchema(toolInputSchemaId, tool.input),
-        validateAgainstSchema(toolOutputSchemaId, tool.output),
-      ]);
-      const warnings: string[] = [];
-      if (inResult && !inResult.valid) {
-        warnings.push(
-          ...inResult.errors.map(
-            (e) => `[input] ${e.path ? `${e.path}: ` : ""}${e.message}`
-          )
+      if (!inputSchema) return result;
+      const schemaResult = await validateAgainstSchema(inputSchema, data);
+      if (schemaResult && !schemaResult.valid) {
+        const warnings = schemaResult.errors.map(
+          (e) => `${e.path ? `${e.path}: ` : ""}${e.message}`
         );
-      }
-      if (outResult && !outResult.valid) {
-        warnings.push(
-          ...outResult.errors.map(
-            (e) => `[output] ${e.path ? `${e.path}: ` : ""}${e.message}`
-          )
-        );
-      }
-      if (warnings.length > 0) {
         return { ...result, schemaWarnings: warnings.join("\n") };
       }
       return result;
     },
-    [toolInputSchemaId, toolOutputSchemaId]
+    [inputSchema]
   );
 
   const handleRun = useCallback(
-    async (
-      tool: { name: string; input: unknown; output: unknown }
-    ): Promise<ComponentTestRunResult> => {
-      const result = await executeRenderTest(componentSource, tool, compositionDeps);
-      return appendSchemaWarnings(result, tool);
+    async (data: unknown): Promise<ComponentTestRunResult> => {
+      const result = await executeRenderTest(componentSource, data, compositionDeps);
+      return appendSchemaWarnings(result, data);
     },
     [componentSource, compositionDeps, appendSchemaWarnings]
   );
@@ -248,8 +230,8 @@ export function ComponentTestCasesPanel({
       let passed = 0;
       for (let i = 0; i < filteredCases.length; i++) {
         const tc = filteredCases[i];
-        const renderResult = await executeRenderTest(componentSource, tc.tool, compositionDeps);
-        const result = await appendSchemaWarnings(renderResult, tc.tool);
+        const renderResult = await executeRenderTest(componentSource, tc.data, compositionDeps);
+        const result = await appendSchemaWarnings(renderResult, tc.data);
         if (result.passed) passed++;
 
         // 3. Save result
@@ -261,7 +243,7 @@ export function ComponentTestCasesPanel({
             body: JSON.stringify({
               caseId: tc.id,
               caseName: tc.name,
-              tool: tc.tool,
+              data: tc.data,
               passed: result.passed,
               error: result.error ?? null,
               durationMs: result.durationMs,

@@ -30,9 +30,9 @@ import {
   Attachments,
 } from "@/components/ai-elements/attachments";
 import {
-  getCompiledToolComponent,
-  getDynamicToolSource,
-  DynamicToolRenderer,
+  getCompiledComponent,
+  getDynamicComponentSource,
+  DynamicComponentRenderer,
   DynamicComponentErrorBoundary,
 } from "@/tool-ui";
 
@@ -76,13 +76,16 @@ export function MessageParts({
             ? (part as { toolName: string }).toolName
             : part.type.split("-").slice(1).join("-");
 
+          // Mapping layer: construct generic data from tool call parts
+          const data = { name: toolName, input: part.input, output: part.output };
+
           // 1a) Pre-compiled component (with composition support)
-          const compiledComp = getCompiledToolComponent(toolName);
+          const compiledComp = getCompiledComponent(toolName);
           if (compiledComp) {
             return (
-              <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackToolName={toolName}>
-                <DynamicToolRenderer
-                  tool={{ name: toolName, input: part.input, output: part.output }}
+              <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackLabel={toolName}>
+                <DynamicComponentRenderer
+                  data={data}
                   state={part.state}
                   compiledComponent={compiledComp}
                 />
@@ -91,12 +94,12 @@ export function MessageParts({
           }
 
           // 1b) Dynamic component source from DB (no composition)
-          const dynamicSource = getDynamicToolSource(toolName);
+          const dynamicSource = getDynamicComponentSource(toolName);
           if (dynamicSource) {
             return (
-              <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackToolName={toolName}>
-                <DynamicToolRenderer
-                  tool={{ name: toolName, input: part.input, output: part.output }}
+              <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackLabel={toolName}>
+                <DynamicComponentRenderer
+                  data={data}
                   state={part.state}
                   source={dynamicSource}
                 />

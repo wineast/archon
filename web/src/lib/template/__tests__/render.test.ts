@@ -35,8 +35,8 @@ vi.mock("@/db/schema", () => ({
     agentId: "agent_id",
     name: "name",
     description: "description",
-    parametersSchemaId: "parameters_schema_id",
-    returnParametersSchemaId: "return_parameters_schema_id",
+    parametersSchema: "parameters_schema",
+    returnParametersSchema: "return_parameters_schema",
     output: "output",
     handler: "handler",
     component: "component",
@@ -148,13 +148,13 @@ const makeSchemaRow = (id: string, params: unknown) => {
   };
 };
 
-const makeTool = (name: string, description: string, schemaId: string | null = null) => ({
+const makeTool = (name: string, description: string, parametersSchema: Record<string, unknown> | null = null) => ({
   id: `tool-${name}`,
   agentId: "agent-1",
   name,
   description,
-  parametersSchemaId: schemaId,
-  returnParametersSchemaId: null,
+  parametersSchema,
+  returnParametersSchema: null,
   output: null,
   handler: null,
   component: null,
@@ -606,17 +606,18 @@ describe("tool namespace", () => {
   });
 
   it("resolves tool.NAME.params to comma-separated param names", async () => {
-    const params = [
-      { id: "p1", name: "income", type: "number", description: "Monthly income", required: true },
-      { id: "p2", name: "debts", type: "number", description: "Monthly debts", required: true },
-    ];
+    const schema = {
+      type: "object",
+      properties: {
+        income: { type: "number", description: "Monthly income" },
+        debts: { type: "number", description: "Monthly debts" },
+      },
+      required: ["income", "debts"],
+    };
     setupDbChain([
       [],
       [],
-      [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
-      [],
-      [],
-      [makeSchemaRow("schema-dti", params)],
+      [makeTool("calculate_dti", "Calculate DTI", schema)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -628,16 +629,17 @@ describe("tool namespace", () => {
   });
 
   it("resolves tool.NAME.json to JSON definition", async () => {
-    const params = [
-      { id: "p1", name: "amount", type: "number", description: "Loan amount", required: true },
-    ];
+    const schema = {
+      type: "object",
+      properties: {
+        amount: { type: "number", description: "Loan amount" },
+      },
+      required: ["amount"],
+    };
     setupDbChain([
       [],
       [],
-      [makeTool("calc_rate", "Calculate rate", "schema-rate")],
-      [],
-      [],
-      [makeSchemaRow("schema-rate", params)],
+      [makeTool("calc_rate", "Calculate rate", schema)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -649,28 +651,23 @@ describe("tool namespace", () => {
     expect(parsed).toEqual({
       name: "calc_rate",
       description: "Calculate rate",
-      parameters: {
-        type: "object",
-        properties: {
-          amount: { type: "number", description: "Loan amount" },
-        },
-        required: ["amount"],
-      },
+      parameters: schema,
     });
   });
 
   it("resolves tool.NAME.parameters for iteration", async () => {
-    const params = [
-      { id: "p1", name: "income", type: "number", description: "Monthly income", required: true },
-      { id: "p2", name: "debts", type: "number", description: "Monthly debts", required: false },
-    ];
+    const schema = {
+      type: "object",
+      properties: {
+        income: { type: "number", description: "Monthly income" },
+        debts: { type: "number", description: "Monthly debts" },
+      },
+      required: ["income"],
+    };
     setupDbChain([
       [],
       [],
-      [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
-      [],
-      [],
-      [makeSchemaRow("schema-dti", params)],
+      [makeTool("calculate_dti", "Calculate DTI", schema)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -682,17 +679,18 @@ describe("tool namespace", () => {
   });
 
   it("tool.NAME.parameters includes description and required", async () => {
-    const params = [
-      { id: "p1", name: "amount", type: "number", description: "Loan amount", required: true },
-      { id: "p2", name: "rate", type: "number", description: "Interest rate", required: false },
-    ];
+    const schema = {
+      type: "object",
+      properties: {
+        amount: { type: "number", description: "Loan amount" },
+        rate: { type: "number", description: "Interest rate" },
+      },
+      required: ["amount"],
+    };
     setupDbChain([
       [],
       [],
-      [makeTool("calc", "Calculate", "schema-calc")],
-      [],
-      [],
-      [makeSchemaRow("schema-calc", params)],
+      [makeTool("calc", "Calculate", schema)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -704,16 +702,17 @@ describe("tool namespace", () => {
   });
 
   it("tool.NAME.parameters includes enum when present", async () => {
-    const params = [
-      { id: "p1", name: "type", type: "enum", description: "Product type", required: true, enum: ["A", "B", "C"] },
-    ];
+    const schema = {
+      type: "object",
+      properties: {
+        type: { type: "enum", description: "Product type", enum: ["A", "B", "C"] },
+      },
+      required: ["type"],
+    };
     setupDbChain([
       [],
       [],
-      [makeTool("route", "Route products", "schema-route")],
-      [],
-      [],
-      [makeSchemaRow("schema-route", params)],
+      [makeTool("route", "Route products", schema)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");
@@ -761,17 +760,18 @@ describe("tool namespace", () => {
   });
 
   it("tool_entries includes simplified params", async () => {
-    const params = [
-      { id: "p1", name: "x", type: "number", description: "X val", required: true },
-      { id: "p2", name: "y", type: "string", description: "Y val", required: false },
-    ];
+    const schema = {
+      type: "object",
+      properties: {
+        x: { type: "number", description: "X val" },
+        y: { type: "string", description: "Y val" },
+      },
+      required: ["x"],
+    };
     setupDbChain([
       [],
       [],
-      [makeTool("calc", "Calculate", "schema-calc")],
-      [],
-      [],
-      [makeSchemaRow("schema-calc", params)],
+      [makeTool("calc", "Calculate", schema)],
     ]);
 
     const { renderSystemPrompt } = await import("../render");

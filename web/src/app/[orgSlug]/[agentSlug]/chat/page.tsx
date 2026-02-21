@@ -52,8 +52,8 @@ import { useTools } from "@/lib/tools/hooks";
 import { executeClientTool } from "@/lib/tools/client-executor";
 import { useComponents } from "@/lib/components/hooks";
 import {
-  registerDynamicToolSource,
-  registerCompiledToolComponent,
+  registerDynamicComponentSource,
+  registerCompiledComponent,
   clearCompiledRegistry,
   compileComponentGraph,
   type ComponentRecord,
@@ -169,11 +169,11 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
       const compiledComp = compKey ? compiled.get(compKey) : undefined;
       if (compiledComp) {
         // Use pre-compiled component (with composition deps resolved)
-        registerCompiledToolComponent(t.name, compiledComp);
+        registerCompiledComponent(t.name, compiledComp);
       } else if (compKey) {
         // Fallback: look up source from componentsList
         const comp = componentsList.find((c) => c.key === compKey);
-        if (comp?.componentSource) registerDynamicToolSource(t.name, comp.componentSource);
+        if (comp?.componentSource) registerDynamicComponentSource(t.name, comp.componentSource);
       }
     }
   }, [toolsList, componentsList]);

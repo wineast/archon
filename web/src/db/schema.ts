@@ -215,8 +215,8 @@ export const functions = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     code: text("code").notNull(),
-    parametersSchemaId: uuid("parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
-    returnParametersSchemaId: uuid("return_parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
+    parametersSchema: jsonb("parameters_schema").$type<JsonSchema7>(),
+    returnParametersSchema: jsonb("return_parameters_schema").$type<JsonSchema7>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -418,8 +418,8 @@ export const tools = pgTable(
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull(),
-    parametersSchemaId: uuid("parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
-    returnParametersSchemaId: uuid("return_parameters_schema_id").references(() => schemas.id, { onDelete: "set null" }),
+    parametersSchema: jsonb("parameters_schema").$type<JsonSchema7>(),
+    returnParametersSchema: jsonb("return_parameters_schema").$type<JsonSchema7>(),
     handler: text("handler"),
     url: text("url"),
     componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),
@@ -802,14 +802,9 @@ export const components = pgTable(
     description: text("description").notNull().default(""),
     componentSource: text("component_source").notNull().default(""),
     generatedCss: text("generated_css").notNull().default(""),
-    toolInputSchemaId: uuid("tool_input_schema_id").references(
-      () => schemas.id,
-      { onDelete: "set null" }
-    ),
-    toolOutputSchemaId: uuid("tool_output_schema_id").references(
-      () => schemas.id,
-      { onDelete: "set null" }
-    ),
+    scenario: text("scenario").$type<"tool" | "component">().notNull().default("tool"),
+    inputSchema: jsonb("input_schema").$type<JsonSchema7>(),
+    outputSchema: jsonb("output_schema").$type<JsonSchema7>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -837,10 +832,10 @@ export const componentTestCases = pgTable(
       .notNull()
       .references(() => components.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    tool: jsonb("tool")
-      .$type<{ name: string; input: unknown; output: unknown }>()
+    data: jsonb("data")
+      .$type<unknown>()
       .notNull()
-      .default({ name: "", input: {}, output: {} }),
+      .default({}),
     tags: text("tags").array().notNull().default([]),
     showAsExample: boolean("show_as_example").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -888,8 +883,8 @@ export const componentTestRunResults = pgTable(
       .references(() => componentTestRuns.id, { onDelete: "cascade" }),
     caseId: uuid("case_id").notNull(),
     caseName: text("case_name").notNull(),
-    tool: jsonb("tool")
-      .$type<{ name: string; input: unknown; output: unknown }>()
+    data: jsonb("data")
+      .$type<unknown>()
       .notNull(),
     passed: boolean("passed").notNull(),
     error: text("error"),

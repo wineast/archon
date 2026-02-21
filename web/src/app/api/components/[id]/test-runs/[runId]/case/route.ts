@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 interface RunCaseBody {
   caseId: string;
   caseName: string;
-  tool: { name: string; input: unknown; output: unknown };
+  data: unknown;
   passed: boolean;
   error?: string;
   durationMs: number;
@@ -19,7 +19,7 @@ export async function POST(
 ) {
   const { runId } = await params;
   const body: RunCaseBody = await req.json();
-  const { caseId, caseName, tool, passed, error, durationMs } = body;
+  const { caseId, caseName, data, passed, error, durationMs } = body;
 
   // Verify run exists
   const [run] = await db
@@ -37,7 +37,7 @@ export async function POST(
       runId,
       caseId,
       caseName,
-      tool,
+      data,
       passed,
       error: error ?? null,
       durationMs,

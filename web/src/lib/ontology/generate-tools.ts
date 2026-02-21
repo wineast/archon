@@ -10,7 +10,8 @@ interface GenerateResult {
 
 /**
  * Generate CRUD tools for an object type.
- * Idempotent: skips tools/schemas that already exist with the same key.
+ * Idempotent: skips tools that already exist with the same key.
+ * Stores parametersSchema inline as JSONB on each tool.
  */
 export async function generateCrudToolsForType(
   objectTypeId: string,
@@ -50,21 +51,21 @@ export async function generateCrudToolsForType(
   };
 
   // Define the 4 tools to generate
+  // For create tool: use $ref to the shared objectType schema (resolved at runtime via defsMap)
+  // For others: store derived schemas inline
   const toolDefs = [
     {
       toolKey: `create_${typeKey}`,
       toolName: `create_${typeKey}`,
       toolDescription: `Create a new ${objType.name} instance. ${objType.description}`,
-      schemaKey: null, // reuse objectType's schema
-      schemaParams: null as JsonSchema7 | null,
+      parametersSchema: { "$ref": `#/$defs/${schema.key}` } as JsonSchema7,
       handler: `async (args, context) => context.ontology.create("${typeKey}", args)`,
     },
     {
       toolKey: `get_${typeKey}`,
       toolName: `get_${typeKey}`,
       toolDescription: `Get a ${objType.name} instance by ID, including its relations.`,
-      schemaKey: `_auto_${typeKey}_get`,
-      schemaParams: {
+      parametersSchema: {
         type: "object",
         properties: {
           id: { type: "string", description: `ID of the ${objType.name} to retrieve` },
@@ -77,8 +78,7 @@ export async function generateCrudToolsForType(
       toolKey: `query_${typeKey}s`,
       toolName: `query_${typeKey}s`,
       toolDescription: `Query ${objType.name} instances with optional filters.`,
-      schemaKey: `_auto_${typeKey}_query`,
-      schemaParams: {
+      parametersSchema: {
         type: "object",
         properties: queryProperties,
         required: [],
@@ -89,8 +89,7 @@ export async function generateCrudToolsForType(
       toolKey: `update_${typeKey}`,
       toolName: `update_${typeKey}`,
       toolDescription: `Update a ${objType.name} instance by ID. Only provided fields are updated.`,
-      schemaKey: `_auto_${typeKey}_update`,
-      schemaParams: {
+      parametersSchema: {
         type: "object",
         properties: updateProperties,
         required: ["id"],
@@ -111,42 +110,13 @@ export async function generateCrudToolsForType(
       continue;
     }
 
-    // Create derived schema if needed
-    let parametersSchemaId: string | null = null;
-    if (def.schemaKey && def.schemaParams) {
-      // Check if schema already exists
-      const [existingSchema] = await db
-        .select({ id: schemas.id })
-        .from(schemas)
-        .where(and(eq(schemas.agentId, agentId), eq(schemas.key, def.schemaKey), isNull(schemas.deletedAt)));
-
-      if (existingSchema) {
-        parametersSchemaId = existingSchema.id;
-      } else {
-        const [newSchema] = await db
-          .insert(schemas)
-          .values({
-            agentId,
-            key: def.schemaKey,
-            name: `${def.toolName} Parameters`,
-            description: `Auto-generated schema for ${def.toolKey}`,
-            parameters: def.schemaParams,
-          })
-          .returning({ id: schemas.id });
-        parametersSchemaId = newSchema.id;
-      }
-    } else {
-      // Reuse the objectType's schema directly
-      parametersSchemaId = objType.schemaId;
-    }
-
-    // Create the tool
+    // Create the tool with inline parametersSchema
     await db.insert(tools).values({
       agentId,
       key: def.toolKey,
       name: def.toolName,
       description: def.toolDescription,
-      parametersSchemaId,
+      parametersSchema: def.parametersSchema,
       handler: def.handler,
       enabled: true,
       executionTarget: "server",

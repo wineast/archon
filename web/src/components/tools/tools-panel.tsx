@@ -91,8 +91,8 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
         {
           name: updated.name,
           description: updated.description,
-          parametersSchemaId: updated.parametersSchemaId ?? null,
-          returnParametersSchemaId: updated.returnParametersSchemaId ?? null,
+          parametersSchema: updated.parametersSchema ?? null,
+          returnParametersSchema: updated.returnParametersSchema ?? null,
           handler: updated.handler,
           url: updated.url,
           componentId: updated.componentId,

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { functions, schemas, functionTestRuns, functionTestRunResults } from "@/db/schema";
+import { functions, functionTestRuns, functionTestRunResults } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import deepEqual from "fast-deep-equal";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import type { JsonSchema7 } from "@/lib/schemas/types";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
 
 export const maxDuration = 120;
@@ -51,12 +50,8 @@ export async function POST(
   let passed = false;
 
   try {
-    // Resolve parameters from schema FK
-    let parametersSchema: JsonSchema7 = EMPTY_OBJECT_SCHEMA;
-    if (fn.parametersSchemaId) {
-      const [schemaRow] = await db.select().from(schemas).where(eq(schemas.id, fn.parametersSchemaId));
-      if (schemaRow) parametersSchema = schemaRow.parameters as JsonSchema7;
-    }
+    // Read inline parameters schema
+    const parametersSchema = fn.parametersSchema ?? EMPTY_OBJECT_SCHEMA;
 
     // Validate input
     let validatedInput = input ?? {};

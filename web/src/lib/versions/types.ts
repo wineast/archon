@@ -7,8 +7,8 @@ export interface ToolSnapshotItem {
   key: string;
   name: string;
   description: string;
-  parametersSchemaKey: string | null;
-  returnParametersSchemaKey: string | null;
+  parametersSchema: JsonSchema7 | null;
+  returnParametersSchema: JsonSchema7 | null;
   handler: string | null;
   url: string | null;
   componentKey: string | null;
@@ -22,8 +22,8 @@ export interface FunctionSnapshotItem {
   name: string;
   description: string;
   code: string;
-  parametersSchemaKey: string | null;
-  returnParametersSchemaKey: string | null;
+  parametersSchema: JsonSchema7 | null;
+  returnParametersSchema: JsonSchema7 | null;
   testCases: FunctionTestCaseSnapshotItem[];
 }
 
@@ -33,6 +33,8 @@ export interface ComponentSnapshotItem {
   description: string;
   componentSource: string;
   generatedCss: string;
+  inputSchema: JsonSchema7 | null;
+  outputSchema: JsonSchema7 | null;
   testCases: ComponentTestCaseSnapshotItem[];
 }
 
@@ -114,7 +116,7 @@ export interface FunctionTestCaseSnapshotItem {
 
 export interface ComponentTestCaseSnapshotItem {
   name: string;
-  tool: { name: string; input: unknown; output: unknown };
+  data: unknown;
   tags: string[];
 }
 

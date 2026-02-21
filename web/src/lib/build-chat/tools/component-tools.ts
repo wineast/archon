@@ -19,8 +19,7 @@ export function buildComponentTools(agentId: string): Record<string, AnyTool> {
             key: components.key,
             name: components.name,
             description: components.description,
-            toolInputSchemaId: components.toolInputSchemaId,
-            toolOutputSchemaId: components.toolOutputSchemaId,
+            inputSchema: components.inputSchema,
           })
           .from(components)
           .where(eq(components.agentId, agentId));
@@ -49,8 +48,7 @@ export function buildComponentTools(agentId: string): Record<string, AnyTool> {
         name: z.string().describe("显示名称"),
         description: z.string().optional().default(""),
         componentSource: z.string().optional().default("").describe("JSX 源码"),
-        toolInputSchemaId: z.string().uuid().optional().describe("关联的 Input Schema ID"),
-        toolOutputSchemaId: z.string().uuid().optional().describe("关联的 Output Schema ID"),
+        inputSchema: z.record(z.string(), z.unknown()).optional().describe("Input JSON Schema (inline)"),
       }),
       execute: async (params) => {
         const [row] = await db
@@ -72,8 +70,7 @@ export function buildComponentTools(agentId: string): Record<string, AnyTool> {
         name: z.string().optional(),
         description: z.string().optional(),
         componentSource: z.string().optional(),
-        toolInputSchemaId: z.string().uuid().nullable().optional().describe("关联的 Input Schema ID"),
-        toolOutputSchemaId: z.string().uuid().nullable().optional().describe("关联的 Output Schema ID"),
+        inputSchema: z.record(z.string(), z.unknown()).nullable().optional().describe("Input JSON Schema (inline)"),
       }),
       execute: async ({ id, ...updates }) => {
         const [row] = await db

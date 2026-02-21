@@ -3,6 +3,7 @@ import { wikiDocuments, tools, schemas, objectTypes, objectRelations } from "@/d
 import type { ToolRow } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import type { JsonSchema7 } from "@/lib/schemas/types";
+import { resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
@@ -38,8 +39,6 @@ export interface TemplateData {
   resolvedVars: Record<string, unknown>;
   docs: WikiDocument[];
   toolRows: ToolRow[];
-  /** Schema lookup by UUID: id → parameters. Used for parametersSchemaId resolution. */
-  schemaMap: Record<string, JsonSchema7>;
   /** Schema lookup by key: key → parameters. Used for $ref resolution in buildInputSchema. */
   defsMap: Record<string, JsonSchema7>;
   datasetEntries: Record<string, Array<{ value: string }>>;
@@ -103,7 +102,7 @@ async function getEnabledTools(agentId: string): Promise<ToolRow[]> {
 
 export function buildToolNamespace(
   toolRows: ToolRow[],
-  schemaMap: Record<string, JsonSchema7> = {}
+  defsMap: Record<string, JsonSchema7> = {}
 ): {
   ns: Record<string, unknown>;
   tool_names: string;
@@ -122,9 +121,8 @@ export function buildToolNamespace(
   }> = [];
 
   for (const row of toolRows) {
-    const schema: JsonSchema7 = row.parametersSchemaId
-      ? (schemaMap[row.parametersSchemaId] ?? { type: "object", properties: {}, required: [] })
-      : { type: "object", properties: {}, required: [] };
+    const schema: JsonSchema7 = resolveInlineSchema(row.parametersSchema ?? null, defsMap)
+      ?? { type: "object", properties: {}, required: [] };
     const props = schema.properties ?? {};
     const requiredSet = new Set(schema.required ?? []);
 
@@ -178,7 +176,7 @@ async function renderWithData(
 ): Promise<string> {
   const { ns: toolNs, tool_names, tool_entries } = buildToolNamespace(
     data.toolRows,
-    data.schemaMap
+    data.defsMap
   );
   const variables: Record<string, unknown> = {
     ...getBuiltinVars(),
@@ -213,7 +211,7 @@ export async function gatherTemplateData(
   agentId?: string
 ): Promise<TemplateData> {
   if (!agentId) {
-    return { resolvedVars: {}, docs: [], toolRows: [], schemaMap: {}, defsMap: {}, datasetEntries: {}, ontologyTypes: [] };
+    return { resolvedVars: {}, docs: [], toolRows: [], defsMap: {}, datasetEntries: {}, ontologyTypes: [] };
   }
 
   const [{ resolvedVars, datasetEntries }, docs, toolRows, objTypeRows, objRelRows] = await Promise.all([
@@ -224,26 +222,25 @@ export async function gatherTemplateData(
     db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
   ]);
 
-  // Load ALL schemas for this agent — directly use stored parameters
+  // Load ALL schemas for this agent — build defsMap (key → parameters) for $ref resolution
+  // and a local id-based map for ontology type schema lookups
   const allSchemaRows = await db
     .select()
     .from(schemas)
     .where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt)));
 
-  // Build schemaMap: id → parameters (used by tool namespace for parametersSchemaId lookup)
-  const schemaMap: Record<string, JsonSchema7> = {};
-  // Build defsMap: key → parameters (used for $ref resolution in buildInputSchema)
   const defsMap: Record<string, JsonSchema7> = {};
+  const schemaByIdMap: Record<string, JsonSchema7> = {};
   for (const row of allSchemaRows) {
-    schemaMap[row.id] = row.parameters as JsonSchema7;
     defsMap[row.key] = row.parameters as JsonSchema7;
+    schemaByIdMap[row.id] = row.parameters as JsonSchema7;
   }
 
   // Build ontology template items
   const objTypeIdToRow = new Map(objTypeRows.map((t) => [t.id, t]));
   const ontologyTypes: OntologyTypeTemplateItem[] = objTypeRows.map((t) => {
     // Resolve properties from linked schema
-    const linkedSchema = t.schemaId ? schemaMap[t.schemaId] : undefined;
+    const linkedSchema = t.schemaId ? schemaByIdMap[t.schemaId] : undefined;
     const properties: OntologyTypeTemplateItem["properties"] = linkedSchema?.properties
       ? Object.entries(linkedSchema.properties).map(([key, propSchema]) => ({
           name: key,
@@ -279,7 +276,7 @@ export async function gatherTemplateData(
     };
   });
 
-  return { resolvedVars, docs, toolRows, schemaMap, defsMap, datasetEntries, ontologyTypes };
+  return { resolvedVars, docs, toolRows, defsMap, datasetEntries, ontologyTypes };
 }
 
 /**

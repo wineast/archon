@@ -33,7 +33,7 @@ import { MessageParts, UserMessageContent } from "@/components/message-parts";
 import { ChatWelcome } from "@/components/chat-welcome";
 import { Spinner } from "@/components/ui/spinner";
 import { executeClientTool } from "@/lib/tools/client-executor";
-import { registerDynamicToolSource } from "@/tool-ui";
+import { registerDynamicComponentSource } from "@/tool-ui";
 import type { WelcomeIconKey } from "@/lib/config/types";
 import { PaperclipIcon } from "lucide-react";
 
@@ -232,7 +232,7 @@ function EmbedChat({
     for (const t of config.tools) {
       const source =
         (t.component && componentMap.get(t.component)) || t.componentSource;
-      if (source) registerDynamicToolSource(t.name, source);
+      if (source) registerDynamicComponentSource(t.name, source);
     }
   }, [config]);
 
@@ -339,8 +339,8 @@ function EmbedChat({
         agentId,
         key: t.name,
         description: "",
-        parametersSchemaId: null,
-        returnParametersSchemaId: null,
+        parametersSchema: null,
+        returnParametersSchema: null,
         output: null,
         handler: null,
         url: null,

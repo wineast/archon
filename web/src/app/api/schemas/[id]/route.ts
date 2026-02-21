@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
-import { schemas, tools } from "@/db/schema";
-import { eq, or, and, isNull } from "drizzle-orm";
+import { schemas } from "@/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
 
@@ -88,30 +88,6 @@ export async function DELETE(
 
   const ctx = await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
-
-  // Check if any non-deleted tools reference this schema
-  const referencingTools = await db
-    .select({ id: tools.id, name: tools.name })
-    .from(tools)
-    .where(
-      and(
-        or(
-          eq(tools.parametersSchemaId, id),
-          eq(tools.returnParametersSchemaId, id)
-        ),
-        isNull(tools.deletedAt)
-      )
-    );
-
-  if (referencingTools.length > 0) {
-    const names = referencingTools.map((t) => t.name).join(", ");
-    return NextResponse.json(
-      {
-        error: `Schema is referenced by: ${names}. Remove references before deleting.`,
-      },
-      { status: 400 }
-    );
-  }
 
   await db.update(schemas).set({ deletedAt: new Date() }).where(eq(schemas.id, id));
 

@@ -68,7 +68,7 @@ export const seedComponents: Seeder = {
           string,
           Array<{
             name: string;
-            tool: { name: string; input: unknown; output: unknown };
+            data: unknown;
             tags?: string[];
             showAsExample?: boolean;
           }>
@@ -91,7 +91,7 @@ export const seedComponents: Seeder = {
               cases.map((tc) => ({
                 componentId: compId,
                 name: tc.name,
-                tool: tc.tool,
+                data: tc.data,
                 tags: tc.tags ?? [],
                 showAsExample: tc.showAsExample ?? false,
               }))

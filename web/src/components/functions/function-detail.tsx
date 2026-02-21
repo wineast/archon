@@ -15,13 +15,14 @@ import { FunctionExamplesPanel } from "./function-examples-panel";
 import { FunctionPlayground } from "./function-playground";
 import { FunctionTestCasesPanel } from "./function-test-cases-panel";
 import type { FunctionRow } from "@/db/schema";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 interface FunctionDetailProps {
   agentId: string;
   fn: FunctionRow;
   onSave: (
     id: string,
-    data: { name: string; description: string; code: string; parametersSchemaId: string | null; returnParametersSchemaId: string | null }
+    data: { name: string; description: string; code: string; parametersSchema: JsonSchema7 | null; returnParametersSchema: JsonSchema7 | null }
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
@@ -48,8 +49,8 @@ export function FunctionDetail({
         name: draft.name,
         description: draft.description,
         code: draft.code,
-        parametersSchemaId: draft.parametersSchemaId,
-        returnParametersSchemaId: draft.returnParametersSchemaId,
+        parametersSchema: draft.parametersSchema,
+        returnParametersSchema: draft.returnParametersSchema,
       });
     } finally {
       setSaving(false);
@@ -88,8 +89,8 @@ export function FunctionDetail({
               name={fn.name}
               description={fn.description}
               code={fn.code}
-              parametersSchemaId={fn.parametersSchemaId ?? null}
-              returnParametersSchemaId={fn.returnParametersSchemaId ?? null}
+              parametersSchema={fn.parametersSchema ?? null}
+              returnParametersSchema={fn.returnParametersSchema ?? null}
               onDraftRef={setDraftRef}
               onDirtyChange={setDirty}
             />

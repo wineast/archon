@@ -171,7 +171,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
     const items = compTestsByKey.get(key) ?? [];
     items.push({
       name: row.component_test_cases.name,
-      tool: row.component_test_cases.tool,
+      data: row.component_test_cases.data,
       tags: row.component_test_cases.tags,
     });
     compTestsByKey.set(key, items);
@@ -202,8 +202,8 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         key: t.key,
         name: t.name,
         description: t.description,
-        parametersSchemaKey: t.parametersSchemaId ? schemaIdToKey.get(t.parametersSchemaId) ?? null : null,
-        returnParametersSchemaKey: t.returnParametersSchemaId ? schemaIdToKey.get(t.returnParametersSchemaId) ?? null : null,
+        parametersSchema: t.parametersSchema ?? null,
+        returnParametersSchema: t.returnParametersSchema ?? null,
         handler: t.handler,
         url: t.url,
         componentKey: t.componentId ? compIdToKey.get(t.componentId) ?? null : null,
@@ -218,8 +218,8 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         name: f.name,
         description: f.description,
         code: f.code,
-        parametersSchemaKey: f.parametersSchemaId ? schemaIdToKey.get(f.parametersSchemaId) ?? null : null,
-        returnParametersSchemaKey: f.returnParametersSchemaId ? schemaIdToKey.get(f.returnParametersSchemaId) ?? null : null,
+        parametersSchema: f.parametersSchema ?? null,
+        returnParametersSchema: f.returnParametersSchema ?? null,
         testCases: funcTestsByKey.get(f.key) ?? [],
       })
     ),
@@ -230,6 +230,8 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         description: c.description,
         componentSource: c.componentSource,
         generatedCss: c.generatedCss,
+        inputSchema: c.inputSchema ?? null,
+        outputSchema: c.outputSchema ?? null,
         testCases: compTestsByKey.get(c.key) ?? [],
       })
     ),
@@ -486,6 +488,8 @@ export async function restoreSnapshot(
           description: c.description,
           componentSource: c.componentSource,
           generatedCss: c.generatedCss,
+          inputSchema: c.inputSchema ?? null,
+          outputSchema: c.outputSchema ?? null,
         }))
       )
       .returning({ id: components.id, key: components.key });
@@ -498,7 +502,7 @@ export async function restoreSnapshot(
       c.testCases.map((tc) => ({
         componentId: compKeyToNewId.get(c.key)!,
         name: tc.name,
-        tool: tc.tool,
+        data: tc.data,
         tags: tc.tags,
       }))
     );
@@ -517,8 +521,8 @@ export async function restoreSnapshot(
           key: t.key,
           name: t.name,
           description: t.description,
-          parametersSchemaId: t.parametersSchemaKey ? schemaKeyToNewId.get(t.parametersSchemaKey) ?? null : null,
-          returnParametersSchemaId: t.returnParametersSchemaKey ? schemaKeyToNewId.get(t.returnParametersSchemaKey) ?? null : null,
+          parametersSchema: t.parametersSchema ?? null,
+          returnParametersSchema: t.returnParametersSchema ?? null,
           handler: t.handler,
           url: t.url ?? null,
           componentId: t.componentKey ? compKeyToNewId.get(t.componentKey) ?? null : null,
@@ -554,8 +558,8 @@ export async function restoreSnapshot(
           name: f.name,
           description: f.description,
           code: f.code,
-          parametersSchemaId: f.parametersSchemaKey ? schemaKeyToNewId.get(f.parametersSchemaKey) ?? null : null,
-          returnParametersSchemaId: f.returnParametersSchemaKey ? schemaKeyToNewId.get(f.returnParametersSchemaKey) ?? null : null,
+          parametersSchema: f.parametersSchema ?? null,
+          returnParametersSchema: f.returnParametersSchema ?? null,
         }))
       )
       .returning({ id: functions.id, key: functions.key });

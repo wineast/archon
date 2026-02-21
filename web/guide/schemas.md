@@ -367,16 +367,16 @@ Schema: loan_application
 
 Schema 被以下实体引用：
 
-| 实体 | 引用字段 | 用途 |
+| 实体 | 引用方式 | 用途 |
 |------|---------|------|
-| **Tool（工具）** | `parametersSchemaId` | 工具的输入参数定义 |
-| **Tool（工具）** | `returnParametersSchemaId` | 工具的返回值结构定义 |
-| **Function（函数）** | `parametersSchemaId` | 函数的输入参数定义 |
-| **Function（函数）** | `returnParametersSchemaId` | 函数的返回值结构定义 |
-| **Object Type（对象类型）** | `schemaId` | 对象的属性结构定义 |
-| **Object 类型参数** | `schemaId` | 嵌套对象引用已有 Schema |
+| **Tool（工具）** | `parametersSchema` (inline JSONB) | 工具的输入参数定义 |
+| **Tool（工具）** | `returnParametersSchema` (inline JSONB) | 工具的返回值结构定义 |
+| **Function（函数）** | `parametersSchema` (inline JSONB) | 函数的输入参数定义 |
+| **Function（函数）** | `returnParametersSchema` (inline JSONB) | 函数的返回值结构定义 |
+| **Component（组件）** | `inputSchema` / `outputSchema` (inline JSONB) | 组件的输入/输出结构 |
+| **Object Type（对象类型）** | `schemaId` (FK) | 对象的属性结构定义 |
 
-删除 Schema 时，引用方的对应字段会被设为 `null`（`onDelete: "set null"`）。
+工具、函数使用内联 JSONB 存储 Schema 定义（可选，`null` 表示不设置）。组件的 inputSchema 为必填，始终存储完整 JSON Schema 对象。
 
 ---
 
@@ -476,19 +476,20 @@ Preview 面板内部再通过 **Zod Code / JSON Schema** 子标签切换两种�
 
 ```
 1. 加载工具定义
-   └── 从 DB 读取 tool.parametersSchemaId → schemas 表
+   └── 从 DB 读取 tool.parametersSchema (inline JSONB)
 
 2. 解析 Schema（gatherTemplateData）
-   └── 加载 agent 所有 schemas + schema_includes
-   └── 递归解析 includes → 合并参数列表 → 构建 schemaMap
-   └── 加载 datasets → 构建 datasetsById
+   └── 加载 agent 所有共享 schemas
+   └── 构建 defsMap: key → parameters（$ref 解析）
+   └── 加载 resolvedVars（数据集变量，用于模板枚举展开）
 
 3. 构建工具定义负载
-   └── 从 schemaMap 解析 parametersSchemaId → SchemaProperty[]
-   └── 从 schemaMap 解析 returnParametersSchemaId → SchemaProperty[]
+   └── 直接读取 tool.parametersSchema（内联 JSONB）
+   └── 如果是 $ref，从 defsMap 解析为完整 JsonSchema7
+   └── 同理处理 returnParametersSchema
 
 4. 构建 Zod Schema
-   └── buildInputSchema(parameters, resolvedVars, { datasetsById, schemaMap })
+   └── buildInputSchema(parameters, resolvedVars, { defsMap })
    └── 返回 z.object({...})
 
 5. 注册为 AI SDK Tool
@@ -502,7 +503,7 @@ Preview 面板内部再通过 **Zod Code / JSON Schema** 子标签切换两种�
    └── 校验失败 → 报错
 
 7. 输出验证（可选）
-   └── 如果配置了 returnParametersSchemaId
+   └── 如果配置了 returnParametersSchema
    └── 用同样的流程构建输出 Zod Schema
    └── 校验 handler 返回值
    └── 验证失败时注入 _outputValidationWarning（不阻断，记录事件）

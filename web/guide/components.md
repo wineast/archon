@@ -32,16 +32,13 @@
 - **Name**：组件显示名称
 - **Description**：组件用途描述
 
-### Schema Ref（Input / Output）
+### Input Schema
 
-可选关联 Schema，用于描述组件接收的工具数据结构。下拉选择当前 Agent 已定义的 Schemas。
+组件必须定义 Input Schema（JSON Schema 7 格式），描述组件接收的数据结构。使用 JSON 编辑器直接编辑 Schema 对象。
 
-- **Input Schema Ref**（可选）：关联一个 Schema，描述 `tool.input` 的数据结构
-- **Output Schema Ref**（可选）：关联一个 Schema，描述 `tool.output` 的数据结构
-
-Schema Ref 的作用：
-- **Playground**：根据关联的 Schema 自动生成模拟数据的模板，方便快速测试
-- **Test Cases**：为测试用例的 input/output 编辑器提供结构参考
+Schema 的作用：
+- **Playground**：根据 Input Schema 验证数据是否符合预期结构
+- **Test Cases**：运行测试时自动校验数据并显示 Schema 告警
 - **文档化**：明确标注组件期望接收的数据结构，方便团队协作
 
 ### 组件源码（Component Source）

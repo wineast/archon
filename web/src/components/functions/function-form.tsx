@@ -11,18 +11,10 @@ import deepEqual from "fast-deep-equal";
 import { Input } from "@/components/ui/input";
 import { KeyField } from "@/components/ui/key-field";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JsEditor } from "@/components/editors/js-editor";
-import { useSchemas } from "@/lib/schemas/hooks";
-import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
+import { InlineSchemaEditor } from "@/components/schemas/inline-schema-editor";
 import { FunctionCodeAssistDialog } from "./function-code-assist-dialog";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 
@@ -30,8 +22,8 @@ export interface FunctionFormValues {
   name: string;
   description: string;
   code: string;
-  parametersSchemaId: string | null;
-  returnParametersSchemaId: string | null;
+  parametersSchema: JsonSchema7 | null;
+  returnParametersSchema: JsonSchema7 | null;
 }
 
 export interface FunctionFormHandle {
@@ -46,63 +38,10 @@ interface FunctionFormProps {
   name: string;
   description: string;
   code: string;
-  parametersSchemaId: string | null;
-  returnParametersSchemaId: string | null;
+  parametersSchema: JsonSchema7 | null;
+  returnParametersSchema: JsonSchema7 | null;
   onDraftRef: (ref: FunctionFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
-}
-
-interface ParameterSectionProps {
-  label: string;
-  schemaIdFieldName: "parametersSchemaId" | "returnParametersSchemaId";
-  schemaIdValue: string | null | undefined;
-  schemas: { id: string; key: string; name: string; parameters: JsonSchema7 }[];
-  form: ReturnType<typeof useForm<FunctionFormValues>>;
-}
-
-function ParameterSection({
-  label,
-  schemaIdFieldName,
-  schemaIdValue,
-  schemas,
-  form,
-}: ParameterSectionProps) {
-  const selectedSchema = schemas.find((s) => s.id === schemaIdValue);
-
-  return (
-    <div>
-      <label className="text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
-      <div className="mt-1 space-y-2">
-        <Controller
-          name={schemaIdFieldName}
-          control={form.control}
-          render={({ field }) => (
-            <Select
-              value={field.value ?? "__none__"}
-              onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="Select a schema..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {schemas.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} ({s.key})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {selectedSchema && (
-          <SchemaParameterPreview schema={selectedSchema.parameters} />
-        )}
-      </div>
-    </div>
-  );
 }
 
 export function FunctionForm({
@@ -111,41 +50,37 @@ export function FunctionForm({
   name: initialName,
   description: initialDescription,
   code: initialCode,
-  parametersSchemaId: initialParametersSchemaId,
-  returnParametersSchemaId: initialReturnParametersSchemaId,
+  parametersSchema: initialParametersSchema,
+  returnParametersSchema: initialReturnParametersSchema,
   onDraftRef,
   onDirtyChange,
 }: FunctionFormProps) {
-  const { schemas } = useSchemas(agentId);
-
   const defaultValues: FunctionFormValues = {
     name: initialName,
     description: initialDescription,
     code: initialCode,
-    parametersSchemaId: initialParametersSchemaId ?? null,
-    returnParametersSchemaId: initialReturnParametersSchemaId ?? null,
+    parametersSchema: initialParametersSchema ?? null,
+    returnParametersSchema: initialReturnParametersSchema ?? null,
   };
 
   const form = useForm<FunctionFormValues>({ defaultValues });
   const originalRef = useRef<FunctionFormValues>({ ...defaultValues });
 
-  const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });
-  const returnParametersSchemaId = useWatch({ control: form.control, name: "returnParametersSchemaId" });
+  const parametersSchema = useWatch({ control: form.control, name: "parametersSchema" });
+  const returnParametersSchema = useWatch({ control: form.control, name: "returnParametersSchema" });
   const currentCode = useWatch({ control: form.control, name: "code" });
   const [codeAssistOpen, setCodeAssistOpen] = useState(false);
 
   const codeAssistContext = useMemo(() => {
     const parts: string[] = [];
-    const paramsSchema = schemas.find((s) => s.id === parametersSchemaId);
-    if (paramsSchema) {
-      parts.push(`### 参数 Schema: ${paramsSchema.name} (${paramsSchema.key})\n\`\`\`json\n${JSON.stringify(paramsSchema.parameters, null, 2)}\n\`\`\``);
+    if (parametersSchema) {
+      parts.push(`### 参数 Schema\n\`\`\`json\n${JSON.stringify(parametersSchema, null, 2)}\n\`\`\``);
     }
-    const returnSchema = schemas.find((s) => s.id === returnParametersSchemaId);
-    if (returnSchema) {
-      parts.push(`### 返回值 Schema: ${returnSchema.name} (${returnSchema.key})\n\`\`\`json\n${JSON.stringify(returnSchema.parameters, null, 2)}\n\`\`\``);
+    if (returnParametersSchema) {
+      parts.push(`### 返回值 Schema\n\`\`\`json\n${JSON.stringify(returnParametersSchema, null, 2)}\n\`\`\``);
     }
     return parts.length > 0 ? parts.join("\n\n") : undefined;
-  }, [schemas, parametersSchemaId, returnParametersSchemaId]);
+  }, [parametersSchema, returnParametersSchema]);
 
   // Expose handle to parent
   useEffect(() => {
@@ -196,19 +131,27 @@ export function FunctionForm({
           />
         </div>
 
-        <ParameterSection
-          label="Parameters"
-          schemaIdFieldName="parametersSchemaId"
-          schemaIdValue={parametersSchemaId}
-          schemas={schemas}
-          form={form}
+        <Controller
+          name="parametersSchema"
+          control={form.control}
+          render={({ field }) => (
+            <InlineSchemaEditor
+              label="Parameters"
+              value={field.value ?? null}
+              onChange={field.onChange}
+            />
+          )}
         />
-        <ParameterSection
-          label="Return Parameters"
-          schemaIdFieldName="returnParametersSchemaId"
-          schemaIdValue={returnParametersSchemaId}
-          schemas={schemas}
-          form={form}
+        <Controller
+          name="returnParametersSchema"
+          control={form.control}
+          render={({ field }) => (
+            <InlineSchemaEditor
+              label="Return Parameters"
+              value={field.value ?? null}
+              onChange={field.onChange}
+            />
+          )}
         />
 
         <div>

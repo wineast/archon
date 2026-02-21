@@ -1,8 +1,8 @@
 import type { ComponentType } from "react";
 
-export interface ToolRendererProps {
-  tool: { name: string; input: unknown; output: unknown };
-  state: string;
+export interface ComponentRendererProps {
+  data: unknown;
+  state?: string;
   isLoading?: boolean;
   isComplete?: boolean;
   isError?: boolean;
@@ -12,11 +12,11 @@ export interface ToolRendererProps {
 
 const dynamicRegistry = new Map<string, string>();
 
-export function registerDynamicToolSource(key: string, source: string) {
+export function registerDynamicComponentSource(key: string, source: string) {
   dynamicRegistry.set(key, source);
 }
 
-export function getDynamicToolSource(
+export function getDynamicComponentSource(
   key: string | undefined | null
 ): string | undefined {
   if (!key) return undefined;
@@ -25,20 +25,20 @@ export function getDynamicToolSource(
 
 /* ── Compiled component registry (for composition) ── */
 
-const compiledRegistry = new Map<string, ComponentType<ToolRendererProps>>();
+const compiledRegistry = new Map<string, ComponentType<ComponentRendererProps>>();
 
-export function registerCompiledToolComponent(
-  toolName: string,
-  comp: ComponentType<ToolRendererProps>
+export function registerCompiledComponent(
+  key: string,
+  comp: ComponentType<ComponentRendererProps>
 ) {
-  compiledRegistry.set(toolName, comp);
+  compiledRegistry.set(key, comp);
 }
 
-export function getCompiledToolComponent(
-  toolName: string | undefined | null
-): ComponentType<ToolRendererProps> | undefined {
-  if (!toolName) return undefined;
-  return compiledRegistry.get(toolName);
+export function getCompiledComponent(
+  key: string | undefined | null
+): ComponentType<ComponentRendererProps> | undefined {
+  if (!key) return undefined;
+  return compiledRegistry.get(key);
 }
 
 export function clearCompiledRegistry() {

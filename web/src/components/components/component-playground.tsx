@@ -38,9 +38,9 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
-import { ToolDataCard } from "@/components/components/tool-data-card";
+import { DataCard } from "@/components/components/data-card";
 import {
-  DynamicToolRenderer,
+  DynamicComponentRenderer,
   DynamicComponentErrorBoundary,
   compileComponentGraph,
   type ComponentRecord,
@@ -49,6 +49,7 @@ import {
   useComponentTestCases,
   createComponentTestCase,
 } from "@/lib/components/test-case-hooks";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import {
   validateAgainstSchema,
   type SchemaValidationResult,
@@ -74,8 +75,7 @@ interface ComponentPlaygroundProps {
   componentSource: string;
   componentKey?: string;
   allComponents?: ComponentRecord[];
-  toolInputSchemaId?: string | null;
-  toolOutputSchemaId?: string | null;
+  inputSchema?: JsonSchema7 | null;
 }
 
 export function ComponentPlayground({
@@ -83,12 +83,9 @@ export function ComponentPlayground({
   componentSource,
   componentKey,
   allComponents,
-  toolInputSchemaId,
-  toolOutputSchemaId,
+  inputSchema,
 }: ComponentPlaygroundProps) {
-  const [toolName, setToolName] = useState("");
-  const [inputValue, setInputValue] = useState("{}");
-  const [outputValue, setOutputValue] = useState("{}");
+  const [dataValue, setDataValue] = useState("{}");
   const [state, setState] = useState("output-available");
   const [previewKey, setPreviewKey] = useState(0);
 
@@ -102,26 +99,16 @@ export function ComponentPlayground({
   const [saveTagInput, setSaveTagInput] = useState("");
   const [saveShowAsExample, setSaveShowAsExample] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [inputValidation, setInputValidation] =
-    useState<SchemaValidationResult | null>(null);
-  const [outputValidation, setOutputValidation] =
+  const [dataValidation, setDataValidation] =
     useState<SchemaValidationResult | null>(null);
 
-  const parsedInput = useMemo(() => {
+  const parsedData = useMemo(() => {
     try {
-      return JSON.parse(inputValue || "{}");
+      return JSON.parse(dataValue || "{}");
     } catch {
       return {};
     }
-  }, [inputValue]);
-
-  const parsedOutput = useMemo(() => {
-    try {
-      return JSON.parse(outputValue || "{}");
-    } catch {
-      return {};
-    }
-  }, [outputValue]);
+  }, [dataValue]);
 
   const booleans = useMemo(() => deriveBooleans(state), [state]);
 
@@ -154,13 +141,9 @@ export function ComponentPlayground({
   }, [componentKey, allComponents, componentSource]);
 
   const runSchemaValidation = useCallback(async () => {
-    const [inResult, outResult] = await Promise.all([
-      validateAgainstSchema(toolInputSchemaId, parsedInput),
-      validateAgainstSchema(toolOutputSchemaId, parsedOutput),
-    ]);
-    setInputValidation(inResult);
-    setOutputValidation(outResult);
-  }, [toolInputSchemaId, toolOutputSchemaId, parsedInput, parsedOutput]);
+    const result = await validateAgainstSchema(inputSchema, parsedData);
+    setDataValidation(result);
+  }, [inputSchema, parsedData]);
 
   const handleRefresh = useCallback(() => {
     setPreviewKey((k) => k + 1);
@@ -168,13 +151,10 @@ export function ComponentPlayground({
   }, [runSchemaValidation]);
 
   const handleLoadTestCase = useCallback(
-    (tool: { name: string; input: unknown; output: unknown }) => {
-      setToolName(tool.name);
-      setInputValue(JSON.stringify(tool.input, null, 2));
-      setOutputValue(JSON.stringify(tool.output, null, 2));
+    (data: unknown) => {
+      setDataValue(JSON.stringify(data, null, 2));
       setPreviewKey((k) => k + 1);
-      setInputValidation(null);
-      setOutputValidation(null);
+      setDataValidation(null);
     },
     []
   );
@@ -211,18 +191,11 @@ export function ComponentPlayground({
 
   const handleSave = useCallback(async () => {
     if (!saveName.trim()) return;
-    let parsedIn: unknown;
-    let parsedOut: unknown;
+    let parsed: unknown;
     try {
-      parsedIn = JSON.parse(inputValue);
+      parsed = JSON.parse(dataValue);
     } catch {
-      toast.error("Invalid input JSON");
-      return;
-    }
-    try {
-      parsedOut = JSON.parse(outputValue);
-    } catch {
-      toast.error("Invalid output JSON");
+      toast.error("Invalid data JSON");
       return;
     }
     setSaving(true);
@@ -231,7 +204,7 @@ export function ComponentPlayground({
         componentId,
         {
           name: saveName.trim(),
-          tool: { name: toolName, input: parsedIn, output: parsedOut },
+          data: parsed,
           tags: saveTags.length > 0 ? saveTags : undefined,
           showAsExample: saveShowAsExample || undefined,
         },
@@ -246,9 +219,7 @@ export function ComponentPlayground({
     }
   }, [
     saveName,
-    inputValue,
-    outputValue,
-    toolName,
+    dataValue,
     saveTags,
     saveShowAsExample,
     componentId,
@@ -259,14 +230,10 @@ export function ComponentPlayground({
     <div className="flex h-full flex-col">
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-3 p-4">
-          {/* Tool */}
-          <ToolDataCard
-            toolName={toolName}
-            inputValue={inputValue}
-            outputValue={outputValue}
-            onToolNameChange={setToolName}
-            onInputChange={setInputValue}
-            onOutputChange={setOutputValue}
+          {/* Data */}
+          <DataCard
+            dataValue={dataValue}
+            onDataChange={setDataValue}
             headerExtra={
               testCases.length > 0 ? (
                 <DropdownMenu>
@@ -287,7 +254,7 @@ export function ComponentPlayground({
                         {examples.map((tc) => (
                           <DropdownMenuItem
                             key={tc.id}
-                            onClick={() => handleLoadTestCase(tc.tool)}
+                            onClick={() => handleLoadTestCase(tc.data)}
                           >
                             {tc.name}
                           </DropdownMenuItem>
@@ -303,7 +270,7 @@ export function ComponentPlayground({
                         {nonExamples.map((tc) => (
                           <DropdownMenuItem
                             key={tc.id}
-                            onClick={() => handleLoadTestCase(tc.tool)}
+                            onClick={() => handleLoadTestCase(tc.data)}
                           >
                             {tc.name}
                           </DropdownMenuItem>
@@ -314,21 +281,10 @@ export function ComponentPlayground({
                 </DropdownMenu>
               ) : undefined
             }
-            inputExtra={
-              inputValidation && !inputValidation.valid ? (
+            dataExtra={
+              dataValidation && !dataValidation.valid ? (
                 <div className="mt-1 space-y-0.5">
-                  {inputValidation.errors.map((e, i) => (
-                    <p key={i} className="text-xs text-destructive">
-                      {e.path ? `${e.path}: ` : ""}{e.message}
-                    </p>
-                  ))}
-                </div>
-              ) : undefined
-            }
-            outputExtra={
-              outputValidation && !outputValidation.valid ? (
-                <div className="mt-1 space-y-0.5">
-                  {outputValidation.errors.map((e, i) => (
+                  {dataValidation.errors.map((e, i) => (
                     <p key={i} className="text-xs text-destructive">
                       {e.path ? `${e.path}: ` : ""}{e.message}
                     </p>
@@ -388,14 +344,10 @@ export function ComponentPlayground({
               <div className="mt-1 rounded-md border p-3">
                 <DynamicComponentErrorBoundary
                   key={previewKey}
-                  fallbackToolName={toolName || "preview"}
+                  fallbackLabel="preview"
                 >
-                  <DynamicToolRenderer
-                    tool={{
-                      name: toolName,
-                      input: parsedInput,
-                      output: parsedOutput,
-                    }}
+                  <DynamicComponentRenderer
+                    data={parsedData}
                     state={state}
                     source={compiledComponent ? undefined : componentSource}
                     compiledComponent={compiledComponent}

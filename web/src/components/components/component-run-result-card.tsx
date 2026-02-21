@@ -80,10 +80,10 @@ export function ComponentRunResultCard({
 
           <div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Tool
+              Data
             </p>
             <pre className="mt-0.5 text-xs bg-muted rounded p-2 overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(result.tool, null, 2)}
+              {JSON.stringify(result.data, null, 2)}
             </pre>
           </div>
         </div>

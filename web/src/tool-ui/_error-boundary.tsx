@@ -5,7 +5,7 @@ import { AlertCircle } from "lucide-react";
 
 interface Props {
   children: ReactNode;
-  fallbackToolName?: string;
+  fallbackLabel?: string;
 }
 
 interface State {
@@ -20,7 +20,7 @@ export class DynamicComponentErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[DynamicComponent]", this.props.fallbackToolName, error, info);
+    console.error("[DynamicComponent]", this.props.fallbackLabel, error, info);
   }
 
   render() {
@@ -29,7 +29,7 @@ export class DynamicComponentErrorBoundary extends Component<Props, State> {
         <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive text-sm">
           <AlertCircle className="size-4 shrink-0" />
           <span>
-            Component error{this.props.fallbackToolName ? ` (${this.props.fallbackToolName})` : ""}:{" "}
+            Component error{this.props.fallbackLabel ? ` (${this.props.fallbackLabel})` : ""}:{" "}
             {this.state.error.message}
           </span>
         </div>

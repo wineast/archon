@@ -40,8 +40,8 @@ export async function POST(req: Request) {
       name: body.name,
       description: body.description ?? "",
       code: body.code,
-      parametersSchemaId: body.parametersSchemaId ?? null,
-      returnParametersSchemaId: body.returnParametersSchemaId ?? null,
+      parametersSchema: body.parametersSchema ?? null,
+      returnParametersSchema: body.returnParametersSchema ?? null,
     })
     .returning();
 
