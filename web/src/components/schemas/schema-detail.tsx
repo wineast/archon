@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { JsonEditor } from "@/components/editors/json-editor";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,9 +12,7 @@ import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./sche
 import { SchemaPlayground } from "./schema-playground";
 import { SchemaExamplesPanel } from "./schema-examples-panel";
 import { SchemaTestCasesPanel } from "./schema-test-cases-panel";
-import { SchemaParameterPreview } from "./schema-parameter-preview";
 import { useDatasets } from "@/lib/datasets/hooks";
-import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { SchemaRow } from "@/db/schema";
 
 interface SchemaDetailProps {
@@ -34,6 +33,9 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
   const [dirty, setDirty] = useState(false);
   const [innerTab, setInnerTab] = useState<"edit" | "preview">("edit");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [previewContent, setPreviewContent] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewJsonError, setPreviewJsonError] = useState<string | null>(null);
   const busy = saving || deleting;
 
   // AI assist context: summarize all schemas for the AI
@@ -51,6 +53,41 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
   const templateVariableNames = useMemo(
     () => datasetRows.map((d) => d.key),
     [datasetRows]
+  );
+
+  const handlePreview = useCallback(async () => {
+    const params = draftRef.current?.getDraft().parameters ?? schema.parameters;
+    const text = JSON.stringify(params, null, 2);
+    setPreviewLoading(true);
+    setPreviewJsonError(null);
+    try {
+      const res = await fetch("/api/schema/template/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, agentId }),
+      });
+      const { rendered } = await res.json();
+      setPreviewContent(rendered);
+      try {
+        JSON.parse(rendered);
+      } catch (err) {
+        setPreviewJsonError((err as Error).message);
+      }
+    } catch {
+      setPreviewContent(text);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [schema.parameters, agentId]);
+
+  const handleInnerTabChange = useCallback(
+    (value: string) => {
+      setInnerTab(value as "edit" | "preview");
+      if (value === "preview") {
+        handlePreview();
+      }
+    },
+    [handlePreview]
   );
 
   const handleSave = useCallback(async () => {
@@ -106,7 +143,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
             >
               <Tabs
                 value={innerTab}
-                onValueChange={(v) => setInnerTab(v as "edit" | "preview")}
+                onValueChange={handleInnerTabChange}
               >
                 <TabsList className="h-7">
                   <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
@@ -116,9 +153,22 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
             </SchemaForm>
 
             {innerTab === "preview" && (
-              <SchemaParameterPreview
-                schema={draftRef.current?.getDraft().parameters ?? schema.parameters as JsonSchema7}
-              />
+              previewLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Spinner />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {previewJsonError && (
+                    <p className="text-xs text-destructive">{previewJsonError}</p>
+                  )}
+                  <JsonEditor
+                    value={previewContent}
+                    height="400px"
+                    readOnly
+                  />
+                </div>
+              )
             )}
           </div>
         </ScrollArea>

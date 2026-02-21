@@ -273,7 +273,7 @@ export function SchemaForm({
         {/* Parameters header with Guide + AI edit */}
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium text-muted-foreground">
-            Parameters
+            JSON Schema
           </label>
           <GuideDialog title="Schema 编辑指南" content={SCHEMA_GUIDE_CONTENT} />
           <Button
