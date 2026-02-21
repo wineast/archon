@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import { JsonEditor } from "@/components/editors/json-editor";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SchemaParameterPreview } from "./schema-parameter-preview";
 import { SchemaCodeAssistDialog } from "./schema-code-assist-dialog";
@@ -40,6 +41,7 @@ export function InlineSchemaEditor({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewJsonError, setPreviewJsonError] = useState<string | null>(null);
   const [schemaAssistOpen, setSchemaAssistOpen] = useState(false);
+  const [expandRefs, setExpandRefs] = useState(false);
 
   // Dataset variables for template completions
   const { datasetVars } = useDatasetVarsMap(agentId);
@@ -74,7 +76,7 @@ export function InlineSchemaEditor({
     [onChange]
   );
 
-  const handlePreview = useCallback(async () => {
+  const handlePreview = useCallback(async (overrideExpandRefs?: boolean) => {
     if (!customJson || !agentId) {
       setPreviewContent(customJson);
       setPreviewJsonError(null);
@@ -82,11 +84,12 @@ export function InlineSchemaEditor({
     }
     setPreviewLoading(true);
     setPreviewJsonError(null);
+    const shouldExpand = overrideExpandRefs ?? expandRefs;
     try {
       const res = await fetch("/api/schema/template/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: customJson, agentId }),
+        body: JSON.stringify({ text: customJson, agentId, expandRefs: shouldExpand }),
       });
       const { rendered } = await res.json();
       setPreviewContent(rendered);
@@ -100,7 +103,7 @@ export function InlineSchemaEditor({
     } finally {
       setPreviewLoading(false);
     }
-  }, [customJson, agentId]);
+  }, [customJson, agentId, expandRefs]);
 
   const handleTabChange = useCallback(
     (value: string) => {
@@ -170,6 +173,19 @@ export function InlineSchemaEditor({
             )}
           </TabsContent>
           <TabsContent value="preview">
+            <div className="flex items-center gap-2 mb-2">
+              <Switch
+                id="expand-refs"
+                checked={expandRefs}
+                onCheckedChange={(checked) => {
+                  setExpandRefs(checked);
+                  handlePreview(checked);
+                }}
+              />
+              <label htmlFor="expand-refs" className="text-xs text-muted-foreground">
+                展开 $ref
+              </label>
+            </div>
             {previewLoading ? (
               <div className="flex min-h-[200px] items-center justify-center rounded-md border">
                 <Spinner className="size-5" />
