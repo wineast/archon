@@ -25,6 +25,7 @@ import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import { WikiAssistDialog } from "@/components/wiki/wiki-assist-dialog";
 import { GuideDialog } from "@/components/ui/guide-dialog";
+import { KeyField } from "@/components/ui/key-field";
 import wikiContentGuide from "../../../guide/wiki-content.md";
 
 interface WikiEditorProps {
@@ -116,14 +117,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
       <div className="flex h-full flex-col">
         {/* Header */}
         <div className="shrink-0 space-y-2 px-6 py-4">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Key</label>
-            <Input
-              className="mt-1 h-8 text-sm font-mono bg-muted"
-              value={doc.key}
-              readOnly
-            />
-          </div>
+          <KeyField value={doc.key} />
           <div>
             <label className="text-xs font-medium text-muted-foreground">Name</label>
             <Input
