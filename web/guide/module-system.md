@@ -14,7 +14,7 @@
 
 | 命名空间 | 用途 | 适用场景 |
 |---------|------|---------|
-| `archon:fn/<key>` | 导入同 Agent 下的其他函数 | 函数、工具 Handler |
+| `archon:fn/<key>` | 导入同 Agent 下的其他函数 | 函数 |
 | `archon:context` | 导入平台 API（wiki/dataset/fn/ontology） | 工具 Handler |
 | `archon:lib/filtrex` | 导入 filtrex 库的 compileExpression | 函数 |
 | `archon:react` | React core hooks | 组件 |

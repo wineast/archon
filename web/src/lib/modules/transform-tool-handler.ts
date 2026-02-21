@@ -8,7 +8,6 @@
  * Transforms:
  * - `import { wiki, dataset } from "archon:context"` → `var { wiki, dataset } = __context;`
  * - `import { fn } from "archon:context"` → `var fn = __context.fn;`
- * - `import calc from "archon:fn/calc"` → `var calc = __context.fn("calc");`
  * - `export default function(args) { ... }` → extracts function for IIFE wrapping
  * - `export default async function(args) { ... }` → same
  */
@@ -39,14 +38,15 @@ export function transformToolHandlerImports(code: string): string {
       continue;
     }
 
-    // Match: import X from "archon:fn/<key>"
-    const fnImport = trimmed.match(
-      /^import\s+(\w+)\s+from\s+["']archon:fn\/([^"']+)["']\s*;?\s*$/
+    // Match: unsupported import (any import not from archon:context)
+    const unsupportedImport = trimmed.match(
+      /^import\s+.+\s+from\s+["']([^"']+)["']\s*;?\s*$/
     );
-    if (fnImport) {
-      const [, localName, key] = fnImport;
-      preamble.push(`var ${localName} = __context.fn("${key}");`);
-      continue;
+    if (unsupportedImport) {
+      const mod = unsupportedImport[1];
+      throw new Error(
+        `工具 Handler 不支持模块 "${mod}"，只能使用 import { ... } from "archon:context"`
+      );
     }
 
     // Match: export default function / export default async function

@@ -31,7 +31,6 @@ return await res.json();
 
 ```js
 import { wiki, dataset, fn, ontology } from "archon:context";
-import calc from "archon:fn/pricing_engine";
 
 export default async function(args) {
   const doc = await wiki.get(args.docId);
@@ -39,11 +38,11 @@ export default async function(args) {
 }
 ```
 
+工具 Handler 只支持 `archon:context` 一个虚拟模块：
+
 | 命名空间 | 用途 | 示例 |
 |----------|------|------|
-| `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki } from "archon:context"` |
-| `archon:fn/<key>` | 导入 Functions 页面的函数 | `import calc from "archon:fn/pricing_engine"` |
-| `archon:lib/filtrex` | Filtrex 表达式引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
+| `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, fn } from "archon:context"` |
 
 **旧闭包格式**：
 

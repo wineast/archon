@@ -14,13 +14,22 @@ export default async function(args) {
     expect(result).not.toContain("export default");
   });
 
-  it("transforms archon:fn import", () => {
+  it("throws on unsupported archon:fn import", () => {
     const code = `import calc from "archon:fn/pricing_engine";
 export default async function(args) {
   return calc(args);
 }`;
-    const result = transformToolHandlerImports(code);
-    expect(result).toContain('var calc = __context.fn("pricing_engine");');
+    expect(() => transformToolHandlerImports(code)).toThrow(
+      '工具 Handler 不支持模块 "archon:fn/pricing_engine"，只能使用 import { ... } from "archon:context"'
+    );
+  });
+
+  it("throws on unsupported module import", () => {
+    const code = `import React from "archon:react";
+export default function(args) { return args; }`;
+    expect(() => transformToolHandlerImports(code)).toThrow(
+      '工具 Handler 不支持模块 "archon:react"，只能使用 import { ... } from "archon:context"'
+    );
   });
 
   it("wraps in an IIFE", () => {
