@@ -66,6 +66,7 @@ export async function GET(req: Request) {
     .where(
       and(
         isNull(agents.deletedAt),
+        eq(agents.isPlatform, false),
         or(
           eq(agentMembers.userId, user.id),
           sql`${orgMembers.userId} IS NOT NULL`,
