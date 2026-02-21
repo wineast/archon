@@ -1,6 +1,7 @@
 import { z } from "zod";
 import deepEqual from "fast-deep-equal";
 import type { JsonSchema7 } from "@/lib/schemas/types";
+import { renderField } from "@/lib/datasets/queries";
 
 export interface BuildSchemaOptions {
   /** Defs map: schema key → JsonSchema7 parameters. Used for $ref resolution. */
@@ -340,7 +341,7 @@ function buildUnionSchema(
   );
 }
 
-/** Resolve enum values, expanding {{var}} template strings from resolvedVars. */
+/** Resolve enum values, expanding LiquidJS template strings from resolvedVars. */
 function resolveEnumValues(
   schema: JsonSchema7,
   resolvedVars?: Record<string, unknown>,
@@ -350,35 +351,25 @@ function resolveEnumValues(
   const result: string[] = [];
   for (const v of schema.enum) {
     const s = String(v);
-    const match = s.match(/^\{\{(\w+)\}\}$/);
-    if (match && resolvedVars) {
-      const val = resolvedVars[match[1]];
-      if (val != null) {
-        const enumVals = resolveEnumFromValue(val);
-        if (enumVals) {
-          result.push(...enumVals);
+    if (!resolvedVars || !s.includes("{{")) {
+      result.push(s);
+      continue;
+    }
+    const rendered = renderField(s, resolvedVars);
+    // json filter outputs a JSON array string — parse and spread
+    if (rendered.startsWith("[")) {
+      try {
+        const arr = JSON.parse(rendered);
+        if (Array.isArray(arr)) {
+          result.push(...arr.map(String));
           continue;
         }
-      }
+      } catch { /* not valid JSON, fall through */ }
     }
-    result.push(s);
+    // Non-array result or parse failure — use as literal
+    result.push(rendered);
   }
   return result;
-}
-
-/** Extract enum values from a resolved dataset value. */
-function resolveEnumFromValue(val: unknown): string[] | undefined {
-  if (Array.isArray(val)) {
-    return val.map(String);
-  } else if (typeof val === "object" && val !== null) {
-    const values = Object.values(val as Record<string, unknown>);
-    if (values.length > 0 && typeof values[0] === "string") {
-      return values.map(String);
-    } else {
-      return Object.keys(val as Record<string, unknown>);
-    }
-  }
-  return undefined;
 }
 
 /**
