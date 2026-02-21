@@ -32,7 +32,7 @@
 |---------|--------|------|
 | 纯函数、解析器、渲染逻辑 | Layer 1 | 无 DOM 依赖，速度最快 |
 | 组件渲染、按钮点击、表单交互 | Layer 2 | 需要 DOM 但可 mock 外部服务 |
-| 真实 DOM 行为（CodeMirror、拖拽、焦点） | Layer 3 | jsdom 不支持的 API 必须在真实浏览器测 |
+| 真实 DOM 行为（Monaco Editor、拖拽、焦点） | Layer 3 | jsdom 不支持的 API 必须在真实浏览器测 |
 | 视觉回归、样式一致性 | Layer 3 | 只有真实浏览器能渲染 CSS |
 
 ---
@@ -72,28 +72,18 @@ describe("resolveTemplate", () => {
 **示例**：自动补全逻辑
 
 ```ts
-// src/components/ui/editors/__tests__/completions.test.ts
+// src/components/editors/__tests__/completions.test.ts
 import { describe, it, expect } from "vitest";
-import { EditorState } from "@codemirror/state";
-import { CompletionContext } from "@codemirror/autocomplete";
-import { createCompletionSource } from "../completions";
+import { generateCompletions } from "../completions";
 
-function complete(source, text) {
-  const state = EditorState.create({ doc: text });
-  const ctx = new CompletionContext(state, text.length, false);
-  return source(ctx);
-}
-
-describe("createCompletionSource", () => {
-  const source = createCompletionSource(["company_name"], []);
-
+describe("generateCompletions", () => {
   it("returns completions when {{ is open", () => {
-    const result = complete(source, "{{");
+    const result = generateCompletions("{{", ["company_name"], [], []);
     expect(result).not.toBeNull();
   });
 
   it("returns null when no trigger", () => {
-    expect(complete(source, "hello")).toBeNull();
+    expect(generateCompletions("hello", ["company_name"], [], [])).toBeNull();
   });
 });
 ```
@@ -133,7 +123,7 @@ vi.mock("@/lib/tools/hooks", () => ({
   useTools: () => ({ tools: [], isLoading: false }),
 }));
 
-vi.mock("@/components/ui/editors/md-editor", () => ({
+vi.mock("@/components/editors/md-editor", () => ({
   MdEditor: ({ value, onChange, placeholder }: any) => (
     <textarea
       data-testid="md-editor"
@@ -184,7 +174,7 @@ vi.mock("@/lib/datasets/hooks", () => ({
 }));
 
 // Mock 复杂 UI 组件为简单替身
-vi.mock("@/components/ui/editors/md-editor", () => ({
+vi.mock("@/components/editors/md-editor", () => ({
   MdEditor: ({ value, onChange }: any) => (
     <textarea data-testid="md-editor" value={value}
       onChange={(e) => onChange(e.target.value)} />
@@ -198,7 +188,7 @@ globalThis.fetch = vi.fn().mockResolvedValue({
 ```
 
 **jsdom 的局限**：
-- 不支持 `Selection`、`Range` — CodeMirror 等依赖选区的组件无法测
+- 不支持 `Selection`、`Range` — Monaco Editor 等依赖选区的组件无法测
 - 不支持 `ResizeObserver` — 需手动 polyfill（见 case-detail.test.tsx）
 - 不支持真实 CSS 布局 — 无法测样式、滚动、定位
 - 不支持 Canvas / WebGL
@@ -207,7 +197,7 @@ globalThis.fetch = vi.fn().mockResolvedValue({
 
 ## Layer 3: Story 交互测试 (Storybook play function)
 
-**适用场景**：真实浏览器中的交互测试、CodeMirror 编辑器、焦点管理、视觉回归
+**适用场景**：真实浏览器中的交互测试、Monaco 编辑器、焦点管理、视觉回归
 
 **特点**：
 - 环境：真实 Chromium 浏览器（通过 `@vitest/browser-playwright`）
@@ -221,21 +211,24 @@ globalThis.fetch = vi.fn().mockResolvedValue({
 **示例**：编辑器焦点稳定性回归测试
 
 ```tsx
-// src/components/__stories__/json-editor.stories.tsx
+// src/components/editors/__stories__/json-editor.stories.tsx
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect } from "storybook/test";
-import { JsonEditor } from "../ui/editors/json-editor";
+import { JsonEditor } from "../json-editor";
 
 const meta = {
-  title: "UI/JsonEditor",
+  title: "Editors/JsonEditor",
   component: JsonEditor,
 } satisfies Meta<typeof JsonEditor>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 回归测试：templateVariables 变化不应导致编辑器重建 */
+/**
+ * 回归测试：templateVariables 变化不应导致编辑器重建
+ * Monaco 使用 configRef 模式动态更新补全配置，不会触发编辑器重建
+ * 手动验证：在编辑器中输入内容 → 点击按钮 → 确认内容不丢失
+ */
 export const KeepsFocusOnVarChange: Story = {
   render: () => {
     const [value, setValue] = useState("{}");
@@ -256,24 +249,6 @@ export const KeepsFocusOnVarChange: Story = {
       </div>
     );
   },
-  play: async ({ canvas, userEvent }) => {
-    // 1. 点击编辑器获取焦点
-    const editor = canvas.getByRole("textbox");
-    await userEvent.click(editor);
-
-    // 2. 输入文本
-    await userEvent.type(editor, "hello");
-
-    // 3. 验证内容同步
-    const raw = canvas.getByTestId("raw-value");
-    await expect(raw.textContent).toContain("hello");
-
-    // 4. 改变 props — 旧代码会在此处重建编辑器导致内容丢失
-    await userEvent.click(canvas.getByTestId("change-vars"));
-
-    // 5. 验证内容仍然存在
-    await expect(raw.textContent).toContain("hello");
-  },
 };
 ```
 
@@ -291,7 +266,7 @@ export const KeepsFocusOnVarChange: Story = {
 - play 函数中的断言失败会导致 vitest 测试失败
 
 **何时用 Layer 3**：
-- 组件依赖真实 DOM API（CodeMirror、contentEditable、Selection）
+- 组件依赖真实 DOM API（Monaco Editor、contentEditable、Selection）
 - 需要测试焦点管理、键盘导航
 - 需要验证 CSS 渲染结果
 - jsdom 中 mock 太多导致测试失去意义
@@ -313,7 +288,7 @@ export const KeepsFocusOnVarChange: Story = {
 │  │  │
 │  │  ├─ 是 → Layer 2（Testing Library + mock）
 │  │  │
-│  │  └─ 否（依赖 CodeMirror/Canvas/真实布局）
+│  │  └─ 否（依赖 Monaco Editor/Canvas/真实布局）
 │  │     → Layer 3（Story play function）
 │  │
 │  └─ 需要验证焦点/拖拽/动画等浏览器行为？
@@ -353,7 +328,7 @@ Layer 1 数量最多、速度最快、维护成本最低。每往上一层，数
 - 回归 Bug（每个修复的 bug 补一个测试）
 
 **不要测**：
-- 第三方库的内部行为（不要测 CodeMirror 的语法高亮是否正确）
+- 第三方库的内部行为（不要测 Monaco Editor 的语法高亮是否正确）
 - 纯样式（`className` 是否正确传递 — 除非是条件样式）
 - 框架自带的功能（React 的 `useState` 是否工作）
 
@@ -377,7 +352,7 @@ Layer 1 数量最多、速度最快、维护成本最低。每往上一层，数
 ```
 
 **Layer 2 mock 规则**：
-- **Mock 什么**：SWR hooks、fetch API、复杂子组件（如 CodeMirror 编辑器）
+- **Mock 什么**：SWR hooks、fetch API、复杂子组件（如 Monaco 编辑器）
 - **不 mock 什么**：被测组件本身的逻辑、简单子组件（Button、Input）
 - **Mock 的粒度**：mock 整个模块而非单个函数，用 `vi.mock("@/lib/xxx/hooks")` 而非 patch 单个方法
 
@@ -388,7 +363,7 @@ vi.mock("@/lib/datasets/hooks", () => ({
 }));
 
 // ✅ 好：mock 不可测的复杂组件为简单替身
-vi.mock("@/components/ui/editors/md-editor", () => ({
+vi.mock("@/components/editors/md-editor", () => ({
   MdEditor: ({ value, onChange }: any) => (
     <textarea data-testid="md-editor" value={value}
       onChange={(e) => onChange(e.target.value)} />
@@ -512,7 +487,7 @@ export const MyStory: Story = {
 /**
  * 回归测试：templateVariables 变化不应导致编辑器重建
  * Bug: templateVariables 在 useEffect deps 中，数组引用变化 → 编辑器销毁重建 → 焦点丢失
- * Fix: 改用 Compartment 动态更新补全配置
+ * Fix: Monaco 使用 configRef 模式，props 变化只更新 ref 值，不触发编辑器重建
  */
 export const KeepsFocusOnVarChange: Story = { ... };
 ```
@@ -531,18 +506,17 @@ src/
 │       └── __tests__/
 │           └── schema-builder.test.ts ← Layer 1
 ├── components/
-│   ├── __stories__/
-│   │   ├── json-editor.stories.tsx    ← Layer 3（含 play function）
-│   │   └── md-editor.stories.tsx      ← Layer 3
+│   ├── editors/
+│   │   ├── completions.ts
+│   │   ├── __tests__/
+│   │   │   └── completions.test.ts           ← Layer 1
+│   │   └── __stories__/
+│   │       ├── json-editor.stories.tsx       ← Layer 3
+│   │       └── md-editor.stories.tsx         ← Layer 3
 │   ├── model-config/
 │   │   ├── model-config-detail.tsx
 │   │   └── __tests__/
 │   │       └── model-config-detail.test.tsx  ← Layer 2
-│   └── ui/
-│       └── editors/
-│           ├── completions.ts
-│           └── __tests__/
-│               └── completions.test.ts       ← Layer 1
 ```
 
 - Layer 1：与被测文件同目录的 `__tests__/` 下

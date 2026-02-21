@@ -16,6 +16,7 @@ export function TemplateTextarea({
   documents,
   placeholder,
   className,
+  height,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -23,6 +24,7 @@ export function TemplateTextarea({
   documents?: CompletionDocument[];
   placeholder?: string;
   className?: string;
+  height?: string;
 }) {
   return (
     <MdEditor
@@ -32,6 +34,7 @@ export function TemplateTextarea({
       documents={documents}
       placeholder={placeholder}
       className={className}
+      height={height}
     />
   );
 }

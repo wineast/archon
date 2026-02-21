@@ -1,63 +1,44 @@
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { EditorView } from "@codemirror/view";
-import { tags } from "@lezer/highlight";
-import type { Extension } from "@codemirror/state";
+import type * as monacoNs from "monaco-editor";
 
-/* ------------------------------------------------------------------ */
-/*  Shared color palette (OKLCH)                                       */
-/*  CSS variables are unreliable in CodeMirror inline styles,          */
-/*  so we use fixed OKLCH values here.                                 */
-/* ------------------------------------------------------------------ */
+type Monaco = typeof monacoNs;
 
-const palette = {
-  light: {
-    variable:   "oklch(0.55 0.15 250)",       // blue
-    variableBg: "oklch(0.55 0.15 250 / 0.08)",
-    keyword:    "oklch(0.55 0.17 320)",        // magenta
-    string:     "oklch(0.52 0.14 155)",        // green
-    brace:      "oklch(0.556 0 0)",            // muted gray
-  },
-  dark: {
-    variable:   "oklch(0.72 0.15 250)",
-    variableBg: "oklch(0.72 0.15 250 / 0.1)",
-    keyword:    "oklch(0.75 0.15 320)",
-    string:     "oklch(0.72 0.14 155)",
-    brace:      "oklch(0.708 0 0)",
-  },
-} as const;
+export const ARCHON_LIGHT = "archon-light";
+export const ARCHON_DARK = "archon-dark";
 
-/** Shared base theme for all editors (JsonEditor / JsEditor / MdEditor). */
-export function editorBaseTheme(options?: { height?: string }): Extension {
-  return EditorView.theme({
-    "&": { fontSize: "13px", ...(options?.height ? { height: options.height } : {}) },
-    ".cm-scroller": { overflow: "auto" },
-    "&.cm-focused": { outline: "none" },
+let registered = false;
+
+export function registerThemes(monaco: Monaco): void {
+  if (registered) return;
+  registered = true;
+
+  monaco.editor.defineTheme(ARCHON_LIGHT, {
+    base: "vs",
+    inherit: true,
+    rules: [
+      { token: "variable.liquid", foreground: "3b7dd8" },
+      { token: "keyword.liquid", foreground: "9b35b0", fontStyle: "bold" },
+      { token: "string.liquid", foreground: "2c8a50" },
+      { token: "delimiter.liquid", foreground: "808080" },
+      { token: "number.liquid", foreground: "3b7dd8" },
+    ],
+    colors: {
+      "editor.background": "#ffffff",
+      "editor.foreground": "#1e1e1e",
+    },
   });
-}
 
-/* ------------------------------------------------------------------ */
-/*  Liquid syntax highlighting (MdEditor + JsonEditor template mode)   */
-/*  Works via the Liquid language parser's syntax tree.                 */
-/* ------------------------------------------------------------------ */
-
-const highlightStyle = HighlightStyle.define([
-  { tag: tags.variableName, color: palette.light.variable, backgroundColor: palette.light.variableBg, borderRadius: "3px", padding: "0 2px" },
-  { tag: tags.keyword, color: palette.light.keyword, fontWeight: "bold" },
-  { tag: tags.string, color: palette.light.string },
-  { tag: tags.brace, color: palette.light.brace },
-]);
-
-const darkHighlightStyle = HighlightStyle.define([
-  { tag: tags.variableName, color: palette.dark.variable, backgroundColor: palette.dark.variableBg, borderRadius: "3px", padding: "0 2px" },
-  { tag: tags.keyword, color: palette.dark.keyword, fontWeight: "bold" },
-  { tag: tags.string, color: palette.dark.string },
-  { tag: tags.brace, color: palette.dark.brace },
-]);
-
-/**
- * Liquid / template syntax highlighting extension.
- * Used by both MdEditor and JsonEditor (in template mode).
- */
-export function templateSyntaxHighlighting(isDark: boolean): Extension {
-  return syntaxHighlighting(isDark ? darkHighlightStyle : highlightStyle);
+  monaco.editor.defineTheme(ARCHON_DARK, {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "variable.liquid", foreground: "7cb3f0" },
+      { token: "keyword.liquid", foreground: "c78bd8", fontStyle: "bold" },
+      { token: "string.liquid", foreground: "5dba82" },
+      { token: "delimiter.liquid", foreground: "a0a0a0" },
+      { token: "number.liquid", foreground: "7cb3f0" },
+    ],
+    colors: {
+      "editor.background": "#1e1e1e",
+    },
+  });
 }

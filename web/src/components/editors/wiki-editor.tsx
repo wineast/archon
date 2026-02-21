@@ -150,7 +150,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
               documents={completionDocs}
               tools={completionTools}
               placeholder="Write your content in Markdown..."
-              className="h-full [&_.cm-editor]:h-full"
+              className="h-full"
             />
           </TabsContent>
           <TabsContent value="preview" className="flex-1 min-h-0 overflow-auto px-6 py-4">

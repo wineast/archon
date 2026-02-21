@@ -5,13 +5,6 @@ import { DefaultChatTransport, isTextUIPart, isToolUIPart, getToolName } from "a
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage, UIDataTypes } from "ai";
 import { CheckIcon, CopyIcon, InfoIcon } from "lucide-react";
-import { EditorState, Compartment } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { unifiedMergeView, updateOriginalDoc, getOriginalDoc } from "@codemirror/merge";
-import { ChangeSet, Text } from "@codemirror/state";
-import { liquid } from "@/components/editors/language";
-import { templateSyntaxHighlighting } from "@/components/editors/theme";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +43,7 @@ import {
   ToolHeader,
   ToolInput,
 } from "@/components/ai-elements/tool";
+import { MdEditor } from "@/components/editors/md-editor";
 
 type PromptAssistTools = {
   update_prompt: { input: { content: string }; output: string };
@@ -146,165 +140,6 @@ function ChatMessages({ messages }: { messages: UIMessage[] }) {
         </Message>
       ))}
     </>
-  );
-}
-
-/** Unified diff editor: original (fixed) vs modified (AI-updated) */
-function DiffEditor({
-  original,
-  modified,
-  readOnly = false,
-  onModifiedChange,
-}: {
-  original: string;
-  modified: string;
-  readOnly?: boolean;
-  onModifiedChange: (value: string) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
-  const isInternalUpdate = useRef(false);
-  const onChangeRef = useRef(onModifiedChange);
-  onChangeRef.current = onModifiedChange;
-  const readOnlyCompartment = useRef(new Compartment());
-
-  // Detect dark mode
-  const [isDark, setIsDark] = useState(false);
-  useEffect(() => {
-    const el = document.documentElement;
-    const check = () => setIsDark(el.classList.contains("dark"));
-    check();
-    const observer = new MutationObserver(check);
-    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-
-  // Create editor on mount
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const state = EditorState.create({
-      doc: modified,
-      extensions: [
-        keymap.of([...defaultKeymap, ...historyKeymap]),
-        history(),
-        lineNumbers(),
-        liquid(),
-        templateSyntaxHighlighting(isDark),
-        EditorView.lineWrapping,
-        EditorView.theme({
-          "&": {
-            height: "100%",
-            fontSize: "14px",
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
-          },
-          "&.cm-focused": { outline: "none" },
-          ".cm-scroller": {
-            overflow: "auto",
-            fontFamily: "inherit",
-            lineHeight: "1.625",
-          },
-          ".cm-content": { caretColor: "var(--foreground)" },
-          ".cm-gutters": {
-            backgroundColor: "var(--muted)",
-            borderRight: "1px solid var(--border)",
-          },
-          ".cm-deletedChunk": {
-            backgroundColor: "rgba(239, 68, 68, 0.1)",
-          },
-        }),
-        unifiedMergeView({
-          original,
-          highlightChanges: true,
-          gutter: true,
-          mergeControls: false,
-          syntaxHighlightDeletions: false,
-        }),
-        readOnlyCompartment.current.of([
-          EditorView.editable.of(!readOnly),
-          EditorState.readOnly.of(readOnly),
-        ]),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            isInternalUpdate.current = true;
-            onChangeRef.current(update.state.doc.toString());
-          }
-        }),
-      ],
-    });
-
-    const view = new EditorView({
-      state,
-      parent: containerRef.current,
-    });
-
-    viewRef.current = view;
-
-    return () => {
-      view.destroy();
-      viewRef.current = null;
-    };
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Sync external modified changes → CM doc
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-
-    if (isInternalUpdate.current) {
-      isInternalUpdate.current = false;
-      return;
-    }
-
-    const currentDoc = view.state.doc.toString();
-    if (currentDoc !== modified) {
-      view.dispatch({
-        changes: { from: 0, to: currentDoc.length, insert: modified },
-      });
-    }
-  }, [modified]);
-
-  // Sync original changes → CM original doc (for diff recalculation)
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-
-    try {
-      const origDoc = getOriginalDoc(view.state);
-      const origStr = origDoc.toString();
-      if (origStr !== original) {
-        const changes = ChangeSet.of(
-          { from: 0, to: origDoc.length, insert: original },
-          origDoc.length
-        );
-        view.dispatch({
-          effects: updateOriginalDoc.of({ doc: Text.of(original.split("\n")), changes }),
-        });
-      }
-    } catch {
-      // unified merge view not yet initialized
-    }
-  }, [original]);
-
-  // Sync readOnly state
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    view.dispatch({
-      effects: readOnlyCompartment.current.reconfigure([
-        EditorView.editable.of(!readOnly),
-        EditorState.readOnly.of(readOnly),
-      ]),
-    });
-  }, [readOnly]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="h-full [&_.cm-editor]:h-full [&_.cm-editor]:outline-none"
-    />
   );
 }
 
@@ -465,11 +300,12 @@ export function PromptAssistDialog({
             </div>
             <div className="flex-1 min-h-0">
               {open && (
-                <DiffEditor
+                <MdEditor
                   original={originalPrompt}
-                  modified={draftPrompt}
+                  value={draftPrompt}
                   readOnly={isStreaming}
-                  onModifiedChange={setDraftPrompt}
+                  onChange={setDraftPrompt}
+                  className="h-full border-0"
                 />
               )}
             </div>

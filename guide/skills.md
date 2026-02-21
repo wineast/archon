@@ -120,7 +120,7 @@ Skills 功能支持 Agent 级别的开关，通过 `agents.skillsEnabled` 字段
 
 ### 提示词编辑器
 
-技能的 `content` 字段（标签显示为"提示词"）使用 MdEditor（CodeMirror）编辑，支持：
+技能的 `content` 字段（标签显示为"提示词"）使用 MdEditor（Monaco Editor）编辑，支持：
 
 - **LiquidJS 语法高亮** — 变量 `{{ }}` 和标签 `{% %}` 自动着色
 - **自动补全** — 输入 `{{` 触发数据集变量、内置变量补全；`{{include "` 触发 Wiki 文档补全；`{{tool.` 触发工具名补全

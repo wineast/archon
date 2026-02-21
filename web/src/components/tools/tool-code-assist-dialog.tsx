@@ -45,75 +45,20 @@ import {
 } from "@/components/ai-elements/tool";
 import { JsEditor } from "@/components/editors/js-editor";
 
-type JsxAssistTools = {
-  update_jsx: { input: { content: string }; output: string };
-  edit_jsx: { input: { old_text: string; new_text: string }; output: string };
+type ToolCodeAssistTools = {
+  update_code: { input: { content: string }; output: string };
+  edit_code: { input: { old_text: string; new_text: string }; output: string };
 };
 
-type JsxAssistMessage = UIMessage<unknown, UIDataTypes, JsxAssistTools>;
+type ToolCodeAssistMessage = UIMessage<unknown, UIDataTypes, ToolCodeAssistTools>;
 
-interface JsxAssistDialogProps {
+interface ToolCodeAssistDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  jsxSource: string;
-  onApply: (newSource: string) => void;
-}
-
-function buildSystemPrompt(currentJsx: string): string {
-  return `你是一位专业的 React 组件开发工程师。你的任务是帮助用户编写和优化 JSX 组件代码。
-
-当前编辑器中的组件代码如下：
-<current_jsx>
-${currentJsx}
-</current_jsx>
-
-## 组件架构
-
-组件采用两层闭包结构：
-- 外层函数：接收依赖注入（React, hooks, UI 组件等）
-- 内层函数：接收运行时 props，返回 JSX
-
-\`\`\`jsx
-function Component({ React, useState, Badge }) {
-  return function ({ tool, state, isLoading, isComplete, isError }) {
-    return <div>...</div>;
-  };
-}
-\`\`\`
-
-### 外层可用依赖
-- React 核心：React, useState, useMemo, useCallback, useEffect, useRef, Fragment
-- UI 组件：Badge, Spinner, Table/TableBody/TableCell/TableHead/TableHeader/TableRow, Tooltip/TooltipContent/TooltipTrigger, CollapsibleSection, ResultHeader, ResultSection, RateSheetLinks, RateSheetPanel, SourceDocumentViewer
-- 图标：ChevronRight, FileText
-- 同 Agent 下其他组件（PascalCase 引用）
-
-### 内层 Props
-- tool: { name: string, input: object, output: any }
-- state: "partial-call" | "call" | "result" | "error"
-- isLoading: boolean（正在加载）
-- isComplete: boolean（已完成）
-- isError: boolean（出错）
-
-### 样式
-可直接使用 Tailwind CSS 类名。
-
-### JSX 片段简写
-如果不需要外层依赖，可以直接写 JSX 片段，系统会自动包装为完整闭包。
-
-## 可用工具
-
-### update_jsx — 整体替换
-适用于大范围重写或重新组织。必须提供完整的新组件代码。
-
-### edit_jsx — 局部编辑
-适用于小范围修改。提供 old_text（要匹配的原文片段）和 new_text（替换后的内容）。
-
-## 工作规则
-1. 小范围修改优先使用 edit_jsx，避免不必要的整体替换
-2. 大范围重写或结构调整使用 update_jsx
-3. edit_jsx 的 old_text 必须与当前代码中的文本精确匹配（包括空格和换行）
-4. 生成的代码必须遵循两层闭包结构（除非是 JSX 片段简写）
-5. 用中文回复用户的问题和说明`;
+  code: string;
+  toolName?: string;
+  toolDescription?: string;
+  onApply: (newCode: string) => void;
 }
 
 function formatMessagesForCopy(messages: UIMessage[]): string {
@@ -152,8 +97,8 @@ function ChatMessages({ messages }: { messages: UIMessage[] }) {
             if (isToolUIPart(part)) {
               const name = getToolName(part);
               const toolLabel: Record<string, string> = {
-                update_jsx: "整体替换",
-                edit_jsx: "局部编辑",
+                update_code: "整体替换",
+                edit_code: "局部编辑",
               };
               return (
                 <Tool key={`tool-${i}`}>
@@ -172,65 +117,69 @@ function ChatMessages({ messages }: { messages: UIMessage[] }) {
   );
 }
 
-export function JsxAssistDialog({
+export function ToolCodeAssistDialog({
   open,
   onOpenChange,
-  jsxSource,
+  code,
+  toolName,
+  toolDescription,
   onApply,
-}: JsxAssistDialogProps) {
-  const [draftJsx, setDraftJsx] = useState(jsxSource);
-  const [originalJsx, setOriginalJsx] = useState(jsxSource);
+}: ToolCodeAssistDialogProps) {
+  const [draftCode, setDraftCode] = useState(code);
+  const [originalCode, setOriginalCode] = useState(code);
   const [input, setInput] = useState("");
-  const draftJsxRef = useRef(draftJsx);
-  draftJsxRef.current = draftJsx;
+  const draftCodeRef = useRef(draftCode);
+  draftCodeRef.current = draftCode;
 
-  const hasDiff = draftJsx !== originalJsx;
+  const hasDiff = draftCode !== originalCode;
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (nextOpen) {
-        setDraftJsx(jsxSource);
-        setOriginalJsx(jsxSource);
-        draftJsxRef.current = jsxSource;
+        setDraftCode(code);
+        setOriginalCode(code);
+        draftCodeRef.current = code;
       }
       onOpenChange(nextOpen);
     },
-    [jsxSource, onOpenChange]
+    [code, onOpenChange]
   );
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: "/api/jsx-assist",
+        api: "/api/tool-code-assist",
         body: () => ({
-          currentJsx: draftJsxRef.current,
+          currentCode: draftCodeRef.current,
+          toolName,
+          toolDescription,
         }),
       }),
-    []
+    [toolName, toolDescription]
   );
 
-  const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<JsxAssistMessage>({
+  const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<ToolCodeAssistMessage>({
     transport,
     onToolCall: ({ toolCall }) => {
-      if (toolCall.toolName === "update_jsx") {
-        const { content } = toolCall.input as JsxAssistTools["update_jsx"]["input"];
-        setDraftJsx(content);
-        draftJsxRef.current = content;
+      if (toolCall.toolName === "update_code") {
+        const { content } = toolCall.input as ToolCodeAssistTools["update_code"]["input"];
+        setDraftCode(content);
+        draftCodeRef.current = content;
         addToolOutput({
-          tool: "update_jsx",
+          tool: "update_code",
           toolCallId: toolCall.toolCallId,
           output: "已更新",
         });
-      } else if (toolCall.toolName === "edit_jsx") {
-        const { old_text, new_text } = toolCall.input as JsxAssistTools["edit_jsx"]["input"];
-        const current = draftJsxRef.current;
+      } else if (toolCall.toolName === "edit_code") {
+        const { old_text, new_text } = toolCall.input as ToolCodeAssistTools["edit_code"]["input"];
+        const current = draftCodeRef.current;
         if (current.includes(old_text)) {
           const updated = current.replace(old_text, new_text);
-          setDraftJsx(updated);
-          draftJsxRef.current = updated;
+          setDraftCode(updated);
+          draftCodeRef.current = updated;
         }
         addToolOutput({
-          tool: "edit_jsx",
+          tool: "edit_code",
           toolCallId: toolCall.toolCallId,
           output: current.includes(old_text) ? "已更新" : "未找到匹配文本",
         });
@@ -241,14 +190,14 @@ export function JsxAssistDialog({
   const prevOpenRef = useRef(open);
   useEffect(() => {
     if (open && !prevOpenRef.current) {
-      setDraftJsx(jsxSource);
-      setOriginalJsx(jsxSource);
-      draftJsxRef.current = jsxSource;
+      setDraftCode(code);
+      setOriginalCode(code);
+      draftCodeRef.current = code;
       setMessages([]);
       setInput("");
     }
     prevOpenRef.current = open;
-  }, [open, jsxSource, setMessages]);
+  }, [open, code, setMessages]);
 
   const isStreaming = status === "streaming" || status === "submitted";
 
@@ -266,9 +215,9 @@ export function JsxAssistDialog({
   }, [input, sendMessage]);
 
   const handleApply = useCallback(() => {
-    onApply(draftJsx);
+    onApply(draftCode);
     onOpenChange(false);
-  }, [draftJsx, onApply, onOpenChange]);
+  }, [draftCode, onApply, onOpenChange]);
 
   const handleCancel = useCallback(() => {
     onOpenChange(false);
@@ -283,6 +232,30 @@ export function JsxAssistDialog({
 
   const [sysPromptOpen, setSysPromptOpen] = useState(false);
 
+  const sysPromptPreview = useMemo(() => {
+    const toolContext = [
+      toolName && `工具名称：${toolName}`,
+      toolDescription && `工具描述：${toolDescription}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    return `你是一位专业的工具 Handler 开发工程师。你的任务是帮助用户编写和优化工具的 Handler 代码。
+
+当前编辑器中的 Handler 代码如下：
+<current_code>
+${draftCode}
+</current_code>
+
+${toolContext ? `## 工具信息\n\n${toolContext}\n\n` : ""}## Handler 架构
+
+Handler 是一个异步函数，签名为 \`async (args, context) => result\`
+
+## Context API: context.wiki / context.dataset / context.fn / context.ontology
+
+（完整内容见 API 路由）`;
+  }, [draftCode, toolName, toolDescription]);
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
@@ -291,7 +264,7 @@ export function JsxAssistDialog({
       >
         <DialogHeader className="border-b px-4 py-3">
           <div className="flex items-center justify-between">
-            <DialogTitle>AI 辅助编辑组件</DialogTitle>
+            <DialogTitle>AI 辅助编辑 Handler</DialogTitle>
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setSysPromptOpen(true)}>
                 <InfoIcon className="size-3" />
@@ -304,7 +277,7 @@ export function JsxAssistDialog({
                   </SubDialogHeader>
                   <div className="flex-1 min-h-0 overflow-y-auto">
                     <pre className="whitespace-pre-wrap break-words p-4 text-xs font-mono leading-relaxed">
-                      {buildSystemPrompt(draftJsx)}
+                      {sysPromptPreview}
                     </pre>
                   </div>
                 </SubDialogContent>
@@ -327,10 +300,10 @@ export function JsxAssistDialog({
             <div className="flex-1 min-h-0">
               {open && (
                 <JsEditor
-                  original={originalJsx}
-                  value={draftJsx}
+                  original={originalCode}
+                  value={draftCode}
                   readOnly={isStreaming}
-                  onChange={setDraftJsx}
+                  onChange={setDraftCode}
                   className="h-full border-0"
                 />
               )}
@@ -349,7 +322,7 @@ export function JsxAssistDialog({
             <div className="flex min-h-0 flex-1 flex-col">
               {messages.length === 0 ? (
                 <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                  描述你想要的组件效果，AI 会帮你编写左侧 JSX 代码
+                  描述你想要的 Handler 逻辑，AI 会帮你编写左侧代码
                 </div>
               ) : (
                 <Conversation>
@@ -364,7 +337,7 @@ export function JsxAssistDialog({
                   <PromptInputBody>
                     <PromptInputTextarea
                       onChange={handleTextChange}
-                      placeholder="描述你想要的组件效果..."
+                      placeholder="描述你想要的 Handler 逻辑..."
                       value={input}
                     />
                   </PromptInputBody>

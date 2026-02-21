@@ -163,7 +163,8 @@ export function JudgeConfigDetail({
               Judge System Prompt
             </label>
             <TemplateTextarea
-              className="mt-1 min-h-[200px] max-h-[50vh] resize-none overflow-y-auto text-sm"
+              className="mt-1"
+              height="300px"
               value={systemPrompt}
               onChange={setSystemPrompt}
               variables={allVariables}

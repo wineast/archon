@@ -1,17 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { EditorState, Compartment } from "@codemirror/state";
-import { EditorView, keymap } from "@codemirror/view";
-import { basicSetup } from "codemirror";
-import { json } from "@codemirror/lang-json";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { indentWithTab } from "@codemirror/commands";
-import { autocompletion } from "@codemirror/autocomplete";
+import { useRef, useEffect } from "react";
+import Editor, { DiffEditor as MonacoDiffEditor, type OnMount, type DiffOnMount } from "@monaco-editor/react";
+import type * as monacoNs from "monaco-editor";
 import { cn } from "@/lib/utils";
-import { liquid } from "./language";
-import { editorBaseTheme, templateSyntaxHighlighting } from "./theme";
-import { createCompletionSource } from "./completions";
+import { useDarkMode } from "./use-dark-mode";
+import { ARCHON_LIGHT, ARCHON_DARK } from "./theme";
+import { ensureMonacoSetup } from "./monaco-setup";
+import { createCompletionProvider, type CompletionConfig } from "./completions";
+
+const SHARED_OPTIONS = {
+  minimap: { enabled: false },
+  scrollBeyondLastLine: false,
+  automaticLayout: true,
+  lineNumbersMinChars: 3,
+  overviewRulerLanes: 0,
+  scrollbar: {
+    verticalScrollbarSize: 8,
+    horizontalScrollbarSize: 8,
+  },
+} as const;
 
 interface JsonEditorProps {
   value: string;
@@ -21,129 +29,99 @@ interface JsonEditorProps {
   className?: string;
   /** Pass variable names to enable {{}} template autocompletion */
   templateVariables?: string[];
+  /** Pass original text to enable diff mode */
+  original?: string;
 }
 
 export function JsonEditor({
   value,
   onChange,
   readOnly = false,
-  height = "300px",
+  height,
   className,
   templateVariables,
+  original,
 }: JsonEditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
+  const isDark = useDarkMode();
+  const theme = isDark ? ARCHON_DARK : ARCHON_LIGHT;
+  const hasTemplateVars = templateVariables && templateVariables.length > 0;
+  const language = hasTemplateVars ? "liquid-json" : "json";
+  const isDiff = original !== undefined;
+
+  const configRef = useRef<CompletionConfig | null>(null);
+  const disposableRef = useRef<monacoNs.IDisposable | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-  const internalValueRef = useRef(value);
 
-  // Compartment for dynamic autocompletion reconfiguration
-  const completionCompartment = useRef(new Compartment());
-
-  // Detect dark mode
-  const [isDark, setIsDark] = useState(false);
+  // Keep configRef up to date
   useEffect(() => {
-    const el = document.documentElement;
-    const check = () => setIsDark(el.classList.contains("dark"));
-    check();
-    const observer = new MutationObserver(check);
-    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
+    configRef.current = hasTemplateVars
+      ? { variables: templateVariables, documents: [], tools: [] }
+      : null;
+  }, [templateVariables, hasTemplateVars]);
 
-  // Create editor
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const completionExt = completionCompartment.current.of(
-      templateVariables && templateVariables.length > 0
-        ? autocompletion({
-            override: [createCompletionSource(templateVariables, [])],
-            activateOnTyping: true,
-          })
-        : []
-    );
-
-    const hasTemplateVars = templateVariables && templateVariables.length > 0;
-
-    const state = EditorState.create({
-      doc: value,
-      extensions: [
-        basicSetup,
-        // Template mode: Liquid parser (same as MdEditor); plain mode: JSON parser
-        ...(hasTemplateVars
-          ? [liquid(), templateSyntaxHighlighting(isDark)]
-          : [json()]),
-        ...(isDark ? [oneDark] : []),
-        keymap.of([indentWithTab]),
-        EditorView.editable.of(!readOnly),
-        EditorState.readOnly.of(readOnly),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            const newValue = update.state.doc.toString();
-            internalValueRef.current = newValue;
-            onChangeRef.current?.(newValue);
-          }
-        }),
-        editorBaseTheme({ height }),
-        completionExt,
-      ],
+  const handleMount: OnMount = (editor, monaco) => {
+    if (hasTemplateVars) {
+      disposableRef.current = monaco.languages.registerCompletionItemProvider(
+        "liquid-json",
+        createCompletionProvider(configRef)
+      );
+    }
+    editor.onDidDispose(() => {
+      disposableRef.current?.dispose();
+      disposableRef.current = null;
     });
+  };
 
-    const view = new EditorView({
-      state,
-      parent: containerRef.current,
+  const handleDiffMount: DiffOnMount = (editor) => {
+    const modifiedEditor = editor.getModifiedEditor();
+    modifiedEditor.onDidChangeModelContent(() => {
+      onChangeRef.current?.(modifiedEditor.getValue());
     });
-
-    viewRef.current = view;
-
-    return () => {
-      view.destroy();
-      viewRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, height, isDark]);
-
-  // Reconfigure autocompletion when templateVariables change
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-
-    view.dispatch({
-      effects: completionCompartment.current.reconfigure(
-        templateVariables && templateVariables.length > 0
-          ? autocompletion({
-              override: [createCompletionSource(templateVariables, [])],
-              activateOnTyping: true,
-            })
-          : []
-      ),
-    });
-  }, [templateVariables]);
-
-  // Sync external value changes
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    if (value === internalValueRef.current) return;
-
-    internalValueRef.current = value;
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert: value,
-      },
-    });
-  }, [value]);
+  };
 
   return (
     <div
-      ref={containerRef}
       className={cn(
         "overflow-hidden rounded-md border border-border",
         className
       )}
-    />
+      style={height ? { height } : undefined}
+    >
+      {isDiff ? (
+        <MonacoDiffEditor
+          original={original}
+          modified={value}
+          language={language}
+          theme={theme}
+          beforeMount={ensureMonacoSetup}
+          onMount={handleDiffMount}
+          options={{
+            ...SHARED_OPTIONS,
+            readOnly,
+            renderSideBySide: false,
+            fontSize: 14,
+            wordWrap: "on",
+          }}
+        />
+      ) : (
+        <Editor
+          language={language}
+          value={value}
+          onChange={(v) => onChange?.(v ?? "")}
+          theme={theme}
+          beforeMount={ensureMonacoSetup}
+          onMount={handleMount}
+          options={{
+            ...SHARED_OPTIONS,
+            readOnly,
+            fontSize: 13,
+            tabSize: 2,
+            wordWrap: "off",
+            hideCursorInOverviewRuler: true,
+          }}
+        />
+      )}
+    </div>
   );
 }

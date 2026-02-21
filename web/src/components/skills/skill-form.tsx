@@ -205,7 +205,7 @@ export function SkillForm({
           </TabsList>
           <TabsContent value="edit">
             <MdEditor
-              className="min-h-[200px] max-h-[50vh] overflow-y-auto"
+              height="300px"
               value={contentValue}
               onChange={handleContentChange}
               variables={allVariables}

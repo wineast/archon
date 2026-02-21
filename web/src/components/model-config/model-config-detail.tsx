@@ -205,7 +205,7 @@ export function ModelConfigDetail({
               </TabsList>
               <TabsContent value="edit">
                 <MdEditor
-                  className="min-h-[200px] max-h-[50vh] overflow-y-auto"
+                  height="300px"
                   value={systemPrompt}
                   onChange={setSystemPrompt}
                   variables={allVariables}

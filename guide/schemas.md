@@ -26,7 +26,7 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 
 ## 编辑 Schema
 
-Schema 的 `parameters` 使用 **JSON 编辑器** 直接编辑标准 JSON Schema 7。编辑器基于 CodeMirror，支持语法高亮和实时校验。
+Schema 的 `parameters` 使用 **JSON 编辑器** 直接编辑标准 JSON Schema 7。编辑器基于 Monaco Editor，支持语法高亮和实时校验。
 
 详情页有两个子标签：
 - **Edit**：JSON 编辑器，直接编辑 `parameters` JSON

@@ -5,7 +5,6 @@ import { DefaultChatTransport, isTextUIPart, isToolUIPart, getToolName } from "a
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage, UIDataTypes } from "ai";
 import { CheckIcon, CopyIcon, InfoIcon } from "lucide-react";
-import { json } from "@codemirror/lang-json";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +43,7 @@ import {
   ToolHeader,
   ToolInput,
 } from "@/components/ai-elements/tool";
-import { DiffEditor } from "@/components/editors/diff-editor";
+import { JsonEditor } from "@/components/editors/json-editor";
 
 type SchemaCodeAssistTools = {
   update_schema: { input: { content: string }; output: string };
@@ -60,8 +59,6 @@ interface SchemaCodeAssistDialogProps {
   context?: string;
   onApply: (newSchema: string) => void;
 }
-
-const jsonLanguage = json();
 
 function buildSystemPrompt(currentSchema: string, context?: string): string {
   return `你是一位专业的 JSON Schema 7 专家。你的任务是帮助用户编写和优化 JSON Schema 定义。
@@ -321,12 +318,12 @@ export function SchemaCodeAssistDialog({
             </div>
             <div className="flex-1 min-h-0">
               {open && (
-                <DiffEditor
+                <JsonEditor
                   original={originalSchema}
-                  modified={draftSchema}
+                  value={draftSchema}
                   readOnly={isStreaming}
-                  onModifiedChange={setDraftSchema}
-                  language={jsonLanguage}
+                  onChange={setDraftSchema}
+                  className="h-full border-0"
                 />
               )}
             </div>

@@ -5,7 +5,6 @@ import { DefaultChatTransport, isTextUIPart, isToolUIPart, getToolName } from "a
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage, UIDataTypes } from "ai";
 import { CheckIcon, CopyIcon, InfoIcon } from "lucide-react";
-import { javascript } from "@codemirror/lang-javascript";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +43,7 @@ import {
   ToolHeader,
   ToolInput,
 } from "@/components/ai-elements/tool";
-import { DiffEditor } from "@/components/editors/diff-editor";
+import { JsEditor } from "@/components/editors/js-editor";
 
 type FunctionCodeAssistTools = {
   update_code: { input: { content: string }; output: string };
@@ -160,8 +159,6 @@ function ChatMessages({ messages }: { messages: UIMessage[] }) {
     </>
   );
 }
-
-const jsLanguage = javascript();
 
 export function FunctionCodeAssistDialog({
   open,
@@ -319,12 +316,12 @@ export function FunctionCodeAssistDialog({
             </div>
             <div className="flex-1 min-h-0">
               {open && (
-                <DiffEditor
+                <JsEditor
                   original={originalCode}
-                  modified={draftCode}
+                  value={draftCode}
                   readOnly={isStreaming}
-                  onModifiedChange={setDraftCode}
-                  language={jsLanguage}
+                  onChange={setDraftCode}
+                  className="h-full border-0"
                 />
               )}
             </div>

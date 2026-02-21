@@ -1,21 +1,30 @@
 "use client";
 
 import * as React from "react";
-import { EditorState, Compartment } from "@codemirror/state";
-import { EditorView, placeholder as cmPlaceholder, keymap } from "@codemirror/view";
-import { indentWithTab } from "@codemirror/commands";
-import { basicSetup } from "codemirror";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { autocompletion } from "@codemirror/autocomplete";
-
+import Editor, { DiffEditor as MonacoDiffEditor, type OnMount, type DiffOnMount } from "@monaco-editor/react";
+import type * as monacoNs from "monaco-editor";
 import { cn } from "@/lib/utils";
-import { liquid } from "./language";
-import { editorBaseTheme, templateSyntaxHighlighting } from "./theme";
+import { useDarkMode } from "./use-dark-mode";
+import { ARCHON_LIGHT, ARCHON_DARK } from "./theme";
+import { ensureMonacoSetup } from "./monaco-setup";
 import {
-  createCompletionSource,
+  createCompletionProvider,
+  type CompletionConfig,
   type CompletionDocument,
   type CompletionTool,
 } from "./completions";
+
+const SHARED_OPTIONS = {
+  minimap: { enabled: false },
+  scrollBeyondLastLine: false,
+  automaticLayout: true,
+  lineNumbersMinChars: 3,
+  overviewRulerLanes: 0,
+  scrollbar: {
+    verticalScrollbarSize: 8,
+    horizontalScrollbarSize: 8,
+  },
+} as const;
 
 interface MdEditorProps {
   value: string;
@@ -25,7 +34,10 @@ interface MdEditorProps {
   tools?: CompletionTool[];
   placeholder?: string;
   className?: string;
-  minHeight?: string;
+  height?: string;
+  /** Pass original text to enable diff mode */
+  original?: string;
+  readOnly?: boolean;
 }
 
 function MdEditor({
@@ -36,135 +48,102 @@ function MdEditor({
   tools = [],
   placeholder = "",
   className,
-  minHeight,
+  height,
+  original,
+  readOnly = false,
 }: MdEditorProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const viewRef = React.useRef<EditorView | null>(null);
-  const isInternalUpdate = React.useRef(false);
+  const isDark = useDarkMode();
+  const theme = isDark ? ARCHON_DARK : ARCHON_LIGHT;
+  const [isEmpty, setIsEmpty] = React.useState(!value);
+  const isDiff = original !== undefined;
+
+  const configRef = React.useRef<CompletionConfig | null>(null);
+  const disposableRef = React.useRef<monacoNs.IDisposable | null>(null);
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
 
-  // Compartments for dynamic reconfiguration
-  const completionCompartment = React.useRef(new Compartment());
-  const placeholderCompartment = React.useRef(new Compartment());
-
-  // Detect dark mode
-  const [isDark, setIsDark] = React.useState(false);
+  // Keep configRef up to date
   React.useEffect(() => {
-    const el = document.documentElement;
-    const check = () => setIsDark(el.classList.contains("dark"));
-    check();
-    const observer = new MutationObserver(check);
-    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-
-  // Initialize editor
-  React.useEffect(() => {
-    if (!containerRef.current) return;
-
-    const completionExt = completionCompartment.current.of(
-      autocompletion({
-        override: [createCompletionSource(variables, documents, tools)],
-        activateOnTyping: true,
-      })
-    );
-
-    const placeholderExt = placeholderCompartment.current.of(
-      cmPlaceholder(placeholder)
-    );
-
-    const state = EditorState.create({
-      doc: value,
-      extensions: [
-        basicSetup,
-        keymap.of([indentWithTab]),
-        liquid(),
-        templateSyntaxHighlighting(isDark),
-        ...(isDark ? [oneDark] : []),
-        completionExt,
-        placeholderExt,
-        EditorView.lineWrapping,
-        editorBaseTheme(),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            isInternalUpdate.current = true;
-            onChangeRef.current(update.state.doc.toString());
-          }
-        }),
-      ],
-    });
-
-    const view = new EditorView({
-      state,
-      parent: containerRef.current,
-    });
-
-    viewRef.current = view;
-
-    return () => {
-      view.destroy();
-      viewRef.current = null;
-    };
-    // Recreate editor when dark mode changes (same as JsonEditor/JsEditor)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDark]);
-
-  // Sync external value changes → CM
-  React.useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-
-    if (isInternalUpdate.current) {
-      isInternalUpdate.current = false;
-      return;
-    }
-
-    const currentDoc = view.state.doc.toString();
-    if (currentDoc !== value) {
-      view.dispatch({
-        changes: { from: 0, to: currentDoc.length, insert: value },
-      });
-    }
-  }, [value]);
-
-  // Reconfigure completions when variables/documents/tools change
-  React.useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-
-    view.dispatch({
-      effects: completionCompartment.current.reconfigure(
-        autocompletion({
-          override: [createCompletionSource(variables, documents, tools)],
-          activateOnTyping: true,
-        })
-      ),
-    });
+    configRef.current = { variables, documents, tools };
   }, [variables, documents, tools]);
 
-  // Reconfigure placeholder
-  React.useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
+  const handleMount: OnMount = (editor, monaco) => {
+    disposableRef.current = monaco.languages.registerCompletionItemProvider(
+      "liquid-markdown",
+      createCompletionProvider(configRef)
+    );
 
-    view.dispatch({
-      effects: placeholderCompartment.current.reconfigure(
-        cmPlaceholder(placeholder)
-      ),
+    // Track empty state for placeholder
+    setIsEmpty(editor.getValue() === "");
+    editor.onDidChangeModelContent(() => {
+      setIsEmpty(editor.getValue() === "");
     });
-  }, [placeholder]);
+
+    editor.onDidDispose(() => {
+      disposableRef.current?.dispose();
+      disposableRef.current = null;
+    });
+  };
+
+  const handleDiffMount: DiffOnMount = (editor) => {
+    const modifiedEditor = editor.getModifiedEditor();
+    modifiedEditor.onDidChangeModelContent(() => {
+      onChangeRef.current(modifiedEditor.getValue());
+    });
+  };
 
   return (
     <div
-      ref={containerRef}
       data-slot="md-editor"
-      style={minHeight ? { minHeight } : undefined}
       className={cn(
-        "overflow-hidden rounded-md border border-border",
+        "relative overflow-hidden rounded-md border border-border",
         className
       )}
-    />
+      style={height ? { height } : undefined}
+    >
+      {isDiff ? (
+        <MonacoDiffEditor
+          original={original}
+          modified={value}
+          language="liquid-markdown"
+          theme={theme}
+          beforeMount={ensureMonacoSetup}
+          onMount={handleDiffMount}
+          options={{
+            ...SHARED_OPTIONS,
+            readOnly,
+            renderSideBySide: false,
+            fontSize: 14,
+            wordWrap: "on",
+          }}
+        />
+      ) : (
+        <>
+          <Editor
+            language="liquid-markdown"
+            value={value}
+            onChange={(v) => onChange(v ?? "")}
+            theme={theme}
+            beforeMount={ensureMonacoSetup}
+            onMount={handleMount}
+            options={{
+              ...SHARED_OPTIONS,
+              readOnly,
+              fontSize: 13,
+              tabSize: 2,
+              wordWrap: "on",
+              lineNumbers: "on",
+              hideCursorInOverviewRuler: true,
+            }}
+          />
+          {isEmpty && placeholder && (
+            <div className="pointer-events-none absolute top-0 left-[62px] py-0.5 text-sm text-muted-foreground">
+              {placeholder}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 

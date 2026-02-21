@@ -1,114 +1,116 @@
-import {
-  StreamLanguage,
-  type StreamParser,
-} from "@codemirror/language";
-import { LanguageSupport } from "@codemirror/language";
-import { tags } from "@lezer/highlight";
+import type * as monacoNs from "monaco-editor";
 
-interface State {
-  /** Inside {{ ... }} output tag */
-  inOutput: boolean;
-  /** Inside {% ... %} control tag */
-  inTag: boolean;
-}
+type Monaco = typeof monacoNs;
 
-const liquidParser: StreamParser<State> = {
-  startState(): State {
-    return { inOutput: false, inTag: false };
-  },
+/* ------------------------------------------------------------------ */
+/*  Liquid base tokenizer rules                                       */
+/* ------------------------------------------------------------------ */
 
-  token(stream, state): string | null {
-    // Inside {{ ... }} output expression
-    if (state.inOutput) {
-      if (stream.match("}}")) {
-        state.inOutput = false;
-        return "brace";
-      }
-      if (stream.eatSpace()) return null;
+const liquidRules: monacoNs.languages.IMonarchLanguageRule[] = [
+  // Output tag  {{ ... }}
+  [/\{\{/, { token: "delimiter.liquid", next: "@liquidOutput" }],
+  // Control tag {% ... %}
+  [/\{%/, { token: "delimiter.liquid", next: "@liquidTag" }],
+];
 
-      // Filter pipe
-      if (stream.match("|")) return "keyword";
+const liquidOutputState: monacoNs.languages.IMonarchLanguageRule[] = [
+  [/\}\}/, { token: "delimiter.liquid", next: "@pop" }],
+  [/\|/, "keyword.liquid"],
+  [/"[^"]*"/, "string.liquid"],
+  [/'[^']*'/, "string.liquid"],
+  [/\d+(\.\d+)?/, "number.liquid"],
+  [/[a-zA-Z_][\w./-]*/, "variable.liquid"],
+  [/\s+/, ""],
+  [/./, ""],
+];
 
-      // Filter names after pipe
-      if (stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/)) {
-        return "variableName";
-      }
+const liquidTagState: monacoNs.languages.IMonarchLanguageRule[] = [
+  [/%\}/, { token: "delimiter.liquid", next: "@pop" }],
+  [
+    /\b(?:if|elsif|else|endif|for|endfor|unless|endunless|include|comment|endcomment|assign|capture|endcapture|in)\b/,
+    "keyword.liquid",
+  ],
+  [/\b(?:==|!=|<=|>=|<|>|and|or|not|contains)\b/, "keyword.liquid"],
+  [/"[^"]*"/, "string.liquid"],
+  [/'[^']*'/, "string.liquid"],
+  [/[a-zA-Z_][\w./-]*/, "variable.liquid"],
+  [/\s+/, ""],
+  [/./, ""],
+];
 
-      // Quoted strings
-      if (stream.match(/^"[^"]*"/) || stream.match(/^'[^']*'/)) {
-        return "string";
-      }
+/* ------------------------------------------------------------------ */
+/*  Register languages                                                */
+/* ------------------------------------------------------------------ */
 
-      // Numbers
-      if (stream.match(/^\d+(\.\d+)?/)) return "variableName";
+let registered = false;
 
-      stream.next();
-      return null;
-    }
+export function registerLanguages(monaco: Monaco): void {
+  if (registered) return;
+  registered = true;
 
-    // Inside {% ... %} control tag
-    if (state.inTag) {
-      if (stream.match("%}")) {
-        state.inTag = false;
-        return "brace";
-      }
-      if (stream.eatSpace()) return null;
+  // Pure Liquid
+  monaco.languages.register({ id: "liquid" });
+  monaco.languages.setMonarchTokensProvider("liquid", {
+    tokenizer: {
+      root: [
+        ...liquidRules,
+        [/.+?(?=\{[{%])/, ""], // plain text before next delimiter
+        [/.+$/, ""],           // rest of line
+      ],
+      liquidOutput: [...liquidOutputState],
+      liquidTag: [...liquidTagState],
+    },
+  });
 
-      // Keywords
-      if (
-        stream.match(
-          /^(?:if|elsif|else|endif|for|endfor|unless|endunless|include|comment|endcomment|assign|capture|endcapture|in)\b/
-        )
-      ) {
-        return "keyword";
-      }
+  // Liquid-JSON: JSON with embedded Liquid
+  monaco.languages.register({ id: "liquid-json" });
+  monaco.languages.setMonarchTokensProvider("liquid-json", {
+    tokenizer: {
+      root: [
+        ...liquidRules,
+        // JSON tokens
+        [/"(?:[^"\\]|\\.)*"(?=\s*:)/, "string.key.json"],
+        [/"(?:[^"\\]|\\.)*"/, "string.value.json"],
+        [/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, "number.json"],
+        [/\b(?:true|false)\b/, "keyword.json"],
+        [/\bnull\b/, "keyword.json"],
+        [/[{}[\]]/, "delimiter.bracket.json"],
+        [/[,:]/, "delimiter.json"],
+        [/\s+/, ""],
+      ],
+      liquidOutput: [...liquidOutputState],
+      liquidTag: [...liquidTagState],
+    },
+  });
 
-      // Quoted strings
-      if (stream.match(/^"[^"]*"/) || stream.match(/^'[^']*'/)) {
-        return "string";
-      }
-
-      // Variable names (dotted paths like foo.bar.baz)
-      if (stream.match(/^[a-zA-Z_][a-zA-Z0-9_./-]*/)) {
-        return "variableName";
-      }
-
-      // Operators
-      if (stream.match(/^(?:==|!=|<=|>=|<|>|and|or|not|contains)\b/)) {
-        return "keyword";
-      }
-
-      stream.next();
-      return null;
-    }
-
-    // Outside: look for opening delimiters
-    if (stream.match("{{")) {
-      state.inOutput = true;
-      return "brace";
-    }
-    if (stream.match("{%")) {
-      state.inTag = true;
-      return "brace";
-    }
-
-    // Consume plain text until next `{` or end of line
-    while (stream.next() != null) {
-      if (stream.peek() === "{") break;
-    }
-    return null;
-  },
-
-  tokenTable: {
-    brace: tags.brace,
-    keyword: tags.keyword,
-    string: tags.string,
-    variableName: tags.variableName,
-  },
-};
-
-const liquidLang = StreamLanguage.define(liquidParser);
-
-export function liquid(): LanguageSupport {
-  return new LanguageSupport(liquidLang);
+  // Liquid-Markdown: Markdown with embedded Liquid
+  monaco.languages.register({ id: "liquid-markdown" });
+  monaco.languages.setMonarchTokensProvider("liquid-markdown", {
+    tokenizer: {
+      root: [
+        ...liquidRules,
+        // Markdown headings
+        [/^#{1,6}\s.*$/, "keyword.md"],
+        // Bold
+        [/\*\*[^*]+\*\*/, "strong.md"],
+        [/__[^_]+__/, "strong.md"],
+        // Italic
+        [/\*[^*]+\*/, "emphasis.md"],
+        [/_[^_]+_/, "emphasis.md"],
+        // Inline code
+        [/`[^`]+`/, "variable.md"],
+        // Links [text](url)
+        [/\[([^\]]+)\]\([^)]+\)/, "string.link.md"],
+        // Horizontal rule
+        [/^---+$/, "keyword.md"],
+        // List markers
+        [/^\s*[-*+]\s/, "keyword.md"],
+        [/^\s*\d+\.\s/, "keyword.md"],
+        // Catch-all
+        [/./, ""],
+      ],
+      liquidOutput: [...liquidOutputState],
+      liquidTag: [...liquidTagState],
+    },
+  });
 }

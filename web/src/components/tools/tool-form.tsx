@@ -23,8 +23,10 @@ import {
   useWatch,
 } from "react-hook-form";
 import deepEqual from "fast-deep-equal";
-import { BoxIcon, CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, ZapIcon } from "lucide-react";
+import { BoxIcon, CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, SparklesIcon, ZapIcon } from "lucide-react";
 import { GuideDialog } from "@/components/ui/guide-dialog";
+import { ToolCodeAssistDialog } from "./tool-code-assist-dialog";
+import { Button } from "@/components/ui/button";
 import toolHandlerDoc from "../../../guide/tool-handler.md";
 
 export interface ToolFormHandle {
@@ -108,6 +110,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   const [handlerTab, setHandlerTab] = useState<HandlerTab>(() =>
     detectHandlerTab(tool)
   );
+  const [codeAssistOpen, setCodeAssistOpen] = useState(false);
   const originalRef = useRef<ToolDefinition>({ ...tool });
 
   // Watch only fields needed for validation / conditional rendering
@@ -278,6 +281,18 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                   代码
                 </button>
               </div>
+              {handlerTab === "code" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 px-1.5 text-xs"
+                  onClick={() => setCodeAssistOpen(true)}
+                >
+                  <SparklesIcon className="size-3" />
+                  AI 编辑
+                </Button>
+              )}
             </div>
 
             {handlerTab === "url" ? (
@@ -299,6 +314,14 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                       className="mt-1"
                     />
                   )}
+                />
+                <ToolCodeAssistDialog
+                  open={codeAssistOpen}
+                  onOpenChange={setCodeAssistOpen}
+                  code={form.getValues("handler") ?? ""}
+                  toolName={name}
+                  toolDescription={form.getValues("description")}
+                  onApply={(src) => form.setValue("handler", src, { shouldDirty: true })}
                 />
                 {executionTarget === "server" && (
                   <div className="flex items-center gap-2 mt-2">

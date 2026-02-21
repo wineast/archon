@@ -1,7 +1,7 @@
 ---
 name: worktree
 description: 管理 git worktree（创建、列出、同步、合并、删除工作区）。当用户说"创建工作区"、"同步上游"、"合并工作区"、"删除工作区"等类似表述时，应调用此技能。
-allowed-tools: Bash, Write, Edit, Read, Grep, Glob, AskUserQuestion
+allowed-tools: Bash, Write, Edit, Read, Grep, Glob, Task, AskUserQuestion
 ---
 
 管理 git worktree 工作区。
@@ -40,12 +40,12 @@ make wt-list
 - `name`（必填）：worktree 名称，如 `fix-ontology-drag`
 - `base`（可选）：基础分支，默认当前分支
 
-**规划模式**：创建工作区时可以进入 plan mode，但目标不是实现代码，而是调研代码库 → 生成 start.sh prompt → 创建可并行工作的若干工作区。规划产出物是工作区本身。
+**重要：不要进入 plan mode，不要开始实现代码。** 本技能的职责是创建工作区并生成启动脚本，让另一个 Claude Code 实例在工作区里自行规划和实现。
 
 流程：
 
 1. **理解任务**：根据用户描述，理解要实现的功能或修复的问题。
-2. **调研代码**：使用 `Explore` agent 或 `Grep`/`Read` 研究相关代码，为 prompt 提供准确的文件路径和实现上下文。
+2. **调研代码**：使用 `Task`（subagent_type=Explore）或 `Grep`/`Read` 研究相关代码，收集关键文件路径、现有模式和实现上下文。调研结果用于撰写高质量的 prompt。
 3. **需求澄清**：根据调研结果，如果发现模糊点、冲突或需要用户决策的地方，向用户追问确认。确认清楚后再进入下一步。如果任务已经足够明确则跳过。
 4. **生成 prompt**：基于任务描述、代码调研和澄清结果，生成一个清晰、具体的工作区 prompt。向用户确认：
    - 展示生成的 prompt

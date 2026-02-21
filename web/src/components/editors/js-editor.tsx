@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { EditorState } from "@codemirror/state";
-import { EditorView, keymap } from "@codemirror/view";
-import { basicSetup } from "codemirror";
-import { javascript } from "@codemirror/lang-javascript";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { indentWithTab } from "@codemirror/commands";
+import { useRef } from "react";
+import Editor, { DiffEditor as MonacoDiffEditor, type DiffOnMount } from "@monaco-editor/react";
 import { cn } from "@/lib/utils";
-import { editorBaseTheme } from "./theme";
+import { useDarkMode } from "./use-dark-mode";
+import { ARCHON_LIGHT, ARCHON_DARK } from "./theme";
+import { ensureMonacoSetup } from "./monaco-setup";
+
+const SHARED_OPTIONS = {
+  minimap: { enabled: false },
+  scrollBeyondLastLine: false,
+  automaticLayout: true,
+  lineNumbersMinChars: 3,
+  overviewRulerLanes: 0,
+  scrollbar: {
+    verticalScrollbarSize: 8,
+    horizontalScrollbarSize: 8,
+  },
+} as const;
 
 interface JsEditorProps {
   value: string;
@@ -16,95 +25,73 @@ interface JsEditorProps {
   readOnly?: boolean;
   height?: string;
   className?: string;
+  /** Pass original text to enable diff mode */
+  original?: string;
 }
 
 export function JsEditor({
   value,
   onChange,
   readOnly = false,
-  height = "300px",
+  height,
   className,
+  original,
 }: JsEditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
+  const isDark = useDarkMode();
+  const theme = isDark ? ARCHON_DARK : ARCHON_LIGHT;
+  const isDiff = original !== undefined;
+
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-  const internalValueRef = useRef(value);
 
-  // Detect dark mode
-  const [isDark, setIsDark] = useState(false);
-  useEffect(() => {
-    const el = document.documentElement;
-    const check = () => setIsDark(el.classList.contains("dark"));
-    check();
-    const observer = new MutationObserver(check);
-    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-
-  // Create editor once
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const extensions = [
-      basicSetup,
-      javascript(),
-      ...(isDark ? [oneDark] : []),
-      keymap.of([indentWithTab]),
-      EditorView.editable.of(!readOnly),
-      EditorState.readOnly.of(readOnly),
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          const newValue = update.state.doc.toString();
-          internalValueRef.current = newValue;
-          onChangeRef.current?.(newValue);
-        }
-      }),
-      editorBaseTheme({ height }),
-    ];
-
-    const state = EditorState.create({
-      doc: value,
-      extensions,
+  const handleDiffMount: DiffOnMount = (editor) => {
+    const modifiedEditor = editor.getModifiedEditor();
+    modifiedEditor.onDidChangeModelContent(() => {
+      onChangeRef.current?.(modifiedEditor.getValue());
     });
-
-    const view = new EditorView({
-      state,
-      parent: containerRef.current,
-    });
-
-    viewRef.current = view;
-
-    return () => {
-      view.destroy();
-      viewRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, height, isDark]);
-
-  // Sync external value changes
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    if (value === internalValueRef.current) return;
-
-    internalValueRef.current = value;
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert: value,
-      },
-    });
-  }, [value]);
+  };
 
   return (
     <div
-      ref={containerRef}
       className={cn(
         "overflow-hidden rounded-md border border-border",
         className
       )}
-    />
+      style={height ? { height } : undefined}
+    >
+      {isDiff ? (
+        <MonacoDiffEditor
+          original={original}
+          modified={value}
+          language="typescript"
+          theme={theme}
+          beforeMount={ensureMonacoSetup}
+          onMount={handleDiffMount}
+          options={{
+            ...SHARED_OPTIONS,
+            readOnly,
+            renderSideBySide: false,
+            fontSize: 14,
+            wordWrap: "on",
+          }}
+        />
+      ) : (
+        <Editor
+          language="typescript"
+          value={value}
+          onChange={(v) => onChange?.(v ?? "")}
+          theme={theme}
+          beforeMount={ensureMonacoSetup}
+          options={{
+            ...SHARED_OPTIONS,
+            readOnly,
+            fontSize: 13,
+            tabSize: 2,
+            wordWrap: "off",
+            hideCursorInOverviewRuler: true,
+          }}
+        />
+      )}
+    </div>
   );
 }

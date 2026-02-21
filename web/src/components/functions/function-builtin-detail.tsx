@@ -120,7 +120,7 @@ export function FunctionBuiltinDetail({ fn }: FunctionBuiltinDetailProps) {
                 <JsEditor
                   value={fn.code}
                   readOnly
-                  height="300px"
+                  height="400px"
                 />
               </div>
             </div>

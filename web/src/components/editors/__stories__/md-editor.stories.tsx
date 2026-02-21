@@ -5,6 +5,7 @@ import { MdEditor } from "../md-editor";
 const meta = {
   title: "Editors/MdEditor",
   component: MdEditor,
+  args: { height: "300px" },
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -72,6 +73,7 @@ export const Interactive: Story = {
         <MdEditor
           value={value}
           onChange={setValue}
+          height="300px"
           variables={["company_name", "income_type_enum", "state_enum"]}
           documents={[{ title: "Welcome Guide" }]}
           placeholder="Try typing {{  to trigger autocomplete..."
