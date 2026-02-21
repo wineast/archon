@@ -26,12 +26,6 @@ import {
 import { extractLabel } from "@/lib/ontology/utils";
 import { proxyToExternal } from "@/lib/ontology/external-proxy";
 
-export interface DataEntry {
-  value: string;
-  label: string | null;
-  metadata: Record<string, unknown> | null;
-}
-
 export interface WikiDoc {
   meta: Record<string, unknown> | null;
   content: string;
@@ -104,7 +98,6 @@ export interface ToolContext {
   };
   dataset: {
     get(key: string): Promise<unknown>;
-    getEntries(key: string): Promise<DataEntry[]>;
   };
   fn: (key: string) => Promise<(...args: unknown[]) => unknown>;
   ontology: OntologyContext;
@@ -236,18 +229,6 @@ export function createToolContext(agentId?: string): ToolContext {
       async get(key: string): Promise<unknown> {
         const all = await getResolved();
         return all[key] ?? null;
-      },
-
-      async getEntries(key: string): Promise<DataEntry[]> {
-        const all = await getResolved();
-        const val = all[key];
-        if (!val || typeof val !== "object" || Array.isArray(val)) return [];
-        return Object.entries(val as Record<string, unknown>).map(([k, v]) => ({
-          value: k,
-          label:
-            (v as Record<string, unknown>)?.label as string | null ?? null,
-          metadata: v as Record<string, unknown>,
-        }));
       },
     },
 

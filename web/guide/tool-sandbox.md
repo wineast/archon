@@ -243,7 +243,7 @@ npm install @vercel/sandbox
 ```
 可用 Context API：
 • context.wiki.get(key) / findByPrefix(prefix) / search(query)
-• context.dataset.get(key) / getEntries(key)
+• context.dataset.get(key)
 • context.fn(key) — 调用 Functions 中定义的函数
 • context.ontology.query(typeKey) / get(typeKey, id) / create(...) / update(...) / delete(...)
 ```

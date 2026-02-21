@@ -11,7 +11,6 @@ function createMockContext(overrides?: Partial<ToolContext>): ToolContext {
     },
     dataset: {
       get: vi.fn().mockResolvedValue({ key: "value" }),
-      getEntries: vi.fn().mockResolvedValue([]),
     },
     fn: vi.fn().mockResolvedValue((x: number) => x * 2),
     ontology: {

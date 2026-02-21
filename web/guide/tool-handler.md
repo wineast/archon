@@ -86,16 +86,10 @@ const results = await context.wiki.search("关键词");
 const val = await context.dataset.get("company_name");
 // → "GMCC" | null
 
-// 获取对象类型数据集的条目列表
-const entries = await context.dataset.getEntries("product_routes");
-// → [{ value, label, metadata }, ...]
+// 获取对象类型数据集（返回原始 JSON）
+const routes = await context.dataset.get("product_routes");
+// → { universe: { label: "...", states: [...] }, ... } | null
 ```
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `e.value` | `string` | 对象的 key |
-| `e.label` | `string \| null` | 对象值中的 `.label` 字段 |
-| `e.metadata` | `object` | 对象值本身 |
 
 ### context.fn(key)
 
@@ -169,15 +163,16 @@ async (args, context) => {
 }
 ```
 
-### 根据数据集条目路由匹配
+### 根据数据集路由匹配
 
 ```js
 async (args, context) => {
-  const entries = await context.dataset.getEntries("products");
-  const matched = entries.filter(e =>
-    e.metadata.category === args.category
+  const products = await context.dataset.get("products");
+  const entries = Object.entries(products || {});
+  const matched = entries.filter(([, val]) =>
+    val.category === args.category
   );
-  return { matched_count: matched.length, products: matched };
+  return { matched_count: matched.length, products: matched.map(([k, v]) => ({ key: k, ...v })) };
 }
 ```
 

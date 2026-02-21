@@ -196,9 +196,6 @@ function injectToolContext(
   registerAsyncMethod(vm, datasetObj, "get", (key) =>
     context.dataset.get(key as string)
   );
-  registerAsyncMethod(vm, datasetObj, "getEntries", (key) =>
-    context.dataset.getEntries(key as string)
-  );
   vm.setProp(ctxObj, "dataset", datasetObj);
   datasetObj.dispose();
 

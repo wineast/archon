@@ -91,7 +91,6 @@ const results = await context.wiki.search("关键词");       // [{ id, title, m
 ### context.dataset
 \`\`\`javascript
 const val = await context.dataset.get("company_name");       // "GMCC" | null
-const entries = await context.dataset.getEntries("products"); // [{ value, label, metadata }]
 \`\`\`
 
 ### context.fn(key)
