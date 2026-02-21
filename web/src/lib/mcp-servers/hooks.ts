@@ -105,14 +105,55 @@ export async function deleteMcpServer(id: string, mutate: () => void) {
   }
 }
 
-export async function testMcpServer(id: string) {
+export interface McpToolDef {
+  name: string;
+  description?: string;
+  inputSchema: {
+    type: "object";
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+}
+
+export interface TestMcpServerResult {
+  ok: boolean;
+  tools?: McpToolDef[];
+  toolCount?: number;
+  error?: string;
+}
+
+export async function testMcpServer(
+  id: string,
+  overrides?: { url: string; transportType: string; headers: Record<string, string> }
+): Promise<TestMcpServerResult> {
   try {
     const res = await fetch(`/api/mcp-servers/${id}/test`, {
       method: "POST",
+      headers: overrides ? { "Content-Type": "application/json" } : undefined,
+      body: overrides ? JSON.stringify(overrides) : undefined,
     });
     return res.json();
   } catch (e) {
     console.error("testMcpServer failed:", e);
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+export async function executeMcpTool(
+  serverId: string,
+  toolName: string,
+  args: Record<string, unknown>,
+  overrides?: { url: string; transportType: string; headers: Record<string, string> }
+) {
+  try {
+    const res = await fetch(`/api/mcp-servers/${serverId}/execute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ toolName, args, ...overrides }),
+    });
+    return res.json();
+  } catch (e) {
+    console.error("executeMcpTool failed:", e);
     return { ok: false, error: (e as Error).message };
   }
 }

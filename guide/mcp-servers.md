@@ -33,7 +33,8 @@ MCP (Model Context Protocol) Server 模块允许子 Agent 在 chat 运行时连�
 | POST | `/api/mcp-servers` | 创建 |
 | PATCH | `/api/mcp-servers/[id]` | 更新 |
 | DELETE | `/api/mcp-servers/[id]` | 软删除 |
-| POST | `/api/mcp-servers/[id]/test` | 测试连接，返回工具列表 |
+| POST | `/api/mcp-servers/[id]/test` | 测试连接，返回完整工具定义（含 inputSchema） |
+| POST | `/api/mcp-servers/[id]/execute` | 执行单个工具，body: `{ toolName, args }` |
 
 ## SWR Hooks
 
@@ -44,7 +45,8 @@ MCP (Model Context Protocol) Server 模块允许子 Agent 在 chat 运行时连�
 - `createMcpServer(data, mutate)` — 创建
 - `updateMcpServer(id, data, mutate)` — 更新
 - `deleteMcpServer(id, mutate)` — 删除
-- `testMcpServer(id)` — 测试连接
+- `testMcpServer(id)` — 测试连接，返回 `TestMcpServerResult`（含 `McpToolDef[]`）
+- `executeMcpTool(serverId, toolName, args)` — 执行单个 MCP 工具
 
 ## Build Chat 工具
 
@@ -80,19 +82,54 @@ Build 页面 → MCP tab（`PlugIcon`）
 |------|------|
 | `McpServersPanel` | 双栏布局主面板 |
 | `McpServersSidebar` | 左侧列表 |
-| `McpServerDetail` | 右侧详情 + Test Connection |
+| `McpServerDetail` | 右侧详情，Edit / Playground 双 Tab 布局（`variant="line"`） |
+| `McpToolPlayground` | Playground Tab：左侧工具列表 sidebar + 右侧参数/结果面板 |
 | `McpServerForm` | react-hook-form 表单 |
 | `McpServerCreateDialog` | key+name 创建对话框 |
 | `McpServersEmptyState` | 空状态提示 |
 
 ## Test Connection
 
-点击 "Test Connection" 按钮，后端会：
+点击 "Test" 按钮，后端会：
 1. 用 `createMCPClient` 连接到 MCP Server
-2. 调用 `client.tools()` 获取工具列表
-3. 返回 `{ ok, tools, toolCount }` 或 `{ ok: false, error }`
+2. 调用 `client.listTools()` 获取完整工具定义（含 `inputSchema`）
+3. 返回 `{ ok, tools: McpToolDef[], toolCount }` 或 `{ ok: false, error }`
 
-成功时 toast 显示工具数量和名称列表。
+成功时 toast 显示工具数量，并自动切换到 Playground Tab。
+
+## Tool Playground
+
+MCP Server 详情页的独立 Tab（与 Edit Tab 并列，`variant="line"` 导航级 Tabs）。Test 连接成功后自动切换至此。
+
+### 布局
+
+采用左右分栏模式（与 tools-panel 的 sidebar + detail 模式一致）：
+
+- **左侧 sidebar**（`w-48 shrink-0 border-r`）：工具列表，点击选中，选中态 `bg-muted font-medium`
+- **右侧面板**（`flex-1`）：ScrollArea 包裹工具描述 + 参数表单 + 结果展示，底部固定 Run 按钮
+
+未 Test 连接时，Playground Tab 显示空状态引导："Please click Test on the Edit tab to connect to the MCP server first."
+
+### 功能
+
+1. **选择工具**：从左侧列表点击选择工具
+2. **查看描述**：展示工具的 description
+3. **填写参数**：根据 `inputSchema.properties` 动态生成表单
+   - `string` → 文本输入
+   - `number` / `integer` → 数字输入
+   - `boolean` → Switch 开关
+   - `string` + `enum` → Select 下拉
+   - 其他复杂类型（object/array）→ JsonEditor 可编辑模式
+4. **执行工具**：点击 "Run" 调用 Execute API
+5. **查看结果**：JsonEditor readOnly 展示；失败时红色 Alert 显示错误信息
+
+### 相关文件
+
+| 文件 | 说明 |
+|------|------|
+| `web/src/components/mcp-servers/mcp-tool-playground.tsx` | Playground 组件 |
+| `web/src/app/api/mcp-servers/[id]/execute/route.ts` | Execute API |
+| `web/src/lib/mcp-servers/hooks.ts` | `executeMcpTool` 函数 + `McpToolDef` 类型 |
 
 ## MCP 总开关
 

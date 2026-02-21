@@ -11,6 +11,12 @@ export async function POST(
 ) {
   const { id } = await params;
 
+  const body = await req.json().catch(() => null);
+  if (!body?.toolName || typeof body.toolName !== "string") {
+    return NextResponse.json({ ok: false, error: "toolName is required" }, { status: 400 });
+  }
+  const { toolName, args = {} } = body as { toolName: string; args?: Record<string, unknown> };
+
   const [server] = await db
     .select()
     .from(mcpServers)
@@ -24,10 +30,9 @@ export async function POST(
   if (ctx instanceof NextResponse) return ctx;
 
   // Accept optional overrides from body (test unsaved form values)
-  const body = await req.json().catch(() => null);
-  const url = body?.url ?? server.url;
-  const transportType = body?.transportType ?? server.transportType;
-  const headers = body?.headers ?? server.headers;
+  const url = body.url ?? server.url;
+  const transportType = body.transportType ?? server.transportType;
+  const headers = body.headers ?? server.headers;
 
   if (!url) {
     return NextResponse.json({ ok: false, error: "URL is not configured" }, { status: 400 });
@@ -45,18 +50,15 @@ export async function POST(
       },
     });
 
-    const result = await client.listTools();
-    const tools = result.tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      inputSchema: t.inputSchema,
-    }));
+    const toolSet = await client.tools();
+    const tool = toolSet[toolName];
+    if (!tool) {
+      return NextResponse.json({ ok: false, error: `Tool "${toolName}" not found` }, { status: 200 });
+    }
 
-    return NextResponse.json({
-      ok: true,
-      tools,
-      toolCount: tools.length,
-    });
+    const result = await tool.execute(args, { toolCallId: `playground-${Date.now()}`, messages: [] });
+
+    return NextResponse.json({ ok: true, result });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: message }, { status: 200 });
