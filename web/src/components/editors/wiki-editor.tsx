@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { RotateCcwIcon, SaveIcon, SparklesIcon, Trash2Icon } from "lucide-react";
 import Markdown from "react-markdown";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
+import { WikiAssistDialog } from "@/components/wiki/wiki-assist-dialog";
 
 interface WikiEditorProps {
   doc: WikiDocument;
@@ -39,6 +40,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [assistOpen, setAssistOpen] = useState(false);
 
   const { tools: allTools } = useTools(agentId);
   const { datasetVars } = useDatasetVarsMap(agentId);
@@ -137,11 +139,17 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
           onValueChange={(v) => setActiveTab(v as "edit" | "preview")}
           className="flex flex-col flex-1 min-h-0"
         >
-          <label className="shrink-0 mx-6 text-xs font-medium text-muted-foreground">Content</label>
-          <TabsList className="h-7 shrink-0 mx-6">
-            <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
-            <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2 shrink-0 mx-6">
+            <label className="text-xs font-medium text-muted-foreground">Content</label>
+            <TabsList className="h-7">
+              <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
+              <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
+            </TabsList>
+            <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-xs" onClick={() => setAssistOpen(true)}>
+              <SparklesIcon className="size-3" />
+              AI 编辑
+            </Button>
+          </div>
           <TabsContent value="edit" className="flex-1 min-h-0 overflow-hidden px-6 pb-4">
             <MdEditor
               value={content}
@@ -208,6 +216,14 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WikiAssistDialog
+        open={assistOpen}
+        onOpenChange={setAssistOpen}
+        content={content}
+        documentName={name}
+        onApply={setContent}
+      />
     </>
   );
 }
