@@ -8,7 +8,7 @@ const valuesMock = vi.fn((v: Record<string, unknown>) => {
 });
 const insertMock = vi.fn(() => ({ values: valuesMock }));
 
-let selectRunResult: unknown[] = [{ id: "run-1", agentId: "agent-1" }];
+let selectRunResult: unknown[] = [{ id: "run-1", agentId: "agent-1", assertionFailConfig: null }];
 let selectModelResult: unknown[] = [
   {
     id: "mc-1",
@@ -144,7 +144,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
     vi.clearAllMocks();
     insertedResults.length = 0;
     fromCallIndex = 0;
-    selectRunResult = [{ id: "run-1", agentId: "agent-1" }];
+    selectRunResult = [{ id: "run-1", agentId: "agent-1", assertionFailConfig: null }];
     selectModelResult = [
       {
         id: "mc-1",

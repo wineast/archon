@@ -37,7 +37,6 @@ export async function PUT(
       }),
       ...(body.assertions !== undefined && { assertions: body.assertions }),
       ...(body.tags !== undefined && { tags: body.tags }),
-      ...(body.assertionFailConfig !== undefined && { assertionFailConfig: body.assertionFailConfig }),
     })
     .where(eq(evalCases.id, id))
     .returning();

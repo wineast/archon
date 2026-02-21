@@ -136,4 +136,35 @@ describe("POST /api/eval/run (create run)", () => {
       filterTags: [],
     });
   });
+
+  it("stores assertionFailConfig when provided", async () => {
+    await POST(
+      makeRequest({
+        agentId: "agent-1",
+        modelConfigId: "mc-1",
+        judgeConfigName: "judge",
+        totalCases: 1,
+        assertionFailConfig: { judgeOnFail: true, stopOnTurnFail: true },
+      })
+    );
+
+    expect(insertedValues[0]).toMatchObject({
+      assertionFailConfig: { judgeOnFail: true, stopOnTurnFail: true },
+    });
+  });
+
+  it("defaults assertionFailConfig to null when not provided", async () => {
+    await POST(
+      makeRequest({
+        agentId: "agent-1",
+        modelConfigId: "mc-1",
+        judgeConfigName: "judge",
+        totalCases: 1,
+      })
+    );
+
+    expect(insertedValues[0]).toMatchObject({
+      assertionFailConfig: null,
+    });
+  });
 });

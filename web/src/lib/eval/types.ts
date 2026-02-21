@@ -58,7 +58,6 @@ export interface EvalCase {
   assertions: Assertion[];
   expectedOutput: string;
   tags?: string[];
-  assertionFailConfig?: AssertionFailConfig;
 }
 
 export interface Dimension {
@@ -120,7 +119,6 @@ export function toEvalCase(row: EvalCaseRow): EvalCase {
     assertions: row.assertions,
     expectedOutput: row.expectedOutput ?? "",
     tags: row.tags,
-    assertionFailConfig: row.assertionFailConfig ?? undefined,
   };
 }
 
@@ -156,6 +154,7 @@ export interface CreateEvalRunRequest {
   judgeConfigId?: string;
   judgeConfigName: string;
   filterTags?: string[];
+  assertionFailConfig?: AssertionFailConfig;
   totalCases: number;
 }
 

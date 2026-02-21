@@ -112,7 +112,6 @@ const baseCase: EvalCaseRow = {
   expectedOutput: "I am fine",
   assertions: [{ id: "a1", type: "contains", value: "fine" }],
   tags: ["greeting"],
-  assertionFailConfig: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,

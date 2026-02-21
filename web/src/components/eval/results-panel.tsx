@@ -31,6 +31,8 @@ import type {
   EvalRunDetail,
 } from "@/lib/eval/types";
 import type { EvalRunRow } from "@/db/schema";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useCallback, useState } from "react";
 import { ResultCard } from "./result-card";
 import {
@@ -40,6 +42,7 @@ import {
   ChevronRightIcon,
   ClockIcon,
 } from "lucide-react";
+import type { AssertionFailConfig } from "@/lib/eval/types";
 
 interface ResultsPanelProps {
   agentId?: string;
@@ -77,6 +80,7 @@ export function ResultsPanel({
     const def = configs.find((c) => c.isDefault);
     return def?.id ?? "";
   });
+  const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>({});
 
   // Run detail expansion
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
@@ -118,6 +122,7 @@ export function ResultsPanel({
           judgeConfigId: selectedJudge.id,
           judgeConfigName: judgeConfig.model,
           filterTags: selectedTags.length > 0 ? selectedTags : undefined,
+          assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
           totalCases: cases.length,
         }),
       });
@@ -327,6 +332,45 @@ export function ResultsPanel({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="judgeOnFail"
+              checked={!!assertionFailConfig.judgeOnFail}
+              onCheckedChange={(v) =>
+                setAssertionFailConfig((prev) => ({ ...prev, judgeOnFail: v }))
+              }
+            />
+            <Label htmlFor="judgeOnFail" className="text-xs">
+              断言失败仍执行评估
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="judgeTurnOnFail"
+              checked={!!assertionFailConfig.judgeTurnOnFail}
+              onCheckedChange={(v) =>
+                setAssertionFailConfig((prev) => ({ ...prev, judgeTurnOnFail: v }))
+              }
+            />
+            <Label htmlFor="judgeTurnOnFail" className="text-xs">
+              单轮断言失败仍评估该轮
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="stopOnTurnFail"
+              checked={!!assertionFailConfig.stopOnTurnFail}
+              onCheckedChange={(v) =>
+                setAssertionFailConfig((prev) => ({ ...prev, stopOnTurnFail: v }))
+              }
+            />
+            <Label htmlFor="stopOnTurnFail" className="text-xs">
+              单轮断言失败停止后续轮
+            </Label>
           </div>
         </div>
 

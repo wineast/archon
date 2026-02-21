@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     judgeConfigId,
     judgeConfigName,
     filterTags,
+    assertionFailConfig,
     totalCases,
   } = body;
 
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
       judgeConfigId: judgeConfigId ?? null,
       judgeConfigName,
       filterTags: filterTags ?? [],
+      assertionFailConfig: assertionFailConfig ?? null,
       totalCases,
       passedAssertions: 0,
       averageScore: null,

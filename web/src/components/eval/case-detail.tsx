@@ -26,8 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { AssertionRow } from "./assertion-row";
 import { TurnsList } from "./turns-list";
 import { ResultCard } from "./result-card";
@@ -40,7 +38,6 @@ import { toJudgeConfig } from "@/lib/eval/types";
 import type { EvalCaseRow } from "@/db/schema";
 import type {
   Assertion,
-  AssertionFailConfig,
   EvalResult,
   EvalCase,
   EvalCaseMode,
@@ -72,7 +69,6 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     evalCase.assertions
   );
   const [tags, setTags] = useState<string[]>(evalCase.tags ?? []);
-  const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>(evalCase.assertionFailConfig ?? {});
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -96,8 +92,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     !deepEqual(turns, evalCase.turns) ||
     expectedOutput !== (evalCase.expectedOutput ?? "") ||
     !deepEqual(assertions, evalCase.assertions) ||
-    !deepEqual(tags, evalCase.tags ?? []) ||
-    !deepEqual(assertionFailConfig, evalCase.assertionFailConfig ?? {});
+    !deepEqual(tags, evalCase.tags ?? []);
 
   const handleAssertionChange = useCallback(
     (idx: number, updated: Assertion) => {
@@ -176,7 +171,6 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     setExpectedOutput(evalCase.expectedOutput ?? "");
     setAssertions(evalCase.assertions);
     setTags(evalCase.tags ?? []);
-    setAssertionFailConfig(evalCase.assertionFailConfig ?? {});
     setTagInput("");
   }, [evalCase]);
 
@@ -190,12 +184,11 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         expectedOutput: expectedOutput || null,
         assertions,
         tags,
-        assertionFailConfig,
       });
     } finally {
       setSaving(false);
     }
-  }, [evalCase.id, name, mode, turns, expectedOutput, assertions, tags, assertionFailConfig, onSave]);
+  }, [evalCase.id, name, mode, turns, expectedOutput, assertions, tags, onSave]);
 
   const handleDelete = useCallback(async () => {
     setDeleting(true);
@@ -238,7 +231,6 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
       assertions,
       expectedOutput,
       tags,
-      assertionFailConfig,
     };
     const enabledToolNames = allDbTools
       .filter((t) => t.enabled)
@@ -324,7 +316,6 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     assertions,
     expectedOutput,
     tags,
-    assertionFailConfig,
     activeModelConfig,
     defaultJudge,
     templateVars,
@@ -475,53 +466,6 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
                 <p className="py-2 text-xs text-muted-foreground">
                   No assertions. Add one to validate the response.
                 </p>
-              )}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">
-              断言失败行为
-            </label>
-            <div className="mt-1 space-y-2">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="judgeOnFail"
-                  checked={!!assertionFailConfig.judgeOnFail}
-                  onCheckedChange={(v) =>
-                    setAssertionFailConfig((prev) => ({ ...prev, judgeOnFail: v }))
-                  }
-                />
-                <Label htmlFor="judgeOnFail" className="text-xs">
-                  断言失败仍执行评估
-                </Label>
-              </div>
-              {mode === "sequential" && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="judgeTurnOnFail"
-                      checked={!!assertionFailConfig.judgeTurnOnFail}
-                      onCheckedChange={(v) =>
-                        setAssertionFailConfig((prev) => ({ ...prev, judgeTurnOnFail: v }))
-                      }
-                    />
-                    <Label htmlFor="judgeTurnOnFail" className="text-xs">
-                      单轮断言失败仍评估该轮
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="stopOnTurnFail"
-                      checked={!!assertionFailConfig.stopOnTurnFail}
-                      onCheckedChange={(v) =>
-                        setAssertionFailConfig((prev) => ({ ...prev, stopOnTurnFail: v }))
-                      }
-                    />
-                    <Label htmlFor="stopOnTurnFail" className="text-xs">
-                      单轮断言失败停止后续轮
-                    </Label>
-                  </div>
-                </>
               )}
             </div>
           </div>

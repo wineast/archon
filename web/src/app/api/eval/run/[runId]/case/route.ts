@@ -119,7 +119,7 @@ export async function POST(
 
     const mode = evalCase.mode ?? "single";
     const turns = evalCase.turns ?? [];
-    const { judgeOnFail = false, judgeTurnOnFail = false, stopOnTurnFail = false } = evalCase.assertionFailConfig ?? {};
+    const { judgeOnFail = false, judgeTurnOnFail = false, stopOnTurnFail = false } = run.assertionFailConfig ?? {};
 
     // ── Execute based on mode ──
     const chatMessages: ChatMessage[] = [];

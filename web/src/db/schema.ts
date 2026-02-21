@@ -561,7 +561,6 @@ export const evalCases = pgTable(
     expectedOutput: text("expected_output"),
     assertions: jsonb("assertions").$type<Assertion[]>().notNull().default([]),
     tags: text("tags").array().notNull().default([]),
-    assertionFailConfig: jsonb("assertion_fail_config").$type<AssertionFailConfig>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -620,6 +619,7 @@ export const evalRuns = pgTable("eval_runs", {
   judgeConfigId: uuid("judge_config_id"),
   judgeConfigName: text("judge_config_name").notNull(),
   filterTags: text("filter_tags").array().notNull().default([]),
+  assertionFailConfig: jsonb("assertion_fail_config").$type<AssertionFailConfig>(),
   totalCases: integer("total_cases").notNull(),
   passedAssertions: integer("passed_assertions").notNull(),
   averageScore: real("average_score"),
