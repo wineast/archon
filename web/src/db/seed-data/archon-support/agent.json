@@ -2,5 +2,6 @@
   "name": "Archon 小助手",
   "slug": "archon-support",
   "description": "Archon 平台客服助手",
-  "icon": "headset"
+  "icon": "headset",
+  "isPlatform": true
 }

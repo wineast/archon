@@ -14,6 +14,7 @@ export const seedAgent: Seeder = {
       slug: string;
       description: string;
       icon: string;
+      isPlatform?: boolean;
     }>(join(ctx.agentDir, "agent.json"));
 
     // Check if agent already exists in this org
@@ -33,6 +34,7 @@ export const seedAgent: Seeder = {
           name: agentSeed.name,
           description: agentSeed.description,
           icon: agentSeed.icon,
+          isPlatform: agentSeed.isPlatform ?? false,
         })
         .where(eq(agents.id, existing.id))
         .returning();
@@ -40,7 +42,11 @@ export const seedAgent: Seeder = {
       [agent] = await ctx.db
         .insert(agents)
         .values({
-          ...agentSeed,
+          name: agentSeed.name,
+          slug: agentSeed.slug,
+          description: agentSeed.description,
+          icon: agentSeed.icon,
+          isPlatform: agentSeed.isPlatform ?? false,
           orgId: ctx.orgId,
           isPublic: true,
         })
