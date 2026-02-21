@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ function BuiltinListItem({
   isActive: boolean;
   onSelect: (id: string) => void;
 }) {
+  const tc = useTranslations("common");
   const id = `builtin:${fn.key}`;
   const handleSelect = useCallback(() => {
     onSelect(id);
@@ -43,7 +45,7 @@ function BuiltinListItem({
     >
       <span className="min-w-0 flex-1 truncate">{fn.name}</span>
       <Badge variant="outline" className="shrink-0 text-[10px]">
-        Built-in
+        {tc("builtIn")}
       </Badge>
     </button>
   );
@@ -85,18 +87,19 @@ export function FunctionsSidebar({
   onSelect,
   onCreate,
 }: FunctionsSidebarProps) {
+  const t = useTranslations("build");
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Functions</span>
+          <span className="text-sm font-semibold">{t("functions")}</span>
           <GuideDialog title="函数模块" content={functionsGuide} />
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={onCreate}
-          title="New Function"
+          title={t("newFunction")}
         >
           <PlusIcon className="size-4" />
         </Button>
@@ -113,7 +116,7 @@ export function FunctionsSidebar({
           ))}
           {functions.length === 0 && builtinFunctions.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No functions yet
+              {t("noFunctions")}
             </p>
           ) : (
             functions.map((fn) => (

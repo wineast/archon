@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { RotateCcwIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -33,6 +34,8 @@ export function TrashDialog({
   onOpenChange,
   agentsMutate,
 }: TrashDialogProps) {
+  const t = useTranslations("trash");
+  const tc = useTranslations("common");
   const { agents, isLoading, mutate: trashMutate } = useTrashAgents();
   const [busy, setBusy] = useState(false);
   const [confirmAgent, setConfirmAgent] = useState<AgentRow | null>(null);
@@ -59,8 +62,8 @@ export function TrashDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>回收站</DialogTitle>
-            <DialogDescription>已删除的 Agent，可恢复或永久删除</DialogDescription>
+            <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("description")}</DialogDescription>
           </DialogHeader>
 
           <div className="max-h-80 overflow-y-auto">
@@ -70,7 +73,7 @@ export function TrashDialog({
               </div>
             ) : agents.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                回收站为空
+                {t("empty")}
               </p>
             ) : (
               <div className="space-y-2">
@@ -102,7 +105,7 @@ export function TrashDialog({
                           className="size-7"
                           disabled={busy}
                           onClick={() => handleRestore(agent)}
-                          title="恢复"
+                          title={t("restore")}
                         >
                           {busy ? (
                             <Spinner className="size-3.5" />
@@ -116,7 +119,7 @@ export function TrashDialog({
                           className="size-7 text-destructive"
                           disabled={busy}
                           onClick={() => setConfirmAgent(agent)}
-                          title="永久删除"
+                          title={t("permanentDelete")}
                         >
                           <Trash2Icon className="size-3.5" />
                         </Button>
@@ -139,10 +142,9 @@ export function TrashDialog({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>永久删除</DialogTitle>
+            <DialogTitle>{t("permanentDelete")}</DialogTitle>
             <DialogDescription>
-              确定永久删除 <strong>{confirmAgent?.name}</strong>
-              ？此操作不可撤销，所有关联数据将被清除。
+              {t("confirmMessage")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -151,14 +153,14 @@ export function TrashDialog({
               onClick={() => setConfirmAgent(null)}
               disabled={busy}
             >
-              取消
+              {tc("cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handlePermanentDelete}
               disabled={busy}
             >
-              {busy ? <Spinner className="size-4" /> : "永久删除"}
+              {busy ? <Spinner className="size-4" /> : t("permanentDelete")}
             </Button>
           </DialogFooter>
         </DialogContent>

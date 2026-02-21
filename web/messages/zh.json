@@ -1,0 +1,326 @@
+{
+  "common": {
+    "save": "保存",
+    "saving": "保存中...",
+    "cancel": "取消",
+    "delete": "删除",
+    "deleting": "删除中...",
+    "reset": "重置",
+    "create": "创建",
+    "edit": "编辑",
+    "or": "或",
+    "confirm": "确认",
+    "close": "关闭",
+    "back": "返回",
+    "loading": "加载中...",
+    "noData": "暂无数据",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失败",
+    "movedToTrash": "已移至回收站",
+    "restored": "已恢复",
+    "permanentlyDeleted": "已永久删除",
+    "deleteFailed": "删除失败",
+    "restoreFailed": "恢复失败",
+    "permanentDeleteFailed": "永久删除失败",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "default": "Default"
+  },
+  "nav": {
+    "agents": "Agents",
+    "admin": "管理后台",
+    "trash": "回收站",
+    "settings": "设置"
+  },
+  "auth": {
+    "signIn": {
+      "title": "欢迎回来",
+      "description": "登录你的账号",
+      "submit": "登录",
+      "google": "使用 Google 登录",
+      "noAccount": "还没有账号？",
+      "error": "登录失败"
+    },
+    "signUp": {
+      "title": "创建账号",
+      "description": "注册一个新账号",
+      "submit": "注册",
+      "google": "使用 Google 注册",
+      "hasAccount": "已有账号？",
+      "link": "登录",
+      "error": "注册失败",
+      "googleError": "Google 注册失败"
+    },
+    "verify": {
+      "title": "验证身份",
+      "emailTitle": "验证邮箱",
+      "description": "我们已向 {email} 发送了验证码",
+      "button": "验证",
+      "error": "验证失败"
+    },
+    "code": {
+      "label": "验证码",
+      "placeholder": "请输入 6 位验证码"
+    },
+    "resend": {
+      "question": "没收到验证码？",
+      "button": "重新发送",
+      "success": "验证码已重新发送",
+      "error": "发送失败"
+    },
+    "email": {
+      "label": "邮箱",
+      "placeholder": "name@example.com"
+    },
+    "password": {
+      "label": "密码"
+    },
+    "googleError": "Google 登录失败"
+  },
+  "user": {
+    "settings": "个人设置",
+    "logout": "退出登录"
+  },
+  "agent": {
+    "createNew": "新建 Agent",
+    "createFirst": "创建第一个 Agent",
+    "noAgents": "还没有 Agent",
+    "editAgent": "编辑 Agent",
+    "newAgent": "新建 Agent",
+    "editDescription": "修改 Agent 的配置信息",
+    "newDescription": "创建一个新的 Agent",
+    "name": "名称",
+    "namePlaceholder": "我的 Agent",
+    "slug": "Slug",
+    "slugPlaceholder": "my-agent",
+    "slugHint": "URL 路径标识，仅支持小写字母、数字和连字符",
+    "description": "描述",
+    "descriptionPlaceholder": "这个 Agent 的用途...",
+    "icon": "图标",
+    "settings": "设置",
+    "createFailed": "创建 Agent 失败",
+    "updateFailed": "更新 Agent 失败",
+    "deleteFailed": "删除 Agent 失败",
+    "restoreFailed": "恢复 Agent 失败"
+  },
+  "trash": {
+    "title": "回收站",
+    "description": "已删除的 Agent，可恢复或永久删除",
+    "empty": "回收站为空",
+    "restore": "恢复",
+    "permanentDelete": "永久删除",
+    "confirmMessage": "此操作不可撤销，所有关联数据将被清除。",
+    "cleared": "回收站已清空",
+    "clearFailed": "清空回收站失败"
+  },
+  "chat": {
+    "clear": "Clear Chat",
+    "export": "Export Chat",
+    "import": "Import Chat",
+    "inspect": "Inspect",
+    "attachmentTooltip": "添加附件",
+    "sessionNotFound": "会话不存在或尚未保存",
+    "sessionAgentMismatch": "会话不属于当前 Agent",
+    "sessionLoadError": "会话加载失败",
+    "exportFetchError": "导出失败：无法获取会话数据",
+    "importInvalidFormat": "无效的聊天导出文件",
+    "importError": "导入失败",
+    "importSuccess": "会话导入成功",
+    "importFormatError": "导入失败：文件格式错误",
+    "deleteSessionFailed": "删除会话失败"
+  },
+  "build": {
+    "titleSuffix": "· 设置",
+    "disabledBadge": "已关闭",
+    "auditLog": "操作日志",
+    "config": "Config",
+    "schemas": "Schemas",
+    "wiki": "Wiki",
+    "datasets": "Datasets",
+    "functions": "Functions",
+    "components": "Components",
+    "tools": "Tools",
+    "skills": "Skills",
+    "ontology": "Ontology",
+    "memory": "Memory",
+    "mcp": "MCP",
+    "files": "Files",
+    "sessions": "Sessions",
+    "evaluate": "Evaluate",
+    "modelConfig": "Model Config",
+    "embed": "Embed",
+    "usage": "Usage",
+    "runtime": "Runtime",
+    "members": "Members",
+    "newComponent": "New Component",
+    "noComponents": "No components yet",
+    "newDataset": "New Dataset",
+    "noDatasets": "No datasets yet",
+    "newFunction": "New Function",
+    "noFunctions": "No functions yet",
+    "newTool": "New Tool",
+    "noTools": "No tools yet",
+    "newSkill": "New Skill",
+    "noSkills": "No skills yet",
+    "disableSkills": "关闭 Skills 功能",
+    "newSchema": "New Schema",
+    "noSchemas": "No schemas yet",
+    "newMcpServer": "New MCP Server",
+    "noMcpServers": "No MCP servers yet",
+    "newModelConfig": "New Config",
+    "noModelConfigs": "No configs yet",
+    "newObjectType": "New Object Type",
+    "importFromFile": "Import from File",
+    "noObjectTypes": "No object types yet",
+    "newDocument": "New Document",
+    "noDocuments": "No documents yet",
+    "newVersion": "New Version",
+    "noVersions": "No versions",
+    "unpublished": "未发布",
+    "detail": "Detail",
+    "publish": "Publish",
+    "deleteVersion": "Delete Version",
+    "evalCases": "Cases",
+    "newCase": "New Case",
+    "noCases": "No cases yet",
+    "noMatchingCases": "No matching cases",
+    "judge": "Judge",
+    "newJudgeConfig": "New Judge Config",
+    "noJudgeConfigs": "No configs yet",
+    "results": "Results",
+    "benchmark": "Benchmark"
+  },
+  "admin": {
+    "title": "管理后台",
+    "buildChatSettings": "Build 助手设置",
+    "model": "模型",
+    "temperature": "Temperature",
+    "usersList": "用户列表 ({count})",
+    "superAdmin": "Super Admin",
+    "userRole": "User",
+    "removeAdmin": "取消超管",
+    "setAdmin": "设为超管"
+  },
+  "org": {
+    "settingsSuffix": "· 组织设置",
+    "info": "基本信息",
+    "members": "成员",
+    "apiKeys": "API Keys",
+    "credits": "额度",
+    "usage": "用量",
+    "name": "名称",
+    "slugLabel": "Slug",
+    "slugHint": "URL 路径标识，仅支持小写字母、数字和连字符"
+  },
+  "share": {
+    "preview": "分享预览",
+    "notFound": "该分享链接不存在或已失效",
+    "loadError": "加载失败，请稍后重试",
+    "backHome": "返回首页"
+  },
+  "embed": {
+    "invalidToken": "Invalid token",
+    "originNotAllowed": "Origin not allowed",
+    "loadFailed": "Failed to load chat",
+    "missingToken": "Missing token parameter"
+  },
+  "message": {
+    "prevBranch": "Previous branch",
+    "nextBranch": "Next branch",
+    "branchOf": "{current} of {total}"
+  },
+  "datasets": {
+    "createFailed": "Failed to create dataset",
+    "saveFailed": "Failed to save dataset",
+    "deleteFailed": "Failed to delete dataset"
+  },
+  "tools": {
+    "createFailed": "Failed to create tool",
+    "saveFailed": "Failed to save tool",
+    "deleteFailed": "Failed to delete tool"
+  },
+  "components": {
+    "createFailed": "Failed to create component",
+    "saveFailed": "Failed to save component",
+    "deleteFailed": "Failed to delete component"
+  },
+  "functions": {
+    "createFailed": "Failed to create function",
+    "saveFailed": "Failed to save function",
+    "deleteFailed": "Failed to delete function"
+  },
+  "mcpServers": {
+    "createFailed": "Failed to create MCP server",
+    "saveFailed": "Failed to save MCP server",
+    "deleteFailed": "Failed to delete MCP server"
+  },
+  "skills": {
+    "createFailed": "Failed to create skill",
+    "saveFailed": "Failed to save skill",
+    "deleteFailed": "Failed to delete skill",
+    "toggleFailed": "Failed to toggle skills feature"
+  },
+  "schemas": {
+    "createFailed": "Failed to create schema",
+    "saveFailed": "Failed to save schema",
+    "deleteFailed": "Failed to delete schema"
+  },
+  "modelConfigs": {
+    "createFailed": "Failed to create model config",
+    "saveFailed": "Failed to save model config",
+    "deleteFailed": "Failed to delete model config",
+    "activateFailed": "Failed to activate model config"
+  },
+  "eval": {
+    "createCaseFailed": "Failed to create case",
+    "saveCaseFailed": "Failed to save case",
+    "deleteCaseFailed": "Failed to delete case",
+    "createJudgeFailed": "Failed to create judge config",
+    "saveJudgeFailed": "Failed to save judge config",
+    "deleteJudgeFailed": "Failed to delete judge config",
+    "setDefaultJudgeFailed": "Failed to set default judge config",
+    "loadRunFailed": "Failed to load run detail",
+    "deleteRunFailed": "Failed to delete run"
+  },
+  "versions": {
+    "switchFailed": "Failed to switch version",
+    "publishFailed": "Failed to publish version",
+    "rollbackFailed": "Failed to rollback version",
+    "deleteFailed": "Failed to delete version"
+  },
+  "ontology": {
+    "createTypeFailed": "Failed to create object type",
+    "saveTypeFailed": "Failed to save object type",
+    "deleteTypeFailed": "Failed to delete object type",
+    "createRelationFailed": "Failed to create relation",
+    "saveRelationFailed": "Failed to save relation",
+    "deleteRelationFailed": "Failed to delete relation",
+    "createInstanceFailed": "Failed to create instance",
+    "saveInstanceFailed": "Failed to save instance",
+    "deleteInstanceFailed": "Failed to delete instance",
+    "importFailed": "Failed to batch import instances",
+    "importSuccess": "Imported {count} instance(s)",
+    "importSkipped": "Skipped (already exist): {names}",
+    "createLinkFailed": "Failed to create link",
+    "deleteLinkFailed": "Failed to delete link",
+    "generateCrudFailed": "Failed to generate CRUD tools"
+  },
+  "embedTokens": {
+    "createFailed": "Failed to create token",
+    "updateFailed": "Failed to update token",
+    "deleteFailed": "Failed to delete token"
+  },
+  "agentFiles": {
+    "deleteFailed": "Failed to delete file"
+  },
+  "chatConfig": {
+    "saveFailed": "Failed to save config"
+  },
+  "memoryConfig": {
+    "toggleFailed": "Failed to toggle memory feature",
+    "saveFailed": "Failed to save memory config",
+    "createFailed": "Failed to create memory",
+    "saveMemoryFailed": "Failed to save memory",
+    "deleteFailed": "Failed to delete memory"
+  }
+}

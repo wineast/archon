@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -56,6 +57,7 @@ export function WikiSidebar({
   onReorder,
   onMove,
 }: WikiSidebarProps) {
+  const t = useTranslations("build");
   const tree = useMemo(() => buildTree(documents), [documents]);
 
   // Default all nodes with children to expanded
@@ -111,14 +113,14 @@ export function WikiSidebar({
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Documents</span>
+          <span className="text-sm font-semibold">{t("wiki")}</span>
           <GuideDialog title="Wiki 模块" content={wikiGuide} />
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={() => onCreate()}
-          title="New Document"
+          title={t("newDocument")}
         >
           <PlusIcon className="size-4" />
         </Button>
@@ -127,7 +129,7 @@ export function WikiSidebar({
         <div className="px-0.5 py-0.5">
           {tree.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No documents yet
+              {t("noDocuments")}
             </p>
           ) : (
             tree.map((node) => (

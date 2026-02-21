@@ -1,8 +1,9 @@
 "use client";
 
 import { use, useCallback, useMemo, useState } from "react";
-import { notFound, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { notFound, useSearchParams } from "next/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import useSWR, { useSWRConfig } from "swr";
 import { UserButton } from "@clerk/nextjs";
 import {
@@ -82,32 +83,34 @@ interface SettingsTab {
 
 const SETTINGS_TABS: SettingsTab[] = [
   // ── Agent config ──
-  { value: "config", label: "Config", icon: SlidersHorizontalIcon },
+  { value: "config", label: "config", icon: SlidersHorizontalIcon },
   // ── Base data (depended on by tools) ──
-  { value: "schemas", label: "Schemas", icon: BracesIcon },
-  { value: "wiki", label: "Wiki", icon: BookOpenIcon },
-  { value: "datasets", label: "Datasets", icon: DatabaseIcon },
-  { value: "functions", label: "Functions", icon: FunctionSquareIcon },
-  { value: "components", label: "Components", icon: PuzzleIcon },
+  { value: "schemas", label: "schemas", icon: BracesIcon },
+  { value: "wiki", label: "wiki", icon: BookOpenIcon },
+  { value: "datasets", label: "datasets", icon: DatabaseIcon },
+  { value: "functions", label: "functions", icon: FunctionSquareIcon },
+  { value: "components", label: "components", icon: PuzzleIcon },
   // ── Core capabilities (depend on base data) ──
-  { value: "tools", label: "Tools", icon: WrenchIcon },
-  { value: "skills", label: "Skills", icon: ZapIcon },
+  { value: "tools", label: "tools", icon: WrenchIcon },
+  { value: "skills", label: "skills", icon: ZapIcon },
   // ── Knowledge & data ──
-  { value: "ontology", label: "Ontology", icon: NetworkIcon },
-  { value: "memory", label: "Memory", icon: BrainIcon },
-  { value: "mcp", label: "MCP", icon: PlugIcon },
-  { value: "files", label: "Files", icon: FileIcon },
+  { value: "ontology", label: "ontology", icon: NetworkIcon },
+  { value: "memory", label: "memory", icon: BrainIcon },
+  { value: "mcp", label: "mcp", icon: PlugIcon },
+  { value: "files", label: "files", icon: FileIcon },
   // ── Operations ──
-  { value: "sessions", label: "Sessions", icon: MessageSquareIcon },
-  { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
-  { value: "model-config", label: "Model Config", icon: SettingsIcon },
-  { value: "embed", label: "Embed", icon: CodeIcon },
-  { value: "usage", label: "Usage", icon: BarChart3Icon },
-  { value: "runtime", label: "Runtime", icon: ActivityIcon },
-  { value: "members", label: "Members", icon: UsersIcon },
+  { value: "sessions", label: "sessions", icon: MessageSquareIcon },
+  { value: "eval", label: "evaluate", icon: FlaskConicalIcon },
+  { value: "model-config", label: "modelConfig", icon: SettingsIcon },
+  { value: "embed", label: "embed", icon: CodeIcon },
+  { value: "usage", label: "usage", icon: BarChart3Icon },
+  { value: "runtime", label: "runtime", icon: ActivityIcon },
+  { value: "members", label: "members", icon: UsersIcon },
 ];
 
 function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string }) {
+  const t = useTranslations("build");
+  const tn = useTranslations("nav");
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "config";
@@ -150,8 +153,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
 
   const visibleTabs = useMemo(
     () =>
-      SETTINGS_TABS.filter((t) => {
-        if (t.value === "members" || t.value === "usage" || t.value === "runtime") return canManageMembers;
+      SETTINGS_TABS.filter((tab) => {
+        if (tab.value === "members" || tab.value === "usage" || tab.value === "runtime") return canManageMembers;
         return true;
       }),
     [canManageMembers]
@@ -322,7 +325,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         </Button>
         <span className="text-sm font-medium">
           {agent.name}
-          <span className="text-muted-foreground"> · 设置</span>
+          <span className="text-muted-foreground"> {t("titleSuffix")}</span>
         </span>
         <div className="ml-auto flex items-center gap-2">
           <Button
@@ -366,22 +369,22 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
 
         {/* Desktop settings nav */}
         <nav className="hidden w-48 shrink-0 flex-col border-r p-2 sm:flex">
-          {visibleTabs.map((t) => {
-            const isActive = t.value === activeTab;
-            const showOff = (t.value === "mcp" && currentAgent.mcpEnabled === false) || (t.value === "memory" && !currentAgent.memoryEnabled) || (t.value === "skills" && !currentAgent.skillsEnabled);
+          {visibleTabs.map((tab) => {
+            const isActive = tab.value === activeTab;
+            const showOff = (tab.value === "mcp" && currentAgent.mcpEnabled === false) || (tab.value === "memory" && !currentAgent.memoryEnabled) || (tab.value === "skills" && !currentAgent.skillsEnabled);
             return (
               <button
-                key={t.value}
-                onClick={() => handleTabChange(t.value)}
+                key={tab.value}
+                onClick={() => handleTabChange(tab.value)}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
                   isActive && "bg-accent text-foreground font-medium"
                 )}
               >
-                <t.icon className="size-4" />
-                {t.label}
+                <tab.icon className="size-4" />
+                {t(tab.label)}
                 {showOff && (
-                  <span className="ml-auto text-[10px] text-muted-foreground/60">已关闭</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground/60">{t("disabledBadge")}</span>
                 )}
               </button>
             );
@@ -392,7 +395,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Trash2Icon className="size-4" />
-            回收站
+            {tn("trash")}
             {trashCount > 0 && (
               <span className="ml-auto rounded-full bg-muted px-1.5 text-xs">
                 {trashCount}
@@ -404,28 +407,28 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <HistoryIcon className="size-4" />
-            操作日志
+            {t("auditLog")}
           </button>
         </nav>
 
         {/* Mobile horizontal tabs */}
         <div className="flex shrink-0 overflow-x-auto border-b sm:hidden">
-          {visibleTabs.map((t) => {
-            const isActive = t.value === activeTab;
-            const showOff = (t.value === "mcp" && currentAgent.mcpEnabled === false) || (t.value === "memory" && !currentAgent.memoryEnabled) || (t.value === "skills" && !currentAgent.skillsEnabled);
+          {visibleTabs.map((tab) => {
+            const isActive = tab.value === activeTab;
+            const showOff = (tab.value === "mcp" && currentAgent.mcpEnabled === false) || (tab.value === "memory" && !currentAgent.memoryEnabled) || (tab.value === "skills" && !currentAgent.skillsEnabled);
             return (
               <button
-                key={t.value}
-                onClick={() => handleTabChange(t.value)}
+                key={tab.value}
+                onClick={() => handleTabChange(tab.value)}
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors",
                   isActive && "border-foreground text-foreground font-medium"
                 )}
               >
-                <t.icon className="size-3.5" />
-                {t.label}
+                <tab.icon className="size-3.5" />
+                {t(tab.label)}
                 {showOff && (
-                  <span className="ml-1 text-[10px] text-muted-foreground/60">已关闭</span>
+                  <span className="ml-1 text-[10px] text-muted-foreground/60">{t("disabledBadge")}</span>
                 )}
               </button>
             );
@@ -435,7 +438,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
             className="flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors"
           >
             <Trash2Icon className="size-3.5" />
-            回收站
+            {tn("trash")}
             {trashCount > 0 && (
               <span className="ml-1 rounded-full bg-muted px-1.5 text-xs">
                 {trashCount}
@@ -447,7 +450,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
             className="flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors"
           >
             <HistoryIcon className="size-3.5" />
-            日志
+            {t("auditLog")}
           </button>
         </div>
 

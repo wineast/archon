@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { PlusIcon, PowerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -23,11 +24,12 @@ export function SkillsSidebar({
   onCreate,
   onDisableFeature,
 }: SkillsSidebarProps) {
+  const t = useTranslations("build");
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Skills</span>
+          <span className="text-sm font-semibold">{t("skills")}</span>
           <GuideDialog title="技能模块" content={skillsGuide} />
         </div>
         <div className="flex items-center gap-0.5">
@@ -36,7 +38,7 @@ export function SkillsSidebar({
               variant="ghost"
               size="icon-xs"
               onClick={onDisableFeature}
-              title="关闭 Skills 功能"
+              title={t("disableSkills")}
             >
               <PowerIcon className="size-4" />
             </Button>
@@ -45,7 +47,7 @@ export function SkillsSidebar({
             variant="ghost"
             size="icon-xs"
             onClick={onCreate}
-            title="New Skill"
+            title={t("newSkill")}
           >
             <PlusIcon className="size-4" />
           </Button>
@@ -55,7 +57,7 @@ export function SkillsSidebar({
         <div className="p-1">
           {skills.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No skills yet
+              {t("noSkills")}
             </p>
           ) : (
             skills.map((skill) => (

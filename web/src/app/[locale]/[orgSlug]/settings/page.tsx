@@ -1,8 +1,9 @@
 "use client";
 
 import { use, useCallback, useState } from "react";
-import { notFound, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { notFound, useSearchParams } from "next/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import useSWR from "swr";
 import {
   ArrowLeftIcon,
@@ -38,14 +39,16 @@ interface SettingsTab {
 }
 
 const TABS: SettingsTab[] = [
-  { value: "info", label: "基本信息", icon: BuildingIcon, minRole: "manage" },
-  { value: "members", label: "成员", icon: UsersIcon, minRole: "manage" },
-  { value: "api-keys", label: "API Keys", icon: KeyIcon, minRole: "manage" },
-  { value: "credits", label: "额度", icon: WalletIcon, minRole: "manage" },
-  { value: "usage", label: "用量", icon: BarChart3Icon, minRole: "manage" },
+  { value: "info", label: "info", icon: BuildingIcon, minRole: "manage" },
+  { value: "members", label: "members", icon: UsersIcon, minRole: "manage" },
+  { value: "api-keys", label: "apiKeys", icon: KeyIcon, minRole: "manage" },
+  { value: "credits", label: "credits", icon: WalletIcon, minRole: "manage" },
+  { value: "usage", label: "usage", icon: BarChart3Icon, minRole: "manage" },
 ];
 
 function OrgInfoPanel({ org }: { org: OrgRow }) {
+  const t = useTranslations("org");
+  const tc = useTranslations("common");
   const { mutate } = useOrgs();
   const [name, setName] = useState(org.name);
   const [slug, setSlug] = useState(org.slug);
@@ -56,7 +59,7 @@ function OrgInfoPanel({ org }: { org: OrgRow }) {
     setBusy(true);
     const result = await updateOrg(org.id, { name, slug }, mutate);
     if (result) {
-      toast.success("保存成功");
+      toast.success(tc("saveSuccess"));
     }
     setBusy(false);
   }, [org.id, name, slug, mutate]);
@@ -65,7 +68,7 @@ function OrgInfoPanel({ org }: { org: OrgRow }) {
     <ScrollArea className="h-full min-h-0">
       <div className="mx-auto max-w-lg space-y-6 p-6">
         <div className="space-y-2">
-          <Label htmlFor="org-name">名称</Label>
+          <Label htmlFor="org-name">{t("name")}</Label>
           <Input
             id="org-name"
             value={name}
@@ -73,7 +76,7 @@ function OrgInfoPanel({ org }: { org: OrgRow }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="org-slug">Slug</Label>
+          <Label htmlFor="org-slug">{t("slugLabel")}</Label>
           <Input
             id="org-slug"
             value={slug}
@@ -82,12 +85,12 @@ function OrgInfoPanel({ org }: { org: OrgRow }) {
             }
           />
           <p className="text-xs text-muted-foreground">
-            URL 路径标识，仅支持小写字母、数字和连字符
+            {t("slugHint")}
           </p>
         </div>
         <Button disabled={busy || !name.trim()} onClick={handleSave}>
           {busy && <Spinner className="mr-2" />}
-          保存
+          {tc("save")}
         </Button>
       </div>
     </ScrollArea>
@@ -95,6 +98,7 @@ function OrgInfoPanel({ org }: { org: OrgRow }) {
 }
 
 function OrgSettingsContent({ org }: { org: OrgRow }) {
+  const t = useTranslations("org");
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "info";
@@ -157,7 +161,7 @@ function OrgSettingsContent({ org }: { org: OrgRow }) {
         </Button>
         <span className="text-sm font-medium">
           {org.name}
-          <span className="text-muted-foreground"> · 组织设置</span>
+          <span className="text-muted-foreground"> {t("settingsSuffix")}</span>
         </span>
       </header>
 
@@ -165,19 +169,19 @@ function OrgSettingsContent({ org }: { org: OrgRow }) {
       <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
         {/* Desktop nav */}
         <nav className="hidden w-48 shrink-0 flex-col gap-1 border-r p-2 sm:flex">
-          {TABS.map((t) => {
-            const isActive = t.value === activeTab;
+          {TABS.map((tab) => {
+            const isActive = tab.value === activeTab;
             return (
               <button
-                key={t.value}
-                onClick={() => handleTabChange(t.value)}
+                key={tab.value}
+                onClick={() => handleTabChange(tab.value)}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
                   isActive && "bg-accent text-foreground font-medium"
                 )}
               >
-                <t.icon className="size-4" />
-                {t.label}
+                <tab.icon className="size-4" />
+                {t(tab.label)}
               </button>
             );
           })}
@@ -185,19 +189,19 @@ function OrgSettingsContent({ org }: { org: OrgRow }) {
 
         {/* Mobile tabs */}
         <div className="flex shrink-0 overflow-x-auto border-b sm:hidden">
-          {TABS.map((t) => {
-            const isActive = t.value === activeTab;
+          {TABS.map((tab) => {
+            const isActive = tab.value === activeTab;
             return (
               <button
-                key={t.value}
-                onClick={() => handleTabChange(t.value)}
+                key={tab.value}
+                onClick={() => handleTabChange(tab.value)}
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors",
                   isActive && "border-foreground text-foreground font-medium"
                 )}
               >
-                <t.icon className="size-3.5" />
-                {t.label}
+                <tab.icon className="size-3.5" />
+                {t(tab.label)}
               </button>
             );
           })}

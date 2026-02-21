@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ export function ComponentsSidebar({
   onSelect,
   onCreate,
 }: ComponentsSidebarProps) {
+  const t = useTranslations("build");
+  const tc = useTranslations("common");
   // Compute how many other components reference each component
   const usedByMap = useMemo(() => {
     const knownKeys = new Set(components.map((c) => c.key));
@@ -42,14 +45,14 @@ export function ComponentsSidebar({
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Components</span>
+          <span className="text-sm font-semibold">{t("components")}</span>
           <GuideDialog title="组件模块" content={componentsGuide} />
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={onCreate}
-          title="New Component"
+          title={t("newComponent")}
         >
           <PlusIcon className="size-4" />
         </Button>
@@ -58,7 +61,7 @@ export function ComponentsSidebar({
         <div className="p-1">
           {/* Built-in group */}
           <p className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Built-in
+            {tc("builtIn")}
           </p>
           {BUILTIN_COMPONENTS.map((def) => {
             const id = `builtin:${def.key}`;
@@ -76,7 +79,7 @@ export function ComponentsSidebar({
                   variant="secondary"
                   className="shrink-0 text-[10px] px-1.5 py-0"
                 >
-                  Built-in
+                  {tc("builtIn")}
                 </Badge>
               </button>
             );
@@ -84,11 +87,11 @@ export function ComponentsSidebar({
 
           {/* Custom group */}
           <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Custom
+            {tc("custom")}
           </p>
           {components.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No components yet
+              {t("noComponents")}
             </p>
           ) : (
             components.map((component) => (

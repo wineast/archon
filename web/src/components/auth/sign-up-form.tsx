@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useSignUp } from "@clerk/nextjs";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,8 @@ interface SignUpFormProps {
 }
 
 export function SignUpForm({ redirectUrl }: SignUpFormProps) {
+  const t = useTranslations("auth");
+  const tc = useTranslations("common");
   const { signUp, setActive, isLoaded } = useSignUp();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -41,7 +43,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
       setStep("verify");
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
-      toast.error(clerkErr.errors?.[0]?.longMessage ?? "注册失败");
+      toast.error(clerkErr.errors?.[0]?.longMessage ?? t("signUp.error"));
     } finally {
       setBusyAction(null);
     }
@@ -61,7 +63,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
       }
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
-      toast.error(clerkErr.errors?.[0]?.longMessage ?? "验证失败");
+      toast.error(clerkErr.errors?.[0]?.longMessage ?? t("verify.error"));
     } finally {
       setBusyAction(null);
     }
@@ -73,10 +75,10 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
     setBusyAction("resend");
     try {
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      toast.success("验证码已重新发送");
+      toast.success(t("resend.success"));
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
-      toast.error(clerkErr.errors?.[0]?.longMessage ?? "发送失败");
+      toast.error(clerkErr.errors?.[0]?.longMessage ?? t("resend.error"));
     } finally {
       setBusyAction(null);
     }
@@ -94,7 +96,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
       });
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
-      toast.error(clerkErr.errors?.[0]?.longMessage ?? "Google 注册失败");
+      toast.error(clerkErr.errors?.[0]?.longMessage ?? t("signUp.googleError"));
       setBusyAction(null);
     }
   };
@@ -103,18 +105,18 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
     return (
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">验证邮箱</CardTitle>
-          <CardDescription>我们已向 {email} 发送了验证码</CardDescription>
+          <CardTitle className="text-xl">{t("verify.emailTitle")}</CardTitle>
+          <CardDescription>{t("verify.description", { email })}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleVerify} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="code">验证码</Label>
+              <Label htmlFor="code">{t("code.label")}</Label>
               <Input
                 id="code"
                 type="text"
                 inputMode="numeric"
-                placeholder="请输入 6 位验证码"
+                placeholder={t("code.placeholder")}
                 autoComplete="one-time-code"
                 required
                 maxLength={6}
@@ -124,17 +126,17 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
             </div>
             <Button type="submit" className="w-full" disabled={!!busyAction}>
               {busyAction === "verify" && <Spinner className="size-4" />}
-              验证
+              {t("verify.button")}
             </Button>
             <div className="text-center text-sm">
-              没收到验证码？{" "}
+              {t("resend.question")}{" "}
               <button
                 type="button"
                 className="underline underline-offset-4"
                 onClick={handleResendCode}
                 disabled={!!busyAction}
               >
-                重新发送
+                {t("resend.button")}
               </button>
             </div>
           </form>
@@ -146,8 +148,8 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">创建账号</CardTitle>
-        <CardDescription>注册一个新账号</CardDescription>
+        <CardTitle className="text-xl">{t("signUp.title")}</CardTitle>
+        <CardDescription>{t("signUp.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-6">
@@ -167,20 +169,20 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
                 />
               </svg>
             )}
-            使用 Google 注册
+            {t("signUp.google")}
           </Button>
 
           <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-            <span className="relative z-10 bg-card px-2 text-muted-foreground">或</span>
+            <span className="relative z-10 bg-card px-2 text-muted-foreground">{tc("or")}</span>
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">邮箱</Label>
+              <Label htmlFor="email">{t("email.label")}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="name@example.com"
+                placeholder={t("email.placeholder")}
                 autoComplete="email"
                 required
                 value={email}
@@ -188,7 +190,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">密码</Label>
+              <Label htmlFor="password">{t("password.label")}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -211,14 +213,14 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
             </div>
             <Button type="submit" className="w-full" disabled={!!busyAction}>
               {busyAction === "submit" && <Spinner className="size-4" />}
-              注册
+              {t("signUp.submit")}
             </Button>
           </form>
 
           <div className="text-center text-sm">
-            已有账号？{" "}
+            {t("signUp.hasAccount")}{" "}
             <Link href="/sign-in" className="underline underline-offset-4">
-              登录
+              {t("signUp.link")}
             </Link>
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -21,18 +22,19 @@ export function SchemasSidebar({
   onSelect,
   onCreate,
 }: SchemasSidebarProps) {
+  const t = useTranslations("build");
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Schemas</span>
+          <span className="text-sm font-semibold">{t("schemas")}</span>
           <GuideDialog title="Schema 模块" content={schemasGuide} />
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={onCreate}
-          title="New Schema"
+          title={t("newSchema")}
         >
           <PlusIcon className="size-4" />
         </Button>
@@ -41,7 +43,7 @@ export function SchemasSidebar({
         <div className="p-1">
           {schemas.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No schemas yet
+              {t("noSchemas")}
             </p>
           ) : (
             schemas.map((schema) => (

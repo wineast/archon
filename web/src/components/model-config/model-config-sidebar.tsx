@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -21,18 +22,19 @@ export function ModelConfigSidebar({
   onSelect,
   onCreate,
 }: ModelConfigSidebarProps) {
+  const t = useTranslations("build");
   return (
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Configs</span>
+          <span className="text-sm font-semibold">{t("modelConfig")}</span>
           <GuideDialog title="模型配置" content={modelConfigGuide} />
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={onCreate}
-          title="New Config"
+          title={t("newModelConfig")}
         >
           <PlusIcon className="size-4" />
         </Button>
@@ -41,7 +43,7 @@ export function ModelConfigSidebar({
         <div className="p-1">
           {configs.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No configs yet
+              {t("noModelConfigs")}
             </p>
           ) : (
             configs.map((config) => (

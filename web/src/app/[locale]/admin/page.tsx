@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { ArrowLeftIcon, ShieldIcon, ShieldOffIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,8 @@ import {
 } from "@/lib/admin/hooks";
 
 function BuildChatSettings() {
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
   const { settings, isLoading, mutate } = useAdminSettings();
   const [model, setModel] = useState("");
   const [temperature, setTemperature] = useState(0.3);
@@ -52,15 +55,15 @@ function BuildChatSettings() {
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-medium text-muted-foreground">
-        Build 助手设置
+        {t("buildChatSettings")}
       </h2>
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">模型</Label>
+          <Label className="text-xs">{t("model")}</Label>
           <ModelCombobox value={model} onChange={setModel} />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Temperature</Label>
+          <Label className="text-xs">{t("temperature")}</Label>
           <Input
             type="number"
             min={0}
@@ -77,13 +80,15 @@ function BuildChatSettings() {
         disabled={!dirty || saving}
         onClick={handleSave}
       >
-        {saving ? <Spinner className="size-3.5" /> : "保存"}
+        {saving ? <Spinner className="size-3.5" /> : tc("save")}
       </Button>
     </div>
   );
 }
 
 export default function AdminPage() {
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
   const { users, isLoading, mutate } = useAdminUsers();
   const [busy, setBusy] = useState(false);
 
@@ -108,7 +113,7 @@ export default function AdminPage() {
             <ArrowLeftIcon className="size-4" />
           </Button>
         </Link>
-        <h1 className="text-lg font-semibold">管理后台</h1>
+        <h1 className="text-lg font-semibold">{t("title")}</h1>
       </header>
 
       <main className="flex-1 p-6">
@@ -122,7 +127,7 @@ export default function AdminPage() {
           ) : (
             <div>
               <h2 className="mb-4 text-sm font-medium text-muted-foreground">
-                用户列表 ({users.length})
+                {t("usersList", { count: users.length })}
               </h2>
               <div className="flex flex-col gap-1">
                 {users.map((user) => (
@@ -151,7 +156,7 @@ export default function AdminPage() {
                         user.platformRole === "super_admin" ? "default" : "secondary"
                       }
                     >
-                      {user.platformRole === "super_admin" ? "Super Admin" : "User"}
+                      {user.platformRole === "super_admin" ? t("superAdmin") : t("userRole")}
                     </Badge>
                     <Button
                       variant="ghost"
@@ -161,8 +166,8 @@ export default function AdminPage() {
                       onClick={() => handleToggleRole(user.id, user.platformRole)}
                       title={
                         user.platformRole === "super_admin"
-                          ? "取消超管"
-                          : "设为超管"
+                          ? t("removeAdmin")
+                          : t("setAdmin")
                       }
                     >
                       {user.platformRole === "super_admin" ? (

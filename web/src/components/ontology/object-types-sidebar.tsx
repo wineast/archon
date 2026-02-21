@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ImportIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -25,6 +26,7 @@ export function ObjectTypesSidebar({
   onCreate,
   onImport,
 }: ObjectTypesSidebarProps) {
+  const t = useTranslations("build");
   // Count relations per type (as source or target)
   const relationCounts = new Map<string, number>();
   for (const rel of relations) {
@@ -38,7 +40,7 @@ export function ObjectTypesSidebar({
     <div className="flex h-full w-60 shrink-0 flex-col overflow-hidden border-r">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-1">
-          <span className="text-sm font-semibold">Object Types</span>
+          <span className="text-sm font-semibold">{t("ontology")}</span>
           <GuideDialog title="本体模块" content={ontologyGuide} />
         </div>
         <div className="flex items-center gap-0.5">
@@ -47,7 +49,7 @@ export function ObjectTypesSidebar({
               variant="ghost"
               size="icon-xs"
               onClick={onImport}
-              title="Import from File"
+              title={t("importFromFile")}
             >
               <ImportIcon className="size-3.5" />
             </Button>
@@ -56,7 +58,7 @@ export function ObjectTypesSidebar({
             variant="ghost"
             size="icon-xs"
             onClick={onCreate}
-            title="New Object Type"
+            title={t("newObjectType")}
           >
             <PlusIcon className="size-4" />
           </Button>
@@ -66,7 +68,7 @@ export function ObjectTypesSidebar({
         <div className="p-1">
           {objectTypes.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No object types yet
+              {t("noObjectTypes")}
             </p>
           ) : (
             objectTypes.map((ot) => (

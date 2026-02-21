@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -43,6 +44,8 @@ export function EvalSidebar({
   selectedTags,
   onToggleTag,
 }: EvalSidebarProps) {
+  const t = useTranslations("build");
+  const tc = useTranslations("common");
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     cases.forEach((c) => c.tags?.forEach((t) => tagSet.add(t)));
@@ -64,14 +67,14 @@ export function EvalSidebar({
           <div className="flex items-center justify-between px-3 py-2">
             <div className="flex items-center gap-1.5">
               <FlaskConicalIcon className="size-3.5 text-muted-foreground" />
-              <span className="text-sm font-semibold">Cases</span>
+              <span className="text-sm font-semibold">{t("evalCases")}</span>
               <GuideDialog title="评测模块" content={evalGuide} />
             </div>
             <Button
               variant="ghost"
               size="icon-xs"
               onClick={onCreateCase}
-              title="New Case"
+              title={t("newCase")}
             >
               <PlusIcon className="size-4" />
             </Button>
@@ -96,7 +99,7 @@ export function EvalSidebar({
           <div className="p-1">
             {filteredCases.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                {cases.length === 0 ? "No cases yet" : "No matching cases"}
+                {cases.length === 0 ? t("noCases") : t("noMatchingCases")}
               </p>
             ) : (
               filteredCases.map((c) => (
@@ -124,13 +127,13 @@ export function EvalSidebar({
           <div className="flex items-center justify-between px-3 py-2">
             <div className="flex items-center gap-1.5">
               <GavelIcon className="size-3.5 text-muted-foreground" />
-              <span className="text-sm font-semibold">Judge</span>
+              <span className="text-sm font-semibold">{t("judge")}</span>
             </div>
             <Button
               variant="ghost"
               size="icon-xs"
               onClick={onCreateConfig}
-              title="New Judge Config"
+              title={t("newJudgeConfig")}
             >
               <PlusIcon className="size-4" />
             </Button>
@@ -138,7 +141,7 @@ export function EvalSidebar({
           <div className="p-1">
             {configs.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                No configs yet
+                {t("noJudgeConfigs")}
               </p>
             ) : (
               configs.map((cfg) => (
@@ -153,7 +156,7 @@ export function EvalSidebar({
                 >
                   <span className="flex-1 truncate">{cfg.name}</span>
                   {cfg.isDefault && (
-                    <Badge className="text-[10px]">Default</Badge>
+                    <Badge className="text-[10px]">{tc("default")}</Badge>
                   )}
                 </button>
               ))
@@ -171,7 +174,7 @@ export function EvalSidebar({
           onClick={() => onSelect({ type: "results" })}
         >
           <BarChart3Icon className="size-4 text-muted-foreground" />
-          <span>Results</span>
+          <span>{t("results")}</span>
         </button>
         <button
           className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent ${
@@ -180,7 +183,7 @@ export function EvalSidebar({
           onClick={() => onSelect({ type: "benchmark" })}
         >
           <TrendingUpIcon className="size-4 text-muted-foreground" />
-          <span>Benchmark</span>
+          <span>{t("benchmark")}</span>
         </button>
       </div>
     </div>
