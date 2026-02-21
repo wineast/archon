@@ -5,11 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useComponentTestCases } from "@/lib/components/test-case-hooks";
 import {
-  DynamicToolRenderer,
+  DynamicComponentRenderer,
   DynamicComponentErrorBoundary,
   compileComponentGraph,
   type ComponentRecord,
-  type ToolRendererProps,
+  type ComponentRendererProps,
 } from "@/tool-ui";
 import type { ComponentTestCaseRow } from "@/db/schema";
 
@@ -80,7 +80,7 @@ export function ComponentExamplesPanel({
 interface ExampleCardProps {
   testCase: ComponentTestCaseRow;
   componentSource: string;
-  compiledComponent: ComponentType<ToolRendererProps> | undefined;
+  compiledComponent: ComponentType<ComponentRendererProps> | undefined;
 }
 
 function ExampleCard({
@@ -109,10 +109,10 @@ function ExampleCard({
       {/* Preview */}
       <div className="p-4">
         <DynamicComponentErrorBoundary
-          fallbackToolName={testCase.tool.name || "example"}
+          fallbackLabel="example"
         >
-          <DynamicToolRenderer
-            tool={testCase.tool}
+          <DynamicComponentRenderer
+            data={testCase.data}
             state="output-available"
             source={compiledComponent ? undefined : componentSource}
             compiledComponent={compiledComponent}

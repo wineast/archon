@@ -31,7 +31,7 @@ export async function PUT(
     .update(componentTestCases)
     .set({
       ...(body.name !== undefined && { name: body.name }),
-      ...(body.tool !== undefined && { tool: body.tool }),
+      ...(body.data !== undefined && { data: body.data }),
       ...(body.tags !== undefined && { tags: body.tags }),
       ...(body.showAsExample !== undefined && { showAsExample: body.showAsExample }),
     })

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { Button } from "@/components/ui/button";
-import { ToolDataCard } from "../tool-data-card";
+import { DataCard } from "../data-card";
 
 const meta = {
-  title: "Components/ToolDataCard",
-  component: ToolDataCard,
+  title: "Components/DataCard",
+  component: DataCard,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -14,7 +14,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof ToolDataCard>;
+} satisfies Meta<typeof DataCard>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -23,27 +23,19 @@ type Story = StoryObj<typeof meta>;
 
 export const Empty: Story = {
   args: {
-    toolName: "",
-    inputValue: "{}",
-    outputValue: "{}",
-    onToolNameChange: () => {},
-    onInputChange: () => {},
-    onOutputChange: () => {},
+    dataValue: "{}",
+    onDataChange: () => {},
   },
 };
 
 export const WithData: Story = {
   args: {
-    toolName: "get_weather",
-    inputValue: JSON.stringify({ city: "Shanghai", unit: "celsius" }, null, 2),
-    outputValue: JSON.stringify(
-      { temperature: 22, condition: "sunny" },
+    dataValue: JSON.stringify(
+      { name: "get_weather", input: { city: "Shanghai" }, output: { temperature: 22 } },
       null,
       2
     ),
-    onToolNameChange: () => {},
-    onInputChange: () => {},
-    onOutputChange: () => {},
+    onDataChange: () => {},
   },
 };
 
@@ -51,12 +43,12 @@ export const WithData: Story = {
 
 export const WithHeaderExtra: Story = {
   args: {
-    toolName: "search_products",
-    inputValue: JSON.stringify({ query: "laptop" }, null, 2),
-    outputValue: JSON.stringify({ results: [] }, null, 2),
-    onToolNameChange: () => {},
-    onInputChange: () => {},
-    onOutputChange: () => {},
+    dataValue: JSON.stringify(
+      { name: "search_products", input: { query: "laptop" }, output: { results: [] } },
+      null,
+      2
+    ),
+    onDataChange: () => {},
     headerExtra: (
       <Button
         variant="ghost"
@@ -69,25 +61,14 @@ export const WithHeaderExtra: Story = {
   },
 };
 
-export const WithValidationErrors: Story = {
+export const WithDataExtra: Story = {
   args: {
-    toolName: "create_order",
-    inputValue: JSON.stringify({ amount: "not_a_number" }, null, 2),
-    outputValue: JSON.stringify({ status: 123 }, null, 2),
-    onToolNameChange: () => {},
-    onInputChange: () => {},
-    onOutputChange: () => {},
-    inputExtra: (
+    dataValue: JSON.stringify({ amount: "not_a_number" }, null, 2),
+    onDataChange: () => {},
+    dataExtra: (
       <div className="mt-1 space-y-0.5">
         <p className="text-xs text-destructive">
           amount: Expected number, received string
-        </p>
-      </div>
-    ),
-    outputExtra: (
-      <div className="mt-1 space-y-0.5">
-        <p className="text-xs text-destructive">
-          status: Expected string, received number
         </p>
       </div>
     ),
@@ -98,14 +79,9 @@ export const WithValidationErrors: Story = {
 
 export const CompactHeight: Story = {
   args: {
-    toolName: "ping",
-    inputValue: "{}",
-    outputValue: JSON.stringify({ ok: true }, null, 2),
-    onToolNameChange: () => {},
-    onInputChange: () => {},
-    onOutputChange: () => {},
-    inputHeight: "80px",
-    outputHeight: "80px",
+    dataValue: JSON.stringify({ ok: true }, null, 2),
+    onDataChange: () => {},
+    height: "80px",
   },
 };
 
@@ -113,29 +89,21 @@ export const CompactHeight: Story = {
 
 export const Interactive: Story = {
   args: {
-    toolName: "",
-    inputValue: "{}",
-    outputValue: "{}",
-    onToolNameChange: () => {},
-    onInputChange: () => {},
-    onOutputChange: () => {},
+    dataValue: "{}",
+    onDataChange: () => {},
   },
   render: () => {
-    const [toolName, setToolName] = useState("get_weather");
-    const [input, setInput] = useState(
-      JSON.stringify({ city: "Beijing" }, null, 2)
-    );
-    const [output, setOutput] = useState(
-      JSON.stringify({ temperature: 18 }, null, 2)
+    const [data, setData] = useState(
+      JSON.stringify(
+        { name: "get_weather", input: { city: "Beijing" }, output: { temperature: 18 } },
+        null,
+        2
+      )
     );
     return (
-      <ToolDataCard
-        toolName={toolName}
-        inputValue={input}
-        outputValue={output}
-        onToolNameChange={setToolName}
-        onInputChange={setInput}
-        onOutputChange={setOutput}
+      <DataCard
+        dataValue={data}
+        onDataChange={setData}
       />
     );
   },

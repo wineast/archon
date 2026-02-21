@@ -43,7 +43,7 @@ export async function POST(
     .values({
       componentId: id,
       name: body.name ?? "Untitled",
-      tool: body.tool ?? { name: "", input: {}, output: {} },
+      data: body.data ?? {},
       tags: body.tags ?? [],
       ...(body.showAsExample !== undefined && { showAsExample: body.showAsExample }),
     })

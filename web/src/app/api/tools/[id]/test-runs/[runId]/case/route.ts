@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { tools, toolTestRuns, toolTestRunResults, schemas } from "@/db/schema";
+import { tools, toolTestRuns, toolTestRunResults } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import deepEqual from "fast-deep-equal";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
@@ -56,14 +56,11 @@ export async function POST(
 
     // Validate input against schema parameters
     let validatedInput = input ?? {};
-    if (tool.parametersSchemaId) {
-      const [schemaRow] = await db
-        .select()
-        .from(schemas)
-        .where(eq(schemas.id, tool.parametersSchemaId));
-      if (schemaRow && schemaRow.parameters.properties && Object.keys(schemaRow.parameters.properties).length > 0) {
-        const inputSchema = buildInputSchema(schemaRow.parameters);
-        validatedInput = inputSchema.parse(input ?? {});
+    if (tool.parametersSchema) {
+      const schema = tool.parametersSchema;
+      if (schema.properties && Object.keys(schema.properties).length > 0) {
+        const parsedSchema = buildInputSchema(schema);
+        validatedInput = parsedSchema.parse(input ?? {});
       }
     }
 

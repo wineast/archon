@@ -18,8 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon } from "lucide-react";
 import {
-  registerDynamicToolSource,
-  registerCompiledToolComponent,
+  registerDynamicComponentSource,
+  registerCompiledComponent,
   clearCompiledRegistry,
   compileComponentGraph,
   type ComponentRecord,
@@ -71,7 +71,7 @@ export default function SharePage({
                 for (const [key, comp] of compiled) {
                   const rec = data.componentRecords.find((r: ComponentRecord) => r.key === key);
                   if (rec && data.toolComponentSourceMap[toolName] === rec.source) {
-                    registerCompiledToolComponent(toolName, comp);
+                    registerCompiledComponent(toolName, comp);
                   }
                 }
               }
@@ -83,7 +83,7 @@ export default function SharePage({
         // Register remaining dynamic component sources (fallback)
         if (data.toolComponentSourceMap) {
           for (const [name, source] of Object.entries(data.toolComponentSourceMap)) {
-            registerDynamicToolSource(name, source as string);
+            registerDynamicComponentSource(name, source as string);
           }
         }
         // Inject dynamic component CSS

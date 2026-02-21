@@ -20,10 +20,10 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ToolDataCard } from "@/components/components/tool-data-card";
+import { DataCard } from "@/components/components/data-card";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
-import { DynamicToolRenderer, DynamicComponentErrorBoundary } from "@/tool-ui";
+import { DynamicComponentRenderer, DynamicComponentErrorBoundary } from "@/tool-ui";
 import type { ComponentTestCaseRow } from "@/db/schema";
 
 export interface ComponentTestRunResult {
@@ -40,14 +40,14 @@ export interface ComponentTestCaseItemProps {
     caseId: string,
     data: {
       name?: string;
-      tool?: { name: string; input: unknown; output: unknown };
+      data?: unknown;
       tags?: string[];
       showAsExample?: boolean;
     }
   ) => Promise<void>;
   onDelete: (caseId: string) => Promise<void>;
   onRun: (
-    tool: { name: string; input: unknown; output: unknown }
+    data: unknown
   ) => Promise<ComponentTestRunResult>;
   runResult?: ComponentTestRunResult;
   busy: boolean;
@@ -64,12 +64,8 @@ export function ComponentTestCaseItem({
 }: ComponentTestCaseItemProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(testCase.name);
-  const [toolName, setToolName] = useState(testCase.tool.name);
-  const [inputValue, setInputValue] = useState(
-    JSON.stringify(testCase.tool.input, null, 2)
-  );
-  const [outputValue, setOutputValue] = useState(
-    JSON.stringify(testCase.tool.output, null, 2)
+  const [dataValue, setDataValue] = useState(
+    JSON.stringify(testCase.data, null, 2)
   );
   const [tags, setTags] = useState<string[]>(testCase.tags);
   const [tagInput, setTagInput] = useState("");
@@ -85,32 +81,18 @@ export function ComponentTestCaseItem({
 
   const result = runResult ?? localResult;
 
-  const parsedInput = useMemo(() => {
+  const parsedData = useMemo(() => {
     try {
-      return JSON.parse(inputValue || "{}");
+      return JSON.parse(dataValue || "{}");
     } catch {
       return {};
     }
-  }, [inputValue]);
-
-  const parsedOutput = useMemo(() => {
-    try {
-      return JSON.parse(outputValue || "{}");
-    } catch {
-      return {};
-    }
-  }, [outputValue]);
+  }, [dataValue]);
 
   const handleSave = useCallback(async () => {
-    let parsedIn: unknown;
-    let parsedOut: unknown;
+    let parsed: unknown;
     try {
-      parsedIn = JSON.parse(inputValue);
-    } catch {
-      return;
-    }
-    try {
-      parsedOut = JSON.parse(outputValue);
+      parsed = JSON.parse(dataValue);
     } catch {
       return;
     }
@@ -118,13 +100,13 @@ export function ComponentTestCaseItem({
     try {
       await onSave(testCase.id, {
         name,
-        tool: { name: toolName, input: parsedIn, output: parsedOut },
+        data: parsed,
         tags,
       });
     } finally {
       setSaving(false);
     }
-  }, [testCase.id, name, toolName, inputValue, outputValue, tags, onSave]);
+  }, [testCase.id, name, dataValue, tags, onSave]);
 
   const handleDelete = useCallback(async () => {
     setDeleting(true);
@@ -136,31 +118,21 @@ export function ComponentTestCaseItem({
   }, [testCase.id, onDelete]);
 
   const handleRun = useCallback(async () => {
-    let parsedIn: unknown;
-    let parsedOut: unknown;
+    let parsed: unknown;
     try {
-      parsedIn = JSON.parse(inputValue);
-    } catch {
-      return;
-    }
-    try {
-      parsedOut = JSON.parse(outputValue);
+      parsed = JSON.parse(dataValue);
     } catch {
       return;
     }
     setRunning(true);
     try {
-      const r = await onRun({
-        name: toolName,
-        input: parsedIn,
-        output: parsedOut,
-      });
+      const r = await onRun(parsed);
       setLocalResult(r);
       setPreviewKey((k) => k + 1);
     } finally {
       setRunning(false);
     }
-  }, [inputValue, outputValue, toolName, onRun]);
+  }, [dataValue, onRun]);
 
   const handleAddTag = useCallback(
     (value: string) => {
@@ -331,16 +303,11 @@ export function ComponentTestCaseItem({
               </Label>
             </div>
 
-            {/* Tool */}
-            <ToolDataCard
-              toolName={toolName}
-              inputValue={inputValue}
-              outputValue={outputValue}
-              onToolNameChange={setToolName}
-              onInputChange={setInputValue}
-              onOutputChange={setOutputValue}
-              inputHeight="100px"
-              outputHeight="100px"
+            {/* Data */}
+            <DataCard
+              dataValue={dataValue}
+              onDataChange={setDataValue}
+              height="150px"
             />
 
             {/* Save button */}
@@ -389,14 +356,10 @@ export function ComponentTestCaseItem({
                   <div className="rounded-md border p-2">
                     <DynamicComponentErrorBoundary
                       key={previewKey}
-                      fallbackToolName={toolName || "preview"}
+                      fallbackLabel="preview"
                     >
-                      <DynamicToolRenderer
-                        tool={{
-                          name: toolName,
-                          input: parsedInput,
-                          output: parsedOutput,
-                        }}
+                      <DynamicComponentRenderer
+                        data={parsedData}
                         state="output-available"
                         source={componentSource}
                       />

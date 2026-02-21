@@ -22,7 +22,7 @@ export interface ResourceSummary {
   wiki: { id: string; key: string; name: string }[];
   datasets: { id: string; key: string; name: string; description: string }[];
   functions: { id: string; key: string; name: string; description: string }[];
-  components: { id: string; key: string; name: string; description: string; toolInputSchemaId: string | null; toolOutputSchemaId: string | null }[];
+  components: { id: string; key: string; name: string; description: string; inputSchema: import("@/lib/schemas/types").JsonSchema7 | null }[];
   modelConfigs: { id: string; key: string; name: string; modelId: string; isActive: boolean }[];
   chatConfig: {
     id: string;
@@ -132,8 +132,7 @@ export async function gatherResourceSummary(
         key: components.key,
         name: components.name,
         description: components.description,
-        toolInputSchemaId: components.toolInputSchemaId,
-        toolOutputSchemaId: components.toolOutputSchemaId,
+        inputSchema: components.inputSchema,
       })
       .from(components)
       .where(eq(components.agentId, agentId)),

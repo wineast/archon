@@ -13,8 +13,7 @@ import {
 import { JsEditor } from "@/components/editors/js-editor";
 import type { ToolDefinition } from "@/lib/tools/types";
 import { useComponents } from "@/lib/components/hooks";
-import { useSchemas } from "@/lib/schemas/hooks";
-import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
+import { InlineSchemaEditor } from "@/components/schemas/inline-schema-editor";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Controller,
@@ -51,60 +50,6 @@ function detectHandlerTab(tool: ToolDefinition): HandlerTab {
   return "code";
 }
 
-interface ParameterSectionProps {
-  label: string;
-  schemaIdFieldName: "parametersSchemaId" | "returnParametersSchemaId";
-  schemaIdValue: string | null | undefined;
-  schemas: { id: string; key: string; name: string; parameters: import("@/lib/schemas/types").JsonSchema7 }[];
-  form: ReturnType<typeof useForm<ToolDefinition>>;
-}
-
-function ParameterSection({
-  label,
-  schemaIdFieldName,
-  schemaIdValue,
-  schemas,
-  form,
-}: ParameterSectionProps) {
-  const selectedSchema = schemas.find((s) => s.id === schemaIdValue);
-
-  return (
-    <div>
-      <label className="text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
-      <div className="mt-1 space-y-2">
-        <Controller
-          name={schemaIdFieldName}
-          control={form.control}
-          render={({ field }) => (
-            <Select
-              value={field.value ?? "__none__"}
-              onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="Select a schema..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {schemas.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} ({s.key})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {selectedSchema && (
-          <SchemaParameterPreview schema={selectedSchema.parameters} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-
 export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormProps) {
   const form = useForm<ToolDefinition>({ defaultValues: { ...tool } });
   const [handlerTab, setHandlerTab] = useState<HandlerTab>(() =>
@@ -117,11 +62,6 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
   const name = useWatch({ control: form.control, name: "name" });
   const executionTarget = useWatch({ control: form.control, name: "executionTarget" });
   const sandboxMode = useWatch({ control: form.control, name: "sandboxMode" });
-  const parametersSchemaId = useWatch({ control: form.control, name: "parametersSchemaId" });
-  const returnParametersSchemaId = useWatch({ control: form.control, name: "returnParametersSchemaId" });
-
-  // Fetch schemas for schema selection
-  const { schemas } = useSchemas(agentId);
 
   // Fetch components for component selector
   const { components: componentsList } = useComponents(agentId);
@@ -187,12 +127,16 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
             placeholder="Describe what this tool does and when the AI should use it..."
           />
         </div>
-        <ParameterSection
-          label="Parameters"
-          schemaIdFieldName="parametersSchemaId"
-          schemaIdValue={parametersSchemaId}
-          schemas={schemas}
-          form={form}
+        <Controller
+          name="parametersSchema"
+          control={form.control}
+          render={({ field }) => (
+            <InlineSchemaEditor
+              label="Parameters"
+              value={field.value ?? null}
+              onChange={field.onChange}
+            />
+          )}
         />
         <div>
           <div className="flex items-center gap-2">
@@ -360,12 +304,16 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
             )}
           </div>
         )}
-        <ParameterSection
-          label="Return Parameters"
-          schemaIdFieldName="returnParametersSchemaId"
-          schemaIdValue={returnParametersSchemaId}
-          schemas={schemas}
-          form={form}
+        <Controller
+          name="returnParametersSchema"
+          control={form.control}
+          render={({ field }) => (
+            <InlineSchemaEditor
+              label="Return Parameters"
+              value={field.value ?? null}
+              onChange={field.onChange}
+            />
+          )}
         />
         <div>
           <label className="text-xs font-medium text-muted-foreground">

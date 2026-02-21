@@ -5,13 +5,13 @@ import { transform } from "sucrase";
 import { INJECTED_DEPS, INJECTED_DEPS_BY_MODULE } from "./_allowed-components";
 import { isModuleFormat } from "@/lib/modules/detect";
 import { transformImports } from "@/lib/modules/transform-imports";
-import type { ToolRendererProps } from "./_registry";
+import type { ComponentRendererProps } from "./_registry";
 
 // ── Compilation cache: source string → React component ──
 
-const cache = new Map<string, ComponentType<ToolRendererProps>>();
+const cache = new Map<string, ComponentType<ComponentRendererProps>>();
 
-function compileSource(source: string): ComponentType<ToolRendererProps> {
+function compileSource(source: string): ComponentType<ComponentRendererProps> {
   const cached = cache.get(source);
   if (cached) return cached;
 
@@ -27,7 +27,7 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
  *  **Legacy (two-layer closure)**:
  *  ```
  *  function Component({ React, useState, DepA }) {  // outer: destructure deps
- *    return function({ tool, state, ... }) {         // inner: render function
+ *    return function({ data, state, ... }) {         // inner: render function
  *      ...
  *    }
  *  }
@@ -44,7 +44,7 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
 export function compileSourceWithDeps(
   source: string,
   extraDeps?: Record<string, unknown>
-): ComponentType<ToolRendererProps> {
+): ComponentType<ComponentRendererProps> {
   if (isModuleFormat(source)) {
     return compileModuleSource(source, extraDeps);
   }
@@ -55,7 +55,7 @@ export function compileSourceWithDeps(
 function compileLegacySource(
   source: string,
   extraDeps?: Record<string, unknown>
-): ComponentType<ToolRendererProps> {
+): ComponentType<ComponentRendererProps> {
   const moduleCode = `${source.trim()}\nreturn Component;`;
 
   const { code } = transform(moduleCode, {
@@ -69,14 +69,14 @@ function compileLegacySource(
   const outerFn = factory();
 
   const allDeps = { ...INJECTED_DEPS, ...(extraDeps ?? {}) };
-  return outerFn(allDeps) as ComponentType<ToolRendererProps>;
+  return outerFn(allDeps) as ComponentType<ComponentRendererProps>;
 }
 
 /** Compile ES module format using import transformation. */
 function compileModuleSource(
   source: string,
   extraDeps?: Record<string, unknown>
-): ComponentType<ToolRendererProps> {
+): ComponentType<ComponentRendererProps> {
   // Transform archon:* imports into __deps__ lookups
   const { code: transformedCode, modules } = transformImports(source);
 
@@ -108,28 +108,29 @@ function compileModuleSource(
 
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
   const factory = new Function("__deps__", code);
-  return factory(depsObj) as ComponentType<ToolRendererProps>;
+  return factory(depsObj) as ComponentType<ComponentRendererProps>;
 }
 
 // ── Public renderer component ──
 
-interface DynamicToolRendererProps {
-  tool: { name: string; input: unknown; output: unknown };
-  state: string;
+interface DynamicComponentRendererProps {
+  data: unknown;
+  state?: string;
   source?: string;
   /** Pre-compiled component (from compileComponentGraph). When provided, source is ignored. */
-  compiledComponent?: ComponentType<ToolRendererProps>;
+  compiledComponent?: ComponentType<ComponentRendererProps>;
 }
 
-export const DynamicToolRenderer = memo(function DynamicToolRenderer({
-  tool,
+export const DynamicComponentRenderer = memo(function DynamicComponentRenderer({
+  data,
   state,
   source,
   compiledComponent,
-}: DynamicToolRendererProps) {
-  const isLoading = state === "input-streaming" || state === "input-available";
-  const isComplete = state === "output-available";
-  const isError = state === "error";
+}: DynamicComponentRendererProps) {
+  const resolvedState = state ?? "output-available";
+  const isLoading = resolvedState === "input-streaming" || resolvedState === "input-available";
+  const isComplete = resolvedState === "output-available";
+  const isError = resolvedState === "error";
 
   const Component = useMemo(
     () => compiledComponent ?? (source ? compileSource(source) : null),
@@ -140,8 +141,8 @@ export const DynamicToolRenderer = memo(function DynamicToolRenderer({
 
   return (
     <Component
-      tool={tool}
-      state={state}
+      data={data}
+      state={resolvedState}
       isLoading={isLoading}
       isComplete={isComplete}
       isError={isError}

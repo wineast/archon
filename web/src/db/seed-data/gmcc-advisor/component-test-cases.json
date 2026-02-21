@@ -2,7 +2,7 @@
   "pricing-result": [
     {
       "name": "Single category pricing",
-      "tool": {
+      "data": {
         "name": "pricing_universe",
         "input": { "ficoScore": 750, "state": "CA" },
         "output": {
@@ -43,7 +43,7 @@
     },
     {
       "name": "Multi-category with adjustments",
-      "tool": {
+      "data": {
         "name": "pricing_universe",
         "input": { "ficoScore": 720, "state": "NY" },
         "output": {
@@ -90,7 +90,7 @@
     },
     {
       "name": "Error response",
-      "tool": {
+      "data": {
         "name": "pricing_universe",
         "input": { "ficoScore": 400, "state": "XX" },
         "output": {

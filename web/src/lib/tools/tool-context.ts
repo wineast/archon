@@ -138,39 +138,20 @@ export function createToolContext(agentId?: string): ToolContext {
     const cached = getCachedFunctions(agentId);
     if (cached) return cached;
 
-    // Load from DB and compile — join schemas for parameters
+    // Load from DB and compile — parametersSchema is stored inline
     const rows = await db
       .select({
         key: functions.key,
         code: functions.code,
-        parametersSchemaId: functions.parametersSchemaId,
+        parametersSchema: functions.parametersSchema,
       })
       .from(functions)
       .where(eq(functions.agentId, agentId));
 
-    // Batch-fetch referenced schemas
-    const schemaIds = rows
-      .map((r) => r.parametersSchemaId)
-      .filter((id): id is string => id != null);
-    const schemaMap = new Map<string, import("@/lib/schemas/types").JsonSchema7>();
-    if (schemaIds.length > 0) {
-      const schemaRows = await db
-        .select({ id: schemas.id, parameters: schemas.parameters })
-        .from(schemas)
-        .where(
-          schemaIds.length === 1
-            ? eq(schemas.id, schemaIds[0])
-            : inArray(schemas.id, schemaIds)
-        );
-      for (const s of schemaRows) {
-        schemaMap.set(s.id, s.parameters);
-      }
-    }
-
     const fnRecords: FunctionRecord[] = rows.map((r) => ({
       key: r.key,
       code: r.code,
-      parameters: r.parametersSchemaId ? schemaMap.get(r.parametersSchemaId) ?? {} : {},
+      parameters: r.parametersSchema ?? {},
     }));
 
     const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords);

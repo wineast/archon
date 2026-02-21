@@ -5,8 +5,8 @@ export interface ToolDefinition {
   key: string;
   name: string;
   description: string;
-  parametersSchemaId?: string | null;
-  returnParametersSchemaId?: string | null;
+  parametersSchema?: JsonSchema7 | null;
+  returnParametersSchema?: JsonSchema7 | null;
   handler: string | null;
   url: string | null;
   componentId: string | null;

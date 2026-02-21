@@ -66,10 +66,14 @@ export const seedTools: Seeder = {
       }>
     >(join(ctx.agentDir, "tools.json"));
 
-    const schemaIdMap: Record<string, string> = {};
+    // Build inline schema map: tool name → JsonSchema7 parameters
+    const schemaJsonMap: Record<string, JsonSchema7> = {};
     for (const t of toolsSeed) {
       if (t.parameters.length === 0) continue;
       const parameters = convertAndMigrate(t.parameters, ctx.datasetKeyToId);
+      schemaJsonMap[t.name] = parameters;
+
+      // Still create schema in schemas table (for defsMap / ontology usage)
       const toolKey = t.key ?? toKey(t.name);
       const schemaKey = `${toolKey}_params`;
       const schemaName = `${t.name} Parameters`;
@@ -82,7 +86,6 @@ export const seedTools: Seeder = {
           set: { name: schemaName, parameters },
         })
         .returning();
-      schemaIdMap[t.name] = schemaRow.id;
       ctx.ids.schemaIds.push(schemaRow.id);
       log("info", `${schemaKey} (${schemaRow.id})`);
     }
@@ -100,7 +103,7 @@ export const seedTools: Seeder = {
           key,
           name: t.name,
           description: t.description,
-          parametersSchemaId: schemaIdMap[t.name] ?? null,
+          parametersSchema: schemaJsonMap[t.name] ?? null,
           handler: t.handler ?? null,
           componentId: t.component ? ctx.componentKeyToId[t.component] ?? null : null,
           enabled: t.enabled,
@@ -110,7 +113,7 @@ export const seedTools: Seeder = {
           set: {
             name: t.name,
             description: t.description,
-            parametersSchemaId: schemaIdMap[t.name] ?? null,
+            parametersSchema: schemaJsonMap[t.name] ?? null,
             handler: t.handler ?? null,
             componentId: t.component ? ctx.componentKeyToId[t.component] ?? null : null,
             agentId,

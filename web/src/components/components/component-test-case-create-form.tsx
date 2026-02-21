@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 interface ComponentTestCaseCreateFormProps {
   onCreate: (data: {
     name: string;
-    tool: { name: string; input: unknown; output: unknown };
+    data: unknown;
     tags: string[];
   }) => Promise<void>;
   onCancel: () => void;
@@ -22,24 +22,16 @@ export function ComponentTestCaseCreateForm({
   onCancel,
 }: ComponentTestCaseCreateFormProps) {
   const [name, setName] = useState("");
-  const [toolName, setToolName] = useState("");
-  const [inputValue, setInputValue] = useState("{}");
-  const [outputValue, setOutputValue] = useState("{}");
+  const [dataValue, setDataValue] = useState("{}");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) return;
-    let parsedInput: unknown;
-    let parsedOutput: unknown;
+    let parsed: unknown;
     try {
-      parsedInput = JSON.parse(inputValue);
-    } catch {
-      return;
-    }
-    try {
-      parsedOutput = JSON.parse(outputValue);
+      parsed = JSON.parse(dataValue);
     } catch {
       return;
     }
@@ -47,13 +39,13 @@ export function ComponentTestCaseCreateForm({
     try {
       await onCreate({
         name: name.trim(),
-        tool: { name: toolName, input: parsedInput, output: parsedOutput },
+        data: parsed,
         tags,
       });
     } finally {
       setSaving(false);
     }
-  }, [name, toolName, inputValue, outputValue, tags, onCreate]);
+  }, [name, dataValue, tags, onCreate]);
 
   const handleAddTag = useCallback(
     (value: string) => {
@@ -117,41 +109,15 @@ export function ComponentTestCaseCreateForm({
         </div>
       </div>
 
-      {/* Tool Name */}
+      {/* Data JSON */}
       <div>
         <label className="text-xs font-medium text-muted-foreground">
-          Tool Name
-        </label>
-        <Input
-          className="mt-1 h-8 text-sm"
-          value={toolName}
-          onChange={(e) => setToolName(e.target.value)}
-          placeholder="e.g. get_weather"
-        />
-      </div>
-
-      {/* Tool Input JSON */}
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">
-          Tool Input (JSON)
+          Data (JSON)
         </label>
         <JsonEditor
-          value={inputValue}
-          onChange={setInputValue}
-          height="100px"
-          className="mt-1"
-        />
-      </div>
-
-      {/* Tool Output JSON */}
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">
-          Tool Output (JSON)
-        </label>
-        <JsonEditor
-          value={outputValue}
-          onChange={setOutputValue}
-          height="100px"
+          value={dataValue}
+          onChange={setDataValue}
+          height="150px"
           className="mt-1"
         />
       </div>

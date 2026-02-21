@@ -36,7 +36,7 @@ export async function createComponentTestCase(
   componentId: string,
   data: {
     name: string;
-    tool: { name: string; input: unknown; output: unknown };
+    data: unknown;
     tags?: string[];
     showAsExample?: boolean;
   },

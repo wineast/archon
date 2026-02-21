@@ -1,3 +1,5 @@
+import type { JsonSchema7 } from "@/lib/schemas/types";
+
 export interface SchemaValidationError {
   path: string;
   message: string;
@@ -9,20 +11,20 @@ export interface SchemaValidationResult {
 }
 
 /**
- * Validate data against a schema using the server-side validate endpoint.
- * Returns null if schemaId is not provided.
+ * Validate data against an inline JSON Schema using the server-side validate endpoint.
+ * Returns null if schema is not provided.
  */
 export async function validateAgainstSchema(
-  schemaId: string | null | undefined,
+  schema: JsonSchema7 | null | undefined,
   data: unknown
 ): Promise<SchemaValidationResult | null> {
-  if (!schemaId) return null;
+  if (!schema) return null;
 
   try {
-    const res = await fetch(`/api/schemas/${schemaId}/validate`, {
+    const res = await fetch("/api/schemas/validate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input: data }),
+      body: JSON.stringify({ schema, input: data }),
     });
     if (!res.ok) return null;
     const result = await res.json();

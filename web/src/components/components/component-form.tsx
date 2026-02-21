@@ -4,20 +4,12 @@ import { Input } from "@/components/ui/input";
 import { KeyField } from "@/components/ui/key-field";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { JsEditor } from "@/components/editors/js-editor";
-import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
+import { InlineSchemaEditor } from "@/components/schemas/inline-schema-editor";
 import { inferComponentDeps, keyToPascal, type ComponentRecord } from "@/tool-ui";
 import type { ComponentDefinition } from "@/lib/components/types";
-import { useSchemas } from "@/lib/schemas/hooks";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SparklesIcon } from "lucide-react";
+import { BoxIcon, SparklesIcon, WrenchIcon } from "lucide-react";
 import {
   Controller,
   FormProvider,
@@ -43,52 +35,21 @@ interface ComponentFormProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-interface SchemaSelectProps {
-  label: string;
-  fieldName: "toolInputSchemaId" | "toolOutputSchemaId";
-  value: string | null | undefined;
-  schemas: { id: string; key: string; name: string; parameters: import("@/lib/schemas/types").JsonSchema7 }[];
-  form: ReturnType<typeof useForm<ComponentDefinition>>;
-}
+const TOOL_SCHEMA_TEMPLATE = {
+  type: "object",
+  properties: {
+    name: { type: "string", description: "工具名称" },
+    input: { type: "object", properties: {}, description: "工具输入参数" },
+    output: { type: "object", properties: {}, description: "工具输出结果" },
+  },
+  required: ["name", "input", "output"],
+};
 
-function SchemaSelect({ label, fieldName, value, schemas, form }: SchemaSelectProps) {
-  const selectedSchema = schemas.find((s) => s.id === value);
-
-  return (
-    <div>
-      <label className="text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
-      <div className="mt-1 space-y-2">
-        <Controller
-          name={fieldName}
-          control={form.control}
-          render={({ field }) => (
-            <Select
-              value={field.value ?? "__none__"}
-              onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="Select a schema..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {schemas.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} ({s.key})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {selectedSchema && (
-          <SchemaParameterPreview schema={selectedSchema.parameters} />
-        )}
-      </div>
-    </div>
-  );
-}
+const COMPONENT_SCHEMA_TEMPLATE = {
+  type: "object",
+  properties: {},
+  required: [],
+};
 
 export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
@@ -96,9 +57,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
   const currentSource = form.watch("componentSource");
   const [jsxAssistOpen, setJsxAssistOpen] = useState(false);
 
-  const toolInputSchemaId = useWatch({ control: form.control, name: "toolInputSchemaId" });
-  const toolOutputSchemaId = useWatch({ control: form.control, name: "toolOutputSchemaId" });
-  const { schemas } = useSchemas(agentId);
+  const scenario = useWatch({ control: form.control, name: "scenario" });
 
   // Infer referenced components from JSX source
   const referencedComponents = useMemo(() => {
@@ -129,6 +88,12 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
     return () => subscription.unsubscribe();
   }, [form, onDirtyChange]);
 
+  const handleScenarioChange = (newScenario: "tool" | "component") => {
+    form.setValue("scenario", newScenario, { shouldDirty: true });
+    const template = newScenario === "tool" ? TOOL_SCHEMA_TEMPLATE : COMPONENT_SCHEMA_TEMPLATE;
+    form.setValue("inputSchema", template, { shouldDirty: true });
+  };
+
   return (
     <FormProvider {...form}>
       <div className="space-y-3 min-w-0">
@@ -153,19 +118,49 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             placeholder="Describe what this component renders..."
           />
         </div>
-        <SchemaSelect
-          label="Tool Input Schema"
-          fieldName="toolInputSchemaId"
-          value={toolInputSchemaId}
-          schemas={schemas}
-          form={form}
-        />
-        <SchemaSelect
-          label="Tool Output Schema"
-          fieldName="toolOutputSchemaId"
-          value={toolOutputSchemaId}
-          schemas={schemas}
-          form={form}
+        <div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              场景
+            </label>
+            <div className="flex items-center rounded-md border border-border p-0.5">
+              <button
+                type="button"
+                onClick={() => handleScenarioChange("tool")}
+                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                  scenario === "tool"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <WrenchIcon className="size-3" />
+                工具
+              </button>
+              <button
+                type="button"
+                onClick={() => handleScenarioChange("component")}
+                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
+                  scenario === "component"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <BoxIcon className="size-3" />
+                组件
+              </button>
+            </div>
+          </div>
+        </div>
+        <Controller
+          name="inputSchema"
+          control={form.control}
+          render={({ field }) => (
+            <InlineSchemaEditor
+              label="Input Schema"
+              value={field.value ?? null}
+              onChange={field.onChange}
+            />
+          )}
         />
         <div>
           <div className="flex items-center gap-2">

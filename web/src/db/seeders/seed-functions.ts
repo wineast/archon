@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { eq } from "drizzle-orm";
 import { functions, schemas, functionTestCases } from "../schema";
 import { readJson, readDirSafe, fileNameToKey, keyToName, logSection, log } from "../seed-utils";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7, SchemaProperty } from "@/lib/schemas/types";
 import { migrateSchemaProperties } from "@/lib/schemas/migrate";
 import type { Seeder } from "./types";
 
@@ -23,31 +23,31 @@ export const seedFunctions: Seeder = {
     // ── Function parameter schemas ──
     logSection("Seeding function parameter schemas");
 
-    const fnSchemaIdMap: Record<string, { paramsSchemaId: string | null; returnParamsSchemaId: string | null }> = {};
+    const fnSchemaMap: Record<string, { paramsSchema: JsonSchema7 | null; returnParamsSchema: JsonSchema7 | null }> = {};
     for (const file of fnFiles) {
       const key = fileNameToKey(file);
       const name = keyToName(key);
 
-      let paramsSchemaId: string | null = null;
-      let returnParamsSchemaId: string | null = null;
+      let paramsSchema: JsonSchema7 | null = null;
+      let returnParamsSchema: JsonSchema7 | null = null;
 
       // Parameters schema
       const paramsFile = file.replace(/\.js$/, ".params.json");
       try {
         const rawParams = readJson<SchemaProperty[]>(join(functionsDir, paramsFile));
         if (rawParams.length > 0) {
-          const parameters = migrateSchemaProperties(rawParams);
+          paramsSchema = migrateSchemaProperties(rawParams);
+          // Still create schema in schemas table (for defsMap / ontology usage)
           const schemaKey = `${key}_params`;
           const schemaName = `${name} Parameters`;
           const [schemaRow] = await ctx.db
             .insert(schemas)
-            .values({ agentId, key: schemaKey, name: schemaName, parameters })
+            .values({ agentId, key: schemaKey, name: schemaName, parameters: paramsSchema })
             .onConflictDoUpdate({
               target: [schemas.agentId, schemas.key],
-              set: { name: schemaName, parameters },
+              set: { name: schemaName, parameters: paramsSchema },
             })
             .returning();
-          paramsSchemaId = schemaRow.id;
           ctx.ids.schemaIds.push(schemaRow.id);
           log("info", `${schemaKey} (${schemaRow.id})`);
         }
@@ -60,18 +60,17 @@ export const seedFunctions: Seeder = {
       try {
         const rawReturnParams = readJson<SchemaProperty[]>(join(functionsDir, returnParamsFile));
         if (rawReturnParams.length > 0) {
-          const returnParameters = migrateSchemaProperties(rawReturnParams);
+          returnParamsSchema = migrateSchemaProperties(rawReturnParams);
           const schemaKey = `${key}_return_params`;
           const schemaName = `${name} Return Parameters`;
           const [schemaRow] = await ctx.db
             .insert(schemas)
-            .values({ agentId, key: schemaKey, name: schemaName, parameters: returnParameters })
+            .values({ agentId, key: schemaKey, name: schemaName, parameters: returnParamsSchema })
             .onConflictDoUpdate({
               target: [schemas.agentId, schemas.key],
-              set: { name: schemaName, parameters: returnParameters },
+              set: { name: schemaName, parameters: returnParamsSchema },
             })
             .returning();
-          returnParamsSchemaId = schemaRow.id;
           ctx.ids.schemaIds.push(schemaRow.id);
           log("info", `${schemaKey} (${schemaRow.id})`);
         }
@@ -79,7 +78,7 @@ export const seedFunctions: Seeder = {
         // No return params file
       }
 
-      fnSchemaIdMap[key] = { paramsSchemaId, returnParamsSchemaId };
+      fnSchemaMap[key] = { paramsSchema, returnParamsSchema };
     }
 
     // ── Functions ──
@@ -90,7 +89,7 @@ export const seedFunctions: Seeder = {
       const key = fileNameToKey(file);
       const code = readFileSync(join(functionsDir, file), "utf-8");
       const name = keyToName(key);
-      const { paramsSchemaId, returnParamsSchemaId } = fnSchemaIdMap[key];
+      const { paramsSchema, returnParamsSchema } = fnSchemaMap[key];
 
       const [row] = await ctx.db
         .insert(functions)
@@ -100,17 +99,17 @@ export const seedFunctions: Seeder = {
           name,
           description: "",
           code,
-          parametersSchemaId: paramsSchemaId,
-          returnParametersSchemaId: returnParamsSchemaId,
+          parametersSchema: paramsSchema,
+          returnParametersSchema: returnParamsSchema,
         })
         .onConflictDoUpdate({
           target: [functions.agentId, functions.key],
-          set: { name, code, parametersSchemaId: paramsSchemaId, returnParametersSchemaId: returnParamsSchemaId },
+          set: { name, code, parametersSchema: paramsSchema, returnParametersSchema: returnParamsSchema },
         })
         .returning();
       ctx.ids.functionIds.push(row.id);
       functionMap.push({ id: row.id, key: row.key });
-      log("info", `${row.key} (${row.id})${paramsSchemaId ? " [schema]" : ""}`);
+      log("info", `${row.key} (${row.id})${paramsSchema ? " [schema]" : ""}`);
     }
     log("ok", `${fnFiles.length} functions`);
 

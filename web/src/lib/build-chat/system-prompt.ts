@@ -72,17 +72,11 @@ export function buildSystemPrompt(summary: ResourceSummary): string {
 
   // Components
   if (summary.components.length > 0) {
-    const schemaMap = new Map(summary.schemas.map((s) => [s.id, s.name]));
     const list = summary.components
       .map((c) => {
         let line = `- ${c.name} (key: ${c.key}, id: ${c.id}): ${c.description}`;
-        const inputName = c.toolInputSchemaId ? schemaMap.get(c.toolInputSchemaId) : null;
-        const outputName = c.toolOutputSchemaId ? schemaMap.get(c.toolOutputSchemaId) : null;
-        if (inputName || outputName) {
-          const parts: string[] = [];
-          if (inputName) parts.push(`input: ${inputName}`);
-          if (outputName) parts.push(`output: ${outputName}`);
-          line += ` [schema: ${parts.join(", ")}]`;
+        if (c.inputSchema) {
+          line += ` [has input schema]`;
         }
         return line;
       })
