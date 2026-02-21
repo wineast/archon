@@ -68,13 +68,23 @@ Skills 功能支持 Agent 级别的开关，通过 `agents.skillsEnabled` 字段
 - 成功：`{ name, content }` — content 已经过 LiquidJS 模板渲染
 - 失败：`{ error: "技能 xxx 不存在或未启用" }`
 
-## LiquidJS 模板
+## 跨资源引用（LiquidJS 模板）
 
-技能内容支持 LiquidJS 模板语法，可引用：
+技能的 `content` 字段支持完整的 LiquidJS 模板语法，可引用以下数据源：
 
-- 数据集变量（如 `{{ dataset_key.field }}`）
-- 工具相关变量（如 `{{ tool_names }}`）
-- 宿主上下文（如 `{{ host.xxx }}`）
+| 语法 | 说明 | 示例 |
+|------|------|------|
+| `{{dataset_key}}` | 数据集变量 | `{{company_name}}` → `"GMCC"` |
+| `{{dataset_key.field}}` | 数据集对象属性 | `{{income_type_enum.w2}}` |
+| `{{tool_names}}` | 所有启用工具名 | `"calculate_dti, route_products"` |
+| `{{tool.name.*}}` | 单个工具详情 | `{{tool.calculate_dti.description}}` |
+| `{% for t in tool_entries %}` | 遍历所有工具 | 每个条目有 `t.name`、`t.description`、`t.params` |
+| `{% include 'wiki_key' %}` | 嵌入 Wiki 文档 | `{% include '贷款指南' %}` |
+| `{{ontology_types}}` | 本体类型列表 | `{% for type in ontology_types %}...{% endfor %}` |
+| `{{host.fieldName}}` | 宿主上下文（embed 模式） | `{{host.userName}}` |
+| `{{date}}` / `{{time}}` | 内置时间变量 | `2026-02-21` / `14:30:00` |
+
+> 技能内容在 `get_skill_detail` 被调用时才渲染（懒加载），不是保存时渲染。
 
 详见 [模板引擎文档](template-engine.md)。
 

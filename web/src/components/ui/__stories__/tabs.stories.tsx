@@ -13,6 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 /** Default size tabs. */
 export const Default: Story = {
+  name: "默认尺寸",
   render: () => (
     <Tabs defaultValue="edit" className="w-[300px]">
       <TabsList>
@@ -31,6 +32,7 @@ export const Default: Story = {
 
 /** Small size tabs for form-embedded usage (h-7 + text-xs). */
 export const Small: Story = {
+  name: "小尺寸",
   render: () => (
     <Tabs defaultValue="edit" className="w-[300px]">
       <TabsList className="h-7">
@@ -49,6 +51,7 @@ export const Small: Story = {
 
 /** Line variant tabs for top-level navigation. */
 export const Line: Story = {
+  name: "线条风格",
   render: () => (
     <Tabs defaultValue="general" className="w-[400px]">
       <TabsList variant="line">
@@ -71,6 +74,7 @@ export const Line: Story = {
 
 /** Default size with icons in triggers. */
 export const WithIcons: Story = {
+  name: "带图标",
   render: () => (
     <Tabs defaultValue="bold" className="w-[300px]">
       <TabsList>
@@ -99,6 +103,7 @@ export const WithIcons: Story = {
 
 /** Small size with icons — typical form-embedded usage. */
 export const SmallWithIcons: Story = {
+  name: "小尺寸带图标",
   render: () => (
     <Tabs defaultValue="bold" className="w-[300px]">
       <TabsList className="h-7">

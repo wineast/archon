@@ -46,6 +46,66 @@
 | PATCH | `/api/tools/[id]` | 更新工具 |
 | DELETE | `/api/tools/[id]` | 软删除工具 |
 
+## 跨资源引用
+
+工具是引用其他资源最多的模块，涉及以下引用方式：
+
+### 参数 Schema 中的引用
+
+| 语法 | 说明 | 示例 |
+|------|------|------|
+| `$ref` | 引用共享 Schema | `{ "$ref": "#/$defs/address_fields" }` |
+| `allOf` + `$ref` | 组合多个 Schema | `{ "allOf": [{ "$ref": "#/$defs/a" }, { "$ref": "#/$defs/b" }] }` |
+| `"{{key}}"` in enum | 引用数据集作为枚举值 | `{ "enum": ["{{us_states}}"] }` |
+
+`$ref` 使用 Schema 的 `key` 字段（snake_case），格式为 `#/$defs/{schema_key}`。运行时从 defsMap 解析。
+
+### Handler 代码中的引用（ES6 模块格式）
+
+```js
+import { wiki, dataset, fn, ontology } from "archon:context";
+import calc from "archon:fn/pricing_engine";
+
+export default async function(args) {
+  const doc = await wiki.get("product-intro");           // Wiki 文档
+  const config = await dataset.get("pricing_config");     // 数据集
+  const engine = await fn("loan_calculator");             // 函数
+  const types = await ontology.types();                   // 本体
+  return calc({ ...args, config });                       // 导入的函数
+}
+```
+
+| 命名空间 | 用途 | 语法 |
+|----------|------|------|
+| `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, dataset, fn, ontology } from "archon:context"` |
+| `archon:fn/<key>` | 导入其他函数 | `import calc from "archon:fn/pricing_engine"` |
+| `archon:lib/filtrex` | Filtrex 表达式引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
+
+### Handler 代码中的引用（旧闭包格式）
+
+```js
+async (args, context) => {
+  const doc = await context.wiki.get("key");
+  const val = await context.dataset.get("key");
+  const fn = await context.fn("key");
+  return fn(args);
+}
+```
+
+### 被其他资源引用
+
+| 引用方 | 语法 | 说明 |
+|--------|------|------|
+| **System Prompt** | `{{tool_names}}` | 所有启用工具名逗号拼接 |
+| **System Prompt** | `{{tool.name.*}}` | 单个工具的名称、描述、参数 |
+| **System Prompt** | `{% for t in tool_entries %}` | 遍历所有工具概要 |
+| **Skills 内容** | 同上 | 同上 |
+| **Wiki 文档** | 同上 | 同上 |
+
+详见 [Handler 编写指南](tool-handler.md) 和 [模块系统文档](../guide/module-system.md)。
+
+---
+
 ## UI
 
 在 Agent Build 页面侧栏中点击 **Tools**（扳手图标）进入：

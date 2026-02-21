@@ -83,24 +83,26 @@ interface SettingsTab {
 const SETTINGS_TABS: SettingsTab[] = [
   // ── Agent config ──
   { value: "config", label: "Config", icon: SlidersHorizontalIcon },
-  // ── Base data (depended on by tools) ──
-  { value: "schemas", label: "Schemas", icon: BracesIcon },
-  { value: "wiki", label: "Wiki", icon: BookOpenIcon },
+  // ── L0: Foundation (no external deps) ──
   { value: "datasets", label: "Datasets", icon: DatabaseIcon },
+  { value: "schemas", label: "Schemas", icon: BracesIcon },
+  // ── L1: Content & logic (depend on L0) ──
+  { value: "wiki", label: "Wiki", icon: BookOpenIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
   { value: "components", label: "Components", icon: PuzzleIcon },
-  // ── Core capabilities (depend on base data) ──
+  { value: "ontology", label: "Ontology", icon: NetworkIcon },
+  // ── L2: Capabilities (depend on L0 + L1) ──
   { value: "tools", label: "Tools", icon: WrenchIcon },
   { value: "skills", label: "Skills", icon: ZapIcon },
-  // ── Knowledge & data ──
-  { value: "ontology", label: "Ontology", icon: NetworkIcon },
+  // ── L3: Assembly (reference everything above) ──
+  { value: "model-config", label: "Model Config", icon: SettingsIcon },
   { value: "memory", label: "Memory", icon: BrainIcon },
   { value: "mcp", label: "MCP", icon: PlugIcon },
+  // ── Runtime & operations ──
   { value: "files", label: "Files", icon: FileIcon },
-  // ── Operations ──
   { value: "sessions", label: "Sessions", icon: MessageSquareIcon },
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
-  { value: "model-config", label: "Model Config", icon: SettingsIcon },
+  // ── Infrastructure ──
   { value: "embed", label: "Embed", icon: CodeIcon },
   { value: "usage", label: "Usage", icon: BarChart3Icon },
   { value: "runtime", label: "Runtime", icon: ActivityIcon },

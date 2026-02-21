@@ -13,21 +13,23 @@
 | **系统提示词** | 模型配置的 `systemPrompt` 字段 | 全部（内置变量、数据集、tool、`{% include %}` Wiki） | `renderTemplate()` — `chat/route.ts`、`eval/.../case/route.ts`、`template/preview/route.ts` |
 | **Wiki 文档内容** | Wiki 编辑器中的文档正文 | 全部 + Wiki 专属变量（`documentTitle`、`documentCount`、`documentList`、`currentDate`、`currentTime`）；支持 `{% include '标题' %}` | `processTemplate()` — `wiki-editor.tsx`（预览）、`tool-context.ts`（工具运行时读取） |
 | **评估 Judge 提示词** | Eval Judge 的 `systemPrompt` 字段 | 全部 + 额外变量（`model`、`caseName`、`toolNames`） | `renderTemplate()` — `eval/.../case/route.ts` |
-| **Layer 1 数据集** | layer=1 的 data 字段内的值 | **仅 layer 0 数据集**（不含 tool 命名空间，不支持 `{% include %}`） | `renderField()` / `renderObjectField()` — `datasets/queries.ts` |
+| **数据集模板** | data 字段内含 `{{ }}` 的数据集 | **所有已解析的前序数据集**（拓扑排序，不含 tool 命名空间，不支持 `{% include %}`） | `renderField()` / `renderObjectField()` — `datasets/queries.ts` |
 | **工具 JS Handler** | handler 为 JS 代码时，第二个参数 `context` 提供运行时数据访问 API | 通过 API 访问 wiki、dataset（返回值已经过模板渲染） | `createToolContext()` — `tool-context.ts` |
 
-> **注意**：Layer 1 数据集内的模板支持完整的 LiquidJS 语法（`{{ }}`、`{% if %}`、`{% for %}` 等），但渲染上下文中只注入了 layer 0 数据集的值，不含 `tool.*` 命名空间，也不支持 `{% include %}` Wiki 文档。这是因为 layer 1 本身就是被其他模板引用的数据源，避免循环依赖。
+> **注意**：数据集模板支持完整的 LiquidJS 语法（`{{ }}`、`{% if %}`、`{% for %}` 等），支持互相引用（系统使用 Kahn 拓扑排序，按依赖顺序逐个渲染，支持 N 层深度链式引用，循环依赖会报错）。但渲染上下文不含 `tool.*` 命名空间，也不支持 `{% include %}` Wiki 文档，避免与最终模板渲染产生循环依赖。
 
 ---
 
 ## 一、数据集（Datasets）
 
-所有配置数据统一存储在 **数据集** 中，分为两层：
+所有配置数据统一存储在 **数据集** 中。数据集分为两类：
 
-| 层级 | 存储内容 | 模板语法 | 示例 |
+| 类型 | 存储内容 | 模板语法 | 示例 |
 |------|---------|---------|------|
-| **Layer 0（基础层）** | 原子化基础值（纯 JSON） | **禁止** | `"GMCC"`, `{"w2":"Full Doc..."}` |
-| **Layer 1（派生层）** | Liquid 模板，渲染后产出 JSON | `{{key}}`、`{% for %}`、`{% if %}` 等 | `{"incomes":["{{income_type_enum.w2}}"]}` 或含 `{% for %}` 的完整模板 |
+| **基础数据集** | 原子化基础值（纯 JSON，不含模板） | 无 | `"GMCC"`, `{"w2":"Full Doc..."}` |
+| **派生数据集** | 含 Liquid 模板的 JSON，渲染后产出最终值 | `{{key}}`、`{% for %}`、`{% if %}` 等 | `{"incomes":["{{income_type_enum.w2}}"]}` |
+
+> 数据库中不区分层级——系统通过 Kahn 拓扑排序自动识别依赖关系，按顺序渲染。
 
 ### 引用方式（扁平命名空间）
 
@@ -51,15 +53,18 @@
 | 对象 | `{"CA":"CA","TX":"TX"}` | `{{state_enum.CA}}`（点号访问） |
 | 数组 | `["en","zh","es"]` | 用于循环遍历 |
 
-### 数据分层
+### 数据集引用链
 
-Layer 0 先解析，Layer 1 可引用 Layer 0 的值：
+数据集支持互相引用，系统自动通过拓扑排序确定渲染顺序：
 
 ```
-Layer 0（先解析）→ Layer 1（引用 Layer 0）→ 最终模板（引用所有数据 + 工具）
+a = "Root"（基础，无依赖）
+b = "{{a}}-Mid"（引用 a）        → "Root-Mid"
+c = "{{b}}-End"（引用 b）        → "Root-Mid-End"
+最终模板（引用所有已解析数据集 + 工具）
 ```
 
-例如：Layer 1 数据集 `product_routes` 中写 `{{income_type_enum.w2}}`，会从 Layer 0 数据集 `income_type_enum` 取值。
+例如：数据集 `product_routes` 中写 `{{income_type_enum.w2}}`，会从数据集 `income_type_enum` 取值。支持 N 层深度链式引用，循环依赖会报错。
 
 ---
 

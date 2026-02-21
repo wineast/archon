@@ -25,7 +25,27 @@ return await res.json();
 
 ### 代码模式
 
-编写 JS 函数，签名为 `async (args, context) => result`。
+支持两种写法格式：
+
+**ES6 模块格式（推荐）**：
+
+```js
+import { wiki, dataset, fn, ontology } from "archon:context";
+import calc from "archon:fn/pricing_engine";
+
+export default async function(args) {
+  const doc = await wiki.get(args.docId);
+  return { title: doc?.meta?.title, content: doc?.content };
+}
+```
+
+| 命名空间 | 用途 | 示例 |
+|----------|------|------|
+| `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki } from "archon:context"` |
+| `archon:fn/<key>` | 导入 Functions 页面的函数 | `import calc from "archon:fn/pricing_engine"` |
+| `archon:lib/filtrex` | Filtrex 表达式引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
+
+**旧闭包格式**：
 
 ```js
 async (args, context) => {
@@ -37,6 +57,8 @@ async (args, context) => {
 - `args` — 工具定义的 parameters 解析后的对象
 - `context` — 运行时数据访问 API（见下方）
 - 返回值为任意可序列化的 JSON 对象
+
+系统通过检测 `import`/`export` 关键字自动判断格式。
 
 ## Context API
 

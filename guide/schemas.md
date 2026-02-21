@@ -4,6 +4,95 @@ Schema 是系统的可复用参数定义层。工具（Tool）、函数（Functi
 
 ---
 
+## 核心概念依赖关系
+
+Schema 是 Archon 数据架构中的基础层之一。以下是 Schema 与其他核心概念之间的依赖关系全景：
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         System Prompt（最终产物）                        │
+│  modelConfig.systemPrompt 经 LiquidJS 渲染后发送给 LLM                  │
+│                                                                         │
+│  渲染时注入的数据源：                                                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
+│  │ Datasets │  │   Wiki   │  │  Tools   │  │  Skills  │  │ Ontology │ │
+│  │ 变量插值  │  │ include  │  │tool_names│  │ 摘要列表  │  │ 类型定义  │ │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+
+依赖关系图（→ 表示"被…使用"）：
+
+  Schemas ──→ Tools（parametersSchema 内 $ref 引用）
+          ──→ Functions（parametersSchema 内 $ref 引用）
+          ──→ Components（inputSchema / outputSchema 内 $ref 引用）
+          ──→ Ontology（schemaId FK，对象类型的属性结构）
+          ──→ Schemas 自身（$ref 互相引用）
+
+  Datasets ──→ Schemas（enum 模板字符串 "{{dataset_key}}"）
+           ──→ System Prompt（变量插值）
+           ──→ Wiki（模板渲染）
+           ──→ Skills（模板渲染）
+           ──→ Tool Handlers（context.dataset.get()）
+           ──→ Datasets 自身（拓扑排序，支持 N 层深度互相引用）
+
+  Wiki ──→ System Prompt（{% include '文档标题' %}）
+       ──→ Tool Handlers（context.wiki.get()）
+       ──→ Wiki 自身（嵌套 include）
+
+  Functions ──→ Tools（handler 中 import "archon:fn/key"）
+            ──→ Functions 自身（互相 import）
+
+  Tools ──→ System Prompt（tool_names、tool.*、tool_entries）
+        ──→ Skills（模板中引用 tool 信息）
+
+  Skills ──→ System Prompt（摘要注入 + get_skill_detail 按需加载）
+
+  Ontology ──→ System Prompt（ontology_types 变量）
+           ──→ Tool Handlers（context.ontology）
+
+  Model Config ──→ System Prompt（systemPrompt 模板 + 模型选择 + temperature）
+```
+
+### 数据流方向
+
+```
+用户发消息
+  │
+  ▼
+加载 active ModelConfig
+  │
+  ▼
+gatherTemplateData(agentId) ─── 一次性加载所有数据源
+  ├── Datasets: 拓扑排序 → 按依赖顺序逐个渲染 → resolvedVars
+  ├── Schemas: 构建 defsMap（$ref 解析用）
+  ├── Wiki: 原始文档（按需渲染）
+  ├── Tools: 定义信息（tool_names, tool.*, tool_entries）
+  ├── Ontology: 类型 + 关系
+  └── Skills: 摘要列表
+  │
+  ▼
+renderTemplate(systemPrompt, templateData) → 最终系统提示词
+  │
+  ▼
+buildDynamicTools() → 构建工具 Zod Schema（使用 defsMap + resolvedVars）
+  │
+  ▼
+发送给 LLM（系统提示词 + 工具定义 + 用户消息）
+```
+
+### 关键规则
+
+- **Schemas** 是纯结构定义，不依赖任何其他概念（基础层）
+- **Datasets** 是纯数据（基础层）；支持互相引用（通过 Kahn 拓扑排序，按依赖顺序逐个渲染，支持 N 层深度链式引用，循环依赖会报错）
+- **Wiki** 可引用 Datasets 和其他 Wiki（通过模板语法）
+- **Tools** 依赖 Schemas（参数结构）+ Datasets（枚举值）+ Functions（handler 逻辑）+ Components（UI 渲染）
+- **Ontology** = Object Types（对象类型）+ Object Relations（对象关系），Object Types 通过 schemaId FK 引用 Schema 定义属性结构
+- **System Prompt** 是所有概念的汇聚点，通过 LiquidJS 模板引用一切
+- **Skills** 是懒加载的——只有摘要注入系统提示词，完整内容按需通过内置工具获取
+- **变量优先级**（低→高）：内置变量 → 无依赖的 Datasets → 有依赖的 Datasets（拓扑序） → 运行时额外变量；`tool.*` 为独立命名空间
+
+---
+
 ## 打开 Schema 面板
 
 在 Agent 主页面的右上角菜单中，点击 **Schemas** 即可打开管理面板。
@@ -30,7 +119,7 @@ Schema 的 `parameters` 使用 **JSON 编辑器** 直接编辑标准 JSON Schema
 
 详情页有两个子标签：
 - **Edit**：JSON 编辑器，直接编辑 `parameters` JSON
-- **Preview**：代码预览面板，实时生成 JSON Schema / Zod Code
+- **Preview**：参数卡片视图，将 JSON Schema 渲染为可读的参数列表（参数名、类型、是否必填、描述），与 Functions 页面的参数预览样式一致
 
 JSON 解析失败时（用户还在打字），表单值不会更新，避免中间状态丢失。
 
@@ -530,23 +619,20 @@ Schema 在系统中有两条转换路径：
 
 代码位于 `web/src/lib/tools/zod-code-builder.ts` 的 `buildZodCode()`。入参为 `JsonSchema7`，返回 TypeScript 代码字符串。
 
-### 代码预览与导出
+### 参数预览
 
 Schema 详情页有 **Edit / Preview** 两个子标签：
 
 - **Edit**：JSON 编辑器，直接编辑 `parameters`
-- **Preview**：代码预览面板，切换到此标签时实时生成
+- **Preview**：参数卡片视图，将当前 JSON Schema 实时渲染为可读的参数列表
 
-Preview 面板内部通过 **JSON Schema / Zod Code** 子标签切换两种输出格式：
+Preview 中每个参数显示为一张卡片，包含：
+- 参数名（monospace 字体）
+- 类型 badge（如 `string`、`number`、`boolean`、`object`、`string[]` 等）
+- `required` badge（如果在 `required` 数组中）
+- 描述文本（截断显示）
 
-**JSON Schema**：
-- 直接显示 `parameters` 的 JSON 格式化输出（因为存储的就是 JSON Schema）
-
-**Zod Code**：
-- 语法高亮显示生成的 `z.object({...})` 代码
-- 变量命名规则：将 Schema key 转为 camelCase 加 `Schema` 后缀
-
-两种格式均提供 Copy 和 Export 按钮。
+此视图与 Functions 页面的参数预览样式一致，便于快速确认 Schema 定义了哪些参数、每个参数什么意思。
 
 ---
 

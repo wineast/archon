@@ -22,6 +22,7 @@ type Story = StoryObj<typeof meta>;
 /* ---------- Basic ---------- */
 
 export const Empty: Story = {
+  name: "空内容",
   args: {
     dataValue: "{}",
     onDataChange: () => {},
@@ -29,6 +30,7 @@ export const Empty: Story = {
 };
 
 export const WithData: Story = {
+  name: "带数据",
   args: {
     dataValue: JSON.stringify(
       { name: "get_weather", input: { city: "Shanghai" }, output: { temperature: 22 } },
@@ -42,6 +44,7 @@ export const WithData: Story = {
 /* ---------- Slots ---------- */
 
 export const WithHeaderExtra: Story = {
+  name: "头部插槽",
   args: {
     dataValue: JSON.stringify(
       { name: "search_products", input: { query: "laptop" }, output: { results: [] } },
@@ -62,6 +65,7 @@ export const WithHeaderExtra: Story = {
 };
 
 export const WithDataExtra: Story = {
+  name: "数据区插槽",
   args: {
     dataValue: JSON.stringify({ amount: "not_a_number" }, null, 2),
     onDataChange: () => {},
@@ -78,6 +82,7 @@ export const WithDataExtra: Story = {
 /* ---------- Custom Heights ---------- */
 
 export const CompactHeight: Story = {
+  name: "紧凑高度",
   args: {
     dataValue: JSON.stringify({ ok: true }, null, 2),
     onDataChange: () => {},
@@ -88,6 +93,7 @@ export const CompactHeight: Story = {
 /* ---------- Interactive ---------- */
 
 export const Interactive: Story = {
+  name: "交互演示",
   args: {
     dataValue: "{}",
     onDataChange: () => {},

@@ -22,6 +22,7 @@ function sleep(ms: number): Promise<void> {
 
 /** Default destructive delete confirmation. */
 export const Default: Story = {
+  name: "默认确认",
   args: {
     open: false,
     onOpenChange: () => {},
@@ -42,6 +43,7 @@ export const Default: Story = {
 
 /** Custom title, description, and labels. */
 export const CustomLabels: Story = {
+  name: "自定义文案",
   args: {
     open: false,
     onOpenChange: () => {},
@@ -66,6 +68,7 @@ export const CustomLabels: Story = {
 
 /** Non-destructive confirm variant (e.g. ownership transfer). */
 export const NonDestructive: Story = {
+  name: "非破坏性确认",
   args: {
     open: false,
     onOpenChange: () => {},
@@ -90,6 +93,7 @@ export const NonDestructive: Story = {
 
 /** Shows the loading spinner during async confirm. */
 export const WithAsyncConfirm: Story = {
+  name: "异步确认",
   args: {
     open: false,
     onOpenChange: () => {},

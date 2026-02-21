@@ -43,8 +43,17 @@ export function GuideDialog({ title, content, trigger }: GuideDialogProps) {
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
-            <div className="prose prose-sm dark:prose-invert max-w-none p-6 overflow-hidden prose-pre:overflow-x-auto prose-table:overflow-x-auto">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <div className="prose prose-sm dark:prose-invert max-w-none p-6 overflow-hidden prose-pre:overflow-x-auto">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  table: ({ children, ...props }) => (
+                    <div className="overflow-x-auto">
+                      <table {...props}>{children}</table>
+                    </div>
+                  ),
+                }}
+              >
                 {content}
               </ReactMarkdown>
             </div>

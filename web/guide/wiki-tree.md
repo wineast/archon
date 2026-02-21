@@ -71,6 +71,50 @@ DropdownMenu 操作：
 - **Move Up / Move Down**：在同级兄弟间排序
 - **Delete**：删除文档（有子节点时提示子文档将移至根级）
 
+## 跨资源引用
+
+### Wiki 文档嵌入（{% include %}）
+
+在系统提示词、其他 Wiki 文档或 Skills 内容中，使用 `{% include %}` 嵌入 Wiki 文档：
+
+```liquid
+{% include 'product_guide' %}
+```
+
+- 通过文档的 **key**（唯一标识符）精确匹配
+- 支持嵌套引用（A include B，B include C），自动检测循环引用
+- 文档未找到时渲染为 `> Document not found: {key}`
+- 循环引用时渲染为 `> Circular reference: {name}`
+
+### Wiki 文档中的模板语法
+
+Wiki 文档内容支持完整的 LiquidJS 模板，可引用以下数据源：
+
+| 语法 | 说明 | 示例 |
+|------|------|------|
+| `{{dataset_key}}` | 数据集变量 | `{{company_name}}` → `"GMCC"` |
+| `{{dataset_key.field}}` | 数据集对象属性 | `{{income_type_enum.w2}}` |
+| `{{tool_names}}` | 所有启用工具名 | `"calculate_dti, route_products"` |
+| `{{tool.name.description}}` | 单个工具信息 | `{{tool.calculate_dti.description}}` |
+| `{{ontology_types}}` | 本体类型列表 | `{% for type in ontology_types %}` |
+| `{% include 'key' %}` | 嵌入其他 Wiki | `{% include '贷款指南' %}` |
+| `{{date}}` / `{{time}}` | 内置时间变量 | `2026-02-21` / `14:30:00` |
+
+### 被其他资源引用
+
+| 引用方 | 语法 | 说明 |
+|--------|------|------|
+| **System Prompt** | `{% include 'key' %}` | 嵌入文档内容，经过完整模板渲染 |
+| **Skills 内容** | `{% include 'key' %}` | 同上 |
+| **其他 Wiki** | `{% include 'key' %}` | 嵌套引用 |
+| **Tool Handler** | `context.wiki.get("key")` | 返回渲染后的 content |
+| **Tool Handler** | `context.wiki.findByPrefix("prefix-")` | 返回原始 content（未渲染） |
+| **Tool Handler** | `context.wiki.search("关键词")` | 返回原始 content（未渲染） |
+
+> **注意**：`wiki.get()` 返回完整渲染后的内容（含 {% include %} 展开），而 `findByPrefix()` 和 `search()` 返回原始正文（仅去除 frontmatter），不经过渲染。
+
+---
+
 ## 删除行为
 
 删除有子节点的文档时：

@@ -217,6 +217,25 @@ Examples 与 Playground 一样支持组件组合（composition）——如果当
 
 ---
 
+## 跨资源引用
+
+### Input/Output Schema 中的引用
+
+组件的 `inputSchema` 和 `outputSchema` 支持与 Tools/Functions 相同的 Schema 引用语法：
+
+| 语法 | 说明 | 示例 |
+|------|------|------|
+| `$ref` | 引用共享 Schema | `{ "$ref": "#/$defs/pricing_result" }` |
+| `allOf` + `$ref` | 组合多个 Schema | `{ "allOf": [{ "$ref": "#/$defs/a" }, { "$ref": "#/$defs/b" }] }` |
+
+### 被其他资源引用
+
+| 引用方 | 方式 | 说明 |
+|--------|------|------|
+| **Tool** | `componentId` FK | 工具关联组件后，工具返回数据自动用组件渲染 |
+
+---
+
 ## 关联工具
 
 组件创建后，需要关联到工具才能在对话中生效：

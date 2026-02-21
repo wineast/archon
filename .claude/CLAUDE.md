@@ -93,6 +93,10 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 代码预览统一使用 Monaco 只读编辑器（`readOnly`）：JS/TS 用 `JsEditor`，JSON 用 `JsonEditor`，不用 `CodeBlockContent`（shiki）或 `<pre>` 标签。固定高度（如 `height="400px"`）启用内部滚动，不要 `height="auto"` 导致无限撑高
 - 工具栏中 Copy/Export 等辅助按钮用 `size="icon" variant="ghost"` 只显示图标，不加文字，保持紧凑
 
+### Storybook
+- Story 的 `name` 字段统一使用中文，如 `name: "基础示例"`、`name: "交互演示"`
+- export 变量名保持英文驼峰（`export const Basic: Story`），仅通过 `name` 属性控制侧边栏显示名
+
 ### Database
 - schema 见 `web/src/db/schema.ts`
 - 当前为开发阶段，schema 变更直接用 `make db-push`，不要生成迁移文件

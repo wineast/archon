@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SparklesIcon } from "lucide-react";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import datasetDataGuide from "../../../guide/dataset-data.md";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KeyField } from "@/components/ui/key-field";
@@ -210,6 +212,7 @@ export function DatasetForm({
             <label className="text-xs font-medium text-muted-foreground">
               Data (JSON / Template)
             </label>
+            <GuideDialog title="Data 编辑指南" content={datasetDataGuide} />
             <Button
               type="button"
               variant="ghost"

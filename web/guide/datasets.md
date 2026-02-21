@@ -177,6 +177,43 @@ Layer 1 支持完整 Liquid 语法，包括循环和条件：
 
 ---
 
+## 跨资源引用
+
+### 引用其他数据集
+
+数据集支持互相引用，系统使用 Kahn 拓扑排序算法自动确定渲染顺序，支持 N 层深度链式引用：
+
+```
+a = "Root"                     （无依赖）
+b = "{{a}}-Mid"                → "Root-Mid"（引用 a）
+c = "{{b}}-End"                → "Root-Mid-End"（引用 b，间接引用 a）
+```
+
+循环依赖（a→b→a）会在保存时报错。
+
+> 数据库中没有 layer 字段——Layer 0/1 只是 UI 上的约定。代码层面所有数据集平等对待，按依赖关系自动排序渲染。
+
+### 被其他资源引用
+
+| 引用方 | 语法 | 示例 |
+|--------|------|------|
+| **System Prompt** | `{{key}}` / `{{key.field}}` | `{{company_name}}`、`{{income_type_enum.w2}}` |
+| **Wiki 文档** | `{{key}}` / `{{key.field}}` | 同上 |
+| **Skills 内容** | `{{key}}` / `{{key.field}}` | 同上 |
+| **Schema 枚举** | `"enum": ["{{key}}"]` | `"enum": ["{{us_states}}"]` — 运行时展开为数据集的值 |
+| **Tool Handler** | `await context.dataset.get("key")` | `context.dataset.get("company_name")` |
+| **Tool Handler** | `await context.dataset.getEntries("key")` | `context.dataset.getEntries("product_routes")` |
+
+### 限制
+
+数据集模板中**不支持**以下语法（防止循环依赖）：
+
+- `{% include '文档' %}` — Wiki 引用不可用
+- `{{tool.*}}` / `{{tool_names}}` — 工具命名空间不可用
+- `{{ontology_types}}` — 本体命名空间不可用
+
+---
+
 ## 保留字
 
 以下 Key 不能用于数据集命名（被系统占用）：

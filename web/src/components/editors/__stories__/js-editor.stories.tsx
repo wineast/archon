@@ -19,6 +19,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Empty: Story = {
+  name: "空内容",
   args: {
     value: "",
     onChange: () => {},
@@ -27,6 +28,7 @@ export const Empty: Story = {
 };
 
 export const Basic: Story = {
+  name: "基础示例",
   args: {
     value: `function hello(name) {
   return \`Hello, \${name}!\`;
@@ -40,6 +42,7 @@ console.log(result);`,
 };
 
 export const ToolHandler: Story = {
+  name: "工具处理器",
   args: {
     value: `async function handler({ args, context }) {
   const rates = await context.dataset.get("interest_rates");
@@ -56,6 +59,7 @@ export const ToolHandler: Story = {
 };
 
 export const WithJsx: Story = {
+  name: "JSX 组件",
   args: {
     value: `function Component({ React, Spinner, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell }) {
   return function({ tool, isLoading }) {
@@ -91,6 +95,7 @@ export const WithJsx: Story = {
 };
 
 export const DifferentHeights: Story = {
+  name: "不同高度",
   args: {
     value: "",
     onChange: () => {},
@@ -114,6 +119,7 @@ export const DifferentHeights: Story = {
 };
 
 export const ReadOnly: Story = {
+  name: "只读模式",
   args: {
     value: `// Generated handler output
 const result = { status: "ok", count: 42 };`,
@@ -124,6 +130,7 @@ const result = { status: "ok", count: 42 };`,
 };
 
 export const Interactive: Story = {
+  name: "交互演示",
   args: {
     value: "",
     onChange: () => {},

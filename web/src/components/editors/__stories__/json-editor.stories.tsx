@@ -19,6 +19,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Basic: Story = {
+  name: "基础示例",
   args: {
     value: JSON.stringify({ company: "GMCC", language: "zh" }, null, 2),
     onChange: () => {},
@@ -27,6 +28,7 @@ export const Basic: Story = {
 };
 
 export const Enum: Story = {
+  name: "枚举数据",
   args: {
     value: JSON.stringify(
       {
@@ -43,6 +45,7 @@ export const Enum: Story = {
 };
 
 export const WithTemplateVariables: Story = {
+  name: "模板变量",
   args: {
     value: JSON.stringify(
       {
@@ -67,6 +70,7 @@ export const WithTemplateVariables: Story = {
 
 /** Demonstrates Liquid control flow syntax (for/if) inside JSON template values. */
 export const WithTemplateSyntax: Story = {
+  name: "模板语法",
   args: {
     value: [
       "{",
@@ -90,6 +94,7 @@ export const WithTemplateSyntax: Story = {
 };
 
 export const ReadOnly: Story = {
+  name: "只读模式",
   args: {
     value: JSON.stringify({ readonly: true, data: [1, 2, 3] }, null, 2),
     onChange: () => {},
@@ -99,6 +104,7 @@ export const ReadOnly: Story = {
 };
 
 export const Interactive: Story = {
+  name: "交互演示",
   args: {
     value: "",
     onChange: () => {},
@@ -132,6 +138,7 @@ export const Interactive: Story = {
  * If the editor is recreated, focus and typed content would be lost.
  */
 export const KeepsFocusOnVarChange: Story = {
+  name: "变量切换保持焦点",
   args: {
     value: "",
     onChange: () => {},

@@ -20,6 +20,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  name: "默认示例",
   args: {
     value:
       "Hello {{borrower_name}},\n\nYour loan for {{property_address}} has been approved at {{interest_rate}}.\n\nBest regards,\n{{company_name}}",
@@ -30,6 +31,7 @@ export const Default: Story = {
 };
 
 export const WithVariables: Story = {
+  name: "带变量",
   args: {
     value: "公司名称: {{company_name}}\n回复语言: {{reply_language}}",
     onChange: () => {},
@@ -45,6 +47,7 @@ export const WithVariables: Story = {
 };
 
 export const WithDocuments: Story = {
+  name: "带文档引用",
   args: {
     value:
       "{% include 'Company Policies' %}\n\n---\n\nHello {{borrower_name}},\n\nPlease review the included document above.",
@@ -60,6 +63,7 @@ export const WithDocuments: Story = {
 };
 
 export const Interactive: Story = {
+  name: "交互演示",
   args: {
     value: "",
     onChange: () => {},
@@ -92,6 +96,7 @@ export const Interactive: Story = {
 };
 
 export const ComplexTemplate: Story = {
+  name: "复杂模板",
   args: {
     value: `{% include 'Header Template' %}
 
@@ -137,6 +142,7 @@ Best regards,
 };
 
 export const Empty: Story = {
+  name: "空内容",
   args: {
     value: "",
     onChange: () => {},
