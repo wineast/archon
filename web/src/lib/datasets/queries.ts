@@ -6,6 +6,22 @@ import { Liquid } from "liquidjs";
 // Shared Liquid instance for simple variable substitution (no custom tags).
 const simpleLiquid = new Liquid({ jsTruthy: true });
 
+// ── Custom filters ──
+
+simpleLiquid.registerFilter("json", (value: unknown) => JSON.stringify(value));
+
+simpleLiquid.registerFilter("keys", (value: unknown) =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+    ? Object.keys(value)
+    : value
+);
+
+simpleLiquid.registerFilter("values", (value: unknown) =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+    ? Object.values(value)
+    : value
+);
+
 /**
  * Render a LiquidJS expression in a string field.
  * Only does simple variable substitution; falls back to the original string on error.

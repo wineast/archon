@@ -47,13 +47,15 @@ LiquidJS 模板引擎，通过 `{{ }}` 输出变量、`{% %}` 控制流。
 
 ### Filter（管道语法）
 
-支持 LiquidJS 内置 filter，用 `|` 连接：
+支持 LiquidJS 内置 filter + 自定义 filter，用 `|` 连接：
 
 ```liquid
 {{languages | join: "、"}}
 {{company_name | upcase}}
 {{description | truncate: 50}}
 ```
+
+**自定义 filter**：`json`（`JSON.stringify`）、`keys`（`Object.keys()`）、`values`（`Object.values()`）。用于 schema enum 场景的显式展开。
 
 ### 各位置的变量范围
 
@@ -122,30 +124,33 @@ JSON Schema 类型定义复用，通过 `$ref` 引用 `$defs` 中定义的子 sc
 
 ## 四、Schema enum 展开
 
-工具参数 schema 的 `enum` 字段支持模板语法，将数据集值展开为枚举选项。
+工具参数 schema 的 `enum` 字段支持 LiquidJS 模板 + filter，通过 filter 显式声明展开意图。
 
 - **来源**：工具定义的 `parameters` JSON Schema 中的 `enum` 字段
 - **渲染时机**：`buildDynamicTools()` 构建 Zod schema 时
-- **代码入口**：`resolveEnumValues()` — `schema-builder.ts`
+- **代码入口**：`resolveEnumValues()` — `schema-builder.ts`（调用 `renderField()` 渲染模板）
 - **编辑器支持**：`InlineSchemaEditor` 提供 `{{}}` 模板补全（含 dot 语法嵌套字段）、Edit/Preview 切换（调用 `/api/schema/template/preview`）、GuideDialog
 
-**语法**：enum 数组中的元素如果是 `{{varName}}`（完整匹配），会从数据集 `resolvedVars` 展开。
+**语法**：enum 数组中包含 `{{ }}` 的元素会经过 LiquidJS 渲染，使用 `json` filter 输出 JSON 数组字符串：
 
 ```json
 {
   "type": "string",
-  "enum": ["{{state_enum}}"]
+  "enum": ["{{ state_enum | json }}"]
 }
 ```
 
 **展开规则**：
 
-| 数据集值类型 | 展开方式 | 示例 |
-|-------------|---------|------|
-| 数组 `["CA","TX"]` | 直接展开 | `enum: ["CA","TX"]` |
-| 对象，values 为字符串 `{"CA":"California"}` | 取 `Object.values()` | `enum: ["California","Texas"]` |
-| 对象，values 非字符串 `{"CA":{...}}` | 取 `Object.keys()` | `enum: ["CA","TX"]` |
-| 非模板字符串 | 保留原值 | `enum: ["fixed_value"]` |
+| 写法 | 适用场景 | 示例 |
+|------|---------|------|
+| `{{ arr \| json }}` | 数组直接展开 | `["CA","TX"]` → `enum: ["CA","TX"]` |
+| `{{ obj \| keys \| json }}` | 取对象 keys | `{"CA":"California"}` → `enum: ["CA","TX"]` |
+| `{{ obj \| values \| json }}` | 取对象 values | `{"CA":"California"}` → `enum: ["California","Texas"]` |
+| `{{ arr \| map: "field" \| json }}` | 取数组对象的某字段 | `[{name:"A"},{name:"B"}]` → `enum: ["A","B"]` |
+| 非模板字符串 | 保留原值 | `"fixed_value"` → `enum: ["fixed_value"]` |
+
+渲染结果为合法 JSON 数组字符串（`[` 开头）时，解析后 spread 为多个枚举值；否则作为字面量字符串使用。
 
 **可用数据**：仅数据集 `resolvedVars`（不含内置变量、工具、本体论）。
 

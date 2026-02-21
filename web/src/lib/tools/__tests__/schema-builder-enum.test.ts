@@ -57,25 +57,38 @@ describe("schema-builder — enum type", () => {
     });
   });
 
-  describe("template string enum: {{var}} → resolved from resolvedVars", () => {
-    it("resolves {{var}} from array in resolvedVars", () => {
+  describe("LiquidJS filter enum: {{ var | json }}", () => {
+    it("resolves array with json filter", () => {
       const resolvedVars = {
         state_enum: ["CA", "NY", "TX"],
       };
       const schema = buildInputSchema(
-        makeSchema({ field: { type: "string", enum: ["{{state_enum}}"] } }),
+        makeSchema({ field: { type: "string", enum: ["{{ state_enum | json }}"] } }),
         resolvedVars
       );
       expect(() => schema.parse({ field: "CA" })).not.toThrow();
       expect(() => schema.parse({ field: "FL" })).toThrow();
     });
 
-    it("resolves {{var}} from object with string values (takes values)", () => {
+    it("resolves object keys with keys + json filters", () => {
+      const resolvedVars = {
+        product_map: { universe: "Universe Product", standard: "Standard Product" },
+      };
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string", enum: ["{{ product_map | keys | json }}"] } }),
+        resolvedVars
+      );
+      expect(() => schema.parse({ field: "universe" })).not.toThrow();
+      expect(() => schema.parse({ field: "standard" })).not.toThrow();
+      expect(() => schema.parse({ field: "Universe Product" })).toThrow();
+    });
+
+    it("resolves object values with values + json filters", () => {
       const resolvedVars = {
         income_types: { salary: "Salary", bonus: "Bonus", rental: "Rental Income" },
       };
       const schema = buildInputSchema(
-        makeSchema({ field: { type: "string", enum: ["{{income_types}}"] } }),
+        makeSchema({ field: { type: "string", enum: ["{{ income_types | values | json }}"] } }),
         resolvedVars
       );
       expect(() => schema.parse({ field: "Salary" })).not.toThrow();
@@ -83,26 +96,32 @@ describe("schema-builder — enum type", () => {
       expect(() => schema.parse({ field: "salary" })).toThrow(); // key, not value
     });
 
-    it("resolves {{var}} from object with non-string values (takes keys)", () => {
+    it("resolves with map + json filters", () => {
       const resolvedVars = {
-        nums: { a: 1, b: 2, c: 3 },
+        products: [
+          { name: "Widget", price: 10 },
+          { name: "Gadget", price: 20 },
+        ],
       };
       const schema = buildInputSchema(
-        makeSchema({ field: { type: "string", enum: ["{{nums}}"] } }),
+        makeSchema({ field: { type: "string", enum: ['{{ products | map: "name" | json }}'] } }),
         resolvedVars
       );
-      expect(() => schema.parse({ field: "a" })).not.toThrow();
-      expect(() => schema.parse({ field: "1" })).toThrow();
+      expect(() => schema.parse({ field: "Widget" })).not.toThrow();
+      expect(() => schema.parse({ field: "Gadget" })).not.toThrow();
+      expect(() => schema.parse({ field: "Unknown" })).toThrow();
     });
 
-    it("keeps raw template string when var is not found", () => {
+    it("renders empty string when var is not found", () => {
       const schema = buildInputSchema(
-        makeSchema({ field: { type: "string", enum: ["{{unknown_var}}"] } }),
+        makeSchema({ field: { type: "string", enum: ["{{ unknown_var | json }}"] } }),
         {}
       );
-      // Falls back to the literal "{{unknown_var}}"
-      expect(() => schema.parse({ field: "{{unknown_var}}" })).not.toThrow();
-      expect(() => schema.parse({ field: "anything_else" })).toThrow();
+      // unknown_var resolves to empty string, json of "" is `""`, renderField returns ""
+      // LiquidJS renders {{ unknown_var | json }} → "" (empty string goes through json → `""` without quotes in output)
+      // Actually: unknown_var is undefined → LiquidJS outputs "" (empty), json filter gets "" → outputs `""`
+      // renderField returns the rendered string `""`, doesn't start with [ so used as literal
+      expect(() => schema.parse({ field: "" })).not.toThrow();
     });
 
     it("mixes template and literal enum values", () => {
@@ -110,7 +129,7 @@ describe("schema-builder — enum type", () => {
         dynamic: ["X", "Y"],
       };
       const schema = buildInputSchema(
-        makeSchema({ field: { type: "string", enum: ["A", "{{dynamic}}", "Z"] } }),
+        makeSchema({ field: { type: "string", enum: ["A", "{{ dynamic | json }}", "Z"] } }),
         resolvedVars
       );
       expect(() => schema.parse({ field: "A" })).not.toThrow();
@@ -118,6 +137,26 @@ describe("schema-builder — enum type", () => {
       expect(() => schema.parse({ field: "Y" })).not.toThrow();
       expect(() => schema.parse({ field: "Z" })).not.toThrow();
       expect(() => schema.parse({ field: "B" })).toThrow();
+    });
+
+    it("keeps literal string when no resolvedVars provided", () => {
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string", enum: ["{{ x | json }}"] } })
+      );
+      // No resolvedVars → s.includes("{{") but no resolvedVars, kept as literal
+      expect(() => schema.parse({ field: "{{ x | json }}" })).not.toThrow();
+    });
+
+    it("handles non-array json output as literal", () => {
+      const resolvedVars = {
+        single: "hello",
+      };
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string", enum: ["{{ single | json }}"] } }),
+        resolvedVars
+      );
+      // json filter outputs "hello" (JSON string), starts with " not [
+      expect(() => schema.parse({ field: '"hello"' })).not.toThrow();
     });
   });
 

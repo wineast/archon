@@ -4,6 +4,7 @@ import {
   topoSortDatasets,
   resolveDatasets,
   validateNoCycle,
+  renderField,
 } from "../queries";
 
 // Mock db / schema (not used by pure functions, but imported at module level)
@@ -21,6 +22,79 @@ vi.mock("@/db/schema", () => ({
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
 }));
+
+// ── Custom filters (json / keys / values) ──
+
+describe("custom LiquidJS filters", () => {
+  describe("json filter", () => {
+    it("serializes array to JSON", () => {
+      expect(renderField('{{ x | json }}', { x: ["a", "b"] })).toBe('["a","b"]');
+    });
+
+    it("serializes object to JSON", () => {
+      expect(renderField('{{ x | json }}', { x: { k: "v" } })).toBe('{"k":"v"}');
+    });
+
+    it("serializes string to JSON", () => {
+      expect(renderField('{{ x | json }}', { x: "hello" })).toBe('"hello"');
+    });
+
+    it("serializes number to JSON", () => {
+      expect(renderField('{{ x | json }}', { x: 42 })).toBe("42");
+    });
+
+    it("serializes null to JSON", () => {
+      expect(renderField('{{ x | json }}', { x: null })).toBe("null");
+    });
+  });
+
+  describe("keys filter", () => {
+    it("returns Object.keys() for objects", () => {
+      expect(renderField('{{ x | keys | json }}', { x: { a: 1, b: 2 } })).toBe('["a","b"]');
+    });
+
+    it("returns array unchanged", () => {
+      expect(renderField('{{ x | keys | json }}', { x: [1, 2] })).toBe("[1,2]");
+    });
+
+    it("returns non-object unchanged", () => {
+      expect(renderField('{{ x | keys | json }}', { x: "str" })).toBe('"str"');
+    });
+  });
+
+  describe("values filter", () => {
+    it("returns Object.values() for objects", () => {
+      expect(renderField('{{ x | values | json }}', { x: { a: "A", b: "B" } })).toBe('["A","B"]');
+    });
+
+    it("returns array unchanged", () => {
+      expect(renderField('{{ x | values | json }}', { x: [1, 2] })).toBe("[1,2]");
+    });
+
+    it("returns non-object unchanged", () => {
+      expect(renderField('{{ x | values | json }}', { x: 42 })).toBe("42");
+    });
+  });
+
+  describe("filter chaining", () => {
+    it("keys + json", () => {
+      const result = renderField('{{ m | keys | json }}', { m: { x: 1, y: 2, z: 3 } });
+      expect(JSON.parse(result)).toEqual(["x", "y", "z"]);
+    });
+
+    it("values + json", () => {
+      const result = renderField('{{ m | values | json }}', { m: { x: "X", y: "Y" } });
+      expect(JSON.parse(result)).toEqual(["X", "Y"]);
+    });
+
+    it("map + json (built-in map filter)", () => {
+      const result = renderField('{{ items | map: "name" | json }}', {
+        items: [{ name: "A" }, { name: "B" }],
+      });
+      expect(JSON.parse(result)).toEqual(["A", "B"]);
+    });
+  });
+});
 
 // ── extractDeps ──
 

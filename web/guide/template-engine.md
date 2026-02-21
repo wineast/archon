@@ -280,6 +280,42 @@ const entries = await context.dataset.getEntries("product_routes");
 → 这是一段很长的描述文字，会被截断到五十个字符...
 ```
 
+### 自定义 Filter
+
+除 LiquidJS 内置 filter 外，系统还注册了以下自定义 filter：
+
+| Filter | 输入 | 输出 | 说明 |
+|--------|------|------|------|
+| `json` | 任意值 | JSON 字符串 | `JSON.stringify(value)` |
+| `keys` | 对象 | 字符串数组 | `Object.keys()`；数组/其他值原样返回 |
+| `values` | 对象 | 值数组 | `Object.values()`；数组/其他值原样返回 |
+
+> `map` 是 LiquidJS 内置 filter，无需自定义。
+
+### Schema enum 场景
+
+工具参数 schema 的 `enum` 字段支持 LiquidJS 模板 + filter，显式声明展开意图：
+
+```liquid
+{{ state_enum | json }}              → 数组直接序列化为 JSON 数组
+{{ product_map | keys | json }}      → 取对象 keys
+{{ product_map | values | json }}    → 取对象 values
+{{ products | map: "name" | json }}  → 取每个对象的某个字段
+```
+
+**示例**：数据集 `state_enum = ["CA", "NY", "TX"]`，工具参数 schema：
+
+```json
+{
+  "type": "string",
+  "enum": ["{{ state_enum | json }}"]
+}
+```
+
+渲染后等价于 `enum: ["CA", "NY", "TX"]`。
+
+**规则**：enum 元素中包含 `{{ }}` 的字符串会经过 LiquidJS 渲染。若渲染结果是合法 JSON 数组字符串（`[` 开头），则解析后展开为多个枚举值；否则作为字面量字符串使用。不含 `{{ }}` 的元素保留原值。
+
 ---
 
 ## 九、变量优先级
