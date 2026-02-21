@@ -24,6 +24,8 @@ import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import { WikiAssistDialog } from "@/components/wiki/wiki-assist-dialog";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import wikiContentGuide from "../../../guide/wiki-content.md";
 
 interface WikiEditorProps {
   doc: WikiDocument;
@@ -36,7 +38,7 @@ interface WikiEditorProps {
 export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: WikiEditorProps) {
   const [name, setName] = useState(doc.name);
   const [content, setContent] = useState(doc.content);
-  const [activeTab, setActiveTab] = useState<"preview" | "edit">("preview");
+  const [activeTab, setActiveTab] = useState<"preview" | "edit">("edit");
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -70,7 +72,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
     setName(doc.name);
     setContent(doc.content);
     snapshotRef.current = { name: doc.name, content: doc.content };
-    setActiveTab("preview");
+    setActiveTab("edit");
   }, [doc.id, doc.name, doc.content]);
 
   const dirty = name !== snapshotRef.current.name || content !== snapshotRef.current.content;
@@ -134,21 +136,24 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
         </div>
 
         {/* Content area */}
+        <div className="flex items-center gap-2 shrink-0 mx-6">
+          <label className="text-xs font-medium text-muted-foreground">Content</label>
+          <GuideDialog title="Wiki 模板语法" content={wikiContentGuide} />
+          <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-xs" onClick={() => setAssistOpen(true)}>
+            <SparklesIcon className="size-3" />
+            AI 编辑
+          </Button>
+        </div>
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as "edit" | "preview")}
-          className="flex flex-col flex-1 min-h-0"
+          className="mt-1 flex flex-col flex-1 min-h-0"
         >
-          <div className="flex items-center gap-2 shrink-0 mx-6">
-            <label className="text-xs font-medium text-muted-foreground">Content</label>
+          <div className="shrink-0 mx-6">
             <TabsList className="h-7">
               <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
               <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
             </TabsList>
-            <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-xs" onClick={() => setAssistOpen(true)}>
-              <SparklesIcon className="size-3" />
-              AI 编辑
-            </Button>
           </div>
           <TabsContent value="edit" className="flex-1 min-h-0 overflow-hidden px-6 pb-4">
             <MdEditor
