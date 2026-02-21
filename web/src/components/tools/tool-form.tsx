@@ -135,6 +135,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               label="Parameters"
               value={field.value ?? null}
               onChange={field.onChange}
+              agentId={agentId}
             />
           )}
         />
@@ -312,6 +313,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               label="Return Parameters"
               value={field.value ?? null}
               onChange={field.onChange}
+              agentId={agentId}
             />
           )}
         />

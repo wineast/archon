@@ -160,6 +160,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
               value={content}
               onChange={setContent}
               variables={allVariables}
+              variableMap={datasetVars}
               documents={completionDocs}
               tools={completionTools}
               placeholder="Write your content in Markdown..."

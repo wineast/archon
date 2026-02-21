@@ -12,7 +12,7 @@ import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./sche
 import { SchemaPlayground } from "./schema-playground";
 import { SchemaExamplesPanel } from "./schema-examples-panel";
 import { SchemaTestCasesPanel } from "./schema-test-cases-panel";
-import { useDatasets } from "@/lib/datasets/hooks";
+import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import type { SchemaRow } from "@/db/schema";
 
 interface SchemaDetailProps {
@@ -48,11 +48,11 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
       : undefined;
   }, [allSchemas, schema.id]);
 
-  // Dataset variable names for template autocompletion
-  const { datasets: datasetRows } = useDatasets(agentId);
+  // Dataset variables for template autocompletion (keys + nested data)
+  const { datasetVars } = useDatasetVarsMap(agentId);
   const templateVariableNames = useMemo(
-    () => datasetRows.map((d) => d.key),
-    [datasetRows]
+    () => Object.keys(datasetVars),
+    [datasetVars]
   );
 
   const handlePreview = useCallback(async () => {
@@ -139,6 +139,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
               parametersHidden={innerTab === "preview"}
               context={schemaAssistContext}
               templateVariableNames={templateVariableNames}
+              templateVariableMap={datasetVars}
               agentId={agentId}
             >
               <Tabs

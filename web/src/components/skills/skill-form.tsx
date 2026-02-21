@@ -210,6 +210,7 @@ export function SkillForm({
               value={contentValue}
               onChange={handleContentChange}
               variables={allVariables}
+              variableMap={datasetVars}
               documents={completionDocs}
               tools={completionTools}
               placeholder="Enter skill content... (supports {{variables}}, {{lookup &quot;key&quot;}}, {{include &quot;doc&quot;}})"

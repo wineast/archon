@@ -210,8 +210,8 @@ export function ModelConfigDetail({
                   value={systemPrompt}
                   onChange={setSystemPrompt}
                   variables={allVariables}
+                  variableMap={datasetVars}
                   documents={completionDocs}
-
                   tools={completionTools}
                   placeholder="Enter system prompt... (supports {{variables}}, {{lookup &quot;key&quot;}}, {{include &quot;doc&quot;}})"
                 />

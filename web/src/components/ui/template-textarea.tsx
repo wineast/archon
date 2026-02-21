@@ -13,6 +13,7 @@ export function TemplateTextarea({
   value,
   onChange,
   variables,
+  variableMap,
   documents,
   placeholder,
   className,
@@ -21,6 +22,7 @@ export function TemplateTextarea({
   value: string;
   onChange: (value: string) => void;
   variables?: string[];
+  variableMap?: Record<string, unknown>;
   documents?: CompletionDocument[];
   placeholder?: string;
   className?: string;
@@ -31,6 +33,7 @@ export function TemplateTextarea({
       value={value}
       onChange={onChange}
       variables={variables}
+      variableMap={variableMap}
       documents={documents}
       placeholder={placeholder}
       className={className}

@@ -168,6 +168,7 @@ export function JudgeConfigDetail({
               value={systemPrompt}
               onChange={setSystemPrompt}
               variables={allVariables}
+              variableMap={datasetVars}
               documents={completionDocs}
               placeholder="Judge system prompt... (supports {{variables}}, {{lookup &quot;key&quot;}}, {{include &quot;doc&quot;}})"
             />

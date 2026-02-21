@@ -139,6 +139,7 @@ export function FunctionForm({
               label="Parameters"
               value={field.value ?? null}
               onChange={field.onChange}
+              agentId={agentId}
             />
           )}
         />
@@ -150,6 +151,7 @@ export function FunctionForm({
               label="Return Parameters"
               value={field.value ?? null}
               onChange={field.onChange}
+              agentId={agentId}
             />
           )}
         />

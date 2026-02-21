@@ -30,6 +30,8 @@ interface MdEditorProps {
   value: string;
   onChange: (value: string) => void;
   variables?: string[];
+  /** Pass variable name→data map to enable {{key.field}} nested completions */
+  variableMap?: Record<string, unknown>;
   documents?: CompletionDocument[];
   tools?: CompletionTool[];
   placeholder?: string;
@@ -44,6 +46,7 @@ function MdEditor({
   value,
   onChange,
   variables = [],
+  variableMap,
   documents = [],
   tools = [],
   placeholder = "",
@@ -64,8 +67,8 @@ function MdEditor({
 
   // Keep configRef up to date
   React.useEffect(() => {
-    configRef.current = { variables, documents, tools };
-  }, [variables, documents, tools]);
+    configRef.current = { variables, variableMap, documents, tools };
+  }, [variables, variableMap, documents, tools]);
 
   const handleMount: OnMount = (editor, monaco) => {
     // Register singleton provider (idempotent)
