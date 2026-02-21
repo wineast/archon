@@ -25,6 +25,7 @@ import {
 } from "@/lib/functions/compile";
 import { extractLabel } from "@/lib/ontology/utils";
 import { proxyToExternal } from "@/lib/ontology/external-proxy";
+import { getDefsMap } from "@/lib/schemas/resolve-inline";
 
 export interface DataEntry {
   value: string;
@@ -154,7 +155,8 @@ export function createToolContext(agentId?: string): ToolContext {
       parameters: r.parametersSchema ?? {},
     }));
 
-    const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords);
+    const defsMap = await getDefsMap(agentId);
+    const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords, defsMap);
     setCachedFunctions(agentId, fns, sandbox);
     return fns;
   }

@@ -6,6 +6,7 @@ import deepEqual from "fast-deep-equal";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
 import { executeToolHandler } from "@/lib/tools/execute-handler";
+import { getDefsMap, resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 
 export async function POST(
   req: Request,
@@ -53,13 +54,14 @@ export async function POST(
 
   const start = Date.now();
 
-  // Validate input against schema parameters
+  // Resolve $ref in parameters schema and validate input
+  const defsMap = tool.agentId ? await getDefsMap(tool.agentId) : {};
   let validatedInput = input ?? {};
   if (tool.parametersSchema) {
     try {
-      const schema = tool.parametersSchema;
+      const schema = resolveInlineSchema(tool.parametersSchema, defsMap) ?? tool.parametersSchema;
       if (schema.properties && Object.keys(schema.properties).length > 0) {
-        const parsedSchema = buildInputSchema(schema);
+        const parsedSchema = buildInputSchema(schema, undefined, { defsMap });
         validatedInput = parsedSchema.parse(input ?? {});
       }
     } catch (e) {

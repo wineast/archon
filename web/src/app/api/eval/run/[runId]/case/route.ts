@@ -10,6 +10,7 @@ import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResu
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
+import { resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { recordUsage } from "@/lib/usage/record";
 import { resolveModel } from "@/lib/ai/resolve-model";
@@ -99,7 +100,7 @@ export async function POST(
     const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
       name: row.name,
       description: row.description,
-      parameters: row.parametersSchema ?? EMPTY_OBJECT_SCHEMA,
+      parameters: resolveInlineSchema(row.parametersSchema ?? null, templateData.defsMap) ?? EMPTY_OBJECT_SCHEMA,
       handler: row.handler ?? "",
       url: row.url ?? "",
       sandboxMode: row.sandboxMode ?? "light",

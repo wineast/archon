@@ -13,7 +13,7 @@
  */
 
 import { compileExpression } from "filtrex";
-import { buildInputSchema } from "@/lib/tools/schema-builder";
+import { buildInputSchema, type BuildSchemaOptions } from "@/lib/tools/schema-builder";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import {
   createFunctionsSandbox,
@@ -123,7 +123,8 @@ function topoSort(records: FunctionRecord[]): FunctionRecord[] {
  * Returns a map of key → sync wrapper function, plus the sandbox for lifecycle management.
  */
 export async function resolveAndCompileFunctions(
-  rows: FunctionRecord[]
+  rows: FunctionRecord[],
+  defsMap?: Record<string, JsonSchema7>,
 ): Promise<{ fns: Map<string, unknown>; sandbox: FunctionsSandbox }> {
   const sorted = topoSort(rows);
   const knownKeys = new Set(rows.map((r) => r.key));
@@ -145,7 +146,7 @@ export async function resolveAndCompileFunctions(
   const fns = new Map<string, unknown>();
   for (const row of rows) {
     if (row.parameters && row.parameters.properties && Object.keys(row.parameters.properties).length > 0) {
-      const schema = buildInputSchema(row.parameters);
+      const schema = buildInputSchema(row.parameters, undefined, defsMap ? { defsMap } : undefined);
       fns.set(row.key, function validatedFn(input: unknown) {
         const parsed = schema.parse(input);
         return sandbox.call(row.key, parsed);

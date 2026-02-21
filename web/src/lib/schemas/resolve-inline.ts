@@ -1,3 +1,6 @@
+import { db } from "@/db";
+import { schemas } from "@/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import type { JsonSchema7 } from "./types";
 
 /**
@@ -26,6 +29,24 @@ export function resolveInlineSchema(
   const key = extractRefKey(schema);
   if (key) return defsMap[key] ?? null;
   return schema;
+}
+
+/**
+ * Build a defsMap (key → JSON Schema) from the schemas table for a given agent.
+ * Lightweight alternative to gatherTemplateData() when only defsMap is needed.
+ */
+export async function getDefsMap(
+  agentId: string,
+): Promise<Record<string, JsonSchema7>> {
+  const rows = await db
+    .select({ key: schemas.key, parameters: schemas.parameters })
+    .from(schemas)
+    .where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt)));
+  const map: Record<string, JsonSchema7> = {};
+  for (const row of rows) {
+    map[row.key] = row.parameters as JsonSchema7;
+  }
+  return map;
 }
 
 /**
