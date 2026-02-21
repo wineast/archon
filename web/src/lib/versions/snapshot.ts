@@ -173,6 +173,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
       name: row.component_test_cases.name,
       data: row.component_test_cases.data,
       tags: row.component_test_cases.tags,
+      scenario: (row.component_test_cases.scenario ?? "tool") as "tool" | "component",
     });
     compTestsByKey.set(key, items);
   }
@@ -230,8 +231,8 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         description: c.description,
         componentSource: c.componentSource,
         generatedCss: c.generatedCss,
-        inputSchema: c.inputSchema ?? null,
-        outputSchema: c.outputSchema ?? null,
+        toolInputSchema: c.toolInputSchema ?? null,
+        componentInputSchema: c.componentInputSchema ?? null,
         testCases: compTestsByKey.get(c.key) ?? [],
       })
     ),
@@ -488,8 +489,8 @@ export async function restoreSnapshot(
           description: c.description,
           componentSource: c.componentSource,
           generatedCss: c.generatedCss,
-          inputSchema: c.inputSchema ?? null,
-          outputSchema: c.outputSchema ?? null,
+          toolInputSchema: c.toolInputSchema ?? null,
+          componentInputSchema: c.componentInputSchema ?? null,
         }))
       )
       .returning({ id: components.id, key: components.key });
@@ -504,6 +505,7 @@ export async function restoreSnapshot(
         name: tc.name,
         data: tc.data,
         tags: tc.tags,
+        scenario: (tc.scenario ?? "tool") as "tool" | "component",
       }))
     );
     if (compTCs.length > 0) {

@@ -38,6 +38,7 @@ export async function createComponentTestCase(
     name: string;
     data: unknown;
     tags?: string[];
+    scenario?: "tool" | "component";
     showAsExample?: boolean;
   },
   mutate: () => void

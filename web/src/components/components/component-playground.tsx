@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataCard } from "@/components/components/data-card";
 import {
   DynamicComponentRenderer,
@@ -75,7 +76,8 @@ interface ComponentPlaygroundProps {
   componentSource: string;
   componentKey?: string;
   allComponents?: ComponentRecord[];
-  inputSchema?: JsonSchema7 | null;
+  toolInputSchema?: JsonSchema7 | null;
+  componentInputSchema?: JsonSchema7 | null;
 }
 
 export function ComponentPlayground({
@@ -83,11 +85,13 @@ export function ComponentPlayground({
   componentSource,
   componentKey,
   allComponents,
-  inputSchema,
+  toolInputSchema,
+  componentInputSchema,
 }: ComponentPlaygroundProps) {
   const [dataValue, setDataValue] = useState("{}");
   const [state, setState] = useState("output-available");
   const [previewKey, setPreviewKey] = useState(0);
+  const [scenario, setScenario] = useState<"tool" | "component">("tool");
 
   const { testCases, mutate: mutateCases } =
     useComponentTestCases(componentId);
@@ -102,6 +106,8 @@ export function ComponentPlayground({
   const [dataValidation, setDataValidation] =
     useState<SchemaValidationResult | null>(null);
 
+  const activeSchema = scenario === "tool" ? toolInputSchema : componentInputSchema;
+
   const parsedData = useMemo(() => {
     try {
       return JSON.parse(dataValue || "{}");
@@ -112,16 +118,17 @@ export function ComponentPlayground({
 
   const booleans = useMemo(() => deriveBooleans(state), [state]);
 
-  // Split test cases into examples and non-examples for grouped dropdown
+  // Split test cases by scenario for grouped dropdown
   const { examples, nonExamples } = useMemo(() => {
     const ex: typeof testCases = [];
     const ne: typeof testCases = [];
     for (const tc of testCases) {
+      if (tc.scenario !== scenario) continue;
       if (tc.showAsExample) ex.push(tc);
       else ne.push(tc);
     }
     return { examples: ex, nonExamples: ne };
-  }, [testCases]);
+  }, [testCases, scenario]);
 
   // Compile component graph to resolve cross-component references
   const compiledComponent = useMemo(() => {
@@ -141,9 +148,9 @@ export function ComponentPlayground({
   }, [componentKey, allComponents, componentSource]);
 
   const runSchemaValidation = useCallback(async () => {
-    const result = await validateAgainstSchema(inputSchema, parsedData);
+    const result = await validateAgainstSchema(activeSchema, parsedData);
     setDataValidation(result);
-  }, [inputSchema, parsedData]);
+  }, [activeSchema, parsedData]);
 
   const handleRefresh = useCallback(() => {
     setPreviewKey((k) => k + 1);
@@ -207,6 +214,7 @@ export function ComponentPlayground({
           data: parsed,
           tags: saveTags.length > 0 ? saveTags : undefined,
           showAsExample: saveShowAsExample || undefined,
+          scenario,
         },
         mutateCases
       );
@@ -222,20 +230,40 @@ export function ComponentPlayground({
     dataValue,
     saveTags,
     saveShowAsExample,
+    scenario,
     componentId,
     mutateCases,
   ]);
+
+  const hasLoadableCases = examples.length > 0 || nonExamples.length > 0;
 
   return (
     <div className="flex h-full flex-col">
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-3 p-4">
+          {/* Scenario toggle */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              Scenario
+            </label>
+            <Tabs
+              value={scenario}
+              onValueChange={(v) => setScenario(v as "tool" | "component")}
+              className="mt-1"
+            >
+              <TabsList className="h-7">
+                <TabsTrigger value="tool" className="text-xs">Tool</TabsTrigger>
+                <TabsTrigger value="component" className="text-xs">Component</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
           {/* Data */}
           <DataCard
             dataValue={dataValue}
             onDataChange={setDataValue}
             headerExtra={
-              testCases.length > 0 ? (
+              hasLoadableCases ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -347,7 +375,8 @@ export function ComponentPlayground({
                   fallbackLabel="preview"
                 >
                   <DynamicComponentRenderer
-                    data={parsedData}
+                    data={scenario === "component" ? parsedData : undefined}
+                    tool={scenario === "tool" ? parsedData : undefined}
                     state={state}
                     source={compiledComponent ? undefined : componentSource}
                     compiledComponent={compiledComponent}

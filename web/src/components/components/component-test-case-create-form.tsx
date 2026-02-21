@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { JsonEditor } from "@/components/editors/json-editor";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ComponentTestCaseCreateFormProps {
   onCreate: (data: {
     name: string;
     data: unknown;
     tags: string[];
+    scenario: "tool" | "component";
   }) => Promise<void>;
   onCancel: () => void;
 }
@@ -26,6 +28,7 @@ export function ComponentTestCaseCreateForm({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [scenario, setScenario] = useState<"tool" | "component">("tool");
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) return;
@@ -41,11 +44,12 @@ export function ComponentTestCaseCreateForm({
         name: name.trim(),
         data: parsed,
         tags,
+        scenario,
       });
     } finally {
       setSaving(false);
     }
-  }, [name, dataValue, tags, onCreate]);
+  }, [name, dataValue, tags, scenario, onCreate]);
 
   const handleAddTag = useCallback(
     (value: string) => {
@@ -80,6 +84,23 @@ export function ComponentTestCaseCreateForm({
           placeholder="Test case name"
           autoFocus
         />
+      </div>
+
+      {/* Scenario */}
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">
+          Scenario
+        </label>
+        <Tabs
+          value={scenario}
+          onValueChange={(v) => setScenario(v as "tool" | "component")}
+          className="mt-1"
+        >
+          <TabsList className="h-7">
+            <TabsTrigger value="tool" className="text-xs">Tool</TabsTrigger>
+            <TabsTrigger value="component" className="text-xs">Component</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Tags */}

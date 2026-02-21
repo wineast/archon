@@ -75,7 +75,7 @@ export function buildSystemPrompt(summary: ResourceSummary): string {
     const list = summary.components
       .map((c) => {
         let line = `- ${c.name} (key: ${c.key}, id: ${c.id}): ${c.description}`;
-        if (c.inputSchema) {
+        if (c.toolInputSchema) {
           line += ` [has input schema]`;
         }
         return line;

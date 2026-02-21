@@ -5,8 +5,7 @@ export interface ComponentDefinition {
   key: string;
   name: string;
   description: string;
-  scenario: "tool" | "component";
-  inputSchema: JsonSchema7 | null;
-  outputSchema: JsonSchema7 | null;
+  toolInputSchema: JsonSchema7 | null;
+  componentInputSchema: JsonSchema7 | null;
   componentSource: string;
 }

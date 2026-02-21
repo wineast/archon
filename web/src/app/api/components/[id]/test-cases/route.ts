@@ -45,6 +45,7 @@ export async function POST(
       name: body.name ?? "Untitled",
       data: body.data ?? {},
       tags: body.tags ?? [],
+      scenario: body.scenario ?? "tool",
       ...(body.showAsExample !== undefined && { showAsExample: body.showAsExample }),
     })
     .returning();
