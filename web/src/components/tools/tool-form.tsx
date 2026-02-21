@@ -132,10 +132,11 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
           control={form.control}
           render={({ field }) => (
             <InlineSchemaEditor
-              label="Data (JSON / Template)"
+              label="Input (JSON Schema / Template)"
               value={field.value ?? null}
               onChange={field.onChange}
               agentId={agentId}
+              requireObjectRoot
             />
           )}
         />
@@ -310,7 +311,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
           control={form.control}
           render={({ field }) => (
             <InlineSchemaEditor
-              label="Data (JSON / Template)"
+              label="Output (JSON Schema / Template)"
               value={field.value ?? null}
               onChange={field.onChange}
               agentId={agentId}

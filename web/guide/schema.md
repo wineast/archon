@@ -1,10 +1,18 @@
-# JSON Schema 编辑指南
+# Schema 编辑指南
 
-## 工具 / 函数参数 Schema 约束
+## 编辑器 Tab
 
-工具和函数的参数 Schema **顶层必须是 `type: "object"`**，`properties` 中的每个字段对应一个参数。不能使用数组、字符串等非 object 类型作为顶层结构。
+| Tab | 说明 |
+|-----|------|
+| **Edit** | JSON Schema 编辑器，支持模板语法 |
+| **Preview** | 模板渲染预览（有数据集时显示），`$ref` 自动展开 |
+| **Parameters** | 参数列表（只读），直观查看当前 Schema 定义的字段 |
 
-正确示例：
+---
+
+## 基础结构
+
+Schema 使用标准 JSON Schema 7 格式：
 
 ```json
 {
@@ -17,72 +25,58 @@
 }
 ```
 
-错误示例（顶层不是 object）：
+支持的类型：`string`、`integer`、`number`、`boolean`、`object`、`array`、`null`
 
-```json
-["string", "integer"]
-```
+---
 
-```json
-{ "type": "array", "items": { "type": "string" } }
-```
+## 模板语法
 
-## 基础结构
-
-Schema 使用标准 JSON Schema 7 格式定义数据结构：
+在 enum 中使用 `{{ }}` 引用数据集变量，运行时自动展开为枚举值：
 
 ```json
 {
-  "type": "object",
-  "properties": {
-    "name": { "type": "string", "description": "借款人姓名" },
-    "age": { "type": "integer", "minimum": 18 }
-  },
-  "required": ["name", "age"]
+  "type": "string",
+  "enum": ["{{ us_states | json }}"]
 }
 ```
 
-## 支持的类型
+编辑器输入 `{{` 时会自动补全可用的数据集变量名。
 
-| 类型 | 示例 | Zod 映射 |
-|------|------|---------|
-| string | `{ "type": "string" }` | `z.string()` |
-| integer | `{ "type": "integer" }` | `z.number().int()` |
-| number | `{ "type": "number" }` | `z.number()` |
-| boolean | `{ "type": "boolean" }` | `z.boolean()` |
-| object | `{ "type": "object", "properties": {...} }` | `z.object({...})` |
-| array | `{ "type": "array", "items": {...} }` | `z.array(...)` |
-| null | `{ "type": "null" }` | `z.null()` |
+### 常用 filter
 
-## 枚举（Enum）
+| 写法 | 适用场景 | 示例结果 |
+|------|---------|---------|
+| `{{ arr \| json }}` | 数组直接展开 | `["CA","TX"]` |
+| `{{ obj \| keys \| json }}` | 取对象的 key | `["CA","NY"]` |
+| `{{ obj \| values \| json }}` | 取对象的 value | `["California","New York"]` |
+| `{{ arr \| map: "field" \| json }}` | 取数组对象的某字段 | `["Alice","Bob"]` |
 
-枚举是 string 类型的约束：
+### 展开规则
 
-```json
-{ "type": "string", "enum": ["CA", "NY", "TX"] }
-```
+- 渲染结果是 JSON 数组（`[` 开头）→ 解析后展开为多个枚举值
+- 否则 → 作为字面量字符串
 
-## 模板字符串
-
-在 enum 中使用数据集变量，运行时自动展开：
+可以混合使用模板和静态值：
 
 ```json
-{ "enum": ["{{state_enum}}"] }
+{ "enum": ["{{ us_states | json }}", "other"] }
 ```
 
-## 引用其他 Schema（$ref）
+---
 
-通过 `$ref` 引用其他 Schema，实现复用：
+## $ref 引用
+
+通过 `$ref` 引用 Schemas 页面中定义的共享 Schema：
 
 ```json
 { "$ref": "#/$defs/address_fields" }
 ```
 
-格式为 `#/$defs/{schema_key}`，使用 Schema 的 key（snake_case）。
+格式：`#/$defs/{schema_key}`，使用 Schema 的 key（snake_case）。
 
-## 组合 Schema（allOf）
+### allOf 组合
 
-使用 `allOf` + `$ref` 合并多个 Schema：
+用 `allOf` + `$ref` 合并多个 Schema：
 
 ```json
 {
@@ -92,14 +86,20 @@ Schema 使用标准 JSON Schema 7 格式定义数据结构：
   ],
   "type": "object",
   "properties": {
-    "ssn_last4": { "type": "string" }
+    "extra_field": { "type": "string" }
   }
 }
 ```
 
-## 联合类型（Union）
+---
 
-使用 `oneOf` 或 `anyOf`：
+## 枚举
+
+```json
+{ "type": "string", "enum": ["CA", "NY", "TX"] }
+```
+
+## 联合类型
 
 ```json
 {
@@ -114,31 +114,17 @@ Schema 使用标准 JSON Schema 7 格式定义数据结构：
 
 ## Nullable
 
-使用 `anyOf` 模式：
-
 ```json
 { "anyOf": [{ "type": "string" }, { "type": "null" }] }
 ```
 
 ## 字符串约束
 
-| 约束 | 示例 |
-|------|------|
-| minLength | `"minLength": 1` |
-| maxLength | `"maxLength": 100` |
-| pattern | `"pattern": "^\\d{5}$"` |
-| format | `"format": "email"` |
-
-支持的 format：email, url, uuid, date, date-time, time, ipv4, ipv6
+`minLength`、`maxLength`、`pattern`、`format`（email, url, uuid, date, date-time, time, ipv4, ipv6）
 
 ## 数值约束
 
-| 约束 | 示例 |
-|------|------|
-| minimum | `"minimum": 0` |
-| maximum | `"maximum": 100` |
-| exclusiveMinimum | `"exclusiveMinimum": 0` |
-| multipleOf | `"multipleOf": 0.01` |
+`minimum`、`maximum`、`exclusiveMinimum`、`multipleOf`
 
 ## 数组
 
@@ -147,16 +133,6 @@ Schema 使用标准 JSON Schema 7 格式定义数据结构：
   "type": "array",
   "items": { "type": "string" },
   "minItems": 1,
-  "maxItems": 10,
-  "uniqueItems": true
-}
-```
-
-Tuple 模式：
-
-```json
-{
-  "type": "array",
-  "prefixItems": [{ "type": "number" }, { "type": "string" }]
+  "maxItems": 10
 }
 ```
