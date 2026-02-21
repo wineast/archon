@@ -23,9 +23,9 @@ let selectToolsResult: unknown[] = [];
 // Track which table was queried
 let fromCallIndex = 0;
 const whereSelectMock = vi.fn(() => {
-  // First call => evalRuns, second call => modelConfigs, third call => tools, fourth call => agents
+  // First call => evalRuns, second call => modelConfigs, third call => tools
   const idx = fromCallIndex++;
-  const result = idx === 0 ? selectRunResult : idx === 1 ? selectModelResult : idx === 3 ? [{ orgId: "org-1" }] : selectToolsResult;
+  const result = idx === 0 ? selectRunResult : idx === 1 ? selectModelResult : selectToolsResult;
   return {
     limit: vi.fn(() => result),
     then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(result)),
@@ -98,6 +98,15 @@ vi.mock("@/app/api/chat/tools/build-dynamic-tools", () => ({
 // Mock usage recording
 vi.mock("@/lib/usage/record", () => ({
   recordUsage: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock BYOK resolve
+vi.mock("@/lib/ai/resolve-model", () => ({
+  resolveModel: vi.fn().mockImplementation((modelId: string) => Promise.resolve(modelId)),
+}));
+
+vi.mock("@/lib/ai/get-org-id", () => ({
+  getOrgIdByAgentId: vi.fn().mockResolvedValue("org-1"),
 }));
 
 // Mock judge dimensions

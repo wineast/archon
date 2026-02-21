@@ -197,6 +197,7 @@ export function SkillForm({
           onOpenChange={setPromptAssistOpen}
           systemPrompt={contentValue}
           onApply={handlePromptApply}
+          agentId={agentId}
         />
         <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
           <TabsList className="h-7">

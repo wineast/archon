@@ -197,6 +197,7 @@ export function ModelConfigDetail({
               onOpenChange={setPromptAssistOpen}
               systemPrompt={systemPrompt}
               onApply={setSystemPrompt}
+              agentId={agentId}
             />
             <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
               <TabsList className="h-7">

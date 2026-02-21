@@ -1,6 +1,6 @@
-import { generateText, gateway, Output, stepCountIs } from "ai";
+import { generateText, Output, stepCountIs } from "ai";
 import { db } from "@/db";
-import { agents as agentsTable, evalRuns, evalRunResults, modelConfigs, tools, schemas } from "@/db/schema";
+import { evalRuns, evalRunResults, modelConfigs, tools, schemas } from "@/db/schema";
 import { eq, and, inArray, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
@@ -13,6 +13,9 @@ import type { JsonSchema7 } from "@/lib/schemas/types";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { recordUsage } from "@/lib/usage/record";
+import { resolveModel } from "@/lib/ai/resolve-model";
+import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
+import { QuotaExceededError } from "@/lib/credits/errors";
 
 export const maxDuration = 120;
 
@@ -42,6 +45,8 @@ export async function POST(
 
   const ctx = await requireAgentRole(run.agentId!, "editor");
   if (ctx instanceof NextResponse) return ctx;
+
+  const orgId = await getOrgIdByAgentId(run.agentId);
 
   // Load model config from DB
   const [modelConfig] = await db
@@ -134,7 +139,7 @@ export async function POST(
       const messages = [{ role: "user" as const, content: userContent }];
 
       const chatResult = await generateText({
-        model: gateway(chatModel),
+        model: await resolveModel(chatModel, orgId),
         system: resolvedSystemPrompt,
         messages,
         temperature: chatTemperature,
@@ -179,7 +184,7 @@ export async function POST(
       }
 
       const chatResult = await generateText({
-        model: gateway(chatModel),
+        model: await resolveModel(chatModel, orgId),
         system: resolvedSystemPrompt,
         messages,
         temperature: chatTemperature,
@@ -208,7 +213,7 @@ export async function POST(
           chatMessages.push({ role: "user", content: turn.content });
 
           const chatResult = await generateText({
-            model: gateway(chatModel),
+            model: await resolveModel(chatModel, orgId),
             system: resolvedSystemPrompt,
             messages: [...history],
             temperature: chatTemperature,
@@ -253,7 +258,7 @@ export async function POST(
               .join("\n\n");
 
             const judgeGenResult = await generateText({
-              model: gateway(judgeConfig.model),
+              model: await resolveModel(judgeConfig.model, orgId),
               system: await renderTemplate(
                 judgeConfig.systemPrompt,
                 templateData,
@@ -309,7 +314,7 @@ export async function POST(
         .join("\n\n");
 
       const judgeGenResult = await generateText({
-        model: gateway(judgeConfig.model),
+        model: await resolveModel(judgeConfig.model, orgId),
         system: await renderTemplate(
           judgeConfig.systemPrompt,
           templateData,
@@ -340,6 +345,9 @@ export async function POST(
       durationMs: Date.now() - start,
     };
   } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      return Response.json({ error: "quota_exceeded", message: err.message }, { status: 402 });
+    }
     result = {
       caseId: evalCase.id,
       caseName: evalCase.name,
@@ -357,21 +365,10 @@ export async function POST(
     };
   }
 
-  // Fetch orgId from agent for usage recording
-  let evalOrgId: string | null = null;
-  if (run.agentId) {
-    const [agentInfo] = await db
-      .select({ orgId: agentsTable.orgId })
-      .from(agentsTable)
-      .where(eq(agentsTable.id, run.agentId))
-      .limit(1);
-    evalOrgId = agentInfo?.orgId ?? null;
-  }
-
   // Record usage (chat model + judge model separately)
   if (chatUsage.inputTokens > 0 || chatUsage.outputTokens > 0) {
     await recordUsage({
-      orgId: evalOrgId,
+      orgId,
       agentId: run.agentId,
       userId: ctx.user.id,
       sessionId: null,
@@ -382,7 +379,7 @@ export async function POST(
   }
   if (judgeUsage.inputTokens > 0 || judgeUsage.outputTokens > 0) {
     await recordUsage({
-      orgId: evalOrgId,
+      orgId,
       agentId: run.agentId,
       userId: ctx.user.id,
       sessionId: null,

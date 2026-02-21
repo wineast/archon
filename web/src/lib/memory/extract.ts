@@ -1,9 +1,11 @@
-import { generateObject, gateway } from "ai";
+import { generateObject } from "ai";
 import { z } from "zod";
 import { db } from "@/db";
 import { memories, agents, memoryConfigs } from "@/db/schema";
 import type { MemoryTypeDef } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { resolveModel } from "@/lib/ai/resolve-model";
+import { QuotaExceededError } from "@/lib/credits/errors";
 
 /* ─────────── Default Extraction Prompt ─────────── */
 
@@ -25,7 +27,7 @@ const DEFAULT_EXTRACTION_PROMPT = `你是一个记忆提取助手。你的任务
 
 /* ─────────── Extraction Model ─────────── */
 
-const EXTRACTION_MODEL = "openai:gpt-4o-mini";
+const EXTRACTION_MODEL = "openai/gpt-4o-mini";
 
 /* ─────────── Types ─────────── */
 
@@ -55,6 +57,10 @@ export async function extractMemories(
   try {
     await _extractMemoriesInner(opts);
   } catch (e) {
+    if (e instanceof QuotaExceededError) {
+      console.warn("[memory-extract] skipped — quota exceeded");
+      return;
+    }
     console.error("[memory-extract] failed:", e);
   }
 }
@@ -68,7 +74,7 @@ async function _extractMemoriesInner(
 
   // Guard 1: agent.memoryEnabled
   const [agent] = await db
-    .select({ memoryEnabled: agents.memoryEnabled })
+    .select({ memoryEnabled: agents.memoryEnabled, orgId: agents.orgId })
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
@@ -93,7 +99,7 @@ async function _extractMemoriesInner(
   );
 
   // Call LLM
-  const extracted = await callExtractionLLM(systemPrompt, conversationText, typeDefs);
+  const extracted = await callExtractionLLM(systemPrompt, conversationText, typeDefs, agent.orgId);
   if (extracted.length === 0) return;
 
   // Deduplicate against existing memories
@@ -139,7 +145,8 @@ ${typeList}
 async function callExtractionLLM(
   systemPrompt: string,
   conversationText: string,
-  typeDefs: MemoryTypeDef[]
+  typeDefs: MemoryTypeDef[],
+  orgId?: string | null
 ): Promise<ExtractedMemory[]> {
   const validTypes = typeDefs.map((t) => t.key);
 
@@ -158,7 +165,7 @@ async function callExtractionLLM(
   });
 
   const { object } = await generateObject({
-    model: gateway(EXTRACTION_MODEL),
+    model: await resolveModel(EXTRACTION_MODEL, orgId),
     schema,
     system: systemPrompt,
     prompt: conversationText,

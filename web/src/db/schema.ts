@@ -28,6 +28,7 @@ export const orgs = pgTable("orgs", {
   slug: text("slug").notNull().unique(),
   isPersonal: boolean("is_personal").notNull().default(false),
   avatarUrl: text("avatar_url"),
+  creditBalanceUSD: real("credit_balance_usd").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -1214,6 +1215,38 @@ export const platformSettings = pgTable("platform_settings", {
 export type PlatformSettingsRow = typeof platformSettings.$inferSelect;
 export type NewPlatformSettingsRow = typeof platformSettings.$inferInsert;
 
+/* ─────────── Org API Keys (BYOK) ─────────── */
+
+export const BYOK_PROVIDERS = ["anthropic", "openai", "google", "xai", "deepseek"] as const;
+export type ByokProvider = (typeof BYOK_PROVIDERS)[number];
+
+export const orgApiKeys = pgTable(
+  "org_api_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull().$type<ByokProvider>(),
+    encryptedKey: text("encrypted_key").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("org_api_keys_org_id_provider_idx").on(t.orgId, t.provider),
+    index("org_api_keys_org_id_idx").on(t.orgId),
+  ]
+);
+
+export type OrgApiKeyRow = typeof orgApiKeys.$inferSelect;
+export type NewOrgApiKeyRow = typeof orgApiKeys.$inferInsert;
+
 /* ─────────── Audit Logs ─────────── */
 
 export const auditLogActions = ["created", "updated", "deleted", "restored", "permanently_deleted"] as const;
@@ -1448,4 +1481,34 @@ export const memories = pgTable(
 
 export type MemoryRow = typeof memories.$inferSelect;
 export type NewMemoryRow = typeof memories.$inferInsert;
+
+/* ─────────── Org Credit Transactions ─────────── */
+
+export const orgCreditTransactionTypes = ["topup", "adjustment", "purchase"] as const;
+export type OrgCreditTransactionType = (typeof orgCreditTransactionTypes)[number];
+
+export const orgCreditTransactions = pgTable(
+  "org_credit_transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    amount: real("amount").notNull(),
+    type: text("type").notNull().$type<OrgCreditTransactionType>(),
+    description: text("description"),
+    createdBy: uuid("created_by").references(() => users.id),
+    balanceAfter: real("balance_after").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("org_credit_transactions_org_id_idx").on(t.orgId),
+    index("org_credit_transactions_org_id_created_at_idx").on(t.orgId, t.createdAt),
+  ]
+);
+
+export type OrgCreditTransactionRow = typeof orgCreditTransactions.$inferSelect;
+export type NewOrgCreditTransactionRow = typeof orgCreditTransactions.$inferInsert;
 

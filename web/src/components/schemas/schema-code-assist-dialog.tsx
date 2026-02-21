@@ -59,6 +59,7 @@ interface SchemaCodeAssistDialogProps {
   schema: string;
   context?: string;
   onApply: (newSchema: string) => void;
+  agentId?: string;
 }
 
 const jsonLanguage = json();
@@ -170,6 +171,7 @@ export function SchemaCodeAssistDialog({
   onOpenChange,
   schema,
   context,
+  agentId,
   onApply,
 }: SchemaCodeAssistDialogProps) {
   const [draftSchema, setDraftSchema] = useState(schema);
@@ -199,9 +201,10 @@ export function SchemaCodeAssistDialog({
         body: () => ({
           currentSchema: draftSchemaRef.current,
           context,
+          agentId,
         }),
       }),
-    [context]
+    [context, agentId]
   );
 
   const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<SchemaCodeAssistMessage>({

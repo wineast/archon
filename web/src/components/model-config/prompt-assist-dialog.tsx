@@ -63,6 +63,7 @@ interface PromptAssistDialogProps {
   onOpenChange: (open: boolean) => void;
   systemPrompt: string;
   onApply: (newPrompt: string) => void;
+  agentId?: string;
 }
 
 function buildSystemPrompt(currentPrompt: string): string {
@@ -313,6 +314,7 @@ export function PromptAssistDialog({
   onOpenChange,
   systemPrompt,
   onApply,
+  agentId,
 }: PromptAssistDialogProps) {
   const [draftPrompt, setDraftPrompt] = useState(systemPrompt);
   const [originalPrompt, setOriginalPrompt] = useState(systemPrompt);
@@ -341,9 +343,10 @@ export function PromptAssistDialog({
         api: "/api/prompt-assist",
         body: () => ({
           currentPrompt: draftPromptRef.current,
+          agentId,
         }),
       }),
-    []
+    [agentId]
   );
 
   const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<PromptAssistMessage>({
