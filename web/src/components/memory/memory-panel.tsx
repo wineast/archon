@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { BrainIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import memoryGuide from "../../../guide/memory.md";
@@ -18,7 +21,15 @@ import { MemoryList } from "./memory-list";
 import { MemoryCreateDialog } from "./memory-create-dialog";
 import type { MemoryRow } from "@/db/schema";
 
-export function MemoryPanel({ agentId }: { agentId: string }) {
+interface MemoryPanelProps {
+  agentId: string;
+  memoryEnabled: boolean;
+  onToggleFeature: (enabled: boolean) => Promise<void>;
+}
+
+export function MemoryPanel({ agentId, memoryEnabled, onToggleFeature }: MemoryPanelProps) {
+  const [enabling, setEnabling] = useState(false);
+
   const { config, mutate: mutateConfig } = useMemoryConfig(agentId);
   const { memories, mutate: mutateMemories } = useMemories(agentId);
   const [deleteTarget, setDeleteTarget] = useState<MemoryRow | null>(null);
@@ -68,6 +79,27 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
       setDeleteTarget(null);
     }
   }, [deleteTarget, mutateMemories]);
+
+  if (!memoryEnabled) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+        <BrainIcon className="size-10 opacity-20" />
+        <p className="text-sm">记忆功能未启用</p>
+        <Button
+          size="sm"
+          disabled={enabling}
+          onClick={async () => {
+            setEnabling(true);
+            await onToggleFeature(true);
+            setEnabling(false);
+          }}
+        >
+          {enabling && <Spinner className="mr-1 size-3" />}
+          启用记忆
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">

@@ -23,7 +23,6 @@ export const seedMemory: Seeder = {
       .insert(memoryConfigs)
       .values({
         agentId: ctx.agentId,
-        enabled: true,
         autoExtract: false,
         extractionPrompt: "",
         injectionMode: "system_prompt",
@@ -37,7 +36,6 @@ export const seedMemory: Seeder = {
       .onConflictDoUpdate({
         target: memoryConfigs.agentId,
         set: {
-          enabled: true,
           memoryTypeDefs: SEED_TYPE_DEFS,
         },
       })

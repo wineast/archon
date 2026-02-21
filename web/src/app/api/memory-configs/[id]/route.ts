@@ -28,7 +28,6 @@ export async function PUT(
   const [updated] = await db
     .update(memoryConfigs)
     .set({
-      ...(body.enabled !== undefined && { enabled: body.enabled }),
       ...(body.autoExtract !== undefined && { autoExtract: body.autoExtract }),
       ...(body.extractionPrompt !== undefined && { extractionPrompt: body.extractionPrompt }),
       ...(body.maxMemoriesPerUser !== undefined && { maxMemoriesPerUser: body.maxMemoriesPerUser }),

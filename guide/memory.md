@@ -6,11 +6,17 @@
 
 | 概念 | 说明 |
 |------|------|
-| **Memory Config** | 每个 Agent 一份记忆策略配置（1:1），控制是否启用、注入方式、衰减等 |
+| **Memory Config** | 每个 Agent 一份记忆策略配置（1:1），控制注入方式、衰减等 |
 | **Memory** | 具体的记忆条目，可以是用户级或全局级 |
 | **Memory Type** | 记忆类型，完全由用户在 Config 中定义（key + label + description） |
 
 ## 数据库 Schema
+
+### agents 表（记忆相关字段）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| memoryEnabled | boolean | 是否启用记忆功能（默认 false） |
 
 ### memoryConfigs 表
 
@@ -18,7 +24,6 @@
 |------|------|------|
 | id | uuid | 主键 |
 | agentId | uuid | 关联 Agent（unique，cascade 删除） |
-| enabled | boolean | 是否启用记忆 |
 | autoExtract | boolean | 是否自动从对话中提取记忆 |
 | extractionPrompt | text | 自定义提取 prompt |
 | maxMemoriesPerUser | integer | 每用户最大记忆数 |
@@ -69,10 +74,13 @@
 
 ```ts
 import {
+  toggleMemoryFeature,
   useMemoryConfig, updateMemoryConfig,
   useMemories, createMemory, updateMemory, deleteMemory,
 } from "@/lib/memory/hooks";
 ```
+
+- `toggleMemoryFeature(agentId, enabled, mutateAgent)` — 切换 agents 表 `memoryEnabled` 开关
 
 ## Build Chat 工具
 
@@ -90,7 +98,8 @@ import {
 
 在 Agent Build 页面侧栏中点击 **Memory**（Brain 图标）进入：
 
-- **Config** tab：配置记忆策略（启用、注入模式、衰减等）+ 自定义记忆类型定义
+- 记忆功能开关在 agents 表 `memoryEnabled` 字段，未启用时显示 "记忆功能未启用" + 启用按钮
+- **Config** tab：配置记忆策略（注入模式、衰减等）+ 自定义记忆类型定义
 - **Memories** tab：左侧按 userId 分栏（含 All / global / 各用户 + 条数 Badge），右侧为搜索 + 类型过滤 + 记忆表格的 CRUD 管理界面
 
 ## 未来规划（P1）

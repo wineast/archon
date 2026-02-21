@@ -25,7 +25,6 @@ interface MemoryConfigDetailProps {
 }
 
 const DEFAULTS = {
-  enabled: false,
   autoExtract: false,
   extractionPrompt: "",
   maxMemoriesPerUser: 100,
@@ -42,7 +41,6 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
 
   const initial = config ?? DEFAULTS;
 
-  const [enabled, setEnabled] = useState(initial.enabled);
   const [autoExtract, setAutoExtract] = useState(initial.autoExtract);
   const [extractionPrompt, setExtractionPrompt] = useState(initial.extractionPrompt);
   const [maxMemoriesPerUser, setMaxMemoriesPerUser] = useState(initial.maxMemoriesPerUser);
@@ -55,7 +53,6 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
 
   useEffect(() => {
     const src = config ?? DEFAULTS;
-    setEnabled(src.enabled);
     setAutoExtract(src.autoExtract);
     setExtractionPrompt(src.extractionPrompt);
     setMaxMemoriesPerUser(src.maxMemoriesPerUser);
@@ -68,7 +65,6 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
   }, [config]);
 
   const current = {
-    enabled,
     autoExtract,
     extractionPrompt,
     maxMemoriesPerUser,
@@ -81,7 +77,6 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
   };
 
   const original = {
-    enabled: initial.enabled,
     autoExtract: initial.autoExtract,
     extractionPrompt: initial.extractionPrompt,
     maxMemoriesPerUser: initial.maxMemoriesPerUser,
@@ -107,7 +102,6 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
 
   const handleReset = useCallback(() => {
     const src = config ?? DEFAULTS;
-    setEnabled(src.enabled);
     setAutoExtract(src.autoExtract);
     setExtractionPrompt(src.extractionPrompt);
     setMaxMemoriesPerUser(src.maxMemoriesPerUser);
@@ -165,15 +159,6 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
     <div className="flex h-full flex-col">
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-4 p-4">
-          {/* Enabled */}
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium">Enabled</label>
-              <p className="text-xs text-muted-foreground">Enable memory for this agent</p>
-            </div>
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
-          </div>
-
           {/* Memory Type Definitions */}
           <div className="space-y-3">
             <div>

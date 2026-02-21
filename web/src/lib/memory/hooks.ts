@@ -2,9 +2,30 @@
 
 import useSWR, { type KeyedMutator } from "swr";
 import { toast } from "sonner";
-import type { MemoryConfigRow, MemoryRow } from "@/db/schema";
+import type { AgentRow, MemoryConfigRow, MemoryRow } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+/* ─────────── Feature Toggle ─────────── */
+
+export async function toggleMemoryFeature(
+  agentId: string,
+  enabled: boolean,
+  mutateAgent: KeyedMutator<AgentRow>
+) {
+  try {
+    const res = await fetch(`/api/agents/${agentId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memoryEnabled: enabled }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    mutateAgent();
+  } catch (e) {
+    console.error("toggleMemoryFeature failed:", e);
+    toast.error("Failed to toggle memory feature");
+  }
+}
 
 /* ─────────── Memory Config (1:1) ─────────── */
 

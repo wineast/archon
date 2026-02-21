@@ -36,7 +36,6 @@ export function buildMemoryTools(agentId: string): Record<string, AnyTool> {
     update_memory_config: tool({
       description: "更新记忆配置（不存在则自动创建）",
       inputSchema: z.object({
-        enabled: z.boolean().optional(),
         autoExtract: z.boolean().optional(),
         extractionPrompt: z.string().optional(),
         maxMemoriesPerUser: z.number().int().optional(),

@@ -42,6 +42,7 @@ import { ComponentsPanel } from "@/components/components/components-panel";
 import { MembersPanel } from "@/components/members/members-panel";
 import { OntologyPanel } from "@/components/ontology/ontology-panel";
 import { MemoryPanel } from "@/components/memory/memory-panel";
+import { toggleMemoryFeature } from "@/lib/memory/hooks";
 import { UsagePanel } from "@/components/usage/usage-panel";
 import { SessionsPanel } from "@/components/sessions/sessions-panel";
 import { VersionsSidebar } from "@/components/versions/versions-sidebar";
@@ -212,6 +213,13 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
     [agent.id, mutateVersions, sheetVersionId]
   );
 
+  const handleToggleMemory = useCallback(
+    async (enabled: boolean) => {
+      await toggleMemoryFeature(agent.id, enabled, mutateAgent);
+    },
+    [agent.id, mutateAgent]
+  );
+
   if (roleLoading) {
     return (
       <div className="flex h-svh items-center justify-center">
@@ -241,7 +249,13 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
       case "ontology":
         return <OntologyPanel agentId={agent.id} />;
       case "memory":
-        return <MemoryPanel agentId={agent.id} />;
+        return (
+          <MemoryPanel
+            agentId={agent.id}
+            memoryEnabled={currentAgent.memoryEnabled}
+            onToggleFeature={handleToggleMemory}
+          />
+        );
       case "functions":
         return <FunctionsPanel agentId={agent.id} />;
       case "files":
@@ -335,6 +349,9 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
               >
                 <t.icon className="size-4" />
                 {t.label}
+                {t.value === "memory" && !currentAgent.memoryEnabled && (
+                  <span className="ml-auto text-[10px] text-muted-foreground">已关闭</span>
+                )}
               </button>
             );
           })}
@@ -375,6 +392,9 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
               >
                 <t.icon className="size-3.5" />
                 {t.label}
+                {t.value === "memory" && !currentAgent.memoryEnabled && (
+                  <span className="ml-1 text-[10px] text-muted-foreground">已关闭</span>
+                )}
               </button>
             );
           })}

@@ -27,6 +27,7 @@ export async function GET(
           icon: agents.icon,
           slug: agents.slug,
           isPublic: agents.isPublic,
+          memoryEnabled: agents.memoryEnabled,
           editingVersionId: agents.editingVersionId,
           publishedVersionId: agents.publishedVersionId,
           createdAt: agents.createdAt,
@@ -83,12 +84,13 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, description, icon, slug, isPublic } = body as {
+  const { name, description, icon, slug, isPublic, memoryEnabled } = body as {
     name?: string;
     description?: string;
     icon?: string;
     slug?: string;
     isPublic?: boolean;
+    memoryEnabled?: boolean;
   };
 
   const updates: Record<string, unknown> = {};
@@ -96,6 +98,7 @@ export async function PUT(
   if (description !== undefined) updates.description = description.trim();
   if (icon !== undefined) updates.icon = icon;
   if (typeof isPublic === "boolean") updates.isPublic = isPublic;
+  if (typeof memoryEnabled === "boolean") updates.memoryEnabled = memoryEnabled;
 
   if (slug !== undefined) {
     const baseSlug = slug.trim() || toSlug(name ?? "");

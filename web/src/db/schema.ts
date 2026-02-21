@@ -105,6 +105,7 @@ export const agents = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    memoryEnabled: boolean("memory_enabled").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
@@ -1346,7 +1347,6 @@ export const memoryConfigs = pgTable("memory_configs", {
   agentId: uuid("agent_id")
     .references(() => agents.id, { onDelete: "cascade" })
     .unique(),
-  enabled: boolean("enabled").notNull().default(false),
   autoExtract: boolean("auto_extract").notNull().default(false),
   extractionPrompt: text("extraction_prompt").notNull().default(""),
   maxMemoriesPerUser: integer("max_memories_per_user").notNull().default(100),
