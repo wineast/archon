@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { ModelCombobox } from "@/components/model-config/model-combobox";
+import { InvitationCodesSection } from "@/components/admin/invitation-codes-section";
 import {
   useAdminUsers,
   updateUserRole,
@@ -114,6 +115,8 @@ export default function AdminPage() {
       <main className="flex-1 p-6">
         <div className="mx-auto max-w-3xl space-y-8">
           <BuildChatSettings />
+
+          <InvitationCodesSection />
 
           {isLoading ? (
             <div className="flex items-center justify-center py-20">

@@ -4,13 +4,29 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSignUp } from "@clerk/nextjs";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, TicketIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+
+const INVITATION_CODE_KEY = "pendingInvitationCode";
+
+async function consumeInvitationCode(code: string) {
+  try {
+    await fetch("/api/invitation-codes/consume", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+  } catch {
+    // Best-effort — don't block signup flow
+  } finally {
+    sessionStorage.removeItem(INVITATION_CODE_KEY);
+  }
+}
 
 interface SignUpFormProps {
   redirectUrl: string;
@@ -22,9 +38,38 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [invitationCode, setInvitationCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [step, setStep] = useState<"form" | "verify">("form");
+  const [step, setStep] = useState<"invitation" | "form" | "verify">("invitation");
   const [busyAction, setBusyAction] = useState<string | null>(null);
+
+  const handleVerifyInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busyAction) return;
+
+    const trimmed = invitationCode.trim();
+    if (!trimmed) return;
+
+    setBusyAction("invitation");
+    try {
+      const res = await fetch("/api/invitation-codes/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: trimmed }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        sessionStorage.setItem(INVITATION_CODE_KEY, trimmed.toUpperCase());
+        setStep("form");
+      } else {
+        toast.error(data.error || "邀请码无效");
+      }
+    } catch {
+      toast.error("验证邀请码失败");
+    } finally {
+      setBusyAction(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +102,11 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
+        // Consume invitation code after successful activation
+        const pending = sessionStorage.getItem(INVITATION_CODE_KEY);
+        if (pending) {
+          await consumeInvitationCode(pending);
+        }
         router.push(redirectUrl);
       }
     } catch (err: unknown) {
@@ -98,6 +148,49 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
       setBusyAction(null);
     }
   };
+
+  if (step === "invitation") {
+    return (
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">输入邀请码</CardTitle>
+          <CardDescription>请输入邀请码以继续注册</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleVerifyInvitation} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="invitation-code">邀请码</Label>
+              <Input
+                id="invitation-code"
+                type="text"
+                placeholder="请输入 8 位邀请码"
+                autoComplete="off"
+                required
+                maxLength={8}
+                value={invitationCode}
+                onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                className="text-center text-lg tracking-widest"
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={!!busyAction}>
+              {busyAction === "invitation" ? (
+                <Spinner className="size-4" />
+              ) : (
+                <TicketIcon className="size-4" />
+              )}
+              验证邀请码
+            </Button>
+            <div className="text-center text-sm">
+              已有账号？{" "}
+              <Link href="/sign-in" className="underline underline-offset-4">
+                登录
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (step === "verify") {
     return (
