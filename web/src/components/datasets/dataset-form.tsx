@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SparklesIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KeyField } from "@/components/ui/key-field";
 import { Spinner } from "@/components/ui/spinner";
@@ -9,6 +11,7 @@ import { JsonEditor } from "@/components/editors/json-editor";
 import { Textarea } from "@/components/ui/textarea";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
+import { DatasetAssistDialog } from "./dataset-assist-dialog";
 
 export interface DatasetFormHandle {
   getDraft: () => {
@@ -174,73 +177,98 @@ export function DatasetForm({
     [handlePreview]
   );
 
+  const [assistOpen, setAssistOpen] = useState(false);
+
   return (
-    <div className="space-y-3">
-      <KeyField value={datasetKey} />
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">
-          Name
-        </label>
-        <Input
-          className="mt-1 h-8 text-sm"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Display name"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">
-          Description
-        </label>
-        <Textarea
-          className="mt-1 min-h-[60px] resize-none text-sm"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="What this dataset contains..."
-        />
-      </div>
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">
-          Data (JSON / Template)
-        </label>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
-          <TabsList className="h-7">
-            <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
-            <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
-          </TabsList>
-          <TabsContent value="edit">
-            <JsonEditor
-              value={dataText}
-              onChange={handleDataChange}
-              height="300px"
-              templateVariables={templateVariables}
-            />
-            {jsonError && (
-              <p className="mt-1 text-xs text-destructive">{jsonError}</p>
-            )}
-          </TabsContent>
-          <TabsContent value="preview">
-            <div className="min-h-[300px] rounded-md border p-3">
-              {previewLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Spinner className="size-5" />
-                </div>
-              ) : previewContent ? (
-                <pre className="whitespace-pre-wrap break-words font-mono text-xs">
-                  {previewContent}
-                </pre>
-              ) : (
-                <p className="text-sm text-muted-foreground">No content to preview</p>
+    <>
+      <div className="space-y-3">
+        <KeyField value={datasetKey} />
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Name
+          </label>
+          <Input
+            className="mt-1 h-8 text-sm"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Display name"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">
+            Description
+          </label>
+          <Textarea
+            className="mt-1 min-h-[60px] resize-none text-sm"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What this dataset contains..."
+          />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              Data (JSON / Template)
+            </label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-1.5 text-xs"
+              onClick={() => setAssistOpen(true)}
+            >
+              <SparklesIcon className="size-3" />
+              AI 编辑
+            </Button>
+          </div>
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
+            <TabsList className="h-7">
+              <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
+              <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
+            </TabsList>
+            <TabsContent value="edit">
+              <JsonEditor
+                value={dataText}
+                onChange={handleDataChange}
+                height="300px"
+                templateVariables={templateVariables}
+              />
+              {jsonError && (
+                <p className="mt-1 text-xs text-destructive">{jsonError}</p>
               )}
-            </div>
-            {previewJsonError && (
-              <p className="mt-1 text-xs text-destructive">
-                Rendered output is not valid JSON: {previewJsonError}
-              </p>
-            )}
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+            <TabsContent value="preview">
+              <div className="min-h-[300px] rounded-md border p-3">
+                {previewLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Spinner className="size-5" />
+                  </div>
+                ) : previewContent ? (
+                  <pre className="whitespace-pre-wrap break-words font-mono text-xs">
+                    {previewContent}
+                  </pre>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No content to preview</p>
+                )}
+              </div>
+              {previewJsonError && (
+                <p className="mt-1 text-xs text-destructive">
+                  Rendered output is not valid JSON: {previewJsonError}
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
+      <DatasetAssistDialog
+        open={assistOpen}
+        onOpenChange={setAssistOpen}
+        data={dataText}
+        datasetName={name}
+        datasetDescription={description}
+        templateVariables={templateVariables}
+        onApply={(newData) => handleDataChange(newData)}
+      />
+    </>
   );
 }
