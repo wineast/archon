@@ -255,11 +255,76 @@ const graph = await context.ontology.graph(type, id, depth);
 
 ## 七、宿主通信 postMessage
 
-embed 嵌入场景，宿主页面通过 postMessage 向 Archon 注入上下文数据。
+embed 嵌入场景，Archon 以 iframe 嵌入宿主页面。宿主页面加载 `widget.js`，通过 postMessage 与 iframe 双向通信。包含两个独立功能：
 
-- **消息类型**：`archon:context`（上下文注入）、`archon:tools-register`（宿主工具注册）、`archon:tool-call` / `archon:tool-result`（工具调用链）
-- **模板中使用**：注入为 `host` 变量，在系统提示词和技能 content 中可用：`{{host.xxx}}`
-- **安全**：iframe 校验 `embedTokens.allowedOrigins`，防止跨域注入
+### 功能 1：上下文注入
+
+宿主页面把业务上下文传给 Archon，让 AI 知道"用户是谁、在哪个页面"：
+
+```js
+// 宿主页面代码
+ArchonEmbed.setContext({
+  currentPage: '/products/123',
+  userName: 'Alice',
+  cartItems: 3
+});
+```
+
+数据流：`setContext()` → postMessage `archon:context` → iframe 存入内存 → 用户发消息时随请求发送到后端 → 后端渲染模板时注入为 `host` 变量
+
+系统提示词中使用：
+
+```liquid
+当前用户：{{host.userName}}，正在浏览：{{host.currentPage}}
+```
+
+**单向**：宿主传数据进来，模板里读取。仅系统提示词和技能 content 可用。
+
+### 功能 2：宿主工具
+
+宿主页面注册 JS 函数，让 AI 能调用宿主系统的能力（如操作购物车、跳转页面）：
+
+```js
+// 宿主页面代码
+ArchonEmbed.registerTools({
+  addToCart: async ({ productId, quantity }) => {
+    const result = await fetch('/api/cart/add', { ... });
+    return { success: true, cartSize: result.cartSize };
+  }
+});
+```
+
+AI 调用时的完整链路：
+
+1. AI 决定调用 `addToCart` → iframe 发送 `archon:tool-call` → 宿主页面
+2. 宿主执行对应的 JS 函数
+3. 宿主发送 `archon:tool-result`（或 `archon:tool-error`）→ iframe → 结果返回给 AI
+
+**双向**：AI 发起调用，宿主执行，结果返回。工具需在 Archon 后台定义（`executionTarget = "host"`）且宿主页面注册，双重校验后 AI 才可见。
+
+### 通信协议
+
+| 方向 | 消息类型 | 作用 |
+|------|---------|------|
+| iframe → 宿主 | `archon:ready` | iframe 加载完毕，宿主可以开始发消息 |
+| 宿主 → iframe | `archon:context` | 传入上下文数据（`setContext`） |
+| 宿主 → iframe | `archon:tools-register` | 注册可调用的工具名列表 |
+| iframe → 宿主 | `archon:tool-call` | AI 要调用宿主工具 |
+| 宿主 → iframe | `archon:tool-result` / `archon:tool-error` | 工具执行结果返回 |
+
+### 安全与限制
+
+- **来源校验**：iframe 校验 `embedTokens.allowedOrigins`，widget.js 校验 Archon 域名
+- **上下文大小**：hostContext 限 10KB
+- **工具超时**：30 秒未返回自动报错
+
+### 关键文件
+
+| 文件 | 作用 |
+|------|------|
+| `web/public/embed/widget.js` | 宿主侧脚本，bubble UI + postMessage API |
+| `web/src/app/(nonlocale)/embed/[agentId]/page.tsx` | iframe 页面，消息监听 + 工具执行 |
+| `web/src/lib/chat/execute-stream.ts` | 后端：hostContext 注入模板、过滤宿主工具 |
 
 ---
 
