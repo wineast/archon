@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { BrainIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { GuideDialog } from "@/components/ui/guide-dialog";
@@ -106,6 +107,11 @@ export function MemoryPanel({ agentId, memoryEnabled, onToggleFeature }: MemoryP
       <Tabs defaultValue="config" className="flex h-full flex-col gap-0">
         <div className="flex items-center gap-2 border-b px-3 py-1.5">
           <span className="text-sm font-semibold">Memory</span>
+          <Switch
+            checked={memoryEnabled}
+            onCheckedChange={onToggleFeature}
+            className="scale-75"
+          />
           <GuideDialog title="记忆模块" content={memoryGuide} />
           <div className="flex-1" />
           <TabsList className="h-7">

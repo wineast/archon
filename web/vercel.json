@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/decay-memories",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

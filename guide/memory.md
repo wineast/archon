@@ -102,9 +102,55 @@ import {
 - **Config** tab：配置记忆策略（注入模式、衰减等）+ 自定义记忆类型定义
 - **Memories** tab：左侧按 userId 分栏（含 All / global / 各用户 + 条数 Badge），右侧为搜索 + 类型过滤 + 记忆表格的 CRUD 管理界面
 
-## 未来规划（P1）
+## 记忆衰减
+
+自动清理过期记忆，基于 `decayEnabled` 和 `decayDays` 配置软删除超期记忆条目。
+
+### 开关守卫
+
+衰减仅在以下条件**同时满足**时生效：
+
+- `agents.memoryEnabled = true`
+- `memoryConfigs.decayEnabled = true`
+
+### 衰减规则
+
+| 记忆类型 | 衰减周期 | 说明 |
+|----------|----------|------|
+| 普通记忆（importance < 0.8） | `decayDays` 天 | 按配置值衰减 |
+| 高重要度记忆（importance >= 0.8） | `decayDays × 2` 天 | 延长存活期 |
+
+判定依据为 `lastAccessedAt` 字段：超过衰减周期未被访问的记忆会被软删除（设置 `deletedAt`）。
+
+### 衰减逻辑
+
+核心函数位于 `web/src/lib/memory/decay.ts`：
+
+```ts
+import { decayMemories, type DecayResult } from "@/lib/memory/decay";
+
+const result: DecayResult = await decayMemories();
+// { deletedCount: number, agentCount: number }
+```
+
+### Cron 定时任务
+
+| 路径 | 方法 | 触发 | 频率 |
+|------|------|------|------|
+| `/api/cron/decay-memories` | GET | Vercel Cron | 每日 03:00 UTC |
+
+通过 `CRON_SECRET` 环境变量验证请求来源（`Authorization: Bearer <CRON_SECRET>`）。
+
+Vercel Cron 配置位于 `web/vercel.json`。
+
+### 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `CRON_SECRET` | Cron 路由鉴权密钥，需在 Vercel 项目设置中配置 |
+
+## 未来规划
 
 - 运行时自动注入相关记忆到 system prompt
 - 对话后自动提取记忆
 - 记忆向量化 + 语义检索
-- 记忆衰减定时任务
