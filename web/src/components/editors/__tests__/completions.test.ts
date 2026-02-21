@@ -60,16 +60,16 @@ describe("generateCompletions", () => {
       const labels = result!.items.map((o) => o.label);
       expect(labels).toContain("{{tool.search.name}}");
       expect(labels).toContain("{{tool.search.description}}");
-      expect(labels).toContain("{{tool.search.params}}");
       expect(labels).toContain("{{tool.search.parameters}}");
-      expect(labels).toContain("{{tool.search.json}}");
+      expect(labels).not.toContain("{{tool.search.params}}");
+      expect(labels).not.toContain("{{tool.search.json}}");
     });
 
     it("includes top-level tool helpers", () => {
       const result = generateCompletions("{{", variables, documents, tools);
       const labels = result!.items.map((o) => o.label);
-      expect(labels).toContain("{{tool_names}}");
       expect(labels).toContain("{{tool_entries}}");
+      expect(labels).not.toContain("{{tool_names}}");
     });
   });
 

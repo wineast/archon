@@ -154,9 +154,7 @@ c = "{{b}}-End"（引用 b）        → "Root-Mid-End"
 |------|------|------|
 | `tool.{name}.name` | `string` | 工具名称 |
 | `tool.{name}.description` | `string` | 工具描述 |
-| `tool.{name}.params` | `string` | 参数名逗号拼接：`"income, expenses, debt"` |
 | `tool.{name}.parameters` | `array` | 参数定义数组，用于 `{% for %}` 遍历 |
-| `tool.{name}.json` | `string` | 完整 JSON 字符串：`{"name":...,"description":...,"parameters":[...]}` |
 
 ### parameters 条目字段
 
@@ -172,8 +170,7 @@ c = "{{b}}-End"（引用 b）        → "Root-Mid-End"
 
 | 变量 | 类型 | 说明 |
 |------|------|------|
-| `tool_names` | `string` | 所有已启用工具名逗号拼接：`"calculate_dti, route_loan_products"` |
-| `tool_entries` | `array` | 工具概要数组，用于 `{% for %}` 遍历 |
+| `tool_entries` | `array` | 工具数组，用于 `{% for %}` 遍历，每个条目与 `tool.{name}` 结构一致 |
 
 ### tool_entries 条目字段
 
@@ -181,14 +178,13 @@ c = "{{b}}-End"（引用 b）        → "Root-Mid-End"
 |------|------|------|
 | `t.name` | `string` | 工具名称 |
 | `t.description` | `string` | 工具描述 |
-| `t.params` | `array` | 简化参数数组 `[{ name, type }]` |
+| `t.parameters` | `array` | 参数定义数组（同 `tool.{name}.parameters`） |
 
 ### 用法示例
 
 ```liquid
 工具名：{{tool.calculate_dti.name}}
 工具描述：{{tool.calculate_dti.description}}
-参数列表：{{tool.calculate_dti.params}}
 
 {% for p in tool.calculate_dti.parameters %}
 - {{p.name}} ({{p.type}}{% if p.required %}, 必填{% endif %}): {{p.description}}
@@ -198,12 +194,12 @@ c = "{{b}}-End"（引用 b）        → "Root-Mid-End"
 全局遍历：
 
 ```liquid
-可用工具：{{tool_names}}
+可用工具：{{tool_entries | map: "name" | join: ", "}}
 
 {% for t in tool_entries %}
 ### {{t.name}}
 {{t.description}}
-参数：{% for p in t.params %}{{p.name}}({{p.type}}){% unless forloop.last %}, {% endunless %}{% endfor %}
+参数：{% for p in t.parameters %}{{p.name}}({{p.type}}){% unless forloop.last %}, {% endunless %}{% endfor %}
 {% endfor %}
 ```
 
@@ -333,7 +329,7 @@ const entries = await context.dataset.getEntries("product_routes");
 
 ## 十、注意事项
 
-- **命名空间保留字**：`tool`、`tool_names`、`tool_entries` 不能用作数据集的 key
+- **命名空间保留字**：`tool`、`tool_entries` 不能用作数据集的 key
 - **未定义变量**：引用不存在的变量会渲染为空字符串，不会报错
 - **语法错误**：模板语法错误时返回原始文本，不影响系统正常运行
 - **编辑器补全 ↔ 预览一致性**：每种模板编辑场景的补全提示和预览渲染必须注入相同的变量集。数据集 data 编辑器只提供前序数据集的补全和渲染，不包含内置变量（`date`/`time` 等）和 `tool.*`；系统提示词编辑器则提供全部变量
