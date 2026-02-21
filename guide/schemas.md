@@ -119,13 +119,13 @@ Schema 的 `parameters` 使用 **JSON 编辑器** 直接编辑标准 JSON Schema
 
 详情页有两个子标签：
 - **Edit**：JSON 编辑器，直接编辑 `parameters` JSON
-- **Preview**：参数卡片视图，将 JSON Schema 渲染为可读的参数列表（参数名、类型、是否必填、描述），与 Functions 页面的参数预览样式一致
+- **Preview**：模板渲染预览，将当前 JSON Schema 通过 LiquidJS 模板引擎渲染后，以只读 JSON 编辑器展示结果。可用数据仅限**数据集变量**（扁平命名空间，拓扑排序解析），不包含内置变量、tool 命名空间、ontology 等
 
 JSON 解析失败时（用户还在打字），表单值不会更新，避免中间状态丢失。
 
 ### AI 辅助编辑
 
-Parameters 标签行提供 **AI 编辑** 按钮（SparklesIcon），点击打开 AI 辅助编辑 Dialog：
+JSON Schema 标签行提供 **AI 编辑** 按钮（SparklesIcon），点击打开 AI 辅助编辑 Dialog：
 
 - **左侧**：Diff 编辑器，对比原始 JSON Schema 和 AI 修改后的结果
 - **右侧**：AI 聊天，用自然语言描述需求（如"添加一个 email 字段"、"把 age 改为可选"）
@@ -138,7 +138,7 @@ AI 支持两种操作：
 
 ### 帮助指南
 
-Parameters 标签行的问号图标（CircleHelpIcon）打开 **Guide Dialog**，包含 JSON Schema 编辑的快速参考文档。
+JSON Schema 标签行的问号图标（CircleHelpIcon）打开 **Guide Dialog**，包含 JSON Schema 编辑的快速参考文档。
 
 ---
 
@@ -619,20 +619,16 @@ Schema 在系统中有两条转换路径：
 
 代码位于 `web/src/lib/tools/zod-code-builder.ts` 的 `buildZodCode()`。入参为 `JsonSchema7`，返回 TypeScript 代码字符串。
 
-### 参数预览
+### 模板渲染预览
 
 Schema 详情页有 **Edit / Preview** 两个子标签：
 
 - **Edit**：JSON 编辑器，直接编辑 `parameters`
-- **Preview**：参数卡片视图，将当前 JSON Schema 实时渲染为可读的参数列表
+- **Preview**：模板渲染预览，将当前 JSON Schema 文本通过 LiquidJS 渲染后，以只读 JsonEditor 展示结果
 
-Preview 中每个参数显示为一张卡片，包含：
-- 参数名（monospace 字体）
-- 类型 badge（如 `string`、`number`、`boolean`、`object`、`string[]` 等）
-- `required` badge（如果在 `required` 数组中）
-- 描述文本（截断显示）
+切换到 Preview 时，系统将当前 JSON Schema 文本 POST 到 `/api/schema/template/preview`，服务端仅使用**数据集变量**（通过 `getResolvedDatasets` 获取的扁平命名空间）进行渲染。不注入内置变量（date/time 等）、tool 命名空间、ontology 等——Schema 模板只能引用数据集。
 
-此视图与 Functions 页面的参数预览样式一致，便于快速确认 Schema 定义了哪些参数、每个参数什么意思。
+渲染结果以只读 JSON 编辑器展示（高度 400px），JSON 解析失败时在编辑器上方显示错误提示。
 
 ---
 
