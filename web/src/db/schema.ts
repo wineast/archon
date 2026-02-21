@@ -90,6 +90,7 @@ export const agents = pgTable(
     icon: text("icon").notNull().default("bot"),
     slug: text("slug").notNull(),
     isPublic: boolean("is_public").notNull().default(false),
+    mcpEnabled: boolean("mcp_enabled").notNull().default(true),
     editingVersionId: uuid("editing_version_id").references(
       (): AnyPgColumn => agentVersions.id,
       { onDelete: "set null" }
@@ -1248,7 +1249,7 @@ export const auditLogResourceTypes = [
   "tool", "function", "component", "schema", "dataset", "wiki",
   "model_config", "eval_case", "eval_judge_config",
   "object_type", "object_relation", "chat_config",
-  "memory_config", "memory",
+  "memory_config", "memory", "mcp_server",
 ] as const;
 export type AuditLogResourceType = (typeof auditLogResourceTypes)[number];
 
@@ -1289,6 +1290,7 @@ export const runtimeEventTypes = [
   "tool_timeout",
   "tool_output_validation",
   "stream_error",
+  "mcp_connect_error",
 ] as const;
 export type RuntimeEventType = (typeof runtimeEventTypes)[number];
 
@@ -1322,6 +1324,39 @@ export const runtimeEvents = pgTable(
 
 export type RuntimeEventRow = typeof runtimeEvents.$inferSelect;
 export type NewRuntimeEventRow = typeof runtimeEvents.$inferInsert;
+
+/* ─────────── MCP Servers ─────────── */
+
+export const mcpServers = pgTable(
+  "mcp_servers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    url: text("url").notNull(),
+    transportType: text("transport_type").notNull().default("sse").$type<"sse" | "http">(),
+    headers: jsonb("headers").$type<Record<string, string>>().notNull().default({}),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    unique("mcp_servers_agent_id_key_idx").on(t.agentId, t.key),
+  ]
+);
+
+export type McpServerRow = typeof mcpServers.$inferSelect;
+export type NewMcpServerRow = typeof mcpServers.$inferInsert;
 
 /* ─────────── Memory Types ─────────── */
 

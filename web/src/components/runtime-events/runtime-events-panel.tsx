@@ -35,6 +35,7 @@ const EVENT_TYPE_LABELS: Record<RuntimeEventType, string> = {
   tool_timeout: "工具超时",
   tool_output_validation: "输出校验",
   stream_error: "流错误",
+  mcp_connect_error: "MCP 连接错误",
 };
 
 const SEVERITY_LABELS: Record<RuntimeEventSeverity, string> = {

@@ -145,6 +145,18 @@ export interface ObjectRelationSnapshotItem {
   order: number;
 }
 
+/* ─────────── MCP Server Snapshot Items ─────────── */
+
+export interface McpServerSnapshotItem {
+  key: string;
+  name: string;
+  description: string;
+  url: string;
+  transportType: "sse" | "http";
+  headers: Record<string, string>;
+  enabled: boolean;
+}
+
 /* ─────────── Agent Snapshot ─────────── */
 
 export interface AgentSnapshot {
@@ -167,6 +179,7 @@ export interface AgentSnapshot {
   evalJudgeConfigs: EvalJudgeConfigSnapshotItem[];
   objectTypes: ObjectTypeSnapshotItem[];
   objectRelations: ObjectRelationSnapshotItem[];
+  mcpServers: McpServerSnapshotItem[];
 }
 
 /* ─────────── Version List Item (without snapshot) ─────────── */

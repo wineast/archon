@@ -20,6 +20,7 @@ import {
   HistoryIcon,
   MessageSquareIcon,
   NetworkIcon,
+  PlugIcon,
   PuzzleIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
@@ -43,6 +44,7 @@ import { MembersPanel } from "@/components/members/members-panel";
 import { OntologyPanel } from "@/components/ontology/ontology-panel";
 import { MemoryPanel } from "@/components/memory/memory-panel";
 import { toggleMemoryFeature } from "@/lib/memory/hooks";
+import { McpServersPanel } from "@/components/mcp-servers/mcp-servers-panel";
 import { UsagePanel } from "@/components/usage/usage-panel";
 import { SessionsPanel } from "@/components/sessions/sessions-panel";
 import { VersionsSidebar } from "@/components/versions/versions-sidebar";
@@ -83,6 +85,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "datasets", label: "Datasets", icon: DatabaseIcon },
   { value: "ontology", label: "Ontology", icon: NetworkIcon },
   { value: "memory", label: "Memory", icon: BrainIcon },
+  { value: "mcp", label: "MCP", icon: PlugIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
   { value: "files", label: "Files", icon: FileIcon },
   { value: "sessions", label: "Sessions", icon: MessageSquareIcon },
@@ -256,6 +259,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
             onToggleFeature={handleToggleMemory}
           />
         );
+      case "mcp":
+        return <McpServersPanel agentId={agent.id} />;
       case "functions":
         return <FunctionsPanel agentId={agent.id} />;
       case "files":
@@ -338,6 +343,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         <nav className="hidden w-48 shrink-0 flex-col border-r p-2 sm:flex">
           {visibleTabs.map((t) => {
             const isActive = t.value === activeTab;
+            const showOff = (t.value === "mcp" && currentAgent.mcpEnabled === false) || (t.value === "memory" && !currentAgent.memoryEnabled);
             return (
               <button
                 key={t.value}
@@ -349,8 +355,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
               >
                 <t.icon className="size-4" />
                 {t.label}
-                {t.value === "memory" && !currentAgent.memoryEnabled && (
-                  <span className="ml-auto text-[10px] text-muted-foreground">已关闭</span>
+                {showOff && (
+                  <span className="ml-auto text-[10px] text-muted-foreground/60">已关闭</span>
                 )}
               </button>
             );
@@ -381,6 +387,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         <div className="flex shrink-0 overflow-x-auto border-b sm:hidden">
           {visibleTabs.map((t) => {
             const isActive = t.value === activeTab;
+            const showOff = (t.value === "mcp" && currentAgent.mcpEnabled === false) || (t.value === "memory" && !currentAgent.memoryEnabled);
             return (
               <button
                 key={t.value}
@@ -392,8 +399,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
               >
                 <t.icon className="size-3.5" />
                 {t.label}
-                {t.value === "memory" && !currentAgent.memoryEnabled && (
-                  <span className="ml-1 text-[10px] text-muted-foreground">已关闭</span>
+                {showOff && (
+                  <span className="ml-1 text-[10px] text-muted-foreground/60">已关闭</span>
                 )}
               </button>
             );

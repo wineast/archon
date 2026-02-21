@@ -13,6 +13,7 @@ export { seedFunctions } from "./seed-functions";
 export { seedEval } from "./seed-eval";
 export { seedVersion } from "./seed-version";
 export { seedMemory } from "./seed-memory";
+export { seedMcpServers } from "./seed-mcp-servers";
 
 export type { SeedContext, SeedResult, Seeder } from "./types";
 
@@ -32,6 +33,7 @@ import { seedFunctions } from "./seed-functions";
 import { seedEval } from "./seed-eval";
 import { seedVersion } from "./seed-version";
 import { seedMemory } from "./seed-memory";
+import { seedMcpServers } from "./seed-mcp-servers";
 
 /** The full seed pipeline in execution order. */
 export const pipeline: Seeder[] = [
@@ -49,5 +51,6 @@ export const pipeline: Seeder[] = [
   seedFunctions,
   seedEval,
   seedMemory,
+  seedMcpServers,
   seedVersion,
 ];

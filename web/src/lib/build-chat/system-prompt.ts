@@ -145,5 +145,20 @@ export function buildSystemPrompt(summary: ResourceSummary): string {
     sections.push("## 当前对象关系\n暂无对象关系");
   }
 
+  // MCP Servers
+  if (summary.mcpServers.length > 0) {
+    const list = summary.mcpServers
+      .map(
+        (s) =>
+          `- ${s.name} (key: ${s.key}, id: ${s.id}, url: ${s.url}, transport: ${s.transportType}, ${s.enabled ? "启用" : "禁用"}): ${s.description}`
+      )
+      .join("\n");
+    sections.push(
+      `## 当前 MCP Server (${summary.mcpServers.length})\n${list}`
+    );
+  } else {
+    sections.push("## 当前 MCP Server\n暂无 MCP Server");
+  }
+
   return sections.join("\n\n");
 }

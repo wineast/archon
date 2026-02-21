@@ -84,13 +84,14 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, description, icon, slug, isPublic, memoryEnabled } = body as {
+  const { name, description, icon, slug, isPublic, memoryEnabled, mcpEnabled } = body as {
     name?: string;
     description?: string;
     icon?: string;
     slug?: string;
     isPublic?: boolean;
     memoryEnabled?: boolean;
+    mcpEnabled?: boolean;
   };
 
   const updates: Record<string, unknown> = {};
@@ -99,6 +100,7 @@ export async function PUT(
   if (icon !== undefined) updates.icon = icon;
   if (typeof isPublic === "boolean") updates.isPublic = isPublic;
   if (typeof memoryEnabled === "boolean") updates.memoryEnabled = memoryEnabled;
+  if (typeof mcpEnabled === "boolean") updates.mcpEnabled = mcpEnabled;
 
   if (slug !== undefined) {
     const baseSlug = slug.trim() || toSlug(name ?? "");

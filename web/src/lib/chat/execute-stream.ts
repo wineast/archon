@@ -7,8 +7,9 @@ import {
 } from "ai";
 import { after } from "next/server";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
+import { createMCPClient } from "@ai-sdk/mcp";
 import { db } from "@/db";
-import { agents, tools, modelConfigs } from "@/db/schema";
+import { agents, tools, modelConfigs, mcpServers } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
@@ -43,9 +44,9 @@ export async function executeChatStream(
 ): Promise<Response> {
   const { messages, sessionId, agentId, userId, hostContext, registeredHostTools } = opts;
 
-  // Get agent's orgId for usage recording
+  // Get agent's orgId and mcpEnabled for usage recording and MCP gating
   const [agentRow] = await db
-    .select({ orgId: agents.orgId })
+    .select({ orgId: agents.orgId, mcpEnabled: agents.mcpEnabled })
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
@@ -113,9 +114,66 @@ export async function executeChatStream(
   const eventCollector: RuntimeEventInput[] = [];
   const streamStartTime = performance.now();
 
-  const allTools = toolPayloads.length
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allTools: Record<string, any> = toolPayloads.length
     ? buildDynamicTools(toolPayloads, templateData, agentId, eventCollector)
     : {};
+
+  // Connect to enabled MCP servers and merge their tools (skip if agent.mcpEnabled is false)
+  const mcpClients: Awaited<ReturnType<typeof createMCPClient>>[] = [];
+  const enabledMcpServers = agentRow?.mcpEnabled !== false
+    ? await db
+        .select()
+        .from(mcpServers)
+        .where(and(eq(mcpServers.agentId, agentId), eq(mcpServers.enabled, true), isNull(mcpServers.deletedAt)))
+    : [];
+
+  if (enabledMcpServers.length > 0) {
+    const results = await Promise.allSettled(
+      enabledMcpServers.map(async (server) => {
+        if (!server.url) throw new Error("URL not configured");
+        const client = await createMCPClient({
+          transport: {
+            type: server.transportType as "sse" | "http",
+            url: server.url,
+            headers: server.headers && Object.keys(server.headers).length > 0
+              ? server.headers
+              : undefined,
+          },
+        });
+        return { server, client };
+      })
+    );
+
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        const { server, client } = result.value;
+        mcpClients.push(client);
+        try {
+          const mcpTools = await client.tools();
+          for (const [toolName, toolDef] of Object.entries(mcpTools)) {
+            const prefixedName = `mcp_${server.key}__${toolName}`;
+            allTools[prefixedName] = toolDef;
+          }
+        } catch (e) {
+          eventCollector.push({
+            agentId,
+            eventType: "mcp_connect_error",
+            severity: "warning",
+            metadata: { serverKey: server.key, serverId: server.id, error: e instanceof Error ? e.message : String(e), phase: "tools" },
+          });
+        }
+      } else {
+        const server = enabledMcpServers[results.indexOf(result)];
+        eventCollector.push({
+          agentId,
+          eventType: "mcp_connect_error",
+          severity: "warning",
+          metadata: { serverKey: server.key, serverId: server.id, error: result.reason?.message ?? String(result.reason), phase: "connect" },
+        });
+      }
+    }
+  }
 
   // The last message is the new user message
   const userMessage = messages[messages.length - 1];
@@ -172,13 +230,15 @@ export async function executeChatStream(
           },
         });
 
-        // Flush runtime events
+        // Flush runtime events + close MCP clients
         after(async () => {
           // Back-fill sessionId into all events
           for (const evt of eventCollector) {
             evt.sessionId = sessionId ?? null;
           }
           await recordRuntimeEvents(eventCollector);
+          // Close all MCP clients
+          await Promise.allSettled(mcpClients.map((c) => c.close()));
         });
 
         if (!sessionId || !userMessage) return;

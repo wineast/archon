@@ -20,6 +20,7 @@
     "vercel-build": "npm run db:migrate && next build"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "^1.0.21",
     "@ai-sdk/react": "^3.0.87",
     "@clerk/nextjs": "^6.37.4",
     "@codemirror/autocomplete": "^6.20.0",
