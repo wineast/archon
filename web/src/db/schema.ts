@@ -12,7 +12,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
 
 /* ─────────── Org Role Constants ─────────── */
@@ -304,7 +304,7 @@ export const schemas = pgTable(
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
-    parameters: jsonb("parameters").$type<SchemaProperty[]>().notNull().default([]),
+    parameters: jsonb("parameters").$type<JsonSchema7>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -322,34 +322,7 @@ export const schemas = pgTable(
 export type SchemaRow = typeof schemas.$inferSelect;
 export type NewSchemaRow = typeof schemas.$inferInsert;
 
-/** Computed type: SchemaRow + resolved includeSchemaIds from junction table */
-export type SchemaWithIncludes = SchemaRow & { includeSchemaIds: string[] };
 
-/* ─────────── Schema Includes (junction table) ─────────── */
-
-export const schemaIncludes = pgTable(
-  "schema_includes",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    schemaId: uuid("schema_id")
-      .notNull()
-      .references(() => schemas.id, { onDelete: "cascade" }),
-    includeSchemaId: uuid("include_schema_id")
-      .notNull()
-      .references(() => schemas.id, { onDelete: "cascade" }),
-    position: integer("position").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (t) => [
-    unique("schema_includes_schema_include_idx").on(t.schemaId, t.includeSchemaId),
-    index("schema_includes_schema_id_idx").on(t.schemaId),
-  ]
-);
-
-export type SchemaIncludeRow = typeof schemaIncludes.$inferSelect;
-export type NewSchemaIncludeRow = typeof schemaIncludes.$inferInsert;
 
 /* ─────────── Schema Test Cases ─────────── */
 
@@ -1205,7 +1178,7 @@ export const usageRecords = pgTable(
     cachedInputTokens: integer("cached_input_tokens").notNull().default(0),
     reasoningTokens: integer("reasoning_tokens").notNull().default(0),
     costUSD: real("cost_usd").notNull().default(0),
-    source: text("source").notNull().$type<"chat" | "embed" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "eval">(),
+    source: text("source").notNull().$type<"chat" | "embed" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "schema-code-assist" | "eval">(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

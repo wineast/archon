@@ -7,13 +7,59 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { BuiltinFunction } from "@/lib/functions/builtin";
 import { BuiltinPlayground } from "./builtin-playground";
 import { BuiltinTestCases } from "./builtin-test-cases";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import { getDisplayType } from "@/lib/schemas/json-schema-utils";
 
 interface FunctionBuiltinDetailProps {
   fn: BuiltinFunction;
 }
 
+function ParameterSection({
+  label,
+  schema,
+}: {
+  label: string;
+  schema: JsonSchema7;
+}) {
+  const entries = Object.entries(schema.properties ?? {});
+  if (entries.length === 0) return null;
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
+      <div className="mt-1 space-y-1">
+        {entries.map(([key, propSchema]) => (
+          <div
+            key={key}
+            className="flex items-center gap-2 text-sm"
+          >
+            <code className="font-mono text-xs">{key}</code>
+            <Badge variant="secondary" className="text-[10px]">
+              {getDisplayType(propSchema)}
+            </Badge>
+            {schema.required?.includes(key) && (
+              <Badge variant="outline" className="text-[10px]">
+                required
+              </Badge>
+            )}
+            {propSchema.description && (
+              <span className="text-xs text-muted-foreground truncate">
+                {propSchema.description}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function FunctionBuiltinDetail({ fn }: FunctionBuiltinDetailProps) {
   const hasTestCases = fn.testCases && fn.testCases.length > 0;
+  const hasParameters = fn.parameters && Object.keys(fn.parameters.properties ?? {}).length > 0;
+  const hasReturnParameters = fn.returnParameters && Object.keys(fn.returnParameters.properties ?? {}).length > 0;
 
   return (
     <Tabs
@@ -58,66 +104,12 @@ export function FunctionBuiltinDetail({ fn }: FunctionBuiltinDetailProps) {
               </p>
             </div>
 
-            {fn.parameters && fn.parameters.length > 0 && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">
-                  Parameters
-                </label>
-                <div className="mt-1 space-y-1">
-                  {fn.parameters.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <code className="font-mono text-xs">{p.name}</code>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {p.type}
-                      </Badge>
-                      {p.required && (
-                        <Badge variant="outline" className="text-[10px]">
-                          required
-                        </Badge>
-                      )}
-                      {p.description && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {p.description}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {hasParameters && fn.parameters && (
+              <ParameterSection label="Parameters" schema={fn.parameters} />
             )}
 
-            {fn.returnParameters && fn.returnParameters.length > 0 && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">
-                  Return Parameters
-                </label>
-                <div className="mt-1 space-y-1">
-                  {fn.returnParameters.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <code className="font-mono text-xs">{p.name}</code>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {p.type}
-                      </Badge>
-                      {p.required && (
-                        <Badge variant="outline" className="text-[10px]">
-                          required
-                        </Badge>
-                      )}
-                      {p.description && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {p.description}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {hasReturnParameters && fn.returnParameters && (
+              <ParameterSection label="Return Parameters" schema={fn.returnParameters} />
             )}
 
             <div>

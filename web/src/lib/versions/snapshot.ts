@@ -5,7 +5,6 @@ import {
   functions,
   components,
   schemas,
-  schemaIncludes,
   wikiDocuments,
   datasets,
   modelConfigs,
@@ -18,7 +17,7 @@ import {
   objectTypes,
   objectRelations,
 } from "@/db/schema";
-import { eq, and, asc, inArray, isNull } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
@@ -41,7 +40,7 @@ import type {
   ObjectTypeSnapshotItem,
   ObjectRelationSnapshotItem,
 } from "./types";
-import type { ToolParameter } from "@/lib/tools/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 type Tx = PgTransaction<
   PostgresJsQueryResultHKT,
@@ -50,27 +49,17 @@ type Tx = PgTransaction<
 >;
 
 /**
- * Recursively remap `schemaId` and `enumDatasetId` references in ToolParameter[].
- * Used by buildSnapshot (UUID→key) and restoreSnapshot (key→newUUID).
+ * Previously used to remap x-enumDatasetId UUIDs in schema snapshots.
+ * Now that x-enumDatasetId has been replaced by template strings (e.g. "{{dataset_key}}"),
+ * no remapping is needed — schemas use human-readable keys directly.
+ *
+ * @deprecated Kept for API compatibility; returns the schema unchanged.
  */
 export function remapParameterRefs(
-  params: ToolParameter[],
-  schemaMap: Map<string, string>,
-  datasetMap: Map<string, string>
-): ToolParameter[] {
-  return params.map((p) => {
-    const mapped = { ...p };
-    if (mapped.schemaId) {
-      mapped.schemaId = schemaMap.get(mapped.schemaId) ?? mapped.schemaId;
-    }
-    if (mapped.enumDatasetId) {
-      mapped.enumDatasetId = datasetMap.get(mapped.enumDatasetId) ?? mapped.enumDatasetId;
-    }
-    if (mapped.properties && mapped.properties.length > 0) {
-      mapped.properties = remapParameterRefs(mapped.properties, schemaMap, datasetMap);
-    }
-    return mapped;
-  });
+  schema: JsonSchema7,
+  _datasetMap?: Map<string, string>
+): JsonSchema7 {
+  return schema;
 }
 
 /* ═══════════════════════════════════════════════
@@ -189,25 +178,6 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
   // Dataset: convert id to key for parameter refs
   const datasetIdToKey = new Map(datasetRows.map((d) => [d.id, d.key]));
 
-  // Load schema includes for snapshot
-  const schemaIncludeRows = schemaRows.length > 0
-    ? await _db
-        .select()
-        .from(schemaIncludes)
-        .where(inArray(schemaIncludes.schemaId, schemaRows.map((s) => s.id)))
-        .orderBy(asc(schemaIncludes.position))
-    : [];
-
-  // Build includeSchemaKeys by schemaId (ID → key conversion)
-  const schemaIncludeKeysBySchemaId = new Map<string, string[]>();
-  for (const row of schemaIncludeRows) {
-    const key = schemaIdToKey.get(row.includeSchemaId);
-    if (!key) continue;
-    const arr = schemaIncludeKeysBySchemaId.get(row.schemaId) ?? [];
-    arr.push(key);
-    schemaIncludeKeysBySchemaId.set(row.schemaId, arr);
-  }
-
   // ObjectType: convert id to key for relation snapshot references
   const objTypeIdToKey = new Map(objectTypeRows.map((t) => [t.id, t.key]));
 
@@ -260,8 +230,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         key: s.key,
         name: s.name,
         description: s.description,
-        parameters: remapParameterRefs(s.parameters, schemaIdToKey, datasetIdToKey),
-        includeSchemaKeys: schemaIncludeKeysBySchemaId.get(s.id) ?? [],
+        parameters: remapParameterRefs(s.parameters, datasetIdToKey),
       })
     ),
     wikiDocuments: wikiRows.map(
@@ -399,10 +368,9 @@ export async function restoreSnapshot(
   }
 
   // 2b. Rebuild schemas (tools/components reference them via FK)
-  // Two-step: insert with key refs, then update with new UUIDs
   const schemaKeyToNewId = new Map<string, string>();
   if (snapshot.schemas.length > 0) {
-    // Step 1: Insert schemas (parameters still contain key references)
+    // Insert schemas (parameters still contain dataset key references)
     const insertedSchemas = await tx
       .insert(schemas)
       .values(
@@ -419,30 +387,15 @@ export async function restoreSnapshot(
       schemaKeyToNewId.set(s.key, s.id);
     }
 
-    // Step 2: Remap key→newUUID in parameters and update each schema
+    // Remap dataset key→newUUID in parameters and update each schema
     for (const s of snapshot.schemas) {
       const schemaId = schemaKeyToNewId.get(s.key);
       if (!schemaId) continue;
-      const remapped = remapParameterRefs(s.parameters, schemaKeyToNewId, datasetKeyToNewId);
+      const remapped = remapParameterRefs(s.parameters, datasetKeyToNewId);
       await tx
         .update(schemas)
         .set({ parameters: remapped })
         .where(eq(schemas.id, schemaId));
-    }
-
-    // Rebuild schema includes from snapshot
-    const includeValues: { schemaId: string; includeSchemaId: string; position: number }[] = [];
-    for (const s of snapshot.schemas) {
-      const schemaId = schemaKeyToNewId.get(s.key);
-      if (!schemaId) continue;
-      for (const [i, includeKey] of (s.includeSchemaKeys ?? []).entries()) {
-        const includeSchemaId = schemaKeyToNewId.get(includeKey);
-        if (!includeSchemaId) continue;
-        includeValues.push({ schemaId, includeSchemaId, position: i });
-      }
-    }
-    if (includeValues.length > 0) {
-      await tx.insert(schemaIncludes).values(includeValues);
     }
   }
 

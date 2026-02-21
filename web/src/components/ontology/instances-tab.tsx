@@ -22,15 +22,16 @@ import {
 import { InstanceCreateDialog } from "./instance-create-dialog";
 import { InstanceEditSheet } from "./instance-edit-sheet";
 import { ImportDialog } from "./import-dialog";
-import type { ObjectTypeRow, ObjectInstanceRow, SchemaWithIncludes } from "@/db/schema";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { ObjectTypeRow, ObjectInstanceRow, SchemaRow } from "@/db/schema";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import { getDisplayType } from "@/lib/schemas/json-schema-utils";
 
-const SIMPLE_TYPES = new Set(["string", "number", "boolean", "enum"]);
+const SIMPLE_TYPES = new Set(["string", "number", "integer", "boolean", "enum"]);
 
 interface InstancesTabProps {
   agentId: string;
   objectType: ObjectTypeRow;
-  schemas: SchemaWithIncludes[];
+  schemas: SchemaRow[];
 }
 
 export function InstancesTab({ agentId, objectType, schemas }: InstancesTabProps) {
@@ -45,9 +46,12 @@ export function InstancesTab({ agentId, objectType, schemas }: InstancesTabProps
     [schemas, objectType.schemaId]
   );
 
-  const columns = useMemo<SchemaProperty[]>(() => {
+  const columns = useMemo<{ key: string; propSchema: JsonSchema7 }[]>(() => {
     if (!schema) return [];
-    return schema.parameters.filter((p) => SIMPLE_TYPES.has(p.type));
+    const schemaParams = schema.parameters as JsonSchema7;
+    return Object.entries(schemaParams.properties ?? {})
+      .filter(([, propSchema]) => SIMPLE_TYPES.has(getDisplayType(propSchema)))
+      .map(([key, propSchema]) => ({ key, propSchema }));
   }, [schema]);
 
   const handleDelete = useCallback(async () => {
@@ -59,7 +63,8 @@ export function InstancesTab({ agentId, objectType, schemas }: InstancesTabProps
   const handleExport = useCallback(async () => {
     if (!schema || instances.length === 0) return;
     const Papa = await import("papaparse");
-    const propNames = schema.parameters.map((p) => p.name);
+    const schemaParams = schema.parameters as JsonSchema7;
+    const propNames = Object.keys(schemaParams.properties ?? {});
     const rows = instances.map((inst) => {
       const row: Record<string, unknown> = {};
       for (const name of propNames) {
@@ -136,7 +141,7 @@ export function InstancesTab({ agentId, objectType, schemas }: InstancesTabProps
               <TableRow>
                 <TableHead>Label</TableHead>
                 {columns.map((col) => (
-                  <TableHead key={col.id}>{col.name}</TableHead>
+                  <TableHead key={col.key}>{col.key}</TableHead>
                 ))}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -152,8 +157,8 @@ export function InstancesTab({ agentId, objectType, schemas }: InstancesTabProps
                     {inst.label || <span className="text-muted-foreground italic">untitled</span>}
                   </TableCell>
                   {columns.map((col) => (
-                    <TableCell key={col.id} className="max-w-[200px] truncate">
-                      {formatCellValue(inst.data[col.name])}
+                    <TableCell key={col.key} className="max-w-[200px] truncate">
+                      {formatCellValue(inst.data[col.key])}
                     </TableCell>
                   ))}
                   <TableCell className="text-right">

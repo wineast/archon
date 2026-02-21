@@ -25,7 +25,7 @@ import {
 import { parseFile, inferColumnTypes, type ParsedFile } from "@/lib/ontology/import";
 import { createSchema } from "@/lib/schemas/hooks";
 import { createObjectType, updateObjectType, batchCreateObjectInstances } from "@/lib/ontology/hooks";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 type Step = "upload" | "preview" | "config";
 
@@ -104,16 +104,24 @@ export function ImportTypeDialog({
     [handleFile]
   );
 
-  const inferredSchema = useMemo<SchemaProperty[]>(() => {
-    if (!parsed) return [];
-    return parsed.headers.map((h, i) => ({
-      id: `prop-${i}`,
-      name: h,
-      type: columnTypes[h] ?? "string",
-      description: "",
-      required: false,
-    }));
+  /** Build a JsonSchema7 from inferred columns. */
+  const inferredSchema = useMemo<JsonSchema7>(() => {
+    if (!parsed) return { type: "object", properties: {}, required: [] };
+    const properties: Record<string, JsonSchema7> = {};
+    for (const h of parsed.headers) {
+      properties[h] = {
+        type: columnTypes[h] ?? "string",
+        description: "",
+      };
+    }
+    return { type: "object", properties, required: [] };
   }, [parsed, columnTypes]);
+
+  /** Entries for display iteration */
+  const inferredEntries = useMemo(
+    () => Object.entries(inferredSchema.properties ?? {}),
+    [inferredSchema]
+  );
 
   const handleCreate = useCallback(async () => {
     if (!parsed || !key.trim()) return;
@@ -155,20 +163,22 @@ export function ImportTypeDialog({
       // 3. Batch import instances
       const items = parsed.rows.map((row) => {
         const data: Record<string, unknown> = {};
-        for (const prop of inferredSchema) {
-          const val = row[prop.name];
+        for (const [propKey, propSchema] of inferredEntries) {
+          const val = row[propKey];
           if (val != null && val !== "") {
-            switch (prop.type) {
+            const propType = propSchema.type;
+            switch (propType) {
               case "number":
-                data[prop.name] = Number(val);
+              case "integer":
+                data[propKey] = Number(val);
                 break;
               case "boolean": {
                 const s = String(val).toLowerCase();
-                data[prop.name] = s === "true" || s === "1";
+                data[propKey] = s === "true" || s === "1";
                 break;
               }
               default:
-                data[prop.name] = String(val);
+                data[propKey] = String(val);
             }
           }
         }
@@ -190,6 +200,7 @@ export function ImportTypeDialog({
     name,
     agentId,
     inferredSchema,
+    inferredEntries,
     onCreated,
     mutateSchemas,
     handleClose,
@@ -248,7 +259,7 @@ export function ImportTypeDialog({
         {step === "preview" && parsed && (
           <div className="space-y-4">
             <div className="text-xs font-medium text-muted-foreground">
-              Inferred schema ({inferredSchema.length} columns,{" "}
+              Inferred schema ({inferredEntries.length} columns,{" "}
               {parsed.rows.length} rows)
             </div>
             <ScrollArea className="max-h-[300px] [&_[data-slot=scroll-area-viewport]>div]:!block">
@@ -261,14 +272,14 @@ export function ImportTypeDialog({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {inferredSchema.map((prop) => (
-                    <TableRow key={prop.id}>
-                      <TableCell className="font-medium">{prop.name}</TableCell>
+                  {inferredEntries.map(([propKey, propSchema]) => (
+                    <TableRow key={propKey}>
+                      <TableCell className="font-medium">{propKey}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {prop.type}
+                        {String(propSchema.type ?? "string")}
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                        {String(parsed.rows[0]?.[prop.name] ?? "")}
+                        {String(parsed.rows[0]?.[propKey] ?? "")}
                       </TableCell>
                     </TableRow>
                   ))}

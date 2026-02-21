@@ -10,32 +10,30 @@ const opts = {
   abortSignal: new AbortController().signal,
 };
 
+const EMPTY_PARAMS = {
+  type: "object" as const,
+  properties: {},
+  required: [] as string[],
+};
+
 const validPayload: ToolDefinitionPayload = {
   name: "searchProducts",
   description: "Search products by keyword",
-  parameters: [
-    {
-      id: "p-1",
-      name: "query",
-      type: "string",
-      description: "Search keyword",
-      required: true,
+  parameters: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Search keyword" },
+      limit: { type: "number", description: "Max results" },
     },
-    {
-      id: "p-2",
-      name: "limit",
-      type: "number",
-      description: "Max results",
-      required: false,
-    },
-  ],
+    required: ["query"],
+  },
   handler: "(args) => ({ results: [], total: 0 })",
 };
 
 const noParamPayload: ToolDefinitionPayload = {
   name: "getCurrentTime",
   description: "Get current time",
-  parameters: [],
+  parameters: EMPTY_PARAMS,
   handler: "() => ({ time: '12:00' })",
 };
 
@@ -62,7 +60,7 @@ describe("buildDynamicTools", () => {
       const payload: ToolDefinitionPayload = {
         name: "noHandler",
         description: "Tool without handler",
-        parameters: [],
+        parameters: EMPTY_PARAMS,
         handler: "",
       };
       const tools = buildDynamicTools([payload]);
@@ -76,7 +74,7 @@ describe("buildDynamicTools", () => {
       const payload: ToolDefinitionPayload = {
         name: "wsHandler",
         description: "Tool with whitespace handler",
-        parameters: [],
+        parameters: EMPTY_PARAMS,
         handler: "   ",
       };
       const tools = buildDynamicTools([payload]);
@@ -104,7 +102,7 @@ describe("buildDynamicTools", () => {
       const payload: ToolDefinitionPayload = {
         name: "weather",
         description: "Get weather",
-        parameters: [],
+        parameters: EMPTY_PARAMS,
         url: "https://api.weather.io/v1",
       };
       const tools = buildDynamicTools([payload]);
@@ -129,7 +127,7 @@ describe("buildDynamicTools", () => {
       const payload: ToolDefinitionPayload = {
         name: "broken_api",
         description: "Broken API",
-        parameters: [],
+        parameters: EMPTY_PARAMS,
         url: "https://api.example.com/broken",
       };
       const tools = buildDynamicTools([payload]);
@@ -146,13 +144,13 @@ describe("buildDynamicTools", () => {
       const payload1: ToolDefinitionPayload = {
         name: "tool1",
         description: "First",
-        parameters: [],
+        parameters: EMPTY_PARAMS,
         handler: "() => ({ a: 1 })",
       };
       const payload2: ToolDefinitionPayload = {
         name: "tool2",
         description: "Second",
-        parameters: [],
+        parameters: EMPTY_PARAMS,
         handler: "() => ({ b: 2 })",
       };
       const tools = buildDynamicTools([payload1, payload2]);
@@ -167,13 +165,13 @@ describe("buildDynamicTools", () => {
       const p1: ToolDefinitionPayload = {
         name: "dup",
         description: "First",
-        parameters: [],
+        parameters: EMPTY_PARAMS,
         handler: "() => ({})",
       };
       const p2: ToolDefinitionPayload = {
         name: "dup",
         description: "Second",
-        parameters: [],
+        parameters: EMPTY_PARAMS,
         handler: "() => ({})",
       };
       const tools = buildDynamicTools([p1, p2]);
@@ -301,16 +299,14 @@ describe("output validation", () => {
     const payload: ToolDefinitionPayload = {
       name: "myTool",
       description: "A tool with output validation",
-      parameters: [],
-      returnParameters: [
-        {
-          id: "r1",
-          name: "status",
-          type: "string",
-          description: "status",
-          required: true,
+      parameters: EMPTY_PARAMS,
+      returnParameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", description: "status" },
         },
-      ],
+        required: ["status"],
+      },
       handler: "() => ({ status: 123 })",
     };
     const tools = buildDynamicTools([payload], undefined, agentId, collector);
@@ -324,7 +320,7 @@ describe("output validation", () => {
     const payload: ToolDefinitionPayload = {
       name: "myTool",
       description: "A tool without output validation",
-      parameters: [],
+      parameters: EMPTY_PARAMS,
       handler: "() => ({ anything: 'goes' })",
     };
     const tools = buildDynamicTools([payload], undefined, agentId, collector);

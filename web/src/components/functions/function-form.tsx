@@ -24,7 +24,7 @@ import { JsEditor } from "@/components/editors/js-editor";
 import { useSchemas } from "@/lib/schemas/hooks";
 import { SchemaParameterPreview } from "@/components/schemas/schema-parameter-preview";
 import { FunctionCodeAssistDialog } from "./function-code-assist-dialog";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 export interface FunctionFormValues {
   name: string;
@@ -56,7 +56,7 @@ interface ParameterSectionProps {
   label: string;
   schemaIdFieldName: "parametersSchemaId" | "returnParametersSchemaId";
   schemaIdValue: string | null | undefined;
-  schemas: { id: string; key: string; name: string; parameters: SchemaProperty[] }[];
+  schemas: { id: string; key: string; name: string; parameters: JsonSchema7 }[];
   form: ReturnType<typeof useForm<FunctionFormValues>>;
 }
 
@@ -98,7 +98,7 @@ function ParameterSection({
           )}
         />
         {selectedSchema && (
-          <SchemaParameterPreview parameters={selectedSchema.parameters} />
+          <SchemaParameterPreview schema={selectedSchema.parameters} />
         )}
       </div>
     </div>

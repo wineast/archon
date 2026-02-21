@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { objectTypes, schemas, tools } from "@/db/schema";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import { eq, and, isNull } from "drizzle-orm";
 
 interface GenerateResult {
@@ -37,6 +37,18 @@ export async function generateCrudToolsForType(
   const created: string[] = [];
   const skipped: string[] = [];
 
+  // Cast parameters to JsonSchema7 (DB column is already JsonSchema7)
+  const schemaParams = schema.parameters as JsonSchema7;
+
+  // Build a copy of the schema's properties with all required removed (for query)
+  const queryProperties: Record<string, JsonSchema7> = { ...(schemaParams.properties ?? {}) };
+
+  // Build update properties: id + all original properties (all optional)
+  const updateProperties: Record<string, JsonSchema7> = {
+    id: { type: "string", description: `ID of the ${objType.name} to update` },
+    ...queryProperties,
+  };
+
   // Define the 4 tools to generate
   const toolDefs = [
     {
@@ -44,7 +56,7 @@ export async function generateCrudToolsForType(
       toolName: `create_${typeKey}`,
       toolDescription: `Create a new ${objType.name} instance. ${objType.description}`,
       schemaKey: null, // reuse objectType's schema
-      schemaParams: null,
+      schemaParams: null as JsonSchema7 | null,
       handler: `async (args, context) => context.ontology.create("${typeKey}", args)`,
     },
     {
@@ -52,15 +64,13 @@ export async function generateCrudToolsForType(
       toolName: `get_${typeKey}`,
       toolDescription: `Get a ${objType.name} instance by ID, including its relations.`,
       schemaKey: `_auto_${typeKey}_get`,
-      schemaParams: [
-        {
-          id: "id",
-          name: "id",
-          type: "string" as const,
-          description: `ID of the ${objType.name} to retrieve`,
-          required: true,
+      schemaParams: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: `ID of the ${objType.name} to retrieve` },
         },
-      ],
+        required: ["id"],
+      } as JsonSchema7,
       handler: `async (args, context) => context.ontology.get("${typeKey}", args.id)`,
     },
     {
@@ -68,12 +78,11 @@ export async function generateCrudToolsForType(
       toolName: `query_${typeKey}s`,
       toolDescription: `Query ${objType.name} instances with optional filters.`,
       schemaKey: `_auto_${typeKey}_query`,
-      schemaParams: schema.parameters.map(
-        (p): SchemaProperty => ({
-          ...p,
-          required: false,
-        })
-      ),
+      schemaParams: {
+        type: "object",
+        properties: queryProperties,
+        required: [],
+      } as JsonSchema7,
       handler: `async (args, context) => context.ontology.query("${typeKey}", args)`,
     },
     {
@@ -81,21 +90,11 @@ export async function generateCrudToolsForType(
       toolName: `update_${typeKey}`,
       toolDescription: `Update a ${objType.name} instance by ID. Only provided fields are updated.`,
       schemaKey: `_auto_${typeKey}_update`,
-      schemaParams: [
-        {
-          id: "id",
-          name: "id",
-          type: "string" as const,
-          description: `ID of the ${objType.name} to update`,
-          required: true,
-        },
-        ...schema.parameters.map(
-          (p): SchemaProperty => ({
-            ...p,
-            required: false,
-          })
-        ),
-      ],
+      schemaParams: {
+        type: "object",
+        properties: updateProperties,
+        required: ["id"],
+      } as JsonSchema7,
       handler: `async (args, context) => { const { id, ...data } = args; return context.ontology.update("${typeKey}", id, data); }`,
     },
   ];

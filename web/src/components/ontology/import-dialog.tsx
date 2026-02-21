@@ -30,8 +30,9 @@ import {
 } from "@/components/ui/table";
 import { parseFile, type ParsedFile } from "@/lib/ontology/import";
 import { batchCreateObjectInstances } from "@/lib/ontology/hooks";
-import type { ObjectTypeRow, SchemaWithIncludes } from "@/db/schema";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { ObjectTypeRow, SchemaRow } from "@/db/schema";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import { getDisplayType } from "@/lib/schemas/json-schema-utils";
 
 type Step = "upload" | "mapping" | "confirm";
 
@@ -40,7 +41,7 @@ interface ImportDialogProps {
   onOpenChange: (open: boolean) => void;
   agentId: string;
   objectType: ObjectTypeRow;
-  schema: SchemaWithIncludes;
+  schema: SchemaRow;
   onImported: () => void;
 }
 
@@ -58,7 +59,8 @@ export function ImportDialog({
   const [importing, setImporting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const schemaProps = schema.parameters;
+  const schemaParams = schema.parameters as JsonSchema7;
+  const schemaEntries = Object.entries(schemaParams.properties ?? {});
 
   const handleClose = useCallback(() => {
     setParsed(null);
@@ -73,13 +75,13 @@ export function ImportDialog({
       try {
         const result = await parseFile(file);
         setParsed(result);
-        // Auto-match: file header → schema prop name
+        // Auto-match: file header -> schema prop name
         const autoMap: Record<string, string> = {};
-        for (const prop of schemaProps) {
+        for (const [key] of schemaEntries) {
           const match = result.headers.find(
-            (h) => h.toLowerCase() === prop.name.toLowerCase()
+            (h) => h.toLowerCase() === key.toLowerCase()
           );
-          if (match) autoMap[prop.name] = match;
+          if (match) autoMap[key] = match;
         }
         setMapping(autoMap);
         setStep("mapping");
@@ -87,7 +89,7 @@ export function ImportDialog({
         // parseFile already shows error context
       }
     },
-    [schemaProps]
+    [schemaEntries]
   );
 
   const handleDrop = useCallback(
@@ -127,15 +129,15 @@ export function ImportDialog({
     if (!parsed) return [];
     return parsed.rows.map((row) => {
       const data: Record<string, unknown> = {};
-      for (const prop of schemaProps) {
-        const header = mapping[prop.name];
+      for (const [key, propSchema] of schemaEntries) {
+        const header = mapping[key];
         if (header) {
-          data[prop.name] = coerceValue(row[header], prop);
+          data[key] = coerceValue(row[header], propSchema);
         }
       }
       return { data };
     });
-  }, [parsed, mapping, schemaProps]);
+  }, [parsed, mapping, schemaEntries]);
 
   const handleImport = useCallback(async () => {
     setImporting(true);
@@ -200,15 +202,15 @@ export function ImportDialog({
           <div className="space-y-4">
             {/* Column mapping */}
             <div className="space-y-2">
-              {schemaProps.map((prop) => (
-                <div key={prop.id} className="flex items-center gap-2">
+              {schemaEntries.map(([key]) => (
+                <div key={key} className="flex items-center gap-2">
                   <span className="w-32 shrink-0 truncate text-sm font-medium">
-                    {prop.name}
+                    {key}
                   </span>
                   <ArrowRightIcon className="size-3 shrink-0 text-muted-foreground" />
                   <Select
-                    value={mapping[prop.name] ?? "__none__"}
-                    onValueChange={(v) => handleMappingChange(prop.name, v)}
+                    value={mapping[key] ?? "__none__"}
+                    onValueChange={(v) => handleMappingChange(key, v)}
                   >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="(skip)" />
@@ -234,21 +236,21 @@ export function ImportDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {schemaProps
-                      .filter((p) => mapping[p.name])
-                      .map((p) => (
-                        <TableHead key={p.id}>{p.name}</TableHead>
+                    {schemaEntries
+                      .filter(([key]) => mapping[key])
+                      .map(([key]) => (
+                        <TableHead key={key}>{key}</TableHead>
                       ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {mappedItems.slice(0, 5).map((item, i) => (
                     <TableRow key={i}>
-                      {schemaProps
-                        .filter((p) => mapping[p.name])
-                        .map((p) => (
-                          <TableCell key={p.id} className="max-w-[150px] truncate">
-                            {String(item.data[p.name] ?? "")}
+                      {schemaEntries
+                        .filter(([key]) => mapping[key])
+                        .map(([key]) => (
+                          <TableCell key={key} className="max-w-[150px] truncate">
+                            {String(item.data[key] ?? "")}
                           </TableCell>
                         ))}
                     </TableRow>
@@ -308,10 +310,12 @@ export function ImportDialog({
   );
 }
 
-function coerceValue(val: unknown, prop: SchemaProperty): unknown {
+function coerceValue(val: unknown, propSchema: JsonSchema7): unknown {
   if (val == null || val === "") return undefined;
-  switch (prop.type) {
+  const displayType = getDisplayType(propSchema);
+  switch (displayType) {
     case "number":
+    case "integer":
       return Number(val);
     case "boolean": {
       const s = String(val).toLowerCase();

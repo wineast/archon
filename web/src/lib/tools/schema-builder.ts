@@ -1,299 +1,331 @@
 import { z } from "zod";
 import deepEqual from "fast-deep-equal";
-import type { SchemaProperty } from "./types";
-
-/** Normalize a single union variant — compatible with both old format (SchemaProperty[]) and new format (SchemaProperty). */
-export function normalizeVariantItem(v: unknown): SchemaProperty {
-  // New format: already a SchemaProperty (has `type` field)
-  if (v && typeof v === "object" && !Array.isArray(v) && "type" in v
-      && typeof (v as Record<string, unknown>).type === "string") {
-    return v as SchemaProperty;
-  }
-  // Old format: SchemaProperty[] (property list → wrap as object variant)
-  if (Array.isArray(v)) {
-    return { id: "migrated", name: "", type: "object", description: "", required: true, properties: v };
-  }
-  // Old format: react-hook-form numeric-key object → convert to array → wrap as object
-  if (v && typeof v === "object") {
-    const entries: SchemaProperty[] = [];
-    for (const [key, val] of Object.entries(v)) {
-      if (/^\d+$/.test(key) && val && typeof val === "object") {
-        entries.push(val as SchemaProperty);
-      }
-    }
-    if (entries.length > 0) {
-      return { id: "migrated", name: "", type: "object", description: "", required: true, properties: entries };
-    }
-  }
-  return { id: "unknown", name: "", type: "string", description: "", required: true };
-}
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 export interface BuildSchemaOptions {
-  /** Datasets by UUID: id → resolved data. */
-  datasetsById?: Record<string, unknown>;
-  /** Schema map: schema UUID → resolved SchemaProperty[]. */
-  schemaMap?: Record<string, SchemaProperty[]>;
+  /** Defs map: schema key → JsonSchema7 parameters. Used for $ref resolution. */
+  defsMap?: Record<string, JsonSchema7>;
 }
 
 /**
- * Build a zod schema for a single SchemaProperty.
+ * Build a zod schema from a single JSON Schema 7 property.
  *
- * `ancestorSchemaIds` tracks schemaId references up the call stack to detect
+ * `ancestorKeys` tracks $ref schema keys up the call stack to detect
  * self-referencing object types and generate z.lazy() for recursion.
  */
-function buildParamSchema(
-  param: SchemaProperty,
+function buildPropertySchema(
+  schema: JsonSchema7,
   resolvedVars?: Record<string, unknown>,
   options?: BuildSchemaOptions,
-  ancestorSchemaIds?: Set<string>
+  ancestorKeys?: Set<string>
 ): z.ZodTypeAny {
-  let schema: z.ZodTypeAny;
+  // $ref resolution
+  if (schema.$ref) {
+    return buildRefSchema(schema, resolvedVars, options, ancestorKeys);
+  }
 
-  switch (param.type) {
+  // const
+  if (schema.const !== undefined) {
+    return z.literal(schema.const as string | number | boolean);
+  }
+
+  // nullable pattern: anyOf: [T, {type:"null"}]
+  if (schema.anyOf && schema.anyOf.length === 2 && schema.anyOf.some((s) => s.type === "null")) {
+    const nonNull = schema.anyOf.find((s) => s.type !== "null")!;
+    return buildPropertySchema(nonNull, resolvedVars, options, ancestorKeys).nullable();
+  }
+
+  // union: oneOf / anyOf
+  if (schema.oneOf && schema.oneOf.length >= 2) {
+    return buildUnionSchema(schema, resolvedVars, options, ancestorKeys);
+  }
+  if (schema.anyOf && schema.anyOf.length >= 2) {
+    return buildUnionSchema(schema, resolvedVars, options, ancestorKeys);
+  }
+
+  // allOf composition
+  if (schema.allOf && schema.allOf.length > 0) {
+    return buildAllOfSchema(schema, resolvedVars, options, ancestorKeys);
+  }
+
+  // enum
+  if (schema.enum && schema.enum.length > 0) {
+    const resolved = resolveEnumValues(schema, resolvedVars);
+    if (resolved && resolved.length > 0) {
+      return z.enum(resolved as [string, ...string[]]);
+    }
+    return z.string();
+  }
+
+  const t = schema.type;
+
+  switch (t) {
+    case "string": {
+      let s: z.ZodTypeAny = z.string();
+      if (schema.minLength != null) s = (s as z.ZodString).min(schema.minLength);
+      if (schema.maxLength != null) s = (s as z.ZodString).max(schema.maxLength);
+      if (schema.pattern) s = (s as z.ZodString).regex(new RegExp(schema.pattern));
+      if (schema.format === "email") s = (s as z.ZodString).email();
+      if (schema.format === "url") s = (s as z.ZodString).url();
+      if (schema.format === "uuid") s = (s as z.ZodString).uuid();
+      if (schema.format === "date") s = (s as z.ZodString).date();
+      if (schema.format === "date-time") s = (s as z.ZodString).datetime();
+      if (schema.format === "time") s = (s as z.ZodString).time();
+      if (schema.format === "ipv4") s = (s as z.ZodString).ipv4();
+      if (schema.format === "ipv6") s = (s as z.ZodString).ipv6();
+      return s;
+    }
+    case "integer": {
+      let s: z.ZodTypeAny = z.number().int();
+      if (schema.minimum != null) s = (s as z.ZodNumber).min(schema.minimum);
+      if (schema.maximum != null) s = (s as z.ZodNumber).max(schema.maximum);
+      if (schema.exclusiveMinimum != null) s = (s as z.ZodNumber).gt(schema.exclusiveMinimum);
+      if (schema.exclusiveMaximum != null) s = (s as z.ZodNumber).lt(schema.exclusiveMaximum);
+      if (schema.multipleOf != null) s = (s as z.ZodNumber).multipleOf(schema.multipleOf);
+      return s;
+    }
     case "number": {
-      schema = param.integer ? z.number().int() : z.number();
-      if (param.minimum != null) schema = (schema as z.ZodNumber).min(param.minimum);
-      if (param.maximum != null) schema = (schema as z.ZodNumber).max(param.maximum);
-      if (param.exclusiveMinimum != null) schema = (schema as z.ZodNumber).gt(param.exclusiveMinimum);
-      if (param.exclusiveMaximum != null) schema = (schema as z.ZodNumber).lt(param.exclusiveMaximum);
-      if (param.multipleOf != null) schema = (schema as z.ZodNumber).multipleOf(param.multipleOf);
-      break;
+      let s: z.ZodTypeAny = z.number();
+      if (schema.minimum != null) s = (s as z.ZodNumber).min(schema.minimum);
+      if (schema.maximum != null) s = (s as z.ZodNumber).max(schema.maximum);
+      if (schema.exclusiveMinimum != null) s = (s as z.ZodNumber).gt(schema.exclusiveMinimum);
+      if (schema.exclusiveMaximum != null) s = (s as z.ZodNumber).lt(schema.exclusiveMaximum);
+      if (schema.multipleOf != null) s = (s as z.ZodNumber).multipleOf(schema.multipleOf);
+      return s;
     }
     case "boolean":
-      schema = z.boolean();
-      break;
+      return z.boolean();
     case "null":
-      schema = z.null();
-      break;
-    case "const":
-      schema = param.constValue !== undefined ? z.literal(param.constValue as string | number | boolean) : z.unknown();
-      break;
+      return z.null();
     case "object":
-      schema = buildObjectSchema(param, resolvedVars, options, ancestorSchemaIds);
-      break;
-    case "array": {
-      if (param.tuple && param.prefixItems && param.prefixItems.length > 0) {
-        const tupleSchemas = param.prefixItems.map((item) =>
-          buildParamSchema(item, resolvedVars, options, ancestorSchemaIds)
-        );
-        schema = z.tuple(tupleSchemas as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
-      } else {
-        let itemSchema: z.ZodTypeAny = z.unknown();
-        if (param.items) {
-          itemSchema = buildParamSchema(param.items, resolvedVars, options, ancestorSchemaIds);
-        }
-        schema = z.array(itemSchema);
-        if (param.minItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).min(param.minItems);
-        if (param.maxItems != null) schema = (schema as z.ZodArray<z.ZodTypeAny>).max(param.maxItems);
-        if (param.uniqueItems) {
-          schema = (schema as z.ZodArray<z.ZodTypeAny>).refine(
-            (arr) => {
-              for (let i = 0; i < arr.length; i++) {
-                for (let j = i + 1; j < arr.length; j++) {
-                  if (deepEqual(arr[i], arr[j])) return false;
-                }
-              }
-              return true;
-            },
-            { message: "Array items must be unique" }
-          );
-        }
-      }
-      break;
-    }
-    case "enum": {
-      // Resolve enum values from datasets or inline
-      const resolvedEnum = resolveEnumValues(param, resolvedVars, options);
-      if (resolvedEnum && resolvedEnum.length > 0) {
-        schema = z.enum(resolvedEnum as [string, ...string[]]);
-      } else {
-        console.warn(`[schema-builder] enum param "${param.name}" has no values, falling back to z.string()`);
-        schema = z.string();
-      }
-      break;
-    }
-    case "union": {
-      schema = buildUnionSchema(param, resolvedVars, options, ancestorSchemaIds);
-      break;
-    }
-    default: {
-      // string
-      schema = z.string();
-      if (param.minLength != null) schema = (schema as z.ZodString).min(param.minLength);
-      if (param.maxLength != null) schema = (schema as z.ZodString).max(param.maxLength);
-      if (param.pattern) schema = (schema as z.ZodString).regex(new RegExp(param.pattern));
-      if (param.format === "email") schema = (schema as z.ZodString).email();
-      if (param.format === "url") schema = (schema as z.ZodString).url();
-      if (param.format === "uuid") schema = (schema as z.ZodString).uuid();
-      if (param.format === "date") schema = (schema as z.ZodString).date();
-      if (param.format === "date-time") schema = (schema as z.ZodString).datetime();
-      if (param.format === "time") schema = (schema as z.ZodString).time();
-      if (param.format === "ipv4") schema = (schema as z.ZodString).ipv4();
-      if (param.format === "ipv6") schema = (schema as z.ZodString).ipv6();
-      break;
-    }
+      return buildObjectSchema(schema, resolvedVars, options, ancestorKeys);
+    case "array":
+      return buildArraySchema(schema, resolvedVars, options, ancestorKeys);
+    default:
+      return z.unknown();
   }
-
-  if (param.nullable) {
-    schema = schema.nullable();
-  }
-
-  return schema;
 }
 
-/** Build z.object schema for "object" type params, with Map/Record and recursive ref support. */
-function buildObjectSchema(
-  param: SchemaProperty,
+/** Resolve a $ref to a schema key and build its Zod schema. */
+function buildRefSchema(
+  schema: JsonSchema7,
   resolvedVars?: Record<string, unknown>,
   options?: BuildSchemaOptions,
-  ancestorSchemaIds?: Set<string>
+  ancestorKeys?: Set<string>
 ): z.ZodTypeAny {
-  // --- Recursive self-reference via schemaId ---
-  if (param.schemaId && options?.schemaMap?.[param.schemaId]) {
-    if (ancestorSchemaIds?.has(param.schemaId)) {
-      // Self-reference detected → z.lazy() to break recursion
-      return z.lazy(() =>
-        buildObjectSchema(
-          { ...param },
-          resolvedVars,
-          options,
-          new Set() // fresh set — z.lazy defers, so no infinite loop
-        )
-      );
-    }
+  const ref = schema.$ref;
+  if (!ref) return z.unknown();
 
-    const nextAncestors = new Set(ancestorSchemaIds);
-    nextAncestors.add(param.schemaId);
+  const key = ref.replace("#/$defs/", "");
+  const refSchema = options?.defsMap?.[key];
+  if (!refSchema) return z.unknown();
 
-    const refParams = options.schemaMap[param.schemaId];
-    const obj = buildNestedObject(refParams, resolvedVars, options, nextAncestors);
-
-    // additionalProperties on top of referenced schema
-    if (param.additionalProperties) {
-      const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, nextAncestors);
-      return obj.catchall(valSchema);
-    }
-    return obj;
+  // Cycle detection — use z.lazy() for recursive refs
+  if (ancestorKeys?.has(key)) {
+    return z.lazy(() =>
+      buildPropertySchema(refSchema, resolvedVars, options, new Set())
+    );
   }
 
-  // --- allOf: merge multiple schemas via schemaIds ---
-  if (param.schemaIds && param.schemaIds.length > 0 && options?.schemaMap) {
-    const mergedParams: SchemaProperty[] = [];
-    const seen = new Set<string>();
-    for (const sid of param.schemaIds) {
-      const refParams = options.schemaMap[sid];
-      if (refParams) {
-        for (const p of refParams) {
-          if (seen.has(p.name)) {
-            const idx = mergedParams.findIndex((m) => m.name === p.name);
-            if (idx >= 0) mergedParams[idx] = p;
-          } else {
-            seen.add(p.name);
-            mergedParams.push(p);
-          }
-        }
+  const nextKeys = new Set(ancestorKeys);
+  nextKeys.add(key);
+  return buildPropertySchema(refSchema, resolvedVars, options, nextKeys);
+}
+
+/** Build z.object schema for allOf composition. Merges properties from all items. */
+function buildAllOfSchema(
+  schema: JsonSchema7,
+  resolvedVars?: Record<string, unknown>,
+  options?: BuildSchemaOptions,
+  ancestorKeys?: Set<string>
+): z.ZodTypeAny {
+  const mergedProps: Record<string, JsonSchema7> = {};
+  const mergedRequired = new Set<string>();
+
+  for (const item of schema.allOf ?? []) {
+    // Resolve $ref items
+    let resolved = item;
+    if (item.$ref) {
+      const key = item.$ref.replace("#/$defs/", "");
+      const refSchema = options?.defsMap?.[key];
+      if (refSchema) resolved = refSchema;
+    }
+
+    if (resolved.properties) {
+      for (const [k, v] of Object.entries(resolved.properties)) {
+        mergedProps[k] = v;
       }
     }
-    if (mergedParams.length > 0) {
-      const obj = buildNestedObject(mergedParams, resolvedVars, options, ancestorSchemaIds);
-      if (param.additionalProperties) {
-        const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, ancestorSchemaIds);
-        return obj.catchall(valSchema);
-      }
-      return obj;
+    for (const req of resolved.required ?? []) {
+      mergedRequired.add(req);
     }
   }
 
+  // Also merge in the schema's own properties (highest priority)
+  if (schema.properties) {
+    for (const [k, v] of Object.entries(schema.properties)) {
+      mergedProps[k] = v;
+    }
+  }
+  for (const req of schema.required ?? []) {
+    mergedRequired.add(req);
+  }
+
+  if (Object.keys(mergedProps).length > 0) {
+    const merged: JsonSchema7 = {
+      type: "object",
+      properties: mergedProps,
+      required: Array.from(mergedRequired),
+    };
+    return buildNestedObject(merged, resolvedVars, options, ancestorKeys);
+  }
+
+  return z.unknown();
+}
+
+/** Build z.object schema for object-type schemas. */
+function buildObjectSchema(
+  schema: JsonSchema7,
+  resolvedVars?: Record<string, unknown>,
+  options?: BuildSchemaOptions,
+  ancestorKeys?: Set<string>
+): z.ZodTypeAny {
   // --- Inline properties ---
-  if (param.properties && param.properties.length > 0) {
-    const obj = buildNestedObject(param.properties, resolvedVars, options, ancestorSchemaIds);
-    // Fixed properties + additionalProperties → catchall
-    if (param.additionalProperties) {
-      const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, ancestorSchemaIds);
+  if (schema.properties && Object.keys(schema.properties).length > 0) {
+    const obj = buildNestedObject(schema, resolvedVars, options, ancestorKeys);
+    if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+      const valSchema = buildPropertySchema(schema.additionalProperties, resolvedVars, options, ancestorKeys);
       return obj.catchall(valSchema);
     }
     return obj;
   }
 
-  // --- Pure Map/Record: no fixed properties, only additionalProperties ---
-  if (param.additionalProperties) {
-    const valSchema = buildParamSchema(param.additionalProperties, resolvedVars, options, ancestorSchemaIds);
+  // --- Pure Map/Record ---
+  if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+    const valSchema = buildPropertySchema(schema.additionalProperties, resolvedVars, options, ancestorKeys);
     return z.record(z.string(), valSchema);
   }
 
   return z.unknown();
 }
 
-/** Build z.object from a list of child properties. */
+/** Build z.object from a JSON Schema with properties/required. */
 function buildNestedObject(
-  children: SchemaProperty[],
+  schema: JsonSchema7,
   resolvedVars?: Record<string, unknown>,
   options?: BuildSchemaOptions,
-  ancestorSchemaIds?: Set<string>
+  ancestorKeys?: Set<string>
 ): z.ZodObject<Record<string, z.ZodTypeAny>> {
   const nested: Record<string, z.ZodTypeAny> = {};
-  for (const child of children) {
-    let childSchema = buildParamSchema(child, resolvedVars, options, ancestorSchemaIds);
-    if (child.description) {
-      childSchema = childSchema.describe(child.description);
+  const requiredSet = new Set(schema.required ?? []);
+
+  for (const [key, propSchema] of Object.entries(schema.properties ?? {})) {
+    let zodSchema = buildPropertySchema(propSchema, resolvedVars, options, ancestorKeys);
+
+    if (propSchema.description) {
+      zodSchema = zodSchema.describe(propSchema.description);
     }
-    if (!child.required) {
-      if (child.defaultValue !== undefined) {
-        childSchema = childSchema.default(child.defaultValue);
+
+    if (!requiredSet.has(key)) {
+      if (propSchema.default !== undefined) {
+        zodSchema = zodSchema.default(propSchema.default);
       } else {
-        childSchema = childSchema.optional();
+        zodSchema = zodSchema.optional();
       }
     }
-    nested[child.name] = childSchema;
+
+    nested[key] = zodSchema;
   }
+
   return z.object(nested);
 }
 
-/** Build z.discriminatedUnion or z.union for "union" type params. */
-function buildUnionSchema(
-  param: SchemaProperty,
+/** Build z.array from array-type schema. */
+function buildArraySchema(
+  schema: JsonSchema7,
   resolvedVars?: Record<string, unknown>,
   options?: BuildSchemaOptions,
-  ancestorSchemaIds?: Set<string>
+  ancestorKeys?: Set<string>
 ): z.ZodTypeAny {
-  if (!param.variants || param.variants.length < 2) {
-    console.warn(`[schema-builder] union param "${param.name}" needs ≥2 variants, falling back to z.unknown()`);
+  // Tuple
+  if (schema.prefixItems && schema.prefixItems.length > 0) {
+    const tupleSchemas = schema.prefixItems.map((item) =>
+      buildPropertySchema(item, resolvedVars, options, ancestorKeys)
+    );
+    return z.tuple(tupleSchemas as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
+  }
+
+  // Regular array
+  let itemSchema: z.ZodTypeAny = z.unknown();
+  if (schema.items && !Array.isArray(schema.items)) {
+    itemSchema = buildPropertySchema(schema.items, resolvedVars, options, ancestorKeys);
+  }
+  let result: z.ZodTypeAny = z.array(itemSchema);
+  if (schema.minItems != null) result = (result as z.ZodArray<z.ZodTypeAny>).min(schema.minItems);
+  if (schema.maxItems != null) result = (result as z.ZodArray<z.ZodTypeAny>).max(schema.maxItems);
+  if (schema.uniqueItems) {
+    result = (result as z.ZodArray<z.ZodTypeAny>).refine(
+      (arr) => {
+        for (let i = 0; i < arr.length; i++) {
+          for (let j = i + 1; j < arr.length; j++) {
+            if (deepEqual(arr[i], arr[j])) return false;
+          }
+        }
+        return true;
+      },
+      { message: "Array items must be unique" }
+    );
+  }
+  return result;
+}
+
+/** Build z.discriminatedUnion or z.union from oneOf/anyOf. */
+function buildUnionSchema(
+  schema: JsonSchema7,
+  resolvedVars?: Record<string, unknown>,
+  options?: BuildSchemaOptions,
+  ancestorKeys?: Set<string>
+): z.ZodTypeAny {
+  const unionMode = schema["x-unionMode"] ?? (schema.oneOf ? "oneOf" : "anyOf");
+  const variants = (unionMode === "anyOf" ? schema.anyOf : schema.oneOf) ?? [];
+
+  if (variants.length < 2) {
     return z.unknown();
   }
 
-  // Build variant schemas — each variant is a SchemaProperty (new format) or legacy array
-  const variantSchemas = param.variants.map((raw, i) => {
-    const variant = normalizeVariantItem(raw);
+  const discriminator = schema["x-discriminator"];
+  const discriminatorValues = schema["x-discriminatorValues"];
+
+  const variantSchemas = variants.map((variant, i) => {
     let variantSchema: z.ZodTypeAny;
 
-    if (variant.type === "object") {
-      // Object variant: build as z.object(...)
-      variantSchema = buildObjectSchema(variant, resolvedVars, options, ancestorSchemaIds);
+    if (variant.type === "object" || variant.properties) {
+      variantSchema = buildObjectSchema(variant, resolvedVars, options, ancestorKeys);
     } else {
-      // Primitive type variant: build as z.string() / z.number() / etc.
-      variantSchema = buildParamSchema(variant, resolvedVars, options, ancestorSchemaIds);
+      variantSchema = buildPropertySchema(variant, resolvedVars, options, ancestorKeys);
     }
 
-    // Inject discriminator literal (only for object variants)
-    const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
-    if (discValue && variant.type === "object") {
+    // Inject discriminator literal
+    const discValue = discriminator ? discriminatorValues?.[i] : undefined;
+    if (discriminator && discValue && (variant.type === "object" || variant.properties)) {
       variantSchema = (variantSchema as z.ZodObject<Record<string, z.ZodTypeAny>>)
-        .extend({ [param.discriminator!]: z.literal(discValue) });
+        .extend({ [discriminator]: z.literal(discValue) });
     }
+
     return variantSchema;
   });
 
-  // anyOf mode: always use z.union (anyOf semantics = try in order)
-  if (param.unionMode === "anyOf") {
+  // anyOf → z.union
+  if (unionMode === "anyOf") {
     return z.union(
       variantSchemas as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]
     );
   }
 
-  // oneOf (default): discriminatedUnion when discriminator is set
-  if (param.discriminator) {
+  // oneOf + discriminator → z.discriminatedUnion
+  if (discriminator) {
     return z.discriminatedUnion(
-      param.discriminator,
+      discriminator,
       variantSchemas as [
         z.ZodObject<Record<string, z.ZodTypeAny>>,
         z.ZodObject<Record<string, z.ZodTypeAny>>,
@@ -308,20 +340,30 @@ function buildUnionSchema(
   );
 }
 
-/** Resolve enum values from datasets / inline enum. */
+/** Resolve enum values, expanding {{var}} template strings from resolvedVars. */
 function resolveEnumValues(
-  param: SchemaProperty,
-  _resolvedVars?: Record<string, unknown>,
-  options?: BuildSchemaOptions
+  schema: JsonSchema7,
+  resolvedVars?: Record<string, unknown>,
 ): string[] | undefined {
-  // enumDatasetId → from datasetsById (by UUID)
-  if (param.enumDatasetId && options?.datasetsById?.[param.enumDatasetId] != null) {
-    const val = options.datasetsById[param.enumDatasetId];
-    const resolved = resolveEnumFromValue(val);
-    if (resolved) return resolved;
-  }
+  if (!schema.enum) return undefined;
 
-  return param.enum;
+  const result: string[] = [];
+  for (const v of schema.enum) {
+    const s = String(v);
+    const match = s.match(/^\{\{(\w+)\}\}$/);
+    if (match && resolvedVars) {
+      const val = resolvedVars[match[1]];
+      if (val != null) {
+        const enumVals = resolveEnumFromValue(val);
+        if (enumVals) {
+          result.push(...enumVals);
+          continue;
+        }
+      }
+    }
+    result.push(s);
+  }
+  return result;
 }
 
 /** Extract enum values from a resolved dataset value. */
@@ -340,302 +382,24 @@ function resolveEnumFromValue(val: unknown): string[] | undefined {
 }
 
 /**
- * Build a zod object schema from a list of SchemaProperty definitions.
- * Returns z.object({}) when parameters is empty (no-arg tool).
- *
- * When `options.datasetsById` is provided, `enumDatasetId` on a parameter
- * resolves to the dataset's values. For object-type datasets with string
- * values, uses Object.values(); for arrays, uses array elements; for
- * objects with non-string values, uses Object.keys().
+ * Build a zod object schema from a JSON Schema 7 object.
+ * Returns z.object({}) when the schema has no properties (no-arg tool).
  */
 export function buildInputSchema(
-  parameters: SchemaProperty[],
+  schema: JsonSchema7,
   resolvedVars?: Record<string, unknown>,
   options?: BuildSchemaOptions
 ) {
-  const shape: Record<string, z.ZodTypeAny> = {};
-
-  for (const param of parameters) {
-    let schema = buildParamSchema(param, resolvedVars, options);
-
-    if (param.description) {
-      schema = schema.describe(param.description);
-    }
-
-    if (!param.required) {
-      if (param.defaultValue !== undefined) {
-        schema = schema.default(param.defaultValue);
-      } else {
-        schema = schema.optional();
-      }
-    }
-
-    shape[param.name] = schema;
+  // Handle top-level allOf (e.g. from schema includes migration)
+  if (schema.allOf && schema.allOf.length > 0) {
+    const result = buildAllOfSchema(schema, resolvedVars, options);
+    if (result instanceof z.ZodObject) return result;
+    // Fallback if allOf didn't produce an object
   }
 
-  return z.object(shape);
-}
-
-/* ─────────── JSON Schema 7 generation ─────────── */
-
-type JsonSchema7 = Record<string, unknown>;
-
-/** Internal context threaded through JSON Schema builders. */
-interface JsonSchemaCtx {
-  options?: BuildSchemaOptions;
-  ancestorSchemaIds: Set<string>;
-  /** Collected $defs from schemaId references (populated during build). */
-  $defs: Record<string, JsonSchema7>;
-}
-
-/** Build a single JSON Schema 7 property from a SchemaProperty. */
-function buildJsonSchemaProperty(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
-  let result: JsonSchema7;
-
-  switch (param.type) {
-    case "string": {
-      const s: JsonSchema7 = { type: "string" };
-      if (param.minLength != null) s.minLength = param.minLength;
-      if (param.maxLength != null) s.maxLength = param.maxLength;
-      if (param.pattern) s.pattern = param.pattern;
-      if (param.format) s.format = param.format;
-      if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      result = s;
-      break;
-    }
-    case "number": {
-      const s: JsonSchema7 = { type: param.integer ? "integer" : "number" };
-      if (param.minimum != null) s.minimum = param.minimum;
-      if (param.maximum != null) s.maximum = param.maximum;
-      if (param.exclusiveMinimum != null) s.exclusiveMinimum = param.exclusiveMinimum;
-      if (param.exclusiveMaximum != null) s.exclusiveMaximum = param.exclusiveMaximum;
-      if (param.multipleOf != null) s.multipleOf = param.multipleOf;
-      if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      result = s;
-      break;
-    }
-    case "boolean": {
-      const s: JsonSchema7 = { type: "boolean" };
-      if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      result = s;
-      break;
-    }
-    case "null": {
-      result = { type: "null" };
-      break;
-    }
-    case "const": {
-      const s: JsonSchema7 = {};
-      if (param.constValue !== undefined) s.const = param.constValue;
-      result = s;
-      break;
-    }
-    case "enum": {
-      const s: JsonSchema7 = { type: "string" };
-      const resolved = resolveEnumValues(param, undefined, ctx.options);
-      if (resolved && resolved.length > 0) {
-        s.enum = resolved;
-      }
-      if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      result = s;
-      break;
-    }
-    case "object": {
-      result = buildJsonSchemaObject(param, ctx);
-      break;
-    }
-    case "array": {
-      const s: JsonSchema7 = { type: "array" };
-      if (param.tuple && param.prefixItems && param.prefixItems.length > 0) {
-        s.items = param.prefixItems.map((item) => buildJsonSchemaProperty(item, ctx));
-      } else {
-        if (param.items) {
-          s.items = buildJsonSchemaProperty(param.items, ctx);
-        }
-        if (param.minItems != null) s.minItems = param.minItems;
-        if (param.maxItems != null) s.maxItems = param.maxItems;
-        if (param.uniqueItems != null) s.uniqueItems = param.uniqueItems;
-      }
-      if (param.defaultValue !== undefined) s.default = param.defaultValue;
-      result = s;
-      break;
-    }
-    case "union": {
-      result = buildJsonSchemaUnion(param, ctx);
-      break;
-    }
-    default:
-      result = { type: "string" };
+  if (!schema.properties || Object.keys(schema.properties).length === 0) {
+    return z.object({});
   }
 
-  if (param.nullable) {
-    return { anyOf: [result, { type: "null" }] };
-  }
-  return result;
-}
-
-/** Build JSON Schema object from an object-type SchemaProperty, with schemaId/$ref, allOf, and additionalProperties support. */
-function buildJsonSchemaObject(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
-  // --- allOf: merge multiple schemas via schemaIds ---
-  if (param.schemaIds && param.schemaIds.length > 0 && ctx.options?.schemaMap) {
-    const mergedChildren: SchemaProperty[] = [];
-    const seen = new Set<string>();
-    for (const sid of param.schemaIds) {
-      const refParams = ctx.options.schemaMap[sid];
-      if (refParams) {
-        for (const p of refParams) {
-          if (seen.has(p.name)) {
-            const idx = mergedChildren.findIndex((m) => m.name === p.name);
-            if (idx >= 0) mergedChildren[idx] = p;
-          } else {
-            seen.add(p.name);
-            mergedChildren.push(p);
-          }
-        }
-      }
-    }
-    if (mergedChildren.length > 0) {
-      const obj = buildJsonSchemaNestedObject(mergedChildren, ctx);
-      if (param.additionalProperties) {
-        obj.additionalProperties = buildJsonSchemaProperty(param.additionalProperties, ctx);
-      }
-      if (param.defaultValue !== undefined) obj.default = param.defaultValue;
-      return obj;
-    }
-  }
-
-  // --- schemaId reference → $ref + $defs ---
-  if (param.schemaId && ctx.options?.schemaMap?.[param.schemaId]) {
-    // Recursive self-reference → just $ref (def is being built up the stack)
-    if (ctx.ancestorSchemaIds.has(param.schemaId)) {
-      return { $ref: `#/$defs/${param.schemaId}` };
-    }
-
-    // First encounter: build definition, store in $defs, return $ref
-    const nextAncestors = new Set(ctx.ancestorSchemaIds);
-    nextAncestors.add(param.schemaId);
-    const nextCtx: JsonSchemaCtx = { ...ctx, ancestorSchemaIds: nextAncestors };
-
-    const refParams = ctx.options.schemaMap[param.schemaId];
-    const def = buildJsonSchemaNestedObject(refParams, nextCtx);
-
-    if (param.additionalProperties) {
-      def.additionalProperties = buildJsonSchemaProperty(param.additionalProperties, nextCtx);
-    }
-
-    ctx.$defs[param.schemaId] = def;
-    return { $ref: `#/$defs/${param.schemaId}` };
-  }
-
-  // --- Inline properties ---
-  if (param.properties && param.properties.length > 0) {
-    const obj = buildJsonSchemaNestedObject(param.properties, ctx);
-    if (param.additionalProperties) {
-      obj.additionalProperties = buildJsonSchemaProperty(param.additionalProperties, ctx);
-    }
-    if (param.defaultValue !== undefined) obj.default = param.defaultValue;
-    return obj;
-  }
-
-  // --- Pure Map/Record: no fixed properties, only additionalProperties ---
-  if (param.additionalProperties) {
-    return {
-      type: "object",
-      additionalProperties: buildJsonSchemaProperty(param.additionalProperties, ctx),
-    };
-  }
-
-  // Fallback: empty object
-  const s: JsonSchema7 = { type: "object" };
-  if (param.defaultValue !== undefined) s.default = param.defaultValue;
-  return s;
-}
-
-/** Build JSON Schema { type: "object", properties, required } from a child list. */
-function buildJsonSchemaNestedObject(children: SchemaProperty[], ctx: JsonSchemaCtx): JsonSchema7 {
-  const properties: Record<string, JsonSchema7> = {};
-  const required: string[] = [];
-
-  for (const child of children) {
-    const prop = buildJsonSchemaProperty(child, ctx);
-    if (child.description) prop.description = child.description;
-    properties[child.name] = prop;
-    if (child.required) required.push(child.name);
-  }
-
-  const s: JsonSchema7 = { type: "object", properties };
-  if (required.length > 0) s.required = required;
-  return s;
-}
-
-/** Build JSON Schema oneOf/anyOf from a union-type SchemaProperty. */
-function buildJsonSchemaUnion(param: SchemaProperty, ctx: JsonSchemaCtx): JsonSchema7 {
-  if (!param.variants || param.variants.length < 2) {
-    return {};
-  }
-
-  // Build variant schemas — each variant is a SchemaProperty (new format) or legacy array
-  const variantSchemas = param.variants.map((raw, i) => {
-    const variant = normalizeVariantItem(raw);
-    let schema: JsonSchema7;
-
-    if (variant.type === "object") {
-      schema = buildJsonSchemaObject(variant, ctx);
-    } else {
-      schema = buildJsonSchemaProperty(variant, ctx);
-    }
-
-    // Inject discriminator const (only for object variants)
-    const discValue = param.discriminator ? param.discriminatorValues?.[i] : undefined;
-    if (discValue && variant.type === "object") {
-      schema.properties = schema.properties || {};
-      (schema.properties as Record<string, unknown>)[param.discriminator!] = { const: discValue };
-      if (!(schema.required as string[] | undefined)?.includes(param.discriminator!)) {
-        schema.required = [...((schema.required as string[]) || []), param.discriminator!];
-      }
-    }
-    return schema;
-  });
-
-  const keyword = param.unionMode === "anyOf" ? "anyOf" : "oneOf";
-  const s: JsonSchema7 = { [keyword]: variantSchemas };
-  if (param.discriminator) {
-    s.discriminator = { propertyName: param.discriminator };
-  }
-  if (param.defaultValue !== undefined) s.default = param.defaultValue;
-  return s;
-}
-
-/**
- * Build a standard JSON Schema 7 object from a list of SchemaProperty definitions.
- * Generates schema directly without going through Zod.
- *
- * Supports the same features as `buildInputSchema` (Zod path):
- * - `schemaId` references → `$ref` + `$defs`
- * - Recursive self-reference detection → `$ref` (no infinite expansion)
- * - `additionalProperties` → JSON Schema `additionalProperties`
- * - `union` type → `oneOf` (with optional `discriminator`)
- * - `enumDatasetId` → resolved enum values from `options.datasetsById`
- */
-export function buildJsonSchema(parameters: SchemaProperty[], options?: BuildSchemaOptions): JsonSchema7 {
-  const ctx: JsonSchemaCtx = {
-    options,
-    ancestorSchemaIds: new Set(),
-    $defs: {},
-  };
-
-  const properties: Record<string, JsonSchema7> = {};
-  const required: string[] = [];
-
-  for (const param of parameters) {
-    const prop = buildJsonSchemaProperty(param, ctx);
-    if (param.description) prop.description = param.description;
-    properties[param.name] = prop;
-    if (param.required) required.push(param.name);
-  }
-
-  const schema: JsonSchema7 = { type: "object", properties };
-  if (required.length > 0) schema.required = required;
-  if (Object.keys(ctx.$defs).length > 0) schema.$defs = ctx.$defs;
-  return schema;
+  return buildNestedObject(schema, resolvedVars, options);
 }

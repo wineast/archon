@@ -11,6 +11,8 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronRightIcon } from "lucide-react";
 import { createContext, useContext, useMemo } from "react";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import { getDisplayType } from "@/lib/schemas/json-schema-utils";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -22,22 +24,13 @@ interface SchemaParameter {
   location?: "path" | "query" | "header";
 }
 
-interface SchemaProperty {
-  name: string;
-  type: string;
-  required?: boolean;
-  description?: string;
-  properties?: SchemaProperty[];
-  items?: SchemaProperty;
-}
-
 interface SchemaDisplayContextType {
   method: HttpMethod;
   path: string;
   description?: string;
   parameters?: SchemaParameter[];
-  requestBody?: SchemaProperty[];
-  responseBody?: SchemaProperty[];
+  requestBody?: JsonSchema7;
+  responseBody?: JsonSchema7;
 }
 
 const SchemaDisplayContext = createContext<SchemaDisplayContextType>({
@@ -50,8 +43,8 @@ export type SchemaDisplayProps = HTMLAttributes<HTMLDivElement> & {
   path: string;
   description?: string;
   parameters?: SchemaParameter[];
-  requestBody?: SchemaProperty[];
-  responseBody?: SchemaProperty[];
+  requestBody?: JsonSchema7;
+  responseBody?: JsonSchema7;
 };
 
 export const SchemaDisplay = ({
@@ -77,6 +70,9 @@ export const SchemaDisplay = ({
     [description, method, parameters, path, requestBody, responseBody]
   );
 
+  const hasRequestProps = requestBody?.properties && Object.keys(requestBody.properties).length > 0;
+  const hasResponseProps = responseBody?.properties && Object.keys(responseBody.properties).length > 0;
+
   return (
     <SchemaDisplayContext.Provider value={contextValue}>
       <div
@@ -99,10 +95,10 @@ export const SchemaDisplay = ({
               {parameters && parameters.length > 0 && (
                 <SchemaDisplayParameters />
               )}
-              {requestBody && requestBody.length > 0 && (
+              {hasRequestProps && (
                 <SchemaDisplayRequest />
               )}
-              {responseBody && responseBody.length > 0 && (
+              {hasResponseProps && (
                 <SchemaDisplayResponse />
               )}
             </SchemaDisplayContent>
@@ -294,6 +290,7 @@ export const SchemaDisplayRequest = ({
   ...props
 }: SchemaDisplayRequestProps) => {
   const { requestBody } = useContext(SchemaDisplayContext);
+  const entries = Object.entries(requestBody?.properties ?? {});
 
   return (
     <Collapsible className={cn(className)} defaultOpen {...props}>
@@ -304,8 +301,14 @@ export const SchemaDisplayRequest = ({
       <CollapsibleContent>
         <div className="border-t">
           {children ??
-            requestBody?.map((prop) => (
-              <SchemaDisplayProperty key={prop.name} {...prop} depth={0} />
+            entries.map(([key, propSchema]) => (
+              <SchemaDisplayProperty
+                key={key}
+                name={key}
+                schema={propSchema}
+                required={requestBody?.required?.includes(key)}
+                depth={0}
+              />
             ))}
         </div>
       </CollapsibleContent>
@@ -321,6 +324,7 @@ export const SchemaDisplayResponse = ({
   ...props
 }: SchemaDisplayResponseProps) => {
   const { responseBody } = useContext(SchemaDisplayContext);
+  const entries = Object.entries(responseBody?.properties ?? {});
 
   return (
     <Collapsible className={cn(className)} defaultOpen {...props}>
@@ -331,8 +335,14 @@ export const SchemaDisplayResponse = ({
       <CollapsibleContent>
         <div className="border-t">
           {children ??
-            responseBody?.map((prop) => (
-              <SchemaDisplayProperty key={prop.name} {...prop} depth={0} />
+            entries.map(([key, propSchema]) => (
+              <SchemaDisplayProperty
+                key={key}
+                name={key}
+                schema={propSchema}
+                required={responseBody?.required?.includes(key)}
+                depth={0}
+              />
             ))}
         </div>
       </CollapsibleContent>
@@ -352,26 +362,29 @@ export const SchemaDisplayBody = ({
   </div>
 );
 
-export type SchemaDisplayPropertyProps = HTMLAttributes<HTMLDivElement> &
-  SchemaProperty & {
-    depth?: number;
-  };
+export type SchemaDisplayPropertyProps = HTMLAttributes<HTMLDivElement> & {
+  name: string;
+  schema: JsonSchema7;
+  required?: boolean;
+  depth?: number;
+};
 
 export const SchemaDisplayProperty = ({
   name,
-  type,
+  schema,
   required,
-  description,
-  properties,
-  items,
   depth = 0,
   className,
   ...props
 }: SchemaDisplayPropertyProps) => {
-  const hasChildren = properties || items;
+  const displayType = getDisplayType(schema);
+  const hasChildren = schema.properties || (schema.items && !Array.isArray(schema.items));
   const paddingLeft = 40 + depth * 16;
 
   if (hasChildren) {
+    const childEntries = Object.entries(schema.properties ?? {});
+    const itemSchema = schema.items && !Array.isArray(schema.items) ? schema.items : undefined;
+
     return (
       <Collapsible defaultOpen={depth < 2}>
         <CollapsibleTrigger
@@ -384,7 +397,7 @@ export const SchemaDisplayProperty = ({
           <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
           <span className="font-mono text-sm">{name}</span>
           <Badge className="text-xs" variant="outline">
-            {type}
+            {displayType}
           </Badge>
           {required && (
             <Badge
@@ -395,28 +408,30 @@ export const SchemaDisplayProperty = ({
             </Badge>
           )}
         </CollapsibleTrigger>
-        {description && (
+        {schema.description && (
           <p
             className="pb-2 text-muted-foreground text-sm"
             style={{ paddingLeft: paddingLeft + 24 }}
           >
-            {description}
+            {schema.description}
           </p>
         )}
         <CollapsibleContent>
           <div className="divide-y border-t">
-            {properties?.map((prop) => (
+            {childEntries.map(([key, childSchema]) => (
               <SchemaDisplayProperty
-                key={prop.name}
-                {...prop}
+                key={key}
+                name={key}
+                schema={childSchema}
+                required={schema.required?.includes(key)}
                 depth={depth + 1}
               />
             ))}
-            {items && (
+            {itemSchema && (
               <SchemaDisplayProperty
-                {...items}
-                depth={depth + 1}
                 name={`${name}[]`}
+                schema={itemSchema}
+                depth={depth + 1}
               />
             )}
           </div>
@@ -436,7 +451,7 @@ export const SchemaDisplayProperty = ({
         <span className="size-4" />
         <span className="font-mono text-sm">{name}</span>
         <Badge className="text-xs" variant="outline">
-          {type}
+          {displayType}
         </Badge>
         {required && (
           <Badge
@@ -447,8 +462,8 @@ export const SchemaDisplayProperty = ({
           </Badge>
         )}
       </div>
-      {description && (
-        <p className="mt-1 pl-6 text-muted-foreground text-sm">{description}</p>
+      {schema.description && (
+        <p className="mt-1 pl-6 text-muted-foreground text-sm">{schema.description}</p>
       )}
     </div>
   );

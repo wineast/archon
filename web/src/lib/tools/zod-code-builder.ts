@@ -1,15 +1,13 @@
-import type { SchemaProperty } from "@/lib/schemas/types";
-import { normalizeVariantItem, type BuildSchemaOptions } from "./schema-builder";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import type { BuildSchemaOptions } from "./schema-builder";
 
 /* ─────────── Zod code string generation ─────────── */
 
 interface ZodCodeCtx {
   options?: BuildSchemaOptions;
-  ancestorSchemaIds: Set<string>;
-  /** Schema UUID → human-friendly key for variable names. */
-  schemaKeyMap?: Record<string, string>;
+  ancestorKeys: Set<string>;
   /** Collected schema refs that need separate const declarations. */
-  refs: Map<string, string>; // schemaId → generated code
+  refs: Map<string, string>;
 }
 
 function ind(depth: number): string {
@@ -20,84 +18,106 @@ function escStr(s: string): string {
   return JSON.stringify(s);
 }
 
-/** Build Zod code for a single SchemaProperty. */
-function buildParamCode(
-  param: SchemaProperty,
+/** Build Zod code for a single JSON Schema 7 property. */
+function buildPropertyCode(
+  schema: JsonSchema7,
   ctx: ZodCodeCtx,
   depth: number
 ): string {
-  let code: string;
-  switch (param.type) {
+  // $ref resolution
+  if (schema.$ref) {
+    return buildRefCode(schema, ctx, depth);
+  }
+
+  // const
+  if (schema.const !== undefined) {
+    return `z.literal(${JSON.stringify(schema.const)})`;
+  }
+
+  // nullable pattern: anyOf: [T, {type:"null"}]
+  if (schema.anyOf && schema.anyOf.length === 2 && schema.anyOf.some((s) => s.type === "null")) {
+    const nonNull = schema.anyOf.find((s) => s.type !== "null")!;
+    return buildPropertyCode(nonNull, ctx, depth) + ".nullable()";
+  }
+
+  // union: oneOf / anyOf
+  if (schema.oneOf && schema.oneOf.length >= 2) {
+    return buildUnionCode(schema, ctx, depth);
+  }
+  if (schema.anyOf && schema.anyOf.length >= 2) {
+    return buildUnionCode(schema, ctx, depth);
+  }
+
+  // allOf composition
+  if (schema.allOf && schema.allOf.length > 0) {
+    return buildAllOfCode(schema, ctx, depth);
+  }
+
+  // enum
+  if (schema.enum && schema.enum.length > 0) {
+    return buildEnumCode(schema);
+  }
+
+  const t = schema.type;
+
+  switch (t) {
     case "string":
-      code = buildStringCode(param);
-      break;
+      return buildStringCode(schema);
+    case "integer":
+      return buildIntegerCode(schema);
     case "number":
-      code = buildNumberCode(param);
-      break;
+      return buildNumberCode(schema);
     case "boolean":
-      code = "z.boolean()";
-      break;
+      return "z.boolean()";
     case "null":
-      code = "z.null()";
-      break;
-    case "const":
-      code = buildConstCode(param);
-      break;
-    case "enum":
-      code = buildEnumCode(param, ctx);
-      break;
+      return "z.null()";
     case "object":
-      code = buildObjectCode(param, ctx, depth);
-      break;
+      return buildObjectCode(schema, ctx, depth);
     case "array":
-      code = buildArrayCode(param, ctx, depth);
-      break;
-    case "union":
-      code = buildUnionCode(param, ctx, depth);
-      break;
+      return buildArrayCode(schema, ctx, depth);
     default:
-      code = "z.string()";
+      return "z.unknown()";
   }
-  if (param.nullable) code += ".nullable()";
-  return code;
 }
 
-function buildStringCode(param: SchemaProperty): string {
+function buildStringCode(schema: JsonSchema7): string {
   let code = "z.string()";
-  if (param.minLength != null) code += `.min(${param.minLength})`;
-  if (param.maxLength != null) code += `.max(${param.maxLength})`;
-  if (param.pattern) code += `.regex(new RegExp(${escStr(param.pattern)}))`;
-  if (param.format === "email") code += ".email()";
-  if (param.format === "url") code += ".url()";
-  if (param.format === "uuid") code += ".uuid()";
-  if (param.format === "date") code += ".date()";
-  if (param.format === "date-time") code += ".datetime()";
-  if (param.format === "time") code += ".time()";
-  if (param.format === "ipv4") code += ".ipv4()";
-  if (param.format === "ipv6") code += ".ipv6()";
+  if (schema.minLength != null) code += `.min(${schema.minLength})`;
+  if (schema.maxLength != null) code += `.max(${schema.maxLength})`;
+  if (schema.pattern) code += `.regex(new RegExp(${escStr(schema.pattern)}))`;
+  if (schema.format === "email") code += ".email()";
+  if (schema.format === "url") code += ".url()";
+  if (schema.format === "uuid") code += ".uuid()";
+  if (schema.format === "date") code += ".date()";
+  if (schema.format === "date-time") code += ".datetime()";
+  if (schema.format === "time") code += ".time()";
+  if (schema.format === "ipv4") code += ".ipv4()";
+  if (schema.format === "ipv6") code += ".ipv6()";
   return code;
 }
 
-function buildNumberCode(param: SchemaProperty): string {
+function buildIntegerCode(schema: JsonSchema7): string {
+  let code = "z.number().int()";
+  if (schema.minimum != null) code += `.min(${schema.minimum})`;
+  if (schema.maximum != null) code += `.max(${schema.maximum})`;
+  if (schema.exclusiveMinimum != null) code += `.gt(${schema.exclusiveMinimum})`;
+  if (schema.exclusiveMaximum != null) code += `.lt(${schema.exclusiveMaximum})`;
+  if (schema.multipleOf != null) code += `.multipleOf(${schema.multipleOf})`;
+  return code;
+}
+
+function buildNumberCode(schema: JsonSchema7): string {
   let code = "z.number()";
-  if (param.integer) code += ".int()";
-  if (param.minimum != null) code += `.min(${param.minimum})`;
-  if (param.maximum != null) code += `.max(${param.maximum})`;
-  if (param.exclusiveMinimum != null) code += `.gt(${param.exclusiveMinimum})`;
-  if (param.exclusiveMaximum != null) code += `.lt(${param.exclusiveMaximum})`;
-  if (param.multipleOf != null) code += `.multipleOf(${param.multipleOf})`;
+  if (schema.minimum != null) code += `.min(${schema.minimum})`;
+  if (schema.maximum != null) code += `.max(${schema.maximum})`;
+  if (schema.exclusiveMinimum != null) code += `.gt(${schema.exclusiveMinimum})`;
+  if (schema.exclusiveMaximum != null) code += `.lt(${schema.exclusiveMaximum})`;
+  if (schema.multipleOf != null) code += `.multipleOf(${schema.multipleOf})`;
   return code;
 }
 
-function buildConstCode(param: SchemaProperty): string {
-  if (param.constValue !== undefined) {
-    return `z.literal(${JSON.stringify(param.constValue)})`;
-  }
-  return "z.unknown()";
-}
-
-function buildEnumCode(param: SchemaProperty, ctx: ZodCodeCtx): string {
-  const values = resolveEnumValues(param, ctx);
+function buildEnumCode(schema: JsonSchema7): string {
+  const values = schema.enum?.map(String);
   if (values && values.length > 0) {
     const items = values.map((v) => escStr(v)).join(", ");
     return `z.enum([${items}])`;
@@ -105,109 +125,98 @@ function buildEnumCode(param: SchemaProperty, ctx: ZodCodeCtx): string {
   return "z.string()";
 }
 
-function resolveEnumValues(
-  param: SchemaProperty,
-  ctx: ZodCodeCtx
-): string[] | undefined {
-  if (
-    param.enumDatasetId &&
-    ctx.options?.datasetsById?.[param.enumDatasetId] != null
-  ) {
-    const val = ctx.options.datasetsById[param.enumDatasetId];
-    if (Array.isArray(val)) return val.map(String);
-    if (typeof val === "object" && val !== null) {
-      const values = Object.values(val as Record<string, unknown>);
-      if (values.length > 0 && typeof values[0] === "string") {
-        return values.map(String);
-      }
-      return Object.keys(val as Record<string, unknown>);
-    }
-  }
-  return param.enum;
-}
-
-function buildObjectCode(
-  param: SchemaProperty,
+/** Build Zod code for a $ref. */
+function buildRefCode(
+  schema: JsonSchema7,
   ctx: ZodCodeCtx,
   depth: number
 ): string {
-  // --- schemaId reference ---
-  if (param.schemaId && ctx.options?.schemaMap?.[param.schemaId]) {
-    if (ctx.ancestorSchemaIds.has(param.schemaId)) {
-      const varName = schemaVarName(param.schemaId, ctx);
-      return `z.lazy(() => ${varName})`;
-    }
+  const ref = schema.$ref;
+  if (!ref) return "z.unknown()";
 
-    const nextAncestors = new Set(ctx.ancestorSchemaIds);
-    nextAncestors.add(param.schemaId);
-    const nextCtx: ZodCodeCtx = { ...ctx, ancestorSchemaIds: nextAncestors };
+  const key = ref.replace("#/$defs/", "");
+  const refSchema = ctx.options?.defsMap?.[key];
+  if (!refSchema) return "z.unknown()";
 
-    const refParams = ctx.options.schemaMap[param.schemaId];
-    let code = buildNestedObjectCode(refParams, nextCtx, depth);
-    if (param.additionalProperties) {
-      const valCode = buildParamCode(
-        param.additionalProperties,
-        nextCtx,
-        depth + 1
-      );
-      code += `.catchall(${valCode})`;
-    }
-    return code;
+  // Cycle detection — use z.lazy()
+  if (ctx.ancestorKeys.has(key)) {
+    const varName = camelCase(key) + "Schema";
+    return `z.lazy(() => ${varName})`;
   }
 
-  // --- allOf: merge multiple schemas ---
-  if (param.schemaIds && param.schemaIds.length > 0 && ctx.options?.schemaMap) {
-    const merged: SchemaProperty[] = [];
-    const seen = new Set<string>();
-    for (const sid of param.schemaIds) {
-      const refParams = ctx.options.schemaMap[sid];
-      if (refParams) {
-        for (const p of refParams) {
-          if (seen.has(p.name)) {
-            const idx = merged.findIndex((m) => m.name === p.name);
-            if (idx >= 0) merged[idx] = p;
-          } else {
-            seen.add(p.name);
-            merged.push(p);
-          }
-        }
+  const nextKeys = new Set(ctx.ancestorKeys);
+  nextKeys.add(key);
+  const nextCtx: ZodCodeCtx = { ...ctx, ancestorKeys: nextKeys };
+  return buildPropertyCode(refSchema, nextCtx, depth);
+}
+
+/** Build Zod code for allOf composition. */
+function buildAllOfCode(
+  schema: JsonSchema7,
+  ctx: ZodCodeCtx,
+  depth: number
+): string {
+  const mergedProps: Record<string, JsonSchema7> = {};
+  const mergedRequired = new Set<string>();
+
+  for (const item of schema.allOf ?? []) {
+    let resolved = item;
+    if (item.$ref) {
+      const key = item.$ref.replace("#/$defs/", "");
+      const refSchema = ctx.options?.defsMap?.[key];
+      if (refSchema) resolved = refSchema;
+    }
+
+    if (resolved.properties) {
+      for (const [k, v] of Object.entries(resolved.properties)) {
+        mergedProps[k] = v;
       }
     }
-    if (merged.length > 0) {
-      let code = buildNestedObjectCode(merged, ctx, depth);
-      if (param.additionalProperties) {
-        const valCode = buildParamCode(
-          param.additionalProperties,
-          ctx,
-          depth + 1
-        );
-        code += `.catchall(${valCode})`;
-      }
-      return code;
+    for (const req of resolved.required ?? []) {
+      mergedRequired.add(req);
     }
   }
 
+  // Also merge the schema's own properties
+  if (schema.properties) {
+    for (const [k, v] of Object.entries(schema.properties)) {
+      mergedProps[k] = v;
+    }
+  }
+  for (const req of schema.required ?? []) {
+    mergedRequired.add(req);
+  }
+
+  if (Object.keys(mergedProps).length > 0) {
+    const merged: JsonSchema7 = {
+      type: "object",
+      properties: mergedProps,
+      required: Array.from(mergedRequired),
+    };
+    return buildNestedObjectCode(merged, ctx, depth);
+  }
+
+  return "z.unknown()";
+}
+
+function buildObjectCode(
+  schema: JsonSchema7,
+  ctx: ZodCodeCtx,
+  depth: number
+): string {
   // --- Inline properties ---
-  if (param.properties && param.properties.length > 0) {
-    let code = buildNestedObjectCode(param.properties, ctx, depth);
-    if (param.additionalProperties) {
-      const valCode = buildParamCode(
-        param.additionalProperties,
-        ctx,
-        depth + 1
-      );
+  if (schema.properties && Object.keys(schema.properties).length > 0) {
+    let code = buildNestedObjectCode(schema, ctx, depth);
+    if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+      const valCode = buildPropertyCode(schema.additionalProperties, ctx, depth + 1);
       code += `.catchall(${valCode})`;
     }
     return code;
   }
 
   // --- Pure Map/Record ---
-  if (param.additionalProperties) {
-    const valCode = buildParamCode(
-      param.additionalProperties,
-      ctx,
-      depth + 1
-    );
+  if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+    const valCode = buildPropertyCode(schema.additionalProperties, ctx, depth + 1);
     return `z.record(z.string(), ${valCode})`;
   }
 
@@ -215,38 +224,40 @@ function buildObjectCode(
 }
 
 function buildNestedObjectCode(
-  children: SchemaProperty[] | undefined,
+  schema: JsonSchema7,
   ctx: ZodCodeCtx,
   depth: number
 ): string {
-  if (!Array.isArray(children) || children.length === 0) return "z.object({})";
+  if (!schema.properties || Object.keys(schema.properties).length === 0) return "z.object({})";
 
+  const requiredSet = new Set(schema.required ?? []);
   const lines: string[] = [];
   lines.push("z.object({");
-  for (const child of children) {
-    let code = buildParamCode(child, ctx, depth + 1);
-    if (child.description) code += `.describe(${escStr(child.description)})`;
-    if (!child.required) {
-      if (child.defaultValue !== undefined) {
-        code += `.default(${JSON.stringify(child.defaultValue)})`;
+  for (const [key, propSchema] of Object.entries(schema.properties)) {
+    let code = buildPropertyCode(propSchema, ctx, depth + 1);
+    if (propSchema.description) code += `.describe(${escStr(propSchema.description)})`;
+    if (!requiredSet.has(key)) {
+      if (propSchema.default !== undefined) {
+        code += `.default(${JSON.stringify(propSchema.default)})`;
       } else {
         code += ".optional()";
       }
     }
-    lines.push(`${ind(depth + 1)}${child.name}: ${code},`);
+    lines.push(`${ind(depth + 1)}${key}: ${code},`);
   }
   lines.push(`${ind(depth)}})`);
   return lines.join("\n");
 }
 
 function buildArrayCode(
-  param: SchemaProperty,
+  schema: JsonSchema7,
   ctx: ZodCodeCtx,
   depth: number
 ): string {
-  if (param.tuple && param.prefixItems && param.prefixItems.length > 0) {
-    const items = param.prefixItems.map((item) =>
-      buildParamCode(item, ctx, depth + 1)
+  // Tuple
+  if (schema.prefixItems && schema.prefixItems.length > 0) {
+    const items = schema.prefixItems.map((item) =>
+      buildPropertyCode(item, ctx, depth + 1)
     );
     if (items.length <= 3 && items.every((i) => i.length < 30)) {
       return `z.tuple([${items.join(", ")}])`;
@@ -261,47 +272,47 @@ function buildArrayCode(
   }
 
   let itemCode = "z.unknown()";
-  if (param.items) {
-    itemCode = buildParamCode(param.items, ctx, depth + 1);
+  if (schema.items && !Array.isArray(schema.items)) {
+    itemCode = buildPropertyCode(schema.items, ctx, depth + 1);
   }
   let code = `z.array(${itemCode})`;
-  if (param.minItems != null) code += `.min(${param.minItems})`;
-  if (param.maxItems != null) code += `.max(${param.maxItems})`;
+  if (schema.minItems != null) code += `.min(${schema.minItems})`;
+  if (schema.maxItems != null) code += `.max(${schema.maxItems})`;
   return code;
 }
 
 function buildUnionCode(
-  param: SchemaProperty,
+  schema: JsonSchema7,
   ctx: ZodCodeCtx,
   depth: number
 ): string {
-  const variants = Array.isArray(param.variants) ? param.variants : [];
+  const unionMode = schema["x-unionMode"] ?? (schema.oneOf ? "oneOf" : "anyOf");
+  const variants = (unionMode === "anyOf" ? schema.anyOf : schema.oneOf) ?? [];
   if (variants.length < 2) return "z.unknown()";
 
-  const variantCodes = variants.map((raw, i) => {
-    const variant = normalizeVariantItem(raw);
+  const discriminator = schema["x-discriminator"];
+  const discriminatorValues = schema["x-discriminatorValues"];
+
+  const variantCodes = variants.map((variant, i) => {
     let code: string;
 
-    if (variant.type === "object") {
+    if (variant.type === "object" || variant.properties) {
       code = buildObjectCode(variant, ctx, depth + 1);
     } else {
-      code = buildParamCode(variant, ctx, depth + 1);
+      code = buildPropertyCode(variant, ctx, depth + 1);
     }
 
-    const discValue = param.discriminator
-      ? param.discriminatorValues?.[i]
-      : undefined;
-    if (discValue && variant.type === "object") {
-      code += `.extend({ ${param.discriminator!}: z.literal(${escStr(discValue)}) })`;
+    const discValue = discriminator ? discriminatorValues?.[i] : undefined;
+    if (discValue && (variant.type === "object" || variant.properties)) {
+      code += `.extend({ ${discriminator}: z.literal(${escStr(discValue)}) })`;
     }
     return code;
   });
 
-  if (param.unionMode === "anyOf" || !param.discriminator) {
+  if (unionMode === "anyOf" || !discriminator) {
     const lines: string[] = [];
     lines.push("z.union([");
     for (const vc of variantCodes) {
-      // Indent each line of the variant code
       const indented = vc
         .split("\n")
         .map((l, li) => (li === 0 ? `${ind(depth + 1)}${l}` : l))
@@ -314,7 +325,7 @@ function buildUnionCode(
 
   // discriminatedUnion
   const lines: string[] = [];
-  lines.push(`z.discriminatedUnion(${escStr(param.discriminator)}, [`);
+  lines.push(`z.discriminatedUnion(${escStr(discriminator)}, [`);
   for (const vc of variantCodes) {
     const indented = vc
       .split("\n")
@@ -326,32 +337,22 @@ function buildUnionCode(
   return lines.join("\n");
 }
 
-function schemaVarName(schemaId: string, ctx: ZodCodeCtx): string {
-  const key = ctx.schemaKeyMap?.[schemaId];
-  if (key) return camelCase(key) + "Schema";
-  return `schema_${schemaId.slice(0, 8)}`;
-}
-
 function camelCase(s: string): string {
   return s.replace(/[-_](.)/g, (_, c: string) => c.toUpperCase());
 }
 
 /**
- * Build a Zod TypeScript code string from a list of SchemaProperty definitions.
+ * Build a Zod TypeScript code string from a JSON Schema 7 object.
  *
  * Returns a ready-to-use TypeScript snippet with `import { z } from "zod"` header.
  */
 export function buildZodCode(
-  parameters: SchemaProperty[],
-  options?: BuildSchemaOptions & {
-    /** Map of schema UUID → human-friendly key for variable names. */
-    schemaKeyMap?: Record<string, string>;
-  }
+  schema: JsonSchema7,
+  options?: BuildSchemaOptions
 ): string {
   const ctx: ZodCodeCtx = {
     options,
-    ancestorSchemaIds: new Set(),
-    schemaKeyMap: options?.schemaKeyMap,
+    ancestorKeys: new Set(),
     refs: new Map(),
   };
 
@@ -359,8 +360,7 @@ export function buildZodCode(
   lines.push('import { z } from "zod";');
   lines.push("");
 
-  // Build main schema
-  const objectCode = buildNestedObjectCode(parameters, ctx, 0);
+  const objectCode = buildNestedObjectCode(schema, ctx, 0);
   lines.push(`const schema = ${objectCode};`);
 
   return lines.join("\n");

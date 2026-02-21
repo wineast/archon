@@ -53,7 +53,7 @@ interface ParameterSectionProps {
   label: string;
   schemaIdFieldName: "parametersSchemaId" | "returnParametersSchemaId";
   schemaIdValue: string | null | undefined;
-  schemas: { id: string; key: string; name: string; parameters: import("@/lib/schemas/types").SchemaProperty[] }[];
+  schemas: { id: string; key: string; name: string; parameters: import("@/lib/schemas/types").JsonSchema7 }[];
   form: ReturnType<typeof useForm<ToolDefinition>>;
 }
 
@@ -95,7 +95,7 @@ function ParameterSection({
           )}
         />
         {selectedSchema && (
-          <SchemaParameterPreview parameters={selectedSchema.parameters} />
+          <SchemaParameterPreview schema={selectedSchema.parameters} />
         )}
       </div>
     </div>

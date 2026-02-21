@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 export async function POST(req: NextRequest) {
   try {
     const { code, parameters, input } = (await req.json()) as {
       code: string;
-      parameters?: SchemaProperty[];
+      parameters?: JsonSchema7;
       input?: unknown;
     };
 
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     // Validate input against parameters schema (host-side, before sandbox)
     let validatedInput = input ?? {};
-    if (parameters && parameters.length > 0) {
+    if (parameters && Object.keys(parameters.properties ?? {}).length > 0) {
       try {
         const schema = buildInputSchema(parameters);
         validatedInput = schema.parse(input ?? {});

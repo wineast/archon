@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { schemas, schemaIncludes, datasets } from "@/db/schema";
-import type { SchemaWithIncludes } from "@/db/schema";
-import { eq, and, isNull, asc, inArray } from "drizzle-orm";
-import { resolveParameters } from "@/lib/schemas/resolve";
+import { schemas } from "@/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import { ZodError } from "zod";
+import { getResolvedDatasets } from "@/lib/datasets/queries";
 
 export async function POST(
   req: Request,
@@ -27,56 +26,28 @@ export async function POST(
     return NextResponse.json({ error: "Schema not found" }, { status: 404 });
   }
 
-  // Load all schemas for the same agent (for resolving includes and schemaId references)
+  // Load all schemas for the same agent (for $ref resolution)
   const allRows = await db
     .select()
     .from(schemas)
     .where(and(eq(schemas.agentId, schema.agentId), isNull(schemas.deletedAt)));
 
-  const allIncludeRows = allRows.length > 0
-    ? await db
-        .select()
-        .from(schemaIncludes)
-        .where(inArray(schemaIncludes.schemaId, allRows.map((r) => r.id)))
-        .orderBy(asc(schemaIncludes.position))
-    : [];
-
-  const includesBySchemaId = new Map<string, string[]>();
-  for (const row of allIncludeRows) {
-    const arr = includesBySchemaId.get(row.schemaId) ?? [];
-    arr.push(row.includeSchemaId);
-    includesBySchemaId.set(row.schemaId, arr);
+  // Build defsMap: schema key → parameters
+  const defsMap: Record<string, JsonSchema7> = {};
+  for (const row of allRows) {
+    defsMap[row.key] = row.parameters as JsonSchema7;
   }
 
-  const allSchemasMap = new Map<string, SchemaWithIncludes>(
-    allRows.map((r) => [r.id, { ...r, includeSchemaIds: includesBySchemaId.get(r.id) ?? [] }])
-  );
-
-  // Resolve parameters (merge includes)
-  const schemaWithIncludes = allSchemasMap.get(id)!;
-  const resolvedParams = resolveParameters(schemaWithIncludes, allSchemasMap);
-
-  // Build schemaMap for object type params that reference other schemas via schemaId
-  const schemaMap: Record<string, SchemaProperty[]> = {};
-  for (const [sid, s] of allSchemasMap) {
-    const resolved = resolveParameters(s, allSchemasMap);
-    schemaMap[sid] = resolved;
-  }
-
-  // Load datasets for enum params that reference datasets via enumDatasetId
-  const datasetRows = await db
-    .select()
-    .from(datasets)
-    .where(and(eq(datasets.agentId, schema.agentId), isNull(datasets.deletedAt)));
-
-  const datasetsById: Record<string, unknown> = {};
-  for (const d of datasetRows) {
-    datasetsById[d.id] = d.data;
-  }
+  // Load resolved dataset variables for template enum expansion
+  const { resolvedVars } = await getResolvedDatasets(schema.agentId);
 
   // Build Zod schema and validate
   try {
-    const zodSchema = buildInputSchema(resolvedParams, {}, { schemaMap, datasetsById });
+    const zodSchema = buildInputSchema(
+      schema.parameters as JsonSchema7,
+      resolvedVars,
+      { defsMap }
+    );
     zodSchema.parse(input ?? {});
 
     return NextResponse.json({

@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { toast } from "sonner";
-import type { SchemaWithIncludes } from "@/db/schema";
+import type { SchemaRow } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -11,7 +11,7 @@ export function schemasApiKey(agentId?: string) {
 }
 
 export function useSchemas(agentId?: string) {
-  const { data, error, isLoading, mutate } = useSWR<SchemaWithIncludes[]>(
+  const { data, error, isLoading, mutate } = useSWR<SchemaRow[]>(
     schemasApiKey(agentId),
     fetcher
   );
@@ -30,7 +30,7 @@ export async function createSchema(
     key: string;
     name: string;
     description?: string;
-    parameters?: unknown[];
+    parameters?: unknown;
   },
   mutate: () => void
 ) {

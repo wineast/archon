@@ -1,132 +1,135 @@
 import { describe, it, expect } from "vitest";
 import { buildInputSchema } from "../schema-builder";
-import type { SchemaProperty } from "../types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
-function makeParam(overrides: Partial<SchemaProperty> = {}): SchemaProperty {
+function makeSchema(
+  props: Record<string, JsonSchema7>,
+  required?: string[]
+): JsonSchema7 {
   return {
-    id: "p-1",
-    name: "field",
-    type: "string",
-    description: "A field",
-    required: true,
-    ...overrides,
+    type: "object",
+    properties: props,
+    required: required ?? Object.keys(props),
   };
 }
 
 describe("schema-builder — enum type", () => {
-  describe("type: enum with manual values", () => {
+  describe("type: string with enum (manual values)", () => {
     it("accepts values in enum list", () => {
-      const schema = buildInputSchema([
-        makeParam({ type: "enum", enum: ["CA", "NY", "TX"] }),
-      ]);
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string", enum: ["CA", "NY", "TX"] } })
+      );
       expect(() => schema.parse({ field: "CA" })).not.toThrow();
       expect(() => schema.parse({ field: "NY" })).not.toThrow();
     });
 
     it("rejects values not in enum list", () => {
-      const schema = buildInputSchema([
-        makeParam({ type: "enum", enum: ["CA", "NY", "TX"] }),
-      ]);
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string", enum: ["CA", "NY", "TX"] } })
+      );
       expect(() => schema.parse({ field: "FL" })).toThrow();
     });
 
     it("falls back to z.string() when enum is empty", () => {
-      const schema = buildInputSchema([
-        makeParam({ type: "enum", enum: [] }),
-      ]);
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string", enum: [] } })
+      );
       expect(() => schema.parse({ field: "anything" })).not.toThrow();
     });
 
     it("falls back to z.string() when enum is undefined", () => {
-      const schema = buildInputSchema([makeParam({ type: "enum" })]);
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string" } })
+      );
       expect(() => schema.parse({ field: "anything" })).not.toThrow();
     });
 
     it("works with optional enum param", () => {
-      const schema = buildInputSchema([
-        makeParam({ type: "enum", required: false, enum: ["a", "b"] }),
-      ]);
+      const schema = buildInputSchema(
+        makeSchema(
+          { field: { type: "string", enum: ["a", "b"] } },
+          [] // not required
+        )
+      );
       expect(() => schema.parse({})).not.toThrow();
       expect(() => schema.parse({ field: "a" })).not.toThrow();
       expect(() => schema.parse({ field: "c" })).toThrow();
     });
   });
 
-  describe("type: enum with enumDatasetId → datasetsById (array)", () => {
-    const datasetsById = {
-      "ds-1": ["CA", "NY", "TX"],
-    };
-
-    it("resolves enumDatasetId from array in datasetsById", () => {
+  describe("template string enum: {{var}} → resolved from resolvedVars", () => {
+    it("resolves {{var}} from array in resolvedVars", () => {
+      const resolvedVars = {
+        state_enum: ["CA", "NY", "TX"],
+      };
       const schema = buildInputSchema(
-        [makeParam({ type: "enum", enumDatasetId: "ds-1" })],
-        undefined,
-        { datasetsById }
+        makeSchema({ field: { type: "string", enum: ["{{state_enum}}"] } }),
+        resolvedVars
       );
       expect(() => schema.parse({ field: "CA" })).not.toThrow();
       expect(() => schema.parse({ field: "FL" })).toThrow();
     });
 
-    it("falls back to enum when enumDatasetId not found in datasetsById", () => {
+    it("resolves {{var}} from object with string values (takes values)", () => {
+      const resolvedVars = {
+        income_types: { salary: "Salary", bonus: "Bonus", rental: "Rental Income" },
+      };
       const schema = buildInputSchema(
-        [makeParam({ type: "enum", enumDatasetId: "ds-unknown", enum: ["x", "y"] })],
-        undefined,
-        { datasetsById }
-      );
-      expect(() => schema.parse({ field: "x" })).not.toThrow();
-      expect(() => schema.parse({ field: "z" })).toThrow();
-    });
-  });
-
-  describe("type: enum with enumDatasetId → datasetsById (json object)", () => {
-    const datasetsById = {
-      "ds-income": { salary: "Salary", bonus: "Bonus", rental: "Rental Income" },
-      "ds-states": ["CA", "NY"],
-    };
-
-    it("resolves enumDatasetId from object via Object.values() when values are strings", () => {
-      const schema = buildInputSchema(
-        [makeParam({ type: "enum", enumDatasetId: "ds-income" })],
-        undefined,
-        { datasetsById }
+        makeSchema({ field: { type: "string", enum: ["{{income_types}}"] } }),
+        resolvedVars
       );
       expect(() => schema.parse({ field: "Salary" })).not.toThrow();
       expect(() => schema.parse({ field: "Bonus" })).not.toThrow();
-      expect(() => schema.parse({ field: "Rental Income" })).not.toThrow();
       expect(() => schema.parse({ field: "salary" })).toThrow(); // key, not value
     });
 
-    it("resolves enumDatasetId from object via Object.keys() when values are non-strings", () => {
+    it("resolves {{var}} from object with non-string values (takes keys)", () => {
+      const resolvedVars = {
+        nums: { a: 1, b: 2, c: 3 },
+      };
       const schema = buildInputSchema(
-        [makeParam({ type: "enum", enumDatasetId: "ds-nums" })],
-        undefined,
-        { datasetsById: { "ds-nums": { a: 1, b: 2, c: 3 } } }
+        makeSchema({ field: { type: "string", enum: ["{{nums}}"] } }),
+        resolvedVars
       );
-      // Object.keys() → ["a", "b", "c"]
       expect(() => schema.parse({ field: "a" })).not.toThrow();
-      expect(() => schema.parse({ field: "b" })).not.toThrow();
-      expect(() => schema.parse({ field: "1" })).toThrow(); // value, not key
+      expect(() => schema.parse({ field: "1" })).toThrow();
     });
 
-    it("arrays still resolve as arrays, not as objects", () => {
+    it("keeps raw template string when var is not found", () => {
       const schema = buildInputSchema(
-        [makeParam({ type: "enum", enumDatasetId: "ds-states" })],
-        undefined,
-        { datasetsById }
+        makeSchema({ field: { type: "string", enum: ["{{unknown_var}}"] } }),
+        {}
       );
-      expect(() => schema.parse({ field: "CA" })).not.toThrow();
-      expect(() => schema.parse({ field: "FL" })).toThrow();
+      // Falls back to the literal "{{unknown_var}}"
+      expect(() => schema.parse({ field: "{{unknown_var}}" })).not.toThrow();
+      expect(() => schema.parse({ field: "anything_else" })).toThrow();
+    });
+
+    it("mixes template and literal enum values", () => {
+      const resolvedVars = {
+        dynamic: ["X", "Y"],
+      };
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string", enum: ["A", "{{dynamic}}", "Z"] } }),
+        resolvedVars
+      );
+      expect(() => schema.parse({ field: "A" })).not.toThrow();
+      expect(() => schema.parse({ field: "X" })).not.toThrow();
+      expect(() => schema.parse({ field: "Y" })).not.toThrow();
+      expect(() => schema.parse({ field: "Z" })).not.toThrow();
+      expect(() => schema.parse({ field: "B" })).toThrow();
     });
   });
 
-  describe("string type no longer handles enum", () => {
-    it("string type with enum values ignores them (just z.string)", () => {
-      const schema = buildInputSchema([
-        makeParam({ type: "string", enum: ["a", "b"] }),
-      ]);
+  describe("string with enum enforces enum values (JSON Schema 7 behavior)", () => {
+    it("string type with enum values enforces them (z.enum, not z.string)", () => {
+      const schema = buildInputSchema(
+        makeSchema({ field: { type: "string", enum: ["a", "b"] } })
+      );
       expect(() => schema.parse({ field: "a" })).not.toThrow();
-      // "c" is accepted because string type doesn't use enum
-      expect(() => schema.parse({ field: "c" })).not.toThrow();
+      expect(() => schema.parse({ field: "b" })).not.toThrow();
+      // "c" is rejected because enum takes effect in JSON Schema 7
+      expect(() => schema.parse({ field: "c" })).toThrow();
     });
   });
 });

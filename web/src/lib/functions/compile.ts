@@ -14,7 +14,7 @@
 
 import { compileExpression } from "filtrex";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import {
   createFunctionsSandbox,
   type FunctionsSandbox,
@@ -51,7 +51,7 @@ export function inferDeps(code: string, knownKeys: Set<string>): string[] {
 export interface FunctionRecord {
   key: string;
   code: string;
-  parameters: SchemaProperty[];
+  parameters: JsonSchema7;
 }
 
 /**
@@ -136,7 +136,7 @@ export async function resolveAndCompileFunctions(
   // Build map of key → sync wrapper with Zod validation
   const fns = new Map<string, unknown>();
   for (const row of rows) {
-    if (row.parameters && row.parameters.length > 0) {
+    if (row.parameters && row.parameters.properties && Object.keys(row.parameters.properties).length > 0) {
       const schema = buildInputSchema(row.parameters);
       fns.set(row.key, function validatedFn(input: unknown) {
         const parsed = schema.parse(input);

@@ -5,7 +5,7 @@ import { DefaultChatTransport, isTextUIPart, isToolUIPart, getToolName } from "a
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage, UIDataTypes } from "ai";
 import { CheckIcon, CopyIcon, InfoIcon } from "lucide-react";
-import { javascript } from "@codemirror/lang-javascript";
+import { json } from "@codemirror/lang-json";
 import {
   Dialog,
   DialogContent,
@@ -46,63 +46,67 @@ import {
 } from "@/components/ai-elements/tool";
 import { DiffEditor } from "@/components/editors/diff-editor";
 
-type FunctionCodeAssistTools = {
-  update_code: { input: { content: string }; output: string };
-  edit_code: { input: { old_text: string; new_text: string }; output: string };
+type SchemaCodeAssistTools = {
+  update_schema: { input: { content: string }; output: string };
+  edit_schema: { input: { old_text: string; new_text: string }; output: string };
 };
 
-type FunctionCodeAssistMessage = UIMessage<unknown, UIDataTypes, FunctionCodeAssistTools>;
+type SchemaCodeAssistMessage = UIMessage<unknown, UIDataTypes, SchemaCodeAssistTools>;
 
-interface FunctionCodeAssistDialogProps {
+interface SchemaCodeAssistDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  code: string;
+  schema: string;
   context?: string;
-  onApply: (newCode: string) => void;
+  onApply: (newSchema: string) => void;
 }
 
-function buildSystemPrompt(currentCode: string, context?: string): string {
-  return `你是一位专业的 JavaScript 函数开发工程师。你的任务是帮助用户编写和优化函数代码。
+const jsonLanguage = json();
 
-当前编辑器中的函数代码如下：
-<current_code>
-${currentCode}
-</current_code>
+function buildSystemPrompt(currentSchema: string, context?: string): string {
+  return `你是一位专业的 JSON Schema 7 专家。你的任务是帮助用户编写和优化 JSON Schema 定义。
 
-${context ? `## 函数上下文\n\n${context}\n\n` : ""}## 函数架构
+当前编辑器中的 JSON Schema 如下：
+<current_schema>
+${currentSchema}
+</current_schema>
 
-函数运行在沙箱环境中，接收参数对象并返回结果。代码格式如下：
+${context ? `## Schema 上下文\n\n${context}\n\n` : ""}## JSON Schema 7 规范
 
-\`\`\`javascript
-// 函数接收 params 对象，包含定义的参数
-// 返回值会被序列化为 JSON 返回给调用方
-const { param1, param2 } = params;
+Schema 定义使用标准 JSON Schema 7 格式。
 
-// 处理逻辑...
-
-return { result: "..." };
+### 基本结构
+\`\`\`json
+{
+  "type": "object",
+  "properties": {
+    "field_name": { "type": "string", "description": "字段描述" }
+  },
+  "required": ["field_name"]
+}
 \`\`\`
 
-### 运行环境
-- JavaScript 沙箱（不能使用 import/require）
-- 可以使用标准 JavaScript 内置对象（Math, Date, JSON, RegExp 等）
-- params 对象包含调用时传入的参数
-- 通过 return 语句返回结果
+### 支持的类型
+- string, integer, number, boolean, object, array, null
+
+### 组合与引用
+- \`$ref\`: "#/$defs/schema_key"
+- allOf / oneOf / anyOf
 
 ## 可用工具
 
-### update_code — 整体替换
-适用于大范围重写或重新组织。必须提供完整的新函数代码。
+### update_schema — 整体替换
+必须提供完整的 JSON Schema JSON 字符串。
 
-### edit_code — 局部编辑
-适用于小范围修改。提供 old_text（要匹配的原文片段）和 new_text（替换后的内容）。
+### edit_schema — 局部编辑
+old_text 必须精确匹配当前内容。
 
 ## 工作规则
-1. 小范围修改优先使用 edit_code，避免不必要的整体替换
-2. 大范围重写或结构调整使用 update_code
-3. edit_code 的 old_text 必须与当前代码中的文本精确匹配（包括空格和换行）
-4. 代码必须是合法的 JavaScript，不能使用 import/require
-5. 用中文回复用户的问题和说明`;
+1. 小范围修改优先使用 edit_schema
+2. 大范围重写使用 update_schema
+3. 输出必须是合法的 JSON Schema 7
+4. 属性名使用 snake_case，每个属性应有 description
+5. 用中文回复`;
 }
 
 function formatMessagesForCopy(messages: UIMessage[]): string {
@@ -141,8 +145,8 @@ function ChatMessages({ messages }: { messages: UIMessage[] }) {
             if (isToolUIPart(part)) {
               const name = getToolName(part);
               const toolLabel: Record<string, string> = {
-                update_code: "整体替换",
-                edit_code: "局部编辑",
+                update_schema: "整体替换",
+                edit_schema: "局部编辑",
               };
               return (
                 <Tool key={`tool-${i}`}>
@@ -161,69 +165,67 @@ function ChatMessages({ messages }: { messages: UIMessage[] }) {
   );
 }
 
-const jsLanguage = javascript();
-
-export function FunctionCodeAssistDialog({
+export function SchemaCodeAssistDialog({
   open,
   onOpenChange,
-  code,
+  schema,
   context,
   onApply,
-}: FunctionCodeAssistDialogProps) {
-  const [draftCode, setDraftCode] = useState(code);
-  const [originalCode, setOriginalCode] = useState(code);
+}: SchemaCodeAssistDialogProps) {
+  const [draftSchema, setDraftSchema] = useState(schema);
+  const [originalSchema, setOriginalSchema] = useState(schema);
   const [input, setInput] = useState("");
-  const draftCodeRef = useRef(draftCode);
-  draftCodeRef.current = draftCode;
+  const draftSchemaRef = useRef(draftSchema);
+  draftSchemaRef.current = draftSchema;
 
-  const hasDiff = draftCode !== originalCode;
+  const hasDiff = draftSchema !== originalSchema;
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (nextOpen) {
-        setDraftCode(code);
-        setOriginalCode(code);
-        draftCodeRef.current = code;
+        setDraftSchema(schema);
+        setOriginalSchema(schema);
+        draftSchemaRef.current = schema;
       }
       onOpenChange(nextOpen);
     },
-    [code, onOpenChange]
+    [schema, onOpenChange]
   );
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: "/api/function-code-assist",
+        api: "/api/schema-code-assist",
         body: () => ({
-          currentCode: draftCodeRef.current,
+          currentSchema: draftSchemaRef.current,
           context,
         }),
       }),
     [context]
   );
 
-  const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<FunctionCodeAssistMessage>({
+  const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<SchemaCodeAssistMessage>({
     transport,
     onToolCall: ({ toolCall }) => {
-      if (toolCall.toolName === "update_code") {
-        const { content } = toolCall.input as FunctionCodeAssistTools["update_code"]["input"];
-        setDraftCode(content);
-        draftCodeRef.current = content;
+      if (toolCall.toolName === "update_schema") {
+        const { content } = toolCall.input as SchemaCodeAssistTools["update_schema"]["input"];
+        setDraftSchema(content);
+        draftSchemaRef.current = content;
         addToolOutput({
-          tool: "update_code",
+          tool: "update_schema",
           toolCallId: toolCall.toolCallId,
           output: "已更新",
         });
-      } else if (toolCall.toolName === "edit_code") {
-        const { old_text, new_text } = toolCall.input as FunctionCodeAssistTools["edit_code"]["input"];
-        const current = draftCodeRef.current;
+      } else if (toolCall.toolName === "edit_schema") {
+        const { old_text, new_text } = toolCall.input as SchemaCodeAssistTools["edit_schema"]["input"];
+        const current = draftSchemaRef.current;
         if (current.includes(old_text)) {
           const updated = current.replace(old_text, new_text);
-          setDraftCode(updated);
-          draftCodeRef.current = updated;
+          setDraftSchema(updated);
+          draftSchemaRef.current = updated;
         }
         addToolOutput({
-          tool: "edit_code",
+          tool: "edit_schema",
           toolCallId: toolCall.toolCallId,
           output: current.includes(old_text) ? "已更新" : "未找到匹配文本",
         });
@@ -234,14 +236,14 @@ export function FunctionCodeAssistDialog({
   const prevOpenRef = useRef(open);
   useEffect(() => {
     if (open && !prevOpenRef.current) {
-      setDraftCode(code);
-      setOriginalCode(code);
-      draftCodeRef.current = code;
+      setDraftSchema(schema);
+      setOriginalSchema(schema);
+      draftSchemaRef.current = schema;
       setMessages([]);
       setInput("");
     }
     prevOpenRef.current = open;
-  }, [open, code, setMessages]);
+  }, [open, schema, setMessages]);
 
   const isStreaming = status === "streaming" || status === "submitted";
 
@@ -259,9 +261,9 @@ export function FunctionCodeAssistDialog({
   }, [input, sendMessage]);
 
   const handleApply = useCallback(() => {
-    onApply(draftCode);
+    onApply(draftSchema);
     onOpenChange(false);
-  }, [draftCode, onApply, onOpenChange]);
+  }, [draftSchema, onApply, onOpenChange]);
 
   const handleCancel = useCallback(() => {
     onOpenChange(false);
@@ -284,7 +286,7 @@ export function FunctionCodeAssistDialog({
       >
         <DialogHeader className="border-b px-4 py-3">
           <div className="flex items-center justify-between">
-            <DialogTitle>AI 辅助编辑函数</DialogTitle>
+            <DialogTitle>AI 辅助编辑 Schema</DialogTitle>
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setSysPromptOpen(true)}>
                 <InfoIcon className="size-3" />
@@ -297,7 +299,7 @@ export function FunctionCodeAssistDialog({
                   </SubDialogHeader>
                   <div className="flex-1 min-h-0 overflow-y-auto">
                     <pre className="whitespace-pre-wrap break-words p-4 text-xs font-mono leading-relaxed">
-                      {buildSystemPrompt(draftCode, context)}
+                      {buildSystemPrompt(draftSchema, context)}
                     </pre>
                   </div>
                 </SubDialogContent>
@@ -320,11 +322,11 @@ export function FunctionCodeAssistDialog({
             <div className="flex-1 min-h-0">
               {open && (
                 <DiffEditor
-                  original={originalCode}
-                  modified={draftCode}
+                  original={originalSchema}
+                  modified={draftSchema}
                   readOnly={isStreaming}
-                  onModifiedChange={setDraftCode}
-                  language={jsLanguage}
+                  onModifiedChange={setDraftSchema}
+                  language={jsonLanguage}
                 />
               )}
             </div>
@@ -342,7 +344,7 @@ export function FunctionCodeAssistDialog({
             <div className="flex min-h-0 flex-1 flex-col">
               {messages.length === 0 ? (
                 <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                  描述你想要的函数逻辑，AI 会帮你编写左侧代码
+                  描述你想要的 Schema 结构，AI 会帮你编写左侧 JSON Schema
                 </div>
               ) : (
                 <Conversation>
@@ -357,7 +359,7 @@ export function FunctionCodeAssistDialog({
                   <PromptInputBody>
                     <PromptInputTextarea
                       onChange={handleTextChange}
-                      placeholder="描述你想要的函数逻辑..."
+                      placeholder="描述你想要的 Schema 结构..."
                       value={input}
                     />
                   </PromptInputBody>
