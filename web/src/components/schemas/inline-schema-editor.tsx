@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import { JsonEditor } from "@/components/editors/json-editor";
 import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SchemaParameterPreview } from "./schema-parameter-preview";
 import { SchemaCodeAssistDialog } from "./schema-code-assist-dialog";
@@ -16,12 +15,26 @@ import schemaGuideContent from "../../../guide/schema.md";
 
 const DEFAULT_SCHEMA: JsonSchema7 = { type: "object", properties: {}, required: [] };
 
+function isPlainObject(val: unknown): val is Record<string, unknown> {
+  return typeof val === "object" && val !== null && !Array.isArray(val);
+}
+
+function isObjectSchemaPattern(schema: Record<string, unknown>): boolean {
+  if (schema.type === "object") return true;
+  if ("properties" in schema) return true;
+  if ("allOf" in schema || "anyOf" in schema || "oneOf" in schema) return true;
+  if ("$ref" in schema) return true;
+  return false;
+}
+
 interface InlineSchemaEditorProps {
   value: JsonSchema7 | null;
   onChange: (v: JsonSchema7) => void;
   label: string;
   /** Agent ID — enables template completions, preview, and AI assist. */
   agentId?: string;
+  /** When true, root schema must be an object type (has type:"object", properties, allOf, $ref, etc.). */
+  requireObjectRoot?: boolean;
 }
 
 export function InlineSchemaEditor({
@@ -29,6 +42,7 @@ export function InlineSchemaEditor({
   onChange,
   label,
   agentId,
+  requireObjectRoot,
 }: InlineSchemaEditorProps) {
   const schema = value ?? DEFAULT_SCHEMA;
 
@@ -41,7 +55,6 @@ export function InlineSchemaEditor({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewJsonError, setPreviewJsonError] = useState<string | null>(null);
   const [schemaAssistOpen, setSchemaAssistOpen] = useState(false);
-  const [expandRefs, setExpandRefs] = useState(false);
 
   // Dataset variables for template completions
   const { datasetVars } = useDatasetVarsMap(agentId);
@@ -67,16 +80,24 @@ export function InlineSchemaEditor({
       }
       try {
         const parsed = JSON.parse(v);
+        if (!isPlainObject(parsed)) {
+          setJsonError("Schema must be a JSON object");
+          return;
+        }
+        if (requireObjectRoot && !isObjectSchemaPattern(parsed)) {
+          setJsonError("Root schema must be an object type");
+          return;
+        }
         setJsonError(null);
         onChange(parsed);
       } catch (err) {
         setJsonError((err as Error).message);
       }
     },
-    [onChange]
+    [onChange, requireObjectRoot]
   );
 
-  const handlePreview = useCallback(async (overrideExpandRefs?: boolean) => {
+  const handlePreview = useCallback(async () => {
     if (!customJson || !agentId) {
       setPreviewContent(customJson);
       setPreviewJsonError(null);
@@ -84,12 +105,11 @@ export function InlineSchemaEditor({
     }
     setPreviewLoading(true);
     setPreviewJsonError(null);
-    const shouldExpand = overrideExpandRefs ?? expandRefs;
     try {
       const res = await fetch("/api/schema/template/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: customJson, agentId, expandRefs: shouldExpand }),
+        body: JSON.stringify({ text: customJson, agentId, expandRefs: true }),
       });
       const { rendered } = await res.json();
       setPreviewContent(rendered);
@@ -103,7 +123,7 @@ export function InlineSchemaEditor({
     } finally {
       setPreviewLoading(false);
     }
-  }, [customJson, agentId, expandRefs]);
+  }, [customJson, agentId]);
 
   const handleTabChange = useCallback(
     (value: string) => {
@@ -154,38 +174,28 @@ export function InlineSchemaEditor({
         agentId={agentId}
         onApply={handleAssistApply}
       />
-      {hasTemplateSupport ? (
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
-          <TabsList className="h-7">
-            <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
+        <TabsList className="h-7">
+          <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
+          {hasTemplateSupport && (
             <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
-          </TabsList>
-          <TabsContent value="edit">
-            <JsonEditor
-              value={customJson}
-              onChange={handleChange}
-              height="200px"
-              templateVariables={templateVariables}
-              templateVariableMap={datasetVars}
-            />
-            {jsonError && (
-              <p className="mt-1 text-xs text-destructive">{jsonError}</p>
-            )}
-          </TabsContent>
+          )}
+          <TabsTrigger value="parameters" className="text-xs">Parameters</TabsTrigger>
+        </TabsList>
+        <TabsContent value="edit">
+          <JsonEditor
+            value={customJson}
+            onChange={handleChange}
+            height="200px"
+            templateVariables={hasTemplateSupport ? templateVariables : undefined}
+            templateVariableMap={hasTemplateSupport ? datasetVars : undefined}
+          />
+          {jsonError && (
+            <p className="mt-1 text-xs text-destructive">{jsonError}</p>
+          )}
+        </TabsContent>
+        {hasTemplateSupport && (
           <TabsContent value="preview">
-            <div className="flex items-center gap-2 mb-2">
-              <Switch
-                id="expand-refs"
-                checked={expandRefs}
-                onCheckedChange={(checked) => {
-                  setExpandRefs(checked);
-                  handlePreview(checked);
-                }}
-              />
-              <label htmlFor="expand-refs" className="text-xs text-muted-foreground">
-                展开 $ref
-              </label>
-            </div>
             {previewLoading ? (
               <div className="flex min-h-[200px] items-center justify-center rounded-md border">
                 <Spinner className="size-5" />
@@ -203,20 +213,11 @@ export function InlineSchemaEditor({
               </p>
             )}
           </TabsContent>
-        </Tabs>
-      ) : (
-        <div className="mt-1">
-          <JsonEditor
-            value={customJson}
-            onChange={handleChange}
-            height="200px"
-          />
-          {jsonError && (
-            <p className="mt-1 text-xs text-destructive">{jsonError}</p>
-          )}
-        </div>
-      )}
-      <SchemaParameterPreview schema={schema} />
+        )}
+        <TabsContent value="parameters">
+          <SchemaParameterPreview schema={schema} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
