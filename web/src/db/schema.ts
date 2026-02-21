@@ -105,6 +105,7 @@ export const agents = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    skillsEnabled: boolean("skills_enabled").notNull().default(true),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
@@ -1242,11 +1243,43 @@ export type NewPlatformSettingsRow = typeof platformSettings.$inferInsert;
 export const auditLogActions = ["created", "updated", "deleted", "restored", "permanently_deleted"] as const;
 export type AuditLogAction = (typeof auditLogActions)[number];
 
+/* ─────────── Skills ─────────── */
+
+export const skills = pgTable(
+  "skills",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    content: text("content").notNull().default(""),
+    enabled: boolean("enabled").notNull().default(true),
+    order: integer("order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    unique("skills_agent_id_key_idx").on(table.agentId, table.key),
+  ]
+);
+
+export type SkillRow = typeof skills.$inferSelect;
+export type NewSkillRow = typeof skills.$inferInsert;
+
 export const auditLogResourceTypes = [
   "tool", "function", "component", "schema", "dataset", "wiki",
   "model_config", "eval_case", "eval_judge_config",
   "object_type", "object_relation", "chat_config",
-  "memory_config", "memory",
+  "memory_config", "memory", "skill",
 ] as const;
 export type AuditLogResourceType = (typeof auditLogResourceTypes)[number];
 

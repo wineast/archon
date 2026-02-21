@@ -1,15 +1,18 @@
 import {
   streamText,
   gateway,
+  tool,
+  type Tool,
   type UIMessage,
   convertToModelMessages,
   stepCountIs,
 } from "ai";
+import { z } from "zod";
 import { after } from "next/server";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import { db } from "@/db";
-import { agents, tools, modelConfigs } from "@/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { agents, tools, modelConfigs, skills } from "@/db/schema";
+import { eq, and, isNull, asc } from "drizzle-orm";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
   createSession,
@@ -43,9 +46,9 @@ export async function executeChatStream(
 ): Promise<Response> {
   const { messages, sessionId, agentId, userId, hostContext, registeredHostTools } = opts;
 
-  // Get agent's orgId for usage recording
+  // Get agent's orgId and skillsEnabled for usage recording and skills logic
   const [agentRow] = await db
-    .select({ orgId: agents.orgId })
+    .select({ orgId: agents.orgId, skillsEnabled: agents.skillsEnabled })
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
@@ -113,18 +116,54 @@ export async function executeChatStream(
   const eventCollector: RuntimeEventInput[] = [];
   const streamStartTime = performance.now();
 
-  const allTools = toolPayloads.length
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allTools: Record<string, Tool<any, any>> = toolPayloads.length
     ? buildDynamicTools(toolPayloads, templateData, agentId, eventCollector)
     : {};
 
   // The last message is the new user message
   const userMessage = messages[messages.length - 1];
 
-  const systemPrompt = await renderTemplate(
+  let systemPrompt = await renderTemplate(
     activeConfig.systemPrompt || "",
     templateData,
     hostContext ? { host: hostContext } : undefined
   );
+
+  // Load enabled skills and inject summary + get_skill_detail tool (skip if skills feature is disabled)
+  const enabledSkills = agentRow?.skillsEnabled !== false
+    ? await db
+        .select()
+        .from(skills)
+        .where(and(eq(skills.agentId, agentId), eq(skills.enabled, true), isNull(skills.deletedAt)))
+        .orderBy(asc(skills.order), asc(skills.key))
+    : [];
+
+  if (enabledSkills.length > 0) {
+    const skillSummaryLines = enabledSkills.map(
+      (s) => `- ${s.name} (key: ${s.key}): ${s.description}`
+    );
+    systemPrompt +=
+      `\n\n## 可用技能\n以下技能提供额外能力。需要时调用 get_skill_detail 工具获取完整指引。\n` +
+      skillSummaryLines.join("\n");
+
+    allTools.get_skill_detail = tool({
+      description: "获取技能的完整内容指引。当需要使用某个技能时，先调用此工具获取详细指引。",
+      inputSchema: z.object({ skill_key: z.string().describe("技能的 key") }),
+      execute: async ({ skill_key }: { skill_key: string }) => {
+        const matched = enabledSkills.find((s) => s.key === skill_key);
+        if (!matched) {
+          return { error: `技能 ${skill_key} 不存在或未启用` };
+        }
+        const renderedContent = await renderTemplate(
+          matched.content,
+          templateData,
+          hostContext ? { host: hostContext } : undefined
+        );
+        return { name: matched.name, content: renderedContent };
+      },
+    });
+  }
 
   try {
     const result = streamText({

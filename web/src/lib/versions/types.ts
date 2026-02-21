@@ -145,6 +145,17 @@ export interface ObjectRelationSnapshotItem {
   order: number;
 }
 
+/* ─────────── Skill Snapshot Items ─────────── */
+
+export interface SkillSnapshotItem {
+  key: string;
+  name: string;
+  description: string;
+  content: string;
+  enabled: boolean;
+  order: number;
+}
+
 /* ─────────── Agent Snapshot ─────────── */
 
 export interface AgentSnapshot {
@@ -167,6 +178,7 @@ export interface AgentSnapshot {
   evalJudgeConfigs: EvalJudgeConfigSnapshotItem[];
   objectTypes: ObjectTypeSnapshotItem[];
   objectRelations: ObjectRelationSnapshotItem[];
+  skills: SkillSnapshotItem[];
 }
 
 /* ─────────── Version List Item (without snapshot) ─────────── */

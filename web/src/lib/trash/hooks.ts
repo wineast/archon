@@ -14,7 +14,8 @@ export type ResourceType =
   | "evalCase"
   | "evalJudgeConfig"
   | "objectType"
-  | "objectRelation";
+  | "objectRelation"
+  | "skill";
 
 export interface TrashedItem {
   id: string;

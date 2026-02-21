@@ -40,6 +40,7 @@ export const RESOURCE_TYPE_LABELS: Record<AuditLogResourceType, string> = {
   chat_config: "对话配置",
   memory_config: "记忆配置",
   memory: "记忆",
+  skill: "技能",
 };
 
 export const ACTION_LABELS: Record<AuditLogAction, string> = {

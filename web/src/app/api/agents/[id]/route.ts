@@ -83,12 +83,13 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, description, icon, slug, isPublic } = body as {
+  const { name, description, icon, slug, isPublic, skillsEnabled } = body as {
     name?: string;
     description?: string;
     icon?: string;
     slug?: string;
     isPublic?: boolean;
+    skillsEnabled?: boolean;
   };
 
   const updates: Record<string, unknown> = {};
@@ -96,6 +97,7 @@ export async function PUT(
   if (description !== undefined) updates.description = description.trim();
   if (icon !== undefined) updates.icon = icon;
   if (typeof isPublic === "boolean") updates.isPublic = isPublic;
+  if (typeof skillsEnabled === "boolean") updates.skillsEnabled = skillsEnabled;
 
   if (slug !== undefined) {
     const baseSlug = slug.trim() || toSlug(name ?? "");

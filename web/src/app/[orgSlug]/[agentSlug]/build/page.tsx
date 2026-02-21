@@ -26,6 +26,7 @@ import {
   Trash2Icon,
   UsersIcon,
   WrenchIcon,
+  ZapIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import { ComponentsPanel } from "@/components/components/components-panel";
 import { MembersPanel } from "@/components/members/members-panel";
 import { OntologyPanel } from "@/components/ontology/ontology-panel";
 import { MemoryPanel } from "@/components/memory/memory-panel";
+import { SkillsPanel } from "@/components/skills/skills-panel";
 import { UsagePanel } from "@/components/usage/usage-panel";
 import { SessionsPanel } from "@/components/sessions/sessions-panel";
 import { VersionsSidebar } from "@/components/versions/versions-sidebar";
@@ -64,6 +66,7 @@ import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
 import { TrashSheet } from "@/components/trash/trash-sheet";
 import { useTrash } from "@/lib/trash/hooks";
+import { toggleSkillsFeature } from "@/lib/skills/hooks";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -83,6 +86,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "ontology", label: "Ontology", icon: NetworkIcon },
   { value: "memory", label: "Memory", icon: BrainIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
+  { value: "skills", label: "Skills", icon: ZapIcon },
   { value: "files", label: "Files", icon: FileIcon },
   { value: "sessions", label: "Sessions", icon: MessageSquareIcon },
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
@@ -126,6 +130,13 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
   const [auditLogOpen, setAuditLogOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const { totalCount: trashCount } = useTrash(agent.id);
+
+  const handleToggleSkills = useCallback(
+    async (enabled: boolean) => {
+      await toggleSkillsFeature(agent.id, enabled, mutateAgent);
+    },
+    [agent.id, mutateAgent]
+  );
 
   const visibleTabs = useMemo(
     () =>
@@ -229,7 +240,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
       case "config":
         return <ChatConfigPanel agentId={agent.id} />;
       case "tools":
-        return <ToolsPanel agentId={agent.id} />;
+        return <ToolsPanel agentId={agent.id} skillsEnabled={currentAgent.skillsEnabled} />;
       case "components":
         return <ComponentsPanel agentId={agent.id} />;
       case "schemas":
@@ -244,6 +255,14 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return <MemoryPanel agentId={agent.id} />;
       case "functions":
         return <FunctionsPanel agentId={agent.id} />;
+      case "skills":
+        return (
+          <SkillsPanel
+            agentId={agent.id}
+            skillsEnabled={currentAgent.skillsEnabled}
+            onToggleFeature={handleToggleSkills}
+          />
+        );
       case "files":
         return <FilesPanel agentId={agent.id} />;
       case "sessions":

@@ -9,6 +9,9 @@ import { gatherResourceSummary } from "./resource-summary";
 import { buildSystemPrompt } from "./system-prompt";
 import { buildAllTools } from "./tools";
 import { getPlatformSettings } from "@/lib/platform-settings/queries";
+import { db } from "@/db";
+import { agents } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export interface ExecuteBuildChatStreamOptions {
   messages: UIMessage[];
@@ -25,13 +28,15 @@ export async function executeBuildChatStream(
 ): Promise<Response> {
   const { messages, agentId } = opts;
 
-  const [summary, settings] = await Promise.all([
+  const [summary, settings, [agentRow]] = await Promise.all([
     gatherResourceSummary(agentId),
     getPlatformSettings(),
+    db.select({ skillsEnabled: agents.skillsEnabled }).from(agents).where(eq(agents.id, agentId)).limit(1),
   ]);
+  const skillsEnabled = agentRow?.skillsEnabled !== false;
   const systemPrompt = buildSystemPrompt(summary);
 
-  const allTools = buildAllTools(agentId);
+  const allTools = buildAllTools(agentId, { skillsEnabled });
 
   const result = streamText({
     model: gateway(settings.buildChatModel),

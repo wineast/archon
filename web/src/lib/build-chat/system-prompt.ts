@@ -145,5 +145,18 @@ export function buildSystemPrompt(summary: ResourceSummary): string {
     sections.push("## 当前对象关系\n暂无对象关系");
   }
 
+  // Skills
+  if (summary.skills.length > 0) {
+    const list = summary.skills
+      .map(
+        (s) =>
+          `- ${s.name} (key: ${s.key}, id: ${s.id}, order: ${s.order}, ${s.enabled ? "启用" : "禁用"}): ${s.description}`
+      )
+      .join("\n");
+    sections.push(`## 当前技能 (${summary.skills.length})\n${list}`);
+  } else {
+    sections.push("## 当前技能\n暂无技能");
+  }
+
   return sections.join("\n\n");
 }

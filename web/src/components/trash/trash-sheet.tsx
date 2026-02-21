@@ -13,6 +13,7 @@ import {
   SettingsIcon,
   Trash2Icon,
   WrenchIcon,
+  ZapIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSWRConfig } from "swr";
@@ -48,6 +49,7 @@ const TYPE_CONFIG: Record<ResourceType, { icon: LucideIcon; label: string }> = {
   evalJudgeConfig: { icon: FlaskConicalIcon, label: "评测裁判" },
   objectType: { icon: NetworkIcon, label: "对象类型" },
   objectRelation: { icon: NetworkIcon, label: "对象关系" },
+  skill: { icon: ZapIcon, label: "技能" },
 };
 
 const RESOURCE_TYPES = Object.keys(TYPE_CONFIG) as ResourceType[];
