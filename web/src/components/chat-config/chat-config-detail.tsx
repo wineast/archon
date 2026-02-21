@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { WELCOME_ICON_OPTIONS } from "@/components/chat-welcome";
 import { cn } from "@/lib/utils";
 import type { WelcomeIconKey } from "@/lib/config/types";
@@ -36,6 +37,8 @@ export function ChatConfigDetail({
   const [quickActions, setQuickActions] = useState<string[]>(config.quickActions ?? []);
   const [placeholder, setPlaceholder] = useState(config.placeholder);
   const [suggestions, setSuggestions] = useState<string[]>(config.suggestions ?? []);
+  const [enableVoice, setEnableVoice] = useState(config.enableVoice);
+  const [enableAttachment, setEnableAttachment] = useState(config.enableAttachment);
 
   // Reset draft when config changes
   useEffect(() => {
@@ -45,6 +48,8 @@ export function ChatConfigDetail({
     setQuickActions(config.quickActions ?? []);
     setPlaceholder(config.placeholder);
     setSuggestions(config.suggestions ?? []);
+    setEnableVoice(config.enableVoice);
+    setEnableAttachment(config.enableAttachment);
   }, [config]);
 
   const handleSave = useCallback(async () => {
@@ -57,11 +62,13 @@ export function ChatConfigDetail({
         quickActions: quickActions.filter((s) => s.trim() !== ""),
         placeholder,
         suggestions: suggestions.filter((s) => s.trim() !== ""),
+        enableVoice,
+        enableAttachment,
       });
     } finally {
       setSaving(false);
     }
-  }, [config.id, onSave, title, welcomeTitle, welcomeIcon, quickActions, placeholder, suggestions]);
+  }, [config.id, onSave, title, welcomeTitle, welcomeIcon, quickActions, placeholder, suggestions, enableVoice, enableAttachment]);
 
   const dirty =
     title !== config.title ||
@@ -69,7 +76,9 @@ export function ChatConfigDetail({
     welcomeIcon !== config.welcomeIcon ||
     !deepEqual(quickActions, config.quickActions) ||
     placeholder !== config.placeholder ||
-    !deepEqual(suggestions, config.suggestions);
+    !deepEqual(suggestions, config.suggestions) ||
+    enableVoice !== config.enableVoice ||
+    enableAttachment !== config.enableAttachment;
 
   const handleReset = useCallback(() => {
     setTitle(config.title);
@@ -78,6 +87,8 @@ export function ChatConfigDetail({
     setQuickActions([...config.quickActions]);
     setPlaceholder(config.placeholder);
     setSuggestions([...config.suggestions]);
+    setEnableVoice(config.enableVoice);
+    setEnableAttachment(config.enableAttachment);
   }, [config]);
 
   return (
@@ -228,6 +239,18 @@ export function ChatConfigDetail({
               <PlusIcon className="mr-1 size-3" />
               Add Suggestion
             </Button>
+          </div>
+
+          {/* Enable Voice */}
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-muted-foreground">Voice Input</label>
+            <Switch checked={enableVoice} onCheckedChange={setEnableVoice} />
+          </div>
+
+          {/* Enable Attachment */}
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-muted-foreground">Attachment Upload</label>
+            <Switch checked={enableAttachment} onCheckedChange={setEnableAttachment} />
           </div>
         </div>
       </ScrollArea>

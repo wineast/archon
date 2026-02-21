@@ -48,6 +48,8 @@ interface EmbedConfig {
     quickActions: string[];
     placeholder: string;
     suggestions: string[];
+    enableVoice: boolean;
+    enableAttachment: boolean;
   } | null;
   tools: Array<{
     name: string;
@@ -420,6 +422,8 @@ function EmbedChat({
   const quickActions = chatConfig?.quickActions ?? [];
   const suggestions = chatConfig?.suggestions ?? [];
   const placeholder = chatConfig?.placeholder ?? "";
+  const enableVoice = chatConfig?.enableVoice ?? false;
+  const enableAttachment = chatConfig?.enableAttachment ?? false;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -481,7 +485,7 @@ function EmbedChat({
           <div className="w-full px-4 pb-4">
             <PromptInput onSubmit={onPromptSubmit} multiple>
               <PromptInputBody>
-                <EmbedAttachmentPreviewBar />
+                {enableAttachment && <EmbedAttachmentPreviewBar />}
                 <PromptInputTextarea
                   onChange={handleTextChange}
                   placeholder={placeholder}
@@ -489,8 +493,8 @@ function EmbedChat({
                 />
               </PromptInputBody>
               <PromptInputFooter>
-                <EmbedAttachmentButton />
-                {speechSupported && (
+                {enableAttachment && <EmbedAttachmentButton />}
+                {enableVoice && speechSupported && (
                   <SpeechInput
                     size="icon-sm"
                     onTranscriptionChange={handleTranscription}

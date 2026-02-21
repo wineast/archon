@@ -15,6 +15,8 @@ export const seedChatConfig: Seeder = {
       quickActions: string[];
       placeholder: string;
       suggestions: string[];
+      enableVoice?: boolean;
+      enableAttachment?: boolean;
     }>(join(ctx.agentDir, "chat-config.json"));
 
     const [chatConfig] = await ctx.db
@@ -29,6 +31,8 @@ export const seedChatConfig: Seeder = {
           quickActions: chatConfigSeed.quickActions,
           placeholder: chatConfigSeed.placeholder,
           suggestions: chatConfigSeed.suggestions,
+          ...(chatConfigSeed.enableVoice !== undefined && { enableVoice: chatConfigSeed.enableVoice }),
+          ...(chatConfigSeed.enableAttachment !== undefined && { enableAttachment: chatConfigSeed.enableAttachment }),
         },
       })
       .returning();

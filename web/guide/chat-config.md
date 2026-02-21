@@ -12,6 +12,8 @@
 | **Placeholder** | 输入框占位文案 |
 | **Quick Actions** | 快捷操作按钮列表 |
 | **Suggestions** | 建议话题列表，显示在欢迎区域 |
+| **Voice Input** | 是否启用语音输入（默认关闭） |
+| **Attachment Upload** | 是否启用附件上传（默认关闭） |
 
 ## API
 

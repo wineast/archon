@@ -52,6 +52,8 @@ export async function GET(req: Request) {
           quickActions: chatConfig.quickActions,
           placeholder: chatConfig.placeholder,
           suggestions: chatConfig.suggestions,
+          enableVoice: chatConfig.enableVoice,
+          enableAttachment: chatConfig.enableAttachment,
         }
       : null,
     tools: toolRows,

@@ -511,6 +511,8 @@ export const chatConfigs = pgTable("chat_configs", {
   quickActions: jsonb("quick_actions").$type<string[]>().notNull().default([]),
   placeholder: text("placeholder").notNull().default(""),
   suggestions: jsonb("suggestions").$type<string[]>().notNull().default([]),
+  enableVoice: boolean("enable_voice").notNull().default(false),
+  enableAttachment: boolean("enable_attachment").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -7,6 +7,8 @@ export interface ChatConfig {
   quickActions: string[];
   placeholder: string;
   suggestions: string[];
+  enableVoice: boolean;
+  enableAttachment: boolean;
 }
 
 export const DEFAULT_TITLE = "";
@@ -15,3 +17,5 @@ export const DEFAULT_WELCOME_ICON: WelcomeIconKey = "";
 export const DEFAULT_QUICK_ACTIONS: string[] = [];
 export const DEFAULT_PLACEHOLDER = "";
 export const DEFAULT_SUGGESTIONS: string[] = [];
+export const DEFAULT_ENABLE_VOICE = false;
+export const DEFAULT_ENABLE_ATTACHMENT = false;

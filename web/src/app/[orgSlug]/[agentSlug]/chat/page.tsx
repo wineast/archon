@@ -205,6 +205,8 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
   const configPlaceholder = chatConfig?.placeholder ?? "";
   const quickActions = chatConfig?.quickActions ?? [];
   const suggestions = chatConfig?.suggestions ?? [];
+  const enableVoice = chatConfig?.enableVoice ?? false;
+  const enableAttachment = chatConfig?.enableAttachment ?? false;
   const setSessionParamRef = useRef(setSessionParam);
   setSessionParamRef.current = setSessionParam;
 
@@ -638,7 +640,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
             <div className="w-full px-4 pb-4">
               <PromptInput onSubmit={onPromptSubmit} multiple>
                 <PromptInputBody>
-                  <AttachmentPreviewBar />
+                  {enableAttachment && <AttachmentPreviewBar />}
                   <PromptInputTextarea
                     onChange={handleTextChange}
                     placeholder={configPlaceholder}
@@ -646,8 +648,8 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
                   />
                 </PromptInputBody>
                 <PromptInputFooter>
-                  <AttachmentButton />
-                  {speechSupported && (
+                  {enableAttachment && <AttachmentButton />}
+                  {enableVoice && speechSupported && (
                     <SpeechInput
                       size="icon-sm"
                       onTranscriptionChange={handleTranscription}

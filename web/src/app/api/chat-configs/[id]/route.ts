@@ -34,6 +34,8 @@ export async function PUT(
       ...(body.quickActions !== undefined && { quickActions: body.quickActions }),
       ...(body.placeholder !== undefined && { placeholder: body.placeholder }),
       ...(body.suggestions !== undefined && { suggestions: body.suggestions }),
+      ...(body.enableVoice !== undefined && { enableVoice: body.enableVoice }),
+      ...(body.enableAttachment !== undefined && { enableAttachment: body.enableAttachment }),
     })
     .where(eq(chatConfigs.id, id))
     .returning();
