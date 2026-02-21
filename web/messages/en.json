@@ -192,9 +192,6 @@
   },
   "admin": {
     "title": "Admin",
-    "buildChatSettings": "Build Assistant Settings",
-    "model": "Model",
-    "temperature": "Temperature",
     "usersList": "Users ({count})",
     "superAdmin": "Super Admin",
     "userRole": "User",
@@ -210,7 +207,10 @@
     "usage": "Usage",
     "name": "Name",
     "slugLabel": "Slug",
-    "slugHint": "URL path identifier, only lowercase letters, numbers and hyphens"
+    "slugHint": "URL path identifier, only lowercase letters, numbers and hyphens",
+    "buildChat": "Build Assistant",
+    "buildChatModel": "Model",
+    "buildChatTemperature": "Temperature"
   },
   "share": {
     "preview": "Share Preview",

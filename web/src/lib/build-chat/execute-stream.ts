@@ -7,12 +7,15 @@ import {
 import { gatherResourceSummary } from "./resource-summary";
 import { buildSystemPrompt } from "./system-prompt";
 import { buildAllTools } from "./tools";
-import { getPlatformSettings } from "@/lib/platform-settings/queries";
+import { getOrgBuildChatSettings } from "@/lib/orgs/build-chat-settings";
 import { db } from "@/db";
 import { agents } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { QuotaExceededError } from "@/lib/credits/errors";
+
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4";
+const DEFAULT_TEMPERATURE = 0.3;
 
 export interface ExecuteBuildChatStreamOptions {
   messages: UIMessage[];
@@ -21,7 +24,7 @@ export interface ExecuteBuildChatStreamOptions {
 
 /**
  * Stream logic for the Build Chat assistant.
- * Uses platform-configured model & temperature, with server-side tools to operate on agent resources.
+ * Uses org-configured model & temperature, with server-side tools to operate on agent resources.
  * No message persistence — operations are persisted to resource tables.
  */
 export async function executeBuildChatStream(
@@ -29,15 +32,18 @@ export async function executeBuildChatStream(
 ): Promise<Response> {
   const { messages, agentId } = opts;
 
-  const [summary, settings, [agentRow]] = await Promise.all([
+  const [summary, [agentRow]] = await Promise.all([
     gatherResourceSummary(agentId),
-    getPlatformSettings(),
     db.select({ skillsEnabled: agents.skillsEnabled, orgId: agents.orgId }).from(agents).where(eq(agents.id, agentId)).limit(1),
   ]);
   const skillsEnabled = agentRow?.skillsEnabled !== false;
   const orgId = agentRow?.orgId ?? null;
-  const systemPrompt = buildSystemPrompt(summary);
 
+  const settings = orgId
+    ? await getOrgBuildChatSettings(orgId)
+    : { buildChatModel: DEFAULT_MODEL, buildChatTemperature: DEFAULT_TEMPERATURE };
+
+  const systemPrompt = buildSystemPrompt(summary);
   const allTools = buildAllTools(agentId, { skillsEnabled });
 
   let model;

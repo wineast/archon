@@ -1,5 +1,4 @@
 export { seedModels } from "./seed-models";
-export { seedPlatformSettings } from "./seed-platform-settings";
 export { seedAgent } from "./seed-agent";
 export { seedUsers } from "./seed-users";
 export { seedOrgs } from "./seed-orgs";
@@ -20,7 +19,6 @@ export type { SeedContext, SeedResult, Seeder } from "./types";
 
 import type { Seeder } from "./types";
 import { seedModels } from "./seed-models";
-import { seedPlatformSettings } from "./seed-platform-settings";
 import { seedUsers } from "./seed-users";
 import { seedOrgs } from "./seed-orgs";
 import { seedAgent } from "./seed-agent";
@@ -40,7 +38,6 @@ import { seedEmbedToken } from "./seed-embed-token";
 /** Global seeders — run once before any agent. */
 export const globalPipeline: Seeder[] = [
   seedModels,
-  seedPlatformSettings,
   seedUsers,
   seedOrgs,
 ];

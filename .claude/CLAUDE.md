@@ -107,6 +107,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 使用文档见 `guide/template-engine.md`
 - 数据源：数据集（2 层 JSON）+ 工具定义
 - 保留字：`tool`、`tool_names`、`tool_entries`
+- **编辑器补全 ↔ 预览渲染一致性**：每种模板编辑场景的补全提示和预览渲染必须注入相同的变量集。数据集 data 只注入前序数据集，不注入内置变量（`date`/`time` 等）和 tool/ontology；系统提示词注入全部变量
 
 ### Screenshots
 - Playwright 截图统一存放到 `screenshots/` 目录（已 gitignore）

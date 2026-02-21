@@ -1,95 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeftIcon, ShieldIcon, ShieldOffIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { ModelCombobox } from "@/components/model-config/model-combobox";
 import { InvitationCodesSection } from "@/components/admin/invitation-codes-section";
 import {
   useAdminUsers,
   updateUserRole,
-  useAdminSettings,
-  updateAdminSettings,
 } from "@/lib/admin/hooks";
-
-function BuildChatSettings() {
-  const t = useTranslations("admin");
-  const tc = useTranslations("common");
-  const { settings, isLoading, mutate } = useAdminSettings();
-  const [model, setModel] = useState("");
-  const [temperature, setTemperature] = useState(0.3);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (settings) {
-      setModel(settings.buildChatModel);
-      setTemperature(settings.buildChatTemperature);
-    }
-  }, [settings]);
-
-  const dirty =
-    settings != null &&
-    (model !== settings.buildChatModel ||
-      temperature !== settings.buildChatTemperature);
-
-  const handleSave = async () => {
-    setSaving(true);
-    await updateAdminSettings({ buildChatModel: model, buildChatTemperature: temperature }, mutate);
-    setSaving(false);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-10">
-        <Spinner className="size-5" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-sm font-medium text-muted-foreground">
-        {t("buildChatSettings")}
-      </h2>
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs">{t("model")}</Label>
-          <ModelCombobox value={model} onChange={setModel} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">{t("temperature")}</Label>
-          <Input
-            type="number"
-            min={0}
-            max={2}
-            step={0.1}
-            value={temperature}
-            onChange={(e) => setTemperature(parseFloat(e.target.value) || 0)}
-            className="h-8 w-32"
-          />
-        </div>
-      </div>
-      <Button
-        size="sm"
-        disabled={!dirty || saving}
-        onClick={handleSave}
-      >
-        {saving ? <Spinner className="size-3.5" /> : tc("save")}
-      </Button>
-    </div>
-  );
-}
 
 export default function AdminPage() {
   const t = useTranslations("admin");
-  const tc = useTranslations("common");
   const { users, isLoading, mutate } = useAdminUsers();
   const [busy, setBusy] = useState(false);
 
@@ -119,8 +45,6 @@ export default function AdminPage() {
 
       <main className="flex-1 p-6">
         <div className="mx-auto max-w-3xl space-y-8">
-          <BuildChatSettings />
-
           <InvitationCodesSection />
 
           {isLoading ? (

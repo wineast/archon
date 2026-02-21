@@ -96,3 +96,29 @@
 - Agent 列表按当前组织过滤
 - 组织设置页（成员管理、基本信息）
 - 组织级用量 Dashboard
+
+## Build 助手设置
+
+Build 助手（Build Chat）的模型配置已从平台级单例下沉到组织级别，支持各组织独立配置。
+
+### 数据模型
+
+`orgs` 表新增字段：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| buildChatModel | TEXT (nullable) | Build 助手使用的模型标识，null 时使用默认值 `anthropic/claude-sonnet-4` |
+| buildChatTemperature | REAL (nullable) | 温度参数，null 时使用默认值 `0.3` |
+
+### API
+
+- `GET /api/orgs/[id]/build-chat-settings` — 返回原始 nullable 值（需 admin 权限）
+- `PUT /api/orgs/[id]/build-chat-settings` — 更新设置，支持传 `null` 重置为默认值
+
+### 服务端查询
+
+`getOrgBuildChatSettings(orgId)` — 查询并缓存 60s，null 字段自动回退默认值。
+
+### UI
+
+组织设置页新增「Build 助手」Tab（`BotIcon`），admin 可配置模型和温度。

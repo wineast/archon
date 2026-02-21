@@ -84,6 +84,15 @@ web/src/components/build-chat/build-chat-panel.tsx — 聊天面板 UI
 
 返回值统一包含 `_mutateKeys: string[]`，前端据此刷新 SWR。
 
+## 模型配置
+
+Build 助手的模型（model）和温度（temperature）配置存储在**组织级别**（`orgs` 表的 `build_chat_model` / `build_chat_temperature` 字段），各组织可独立设置。
+
+- 字段为 nullable，`null` 表示使用应用默认值（`anthropic/claude-sonnet-4` / `0.3`）
+- 在组织设置页的「Build 助手」Tab 中配置，需 admin 权限
+- 服务端通过 `getOrgBuildChatSettings(orgId)` 查询，带 60s 内存缓存
+- API 路由：`GET/PUT /api/orgs/[id]/build-chat-settings`
+
 ## 前端面板
 
 - 复用 `ai-elements/` 组件：Conversation、Message、PromptInput、Suggestion

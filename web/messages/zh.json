@@ -192,9 +192,6 @@
   },
   "admin": {
     "title": "管理后台",
-    "buildChatSettings": "Build 助手设置",
-    "model": "模型",
-    "temperature": "Temperature",
     "usersList": "用户列表 ({count})",
     "superAdmin": "Super Admin",
     "userRole": "User",
@@ -210,7 +207,10 @@
     "usage": "用量",
     "name": "名称",
     "slugLabel": "Slug",
-    "slugHint": "URL 路径标识，仅支持小写字母、数字和连字符"
+    "slugHint": "URL 路径标识，仅支持小写字母、数字和连字符",
+    "buildChat": "Build 助手",
+    "buildChatModel": "模型",
+    "buildChatTemperature": "Temperature"
   },
   "share": {
     "preview": "分享预览",

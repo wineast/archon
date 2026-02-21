@@ -300,3 +300,4 @@ const entries = await context.dataset.getEntries("product_routes");
 - **命名空间保留字**：`tool`、`tool_names`、`tool_entries` 不能用作数据集的 key
 - **未定义变量**：引用不存在的变量会渲染为空字符串，不会报错
 - **语法错误**：模板语法错误时返回原始文本，不影响系统正常运行
+- **编辑器补全 ↔ 预览一致性**：每种模板编辑场景的补全提示和预览渲染必须注入相同的变量集。数据集 data 编辑器只提供前序数据集的补全和渲染，不包含内置变量（`date`/`time` 等）和 `tool.*`；系统提示词编辑器则提供全部变量

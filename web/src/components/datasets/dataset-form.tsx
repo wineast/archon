@@ -159,7 +159,7 @@ export function DatasetForm({
       const res = await fetch("/api/template/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: dataText, agentId }),
+        body: JSON.stringify({ text: dataText, agentId, mode: "dataset" }),
       });
       const { rendered } = await res.json();
       setPreviewContent(rendered);
