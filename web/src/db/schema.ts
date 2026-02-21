@@ -598,6 +598,7 @@ export const evalRuns = pgTable("eval_runs", {
   totalCases: integer("total_cases").notNull(),
   passedAssertions: integer("passed_assertions").notNull(),
   averageScore: real("average_score"),
+  isBaseline: boolean("is_baseline").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

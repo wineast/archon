@@ -64,3 +64,4 @@
 - **Cases**：管理测试用例，支持 tag 筛选
 - **Judge**：配置评审模型和评分维度
 - **Results**：查看评测运行结果，含断言通过率和维度评分
+- **Benchmark**：趋势追踪、运行对比、跨模型分析（详见 [benchmark.md](../../guide/benchmark.md)）

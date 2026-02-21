@@ -20,6 +20,7 @@ import { EvalSidebar, type ActiveView } from "./eval-sidebar";
 import { CaseDetail } from "./case-detail";
 import { JudgeConfigDetail } from "./judge-config-detail";
 import { ResultsPanel } from "./results-panel";
+import { BenchmarkPanel } from "./benchmark-panel";
 import { EvalEmptyState } from "./eval-empty-state";
 import { EvalCaseCreateDialog } from "./eval-case-create-dialog";
 import { JudgeConfigCreateDialog } from "./judge-config-create-dialog";
@@ -184,6 +185,9 @@ export function EvalPanel({ agentId }: { agentId: string }) {
           selectedTags={selectedTags}
         />
       );
+    }
+    if (activeView?.type === "benchmark") {
+      return <BenchmarkPanel agentId={agentId} />;
     }
     return <EvalEmptyState />;
   }
