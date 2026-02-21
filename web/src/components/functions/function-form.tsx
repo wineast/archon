@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { JsEditor } from "@/components/editors/js-editor";
 import { InlineSchemaEditor } from "@/components/schemas/inline-schema-editor";
 import { FunctionCodeAssistDialog } from "./function-code-assist-dialog";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import functionCodeGuide from "../../../guide/function-code.md";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 
 export interface FunctionFormValues {
@@ -161,6 +163,7 @@ export function FunctionForm({
             <label className="text-xs font-medium text-muted-foreground">
               Code (JavaScript)
             </label>
+            <GuideDialog title="函数代码编写指南" content={functionCodeGuide} />
             <Button
               type="button"
               variant="ghost"
