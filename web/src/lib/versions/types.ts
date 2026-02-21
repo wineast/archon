@@ -214,3 +214,43 @@ export interface VersionListItem {
 export interface VersionDetail extends VersionListItem {
   snapshot: AgentSnapshot;
 }
+
+/* ─────────── Agent Export/Import ─────────── */
+
+export interface AgentExportVersion {
+  version: string;
+  changelog: string;
+  snapshot: AgentSnapshot;
+  isEditing: boolean;
+  isPublished: boolean;
+}
+
+export interface AgentExportData {
+  exportVersion: 1;
+  exportedAt: string;
+  agent: {
+    name: string;
+    description: string;
+    icon: string;
+    slug: string;
+    isPublic: boolean;
+    mcpEnabled: boolean;
+    memoryEnabled: boolean;
+    skillsEnabled: boolean;
+  };
+  versions: AgentExportVersion[];
+}
+
+/** Validate that the given value is a valid AgentExportData shape. */
+export function validateExportData(
+  data: unknown
+): data is AgentExportData {
+  if (typeof data !== "object" || data === null) return false;
+  const d = data as Record<string, unknown>;
+  if (d.exportVersion !== 1) return false;
+  if (typeof d.agent !== "object" || d.agent === null) return false;
+  const agent = d.agent as Record<string, unknown>;
+  if (typeof agent.name !== "string" || !agent.name.trim()) return false;
+  if (!Array.isArray(d.versions) || d.versions.length === 0) return false;
+  return true;
+}

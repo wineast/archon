@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { EllipsisVerticalIcon, PencilIcon, SettingsIcon, Trash2Icon } from "lucide-react";
+import { DownloadIcon, EllipsisVerticalIcon, PencilIcon, SettingsIcon, Trash2Icon } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +19,10 @@ interface AgentCardProps {
   agent: AgentWithRole;
   onEdit: (agent: AgentWithRole) => void;
   onDelete: (agent: AgentWithRole) => void;
+  onExport: (agent: AgentWithRole) => void;
 }
 
-export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
+export function AgentCard({ agent, onEdit, onDelete, onExport }: AgentCardProps) {
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
   const level = agent.myRole ? AGENT_ROLE_LEVELS[agent.myRole] : -1;
@@ -48,20 +49,20 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
               )}
             </div>
           </div>
-          {canEdit && (
-            <CardAction>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <EllipsisVerticalIcon className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <EllipsisVerticalIcon className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canEdit && (
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.preventDefault();
@@ -71,28 +72,39 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
                     <PencilIcon className="size-4" />
                     {tc("edit")}
                   </DropdownMenuItem>
+                )}
+                {canEdit && (
                   <DropdownMenuItem asChild>
                     <Link href={`/${orgSlug}/${agent.slug}/build`} onClick={(e) => e.stopPropagation()}>
                       <SettingsIcon className="size-4" />
                       {tn("settings")}
                     </Link>
                   </DropdownMenuItem>
-                  {canDelete && (
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onDelete(agent);
-                      }}
-                      className="text-destructive"
-                    >
-                      <Trash2Icon className="size-4" />
-                      {tc("delete")}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardAction>
-          )}
+                )}
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onExport(agent);
+                  }}
+                >
+                  <DownloadIcon className="size-4" />
+                  {tc("export")}
+                </DropdownMenuItem>
+                {canDelete && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onDelete(agent);
+                    }}
+                    className="text-destructive"
+                  >
+                    <Trash2Icon className="size-4" />
+                    {tc("delete")}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
         </CardHeader>
       </Card>
     </Link>

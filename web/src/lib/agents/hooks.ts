@@ -144,3 +144,66 @@ export async function permanentDeleteAgent(
     return false;
   }
 }
+
+export async function exportAgent(
+  agent: AgentWithRole,
+  t: (key: string) => string
+) {
+  try {
+    const res = await fetch(`/api/agents/${agent.id}/export`);
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${agent.slug}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error("exportAgent failed:", e);
+    toast.error(t("exportFailed"));
+  }
+}
+
+export async function importAgent(
+  file: File,
+  orgId: string,
+  mutate: KeyedMutator<AgentWithRole[]>,
+  t: (key: string) => string
+) {
+  try {
+    const text = await file.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      toast.error(t("importInvalidFormat"));
+      return null;
+    }
+
+    const d = data as Record<string, unknown>;
+    if (d.exportVersion !== 1 || !d.agent || !Array.isArray(d.versions)) {
+      toast.error(t("importInvalidFormat"));
+      return null;
+    }
+
+    const res = await fetch(`/api/agents/import?orgId=${orgId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: text,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Import failed");
+    }
+
+    mutate();
+    toast.success(t("importSuccess"));
+    return res.json();
+  } catch (e) {
+    console.error("importAgent failed:", e);
+    toast.error(t("importFailed"));
+    return null;
+  }
+}

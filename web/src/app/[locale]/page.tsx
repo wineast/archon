@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { UserMenu } from "@/components/auth/user-menu";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { PlusIcon, SettingsIcon, ShieldIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon, SettingsIcon, ShieldIcon, Trash2Icon, UploadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { AgentCard } from "@/components/agents/agent-card";
@@ -13,7 +13,7 @@ import { AgentFormDialog } from "@/components/agents/agent-form-dialog";
 import { TrashDialog } from "@/components/agents/trash-dialog";
 import { OrgSwitcher } from "@/components/orgs/org-switcher";
 import { OrgFormDialog } from "@/components/orgs/org-form-dialog";
-import { useAgents, deleteAgent } from "@/lib/agents/hooks";
+import { useAgents, deleteAgent, exportAgent, importAgent } from "@/lib/agents/hooks";
 import type { AgentWithRole } from "@/lib/agents/hooks";
 import { useOrgs } from "@/lib/orgs/hooks";
 import type { AgentRow } from "@/db/schema";
@@ -32,6 +32,7 @@ export default function AgentsPage() {
   const [editingAgent, setEditingAgent] = useState<AgentRow | null>(null);
   const [trashOpen, setTrashOpen] = useState(false);
   const [orgDialogOpen, setOrgDialogOpen] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const currentOrg = orgs.find((o) => o.id === currentOrgId);
 
@@ -52,6 +53,21 @@ export default function AgentsPage() {
       deleteAgent(agent.id, mutate, tc);
     },
     [mutate, tc]
+  );
+
+  const handleExport = useCallback(
+    (agent: AgentWithRole) => {
+      exportAgent(agent, t);
+    },
+    [t]
+  );
+
+  const handleImportFile = useCallback(
+    (file: File) => {
+      if (!currentOrgId) return;
+      importAgent(file, currentOrgId, mutate, t);
+    },
+    [currentOrgId, mutate, t]
   );
 
   return (
@@ -83,10 +99,27 @@ export default function AgentsPage() {
             {tn("trash")}
           </Button>
           {currentOrgId && (
-            <Button size="sm" onClick={handleCreate}>
-              <PlusIcon className="size-4" />
-              {t("createNew")}
-            </Button>
+            <>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportFile(file);
+                  e.target.value = "";
+                }}
+              />
+              <Button size="sm" variant="outline" onClick={() => importInputRef.current?.click()}>
+                <UploadIcon className="size-4" />
+                {t("importAgent")}
+              </Button>
+              <Button size="sm" onClick={handleCreate}>
+                <PlusIcon className="size-4" />
+                {t("createNew")}
+              </Button>
+            </>
           )}
           <LocaleSwitcher />
           <UserMenu />
@@ -117,6 +150,7 @@ export default function AgentsPage() {
                 agent={agent}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onExport={handleExport}
               />
             ))}
           </div>
