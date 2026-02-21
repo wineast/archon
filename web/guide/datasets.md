@@ -69,6 +69,19 @@
 - **Edit**：编辑文本。Layer 0 有实时 JSON 校验；Layer 1 无校验（因为模板语法不是合法 JSON）
 - **Preview**：渲染模板后显示最终结果，并验证输出是否为合法 JSON。适用于 Layer 1 的模板调试
 
+### AI 辅助编辑
+
+Data 标签旁边有 **AI 编辑** 按钮（SparklesIcon），点击后打开 AI 辅助编辑弹窗：
+
+- **左半边**：Diff 编辑器，显示 AI 修改前后的对比。支持模板变量补全
+- **右半边**：AI 对话区，输入自然语言描述你想要的数据修改
+
+AI 支持两种操作模式：
+- **整体替换**（update_data）：适用于大范围重写
+- **局部编辑**（edit_data）：适用于小范围修改，精确匹配并替换文本片段
+
+AI 能正确处理 JSON 和 LiquidJS 模板语法。对话完成后点击 **Apply** 将修改应用到编辑器，或点击 **Cancel** 放弃修改
+
 ---
 
 ## 数据类型示例
@@ -174,43 +187,6 @@ Layer 1 支持完整 Liquid 语法，包括循环和条件：
 3. 从下拉列表选择一个对象类型的数据集
 
 系统会自动将该数据集的值（对象的 value 或 key）作为可选枚举值。
-
----
-
-## 跨资源引用
-
-### 引用其他数据集
-
-数据集支持互相引用，系统使用 Kahn 拓扑排序算法自动确定渲染顺序，支持 N 层深度链式引用：
-
-```
-a = "Root"                     （无依赖）
-b = "{{a}}-Mid"                → "Root-Mid"（引用 a）
-c = "{{b}}-End"                → "Root-Mid-End"（引用 b，间接引用 a）
-```
-
-循环依赖（a→b→a）会在保存时报错。
-
-> 数据库中没有 layer 字段——Layer 0/1 只是 UI 上的约定。代码层面所有数据集平等对待，按依赖关系自动排序渲染。
-
-### 被其他资源引用
-
-| 引用方 | 语法 | 示例 |
-|--------|------|------|
-| **System Prompt** | `{{key}}` / `{{key.field}}` | `{{company_name}}`、`{{income_type_enum.w2}}` |
-| **Wiki 文档** | `{{key}}` / `{{key.field}}` | 同上 |
-| **Skills 内容** | `{{key}}` / `{{key.field}}` | 同上 |
-| **Schema 枚举** | `"enum": ["{{key}}"]` | `"enum": ["{{us_states}}"]` — 运行时展开为数据集的值 |
-| **Tool Handler** | `await context.dataset.get("key")` | `context.dataset.get("company_name")` |
-| **Tool Handler** | `await context.dataset.getEntries("key")` | `context.dataset.getEntries("product_routes")` |
-
-### 限制
-
-数据集模板中**不支持**以下语法（防止循环依赖）：
-
-- `{% include '文档' %}` — Wiki 引用不可用
-- `{{tool.*}}` / `{{tool_names}}` — 工具命名空间不可用
-- `{{ontology_types}}` — 本体命名空间不可用
 
 ---
 

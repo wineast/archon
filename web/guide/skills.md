@@ -53,13 +53,15 @@ Skills 功能支持 Agent 级别的开关，通过 `agents.skillsEnabled` 字段
 
 ```
 ## 可用技能
-以下技能提供额外能力。需要时调用 get_skill_detail 工具获取完整指引。
+当用户请求与某个技能相关时，必须先调用 get_skill_detail 获取完整指引，再严格按照指引执行。不要凭自身知识猜测，技能内容是唯一执行依据。
 - 技能名称 (key: xxx): 技能描述
 ```
 
 ### get_skill_detail 工具
 
-自动注入的内置工具，参数：
+自动注入的内置工具，描述："获取技能的完整执行指引。当用户请求匹配某个技能时，必须先调用此工具获取指引再执行，不要跳过。"
+
+参数：
 
 - `skill_key` (string) — 技能的 key
 
@@ -68,23 +70,13 @@ Skills 功能支持 Agent 级别的开关，通过 `agents.skillsEnabled` 字段
 - 成功：`{ name, content }` — content 已经过 LiquidJS 模板渲染
 - 失败：`{ error: "技能 xxx 不存在或未启用" }`
 
-## 跨资源引用（LiquidJS 模板）
+## LiquidJS 模板
 
-技能的 `content` 字段支持完整的 LiquidJS 模板语法，可引用以下数据源：
+技能内容支持 LiquidJS 模板语法，可引用：
 
-| 语法 | 说明 | 示例 |
-|------|------|------|
-| `{{dataset_key}}` | 数据集变量 | `{{company_name}}` → `"GMCC"` |
-| `{{dataset_key.field}}` | 数据集对象属性 | `{{income_type_enum.w2}}` |
-| `{{tool_names}}` | 所有启用工具名 | `"calculate_dti, route_products"` |
-| `{{tool.name.*}}` | 单个工具详情 | `{{tool.calculate_dti.description}}` |
-| `{% for t in tool_entries %}` | 遍历所有工具 | 每个条目有 `t.name`、`t.description`、`t.params` |
-| `{% include 'wiki_key' %}` | 嵌入 Wiki 文档 | `{% include '贷款指南' %}` |
-| `{{ontology_types}}` | 本体类型列表 | `{% for type in ontology_types %}...{% endfor %}` |
-| `{{host.fieldName}}` | 宿主上下文（embed 模式） | `{{host.userName}}` |
-| `{{date}}` / `{{time}}` | 内置时间变量 | `2026-02-21` / `14:30:00` |
-
-> 技能内容在 `get_skill_detail` 被调用时才渲染（懒加载），不是保存时渲染。
+- 数据集变量（如 `{{ dataset_key.field }}`）
+- 工具相关变量（如 `{{ tool_names }}`）
+- 宿主上下文（如 `{{ host.xxx }}`）
 
 详见 [模板引擎文档](template-engine.md)。
 
@@ -130,7 +122,7 @@ Skills 功能支持 Agent 级别的开关，通过 `agents.skillsEnabled` 字段
 
 ### 提示词编辑器
 
-技能的 `content` 字段（标签显示为"提示词"）使用 MdEditor（CodeMirror）编辑，支持：
+技能的 `content` 字段（标签显示为"提示词"）使用 MdEditor（Monaco Editor）编辑，支持：
 
 - **LiquidJS 语法高亮** — 变量 `{{ }}` 和标签 `{% %}` 自动着色
 - **自动补全** — 输入 `{{` 触发数据集变量、内置变量补全；`{{include "` 触发 Wiki 文档补全；`{{tool.` 触发工具名补全

@@ -41,7 +41,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 
 ## 项目知识
 
-- 使用指南：`guide/`（唯一 source of truth，需求/问题/功能全部通过 guide 文档驱动；被代码 import 的文档保留在 `web/guide/`）
+- 使用指南：`web/guide/`（唯一 source of truth，需求/问题/功能全部通过 guide 文档驱动）
 
 ## 通用约定
 - 使用中文回复
@@ -88,7 +88,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - Sheet 内部不加 `border-b` / `border-t` 分割线
 - 新增按钮放在底部固定区域
 - 表单 label 统一样式：`text-xs font-medium text-muted-foreground`，label 与控件间距用 `mt-1`
-- Edit/Preview 切换统一使用 Radix `<Tabs>` 组件，禁止用 Button 自行实现模式切换——详见 `guide/edit-preview-pattern.md`。表单内嵌的 default variant Tabs 统一小尺寸：`TabsList` 加 `h-7`、`TabsTrigger` 加 `text-xs`、`Tabs` 与上方 label 间距用 `mt-1`；`variant="line"` 的导航级 Tabs 保持默认尺寸
+- Edit/Preview 切换统一使用 Radix `<Tabs>` 组件，禁止用 Button 自行实现模式切换——详见 `web/guide/edit-preview-pattern.md`。表单内嵌的 default variant Tabs 统一小尺寸：`TabsList` 加 `h-7`、`TabsTrigger` 加 `text-xs`、`Tabs` 与上方 label 间距用 `mt-1`；`variant="line"` 的导航级 Tabs 保持默认尺寸
 - 详情页底部操作栏统一样式：容器 `flex items-center gap-2 border-t px-4 py-2`；Save 按钮带 `SaveIcon` + "Saving..." 文字切换；Reset 按钮 `variant="ghost"` 带 `RotateCcwIcon`；Delete 按钮 `variant="destructive"` 用 `flex-1` 隔开靠右，带 "Deleting..." 文字切换
 - 代码预览统一使用 Monaco 只读编辑器（`readOnly`）：JS/TS 用 `JsEditor`，JSON 用 `JsonEditor`，不用 `CodeBlockContent`（shiki）或 `<pre>` 标签。固定高度（如 `height="400px"`）启用内部滚动，不要 `height="auto"` 导致无限撑高
 - 工具栏中 Copy/Export 等辅助按钮用 `size="icon" variant="ghost"` 只显示图标，不加文字，保持紧凑
@@ -104,7 +104,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 
 ### Template Engine（LiquidJS）
-- 使用文档见 `guide/template-engine.md`
+- 使用文档见 `web/guide/template-engine.md`
 - 数据源：数据集（2 层 JSON）+ 工具定义
 - 保留字：`tool`、`tool_names`、`tool_entries`
 - **编辑器补全 ↔ 预览渲染一致性**：每种模板编辑场景的补全提示和预览渲染必须注入相同的变量集。数据集 data 只注入前序数据集，不注入内置变量（`date`/`time` 等）和 tool/ontology；系统提示词注入全部变量
@@ -120,7 +120,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 
 ### 收尾检查
 - 代码修改完成后，必须依次执行 `make typecheck` 和 `make test`，确认类型无报错 + 测试通过后才算任务完成
-- 同步 `guide/` 使用指南：根据本次改动内容，对 `guide/` 目录下的相关文档执行 CRUD——新增功能写新文档或新章节，修改功能更新对应段落，删除功能移除过时描述，确保文档与代码始终一致
+- 同步 `web/guide/` 使用指南：根据本次改动内容，对 `web/guide/` 目录下的相关文档执行 CRUD——新增功能写新文档或新章节，修改功能更新对应段落，删除功能移除过时描述，确保文档与代码始终一致
 
 ### 测试账号
 

@@ -1,6 +1,6 @@
 # 组件（Components）使用指南
 
-组件是工具调用结果的可视化渲染器。当 AI 调用工具返回数据后，组件负责将原始 JSON 数据渲染为用户友好的 UI 界面。组件以 JSX 函数形式存储在数据库中，支持 Tailwind CSS 和内置 UI 组件库。
+组件是通用的可视化渲染器，接收任意 JSON 数据并渲染为用户友好的 UI 界面。组件以 JSX 函数形式存储在数据库中，支持 Tailwind CSS 和内置 UI 组件库。组件通过关联工具在对话中使用——当 AI 调用工具时，系统自动将工具调用数据映射为 `{ name, input, output }` 传给组件渲染。
 
 ---
 
@@ -43,19 +43,39 @@ Schema 的作用：
 
 ### 组件源码（Component Source）
 
-JSX 编辑器中编写组件的渲染逻辑。支持两种写法：
+JSX 编辑器中编写组件的渲染逻辑。支持三种写法：
 
-**完整函数形式**（推荐）：
+**ES6 模块形式**（推荐）：
 
 ```jsx
-function PricingResult({ tool, isLoading }) {
+import { useState } from "archon:react";
+import { Badge, Spinner } from "archon:ui";
+
+export default function({ tool, isLoading }) {
   const { output } = tool;
   if (isLoading) return <Spinner className="size-4" />;
 
   return (
     <div className="rounded-lg border bg-card p-4">
+      <Badge>{output.status}</Badge>
       <h3 className="text-lg font-semibold">{output.plan}</h3>
-      <span className="text-2xl font-bold text-primary">{output.price}</span>
+    </div>
+  );
+}
+```
+
+使用 `archon:*` 虚拟模块导入依赖，详见 [模块系统文档](module-system.md)。
+
+**完整函数形式**（旧格式，仍支持）：
+
+```jsx
+function PricingResult({ data, isLoading }) {
+  if (isLoading) return <Spinner className="size-4" />;
+
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <h3 className="text-lg font-semibold">{data.output.plan}</h3>
+      <span className="text-2xl font-bold text-primary">{data.output.price}</span>
     </div>
   );
 }
@@ -65,11 +85,11 @@ function PricingResult({ tool, isLoading }) {
 
 ```jsx
 <div className="p-4">
-  <p>{tool.output.result}</p>
+  <p>{data.output.result}</p>
 </div>
 ```
 
-片段形式会自动被包装为函数，注入 `tool`、`state`、`isLoading`、`isComplete`、`isError` 变量。
+片段形式会自动被包装为函数，注入 `data`、`state`、`isLoading`、`isComplete`、`isError` 变量。
 
 ### 注入的 Props
 
@@ -77,28 +97,32 @@ function PricingResult({ tool, isLoading }) {
 
 | Prop | 类型 | 说明 |
 |------|------|------|
-| `tool` | `{ name: string; input: unknown; output: unknown }` | 工具对象（聚合了 name/input/output） |
-| `state` | `string` | 当前状态：`input-streaming`、`input-available`、`output-available`、`error` |
+| `data` | `unknown` | 传入的数据（在对话中使用时，为 `{ name, input, output }`） |
+| `state` | `string` | 当前状态：`input-streaming`、`input-available`、`output-available`、`error`（默认 `output-available`） |
 | `isLoading` | `boolean` | 是否正在加载（等待工具返回） |
 | `isComplete` | `boolean` | 工具调用是否已完成 |
 | `isError` | `boolean` | 工具调用是否出错 |
 
 **JSX 片段中的便捷变量**：在片段形式中，以下变量自动可用，无需从 props 解构：
-- `tool`、`state`、`isLoading`、`isComplete`、`isError`
+- `data`、`state`、`isLoading`、`isComplete`、`isError`
+
+**对话中的数据映射**：当组件通过工具关联在对话中使用时，系统自动将工具调用的 `name`、`input`、`output` 组装为 `data = { name, input, output }` 传入组件。因此在对话场景中可以通过 `data.name`、`data.input`、`data.output` 访问工具数据。
 
 典型用法：
 
 ```jsx
-function MyComponent({ tool, isLoading, isError }) {
+function MyComponent({ data, isLoading, isError }) {
   if (isLoading) return <Spinner className="size-4" />;
   if (isError) return <p className="text-destructive">出错了</p>;
-  return <div>{tool.output.message}</div>;
+  return <div>{data.output.message}</div>;
 }
 ```
 
 ### 可用的依赖
 
-在组件源码中可以直接使用以下依赖，无需 import：
+**ES6 模块形式**：通过 `archon:*` 模块导入，详见 [模块系统文档](module-system.md)。
+
+**旧格式**：在组件源码中可以直接使用以下依赖，无需 import：
 
 **React**：
 `React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment`
@@ -122,10 +146,7 @@ Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 
 ### 使用方法
 
-1. 在 **Tool** 区域填写模拟数据：
-   - **Name**：工具名称（可选）
-   - **Input (JSON)**：工具输入 JSON
-   - **Output (JSON)**：工具输出 JSON
+1. 在 **Data** 区域填写 JSON 数据：
    - 可以从右上角的 **Load** 下拉菜单加载已有数据，菜单按 Examples 和 Test Cases 分组显示
 2. 在 **State** 下拉框中选择组件状态：
    - `output-available`（默认）— isComplete=true
@@ -161,9 +182,7 @@ Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 2. 填写：
    - **Name**：测试用例名称
    - **Tags**：标签（用于分组过滤）
-   - **Tool Name**：工具名称
-   - **Tool Input (JSON)**：工具输入 JSON
-   - **Tool Output (JSON)**：工具输出 JSON
+   - **Data (JSON)**：组件接收的数据 JSON
 3. 点击 **Save**
 
 ### 运行测试
@@ -203,9 +222,7 @@ Examples 的数据来自 **Test Cases**——只有被标记为 "Show as Example
 
 每个 Example 卡片包含：
 - **标题**：测试用例名称
-- **编辑按钮**（✏️）：点击展开编辑表单，可修改 Name、Tags、Show as Example、Tool Name、Tool Input/Output，编辑时预览区域实时更新
-- **删除按钮**（🗑️）：点击弹出确认对话框，确认后删除该测试用例
-- **渲染区域**：使用组件源码 + 测试用例的 tool 数据实时渲染
+- **渲染区域**：使用组件源码 + 测试用例的 data 数据实时渲染
 
 ### 空状态
 
@@ -214,25 +231,6 @@ Examples 的数据来自 **Test Cases**——只有被标记为 "Show as Example
 ### 组合依赖
 
 Examples 与 Playground 一样支持组件组合（composition）——如果当前组件依赖其他组件，会自动编译依赖图并正确渲染。
-
----
-
-## 跨资源引用
-
-### Input/Output Schema 中的引用
-
-组件的 `inputSchema` 和 `outputSchema` 支持与 Tools/Functions 相同的 Schema 引用语法：
-
-| 语法 | 说明 | 示例 |
-|------|------|------|
-| `$ref` | 引用共享 Schema | `{ "$ref": "#/$defs/pricing_result" }` |
-| `allOf` + `$ref` | 组合多个 Schema | `{ "allOf": [{ "$ref": "#/$defs/a" }, { "$ref": "#/$defs/b" }] }` |
-
-### 被其他资源引用
-
-| 引用方 | 方式 | 说明 |
-|--------|------|------|
-| **Tool** | `componentId` FK | 工具关联组件后，工具返回数据自动用组件渲染 |
 
 ---
 
@@ -245,7 +243,7 @@ Examples 与 Playground 一样支持组件组合（composition）——如果当
 3. 在表单底部的 **Component** 下拉框中选择对应的组件 Key
 4. 保存
 
-当 AI 调用该工具时，返回的数据会自动使用关联的组件渲染。
+当 AI 调用该工具时，系统自动将工具调用数据映射为 `{ name: toolName, input, output }` 传给关联的组件渲染。
 
 ---
 
@@ -271,19 +269,18 @@ Examples 与 Playground 一样支持组件组合（composition）——如果当
 **组件源码**：
 
 ```jsx
-function PricingResult({ tool, isLoading }) {
-  const { output } = tool;
+function PricingResult({ data, isLoading }) {
   if (isLoading) return <Spinner className="size-4" />;
-  if (!output) return null;
+  if (!data?.output) return null;
 
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{output.plan}</h3>
-        <span className="text-2xl font-bold text-primary">{output.price}</span>
+        <h3 className="text-lg font-semibold">{data.output.plan}</h3>
+        <span className="text-2xl font-bold text-primary">{data.output.price}</span>
       </div>
       <ul className="mt-4 space-y-2">
-        {output.features?.map((f, i) => (
+        {data.output.features?.map((f, i) => (
           <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="size-1.5 rounded-full bg-primary" />
             {f}
@@ -297,13 +294,15 @@ function PricingResult({ tool, isLoading }) {
 
 **测试用例数据**（在 Test Cases 中创建）：
 
-- Tool Name: `get_pricing`
-- Tool Input: `{}`
-- Tool Output:
+- Data (JSON):
 ```json
 {
-  "plan": "专业版",
-  "price": "¥299/月",
-  "features": ["无限项目", "团队协作", "API 接入", "优先技术支持"]
+  "name": "get_pricing",
+  "input": {},
+  "output": {
+    "plan": "专业版",
+    "price": "¥299/月",
+    "features": ["无限项目", "团队协作", "API 接入", "优先技术支持"]
+  }
 }
 ```

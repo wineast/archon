@@ -1,89 +1,128 @@
-# 函数（Functions）模块
+# 函数（Functions）使用指南
 
-函数是服务端可复用的 JavaScript 代码单元，可被工具 Handler 或其他函数调用。
+函数是可复用的 JavaScript 逻辑单元，用于封装数据转换、计算等操作。函数以代码形式存储在数据库中，支持参数 Schema 定义和自动化测试。
 
-## 概念
+---
 
-| 概念 | 说明 |
-|------|------|
-| **Function** | 一段可复用的 JavaScript 代码，有输入输出定义 |
-| **Builtin Function** | 系统内置函数，不可编辑但可直接使用 |
-| **Dynamic Function** | 用户自定义函数，可编辑代码和参数 |
+## 代码格式
 
-## 数据库 Schema
+函数支持两种代码格式，系统自动检测：
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | 主键 |
-| agentId | uuid | 关联 Agent |
-| key | text | 函数唯一标识 |
-| name | text | 函数名称 |
-| description | text | 函数描述 |
-| code | text | JavaScript 实现代码 |
-| parametersSchema | jsonb | 输入参数 Schema（内联 JsonSchema7 或 `$ref`） |
-| returnParametersSchema | jsonb | 返回值 Schema（内联 JsonSchema7 或 `$ref`） |
-
-## API
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/functions?agentId=xxx` | 列出所有函数 |
-| POST | `/api/functions` | 创建函数 |
-| GET | `/api/functions/[id]` | 获取函数详情 |
-| PATCH | `/api/functions/[id]` | 更新函数 |
-| DELETE | `/api/functions/[id]` | 软删除函数 |
-
-## 跨资源引用
-
-### 导入其他函数（ES6 模块格式）
+**旧格式（闭包注入）**：
 
 ```js
-import calc from "archon:fn/pricing_engine";
-import validate from "archon:fn/input_validator";
-
-export default function(input) {
-  validate(input);
-  return calc(input);
-}
-```
-
-| 命名空间 | 用途 | 语法 |
-|----------|------|------|
-| `archon:fn/<key>` | 导入其他函数 | `import calc from "archon:fn/pricing_engine"` |
-| `archon:lib/filtrex` | Filtrex 表达式引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
-
-函数间的依赖关系自动从 import 语句推断。编辑器提供 TypeScript 类型提示和自动补全。
-
-### 旧闭包格式
-
-```js
-function fn({ pricing_engine, input_validator }) {
+function fn({ compileExpression, other_fn }) {
   return function(input) {
-    input_validator(input);
-    return pricing_engine(input);
+    return other_fn({ value: compileExpression("x * 2")(input) });
   }
 }
 ```
 
-依赖通过解构参数名匹配其他函数的 key。
+**新格式（ES6 模块）**：
 
-### 被其他资源引用
+```js
+import { compileExpression } from "archon:lib/filtrex";
+import other_fn from "archon:fn/other_fn";
 
-| 引用方 | 语法 | 说明 |
-|--------|------|------|
-| **Tool Handler（新格式）** | `import fn from "archon:fn/<key>"` | ES6 导入 |
-| **Tool Handler（旧格式）** | `await context.fn("<key>")` | 动态加载 |
-| **其他 Function** | `import fn from "archon:fn/<key>"` | 互相导入 |
+export default function(input) {
+  return other_fn({ value: compileExpression("x * 2")(input) });
+}
+```
 
-> **注意**：函数本身**不能**使用 `archon:context`（wiki/dataset/ontology API）。只有 Tool Handler 才有 context 访问权限。函数是纯逻辑单元。
-
-详见 [模块系统文档](../guide/module-system.md)。
+新格式使用 `archon:*` 虚拟模块导入依赖，详见 [模块系统文档](module-system.md)。两种格式可在同一 Agent 内混用。
 
 ---
 
-## UI
+## 打开函数面板
 
-在 Agent Build 页面侧栏中点击 **Functions**（函数图标）进入：
+进入 Agent 的 **Settings** 页面，选择 **Functions** 标签页。
 
-- 左侧侧栏：内置函数 + 自定义函数列表
-- 右侧详情：代码编辑器、参数 Schema 关联、测试用例
+面板采用左右分栏布局：
+- **左侧**：函数列表 + 新建按钮
+- **右侧**：选中函数的详情（四个 Tab：Edit / Examples / Playground / Test Cases）
+
+---
+
+## Playground Tab
+
+Playground 提供即时执行功能，用于快速测试函数的输入输出。
+
+### 使用方法
+
+1. 在 **Input** 区域填写 JSON 输入数据
+   - 可以从右上角的 **Load** 下拉菜单加载已有数据，菜单按 Examples 和 Test Cases 分组显示
+2. 点击 **Run** 按钮执行函数
+3. **Output** 区域展示执行结果或错误信息，右侧显示执行耗时
+
+### 保存为测试用例
+
+在 Playground 中调试好数据后，可以直接保存为 Test Case：
+
+1. 点击底部的 **Save** 按钮
+2. 在弹出的 Dialog 中填写：
+   - **Name**（必填）：测试用例名称
+   - **Tags**（可选）：标签，回车添加
+   - **Show as Example**（可选）：开启后同时作为 Example 展示
+3. 点击 **Save** 保存
+
+保存时会自动将当前 Input 作为测试用例的 input，如果已有 Output 则作为 expectedOutput。
+
+---
+
+## Test Cases Tab
+
+测试用例用于验证函数在各种输入场景下的输出正确性。函数的测试在服务端执行：实际输出与期望输出深度比较 = 通过，不匹配或抛异常 = 失败。
+
+### 创建测试用例
+
+1. 点击底部的 **Add Test Case** 按钮
+2. 填写：
+   - **Name**：测试用例名称
+   - **Tags**：标签（用于分组过滤）
+   - **Input (JSON)**：函数输入 JSON
+   - **Expected Output (JSON)**：期望输出 JSON
+3. 点击 **Save**
+
+### 运行测试
+
+- **单个运行**：点击测试用例右侧的 ▶ 按钮
+- **批量运行**：点击顶部工具栏的 **Run All** 按钮
+
+运行结果会显示 Passed/Failed/Error 状态和执行耗时。
+
+### 标签过滤
+
+点击顶部的标签按钮可以只显示和运行特定标签的测试用例。
+
+### 运行历史
+
+每次 Run All 都会生成一条运行记录，保存在 **Runs** 区域。可以展开查看每个用例的详细结果，也可以删除历史记录。
+
+### 标记为示例
+
+展开任意测试用例，可以看到 **Show as Example** 开关。开启后，该测试用例会同时出现在 **Examples** Tab 中，作为函数的展示示例。切换开关会立即保存，无需额外点击 Save。
+
+---
+
+## Examples Tab
+
+Examples 以只读方式展示函数的典型输入输出，方便快速了解函数的用途和数据格式。
+
+### 数据来源
+
+Examples 的数据来自 **Test Cases**——只有被标记为 "Show as Example" 的测试用例才会在 Examples Tab 中展示。
+
+### 使用方法
+
+1. 进入 **Test Cases** Tab
+2. 展开目标测试用例，开启 **Show as Example** 开关
+3. 切换到 **Examples** Tab，即可看到该用例的数据卡片
+
+每个 Example 卡片包含：
+- **标题**：测试用例名称
+- **Input**：只读 JSON 编辑器展示输入数据
+- **Expected Output**：只读 JSON 编辑器展示期望输出数据（如有）
+
+### 空状态
+
+当没有任何测试用例被标记为 Example 时，面板会显示引导提示，引导用户去 Test Cases Tab 标记。
