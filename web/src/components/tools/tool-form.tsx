@@ -315,6 +315,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               value={field.value ?? null}
               onChange={field.onChange}
               agentId={agentId}
+              requireObjectRoot
             />
           )}
         />

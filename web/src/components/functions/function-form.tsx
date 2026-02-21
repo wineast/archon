@@ -142,6 +142,7 @@ export function FunctionForm({
               value={field.value ?? null}
               onChange={field.onChange}
               agentId={agentId}
+              requireObjectRoot
             />
           )}
         />
@@ -154,6 +155,7 @@ export function FunctionForm({
               value={field.value ?? null}
               onChange={field.onChange}
               agentId={agentId}
+              requireObjectRoot
             />
           )}
         />

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { functions } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { clearFunctionCache } from "@/lib/functions/compile";
 import { logAudit } from "@/lib/audit/log";
 
@@ -52,6 +53,14 @@ export async function PATCH(
   if (ctx instanceof NextResponse) return ctx;
 
   const body = await req.json();
+
+  for (const [field, label] of [
+    ["parametersSchema", "parametersSchema"],
+    ["returnParametersSchema", "returnParametersSchema"],
+  ] as const) {
+    const err = validateObjectSchema(body[field], label);
+    if (err) return NextResponse.json({ error: err }, { status: 400 });
+  }
 
   const [updated] = await db
     .update(functions)

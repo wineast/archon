@@ -11,20 +11,13 @@ import { SchemaParameterPreview } from "./schema-parameter-preview";
 import { SchemaCodeAssistDialog } from "./schema-code-assist-dialog";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import type { JsonSchema7 } from "@/lib/schemas/types";
+import { isObjectSchema } from "@/lib/schemas/json-schema-utils";
 import schemaGuideContent from "../../../guide/schema.md";
 
 const DEFAULT_SCHEMA: JsonSchema7 = { type: "object", properties: {}, required: [] };
 
 function isPlainObject(val: unknown): val is Record<string, unknown> {
   return typeof val === "object" && val !== null && !Array.isArray(val);
-}
-
-function isObjectSchemaPattern(schema: Record<string, unknown>): boolean {
-  if (schema.type === "object") return true;
-  if ("properties" in schema) return true;
-  if ("allOf" in schema || "anyOf" in schema || "oneOf" in schema) return true;
-  if ("$ref" in schema) return true;
-  return false;
 }
 
 interface InlineSchemaEditorProps {
@@ -84,7 +77,7 @@ export function InlineSchemaEditor({
           setJsonError("Schema must be a JSON object");
           return;
         }
-        if (requireObjectRoot && !isObjectSchemaPattern(parsed)) {
+        if (requireObjectRoot && !isObjectSchema(parsed)) {
           setJsonError("Root schema must be an object type");
           return;
         }

@@ -132,4 +132,30 @@ export function isPropertyRequired(parentSchema: JsonSchema7, key: string): bool
   return parentSchema.required?.includes(key) ?? false;
 }
 
+/**
+ * Check if a value is an object-rooted JSON Schema.
+ * Accepts `unknown` so it can be used with unvalidated API request bodies.
+ */
+export function isObjectSchema(schema: unknown): boolean {
+  if (typeof schema !== "object" || schema === null || Array.isArray(schema)) return false;
+  const s = schema as Record<string, unknown>;
+  if (s.type === "object") return true;
+  if ("properties" in s) return true;
+  if ("allOf" in s || "anyOf" in s || "oneOf" in s) return true;
+  if ("$ref" in s) return true;
+  return false;
+}
+
+/**
+ * Validate that a schema field, if provided and non-null, has an object root.
+ * Returns an error message string if invalid, or null if valid/skipped.
+ */
+export function validateObjectSchema(value: unknown, fieldName: string): string | null {
+  if (value === undefined || value === null) return null;
+  if (!isObjectSchema(value)) {
+    return `${fieldName} must be an object-type schema`;
+  }
+  return null;
+}
+
 export { EMPTY_OBJECT_SCHEMA };

@@ -2,6 +2,8 @@
 
 函数是可复用的 JavaScript 逻辑单元，用于封装数据转换、计算等操作。函数以代码形式存储在数据库中，支持参数 Schema 定义和自动化测试。
 
+> 函数的 Input Schema 和 Output Schema 均要求根类型为 object，详见 [Schema 编辑指南](schema.md#根类型约束)。
+
 ---
 
 ## 代码格式
