@@ -145,8 +145,58 @@ The following are relevant memories about the user and prior interactions:
 | `context` | 格式化文本作为额外的 system message 注入（unshift 到消息列表开头） |
 | `none` | 不注入 |
 
+## 自动记忆提取
+
+对话结束后，系统自动从聊天内容中提取值得记住的信息，存为记忆条目。
+
+### 开关条件
+
+提取逻辑需要同时满足以下条件才会执行：
+
+1. `agents.memoryEnabled = true`（模块总开关）
+2. `memoryConfigs.autoExtract = true`（提取开关）
+3. `memoryConfigs.memoryTypeDefs` 至少有一个类型定义
+
+三个条件任一不满足则完全跳过，零 LLM 开销。
+
+### 执行时机
+
+在 `execute-stream.ts` 的 `onFinish` 回调中，通过 `after()` 异步执行，绝不阻塞聊天流式响应。
+
+### 提取流程
+
+```
+对话完成 → after() → 检查开关 → 序列化对话 → 调用 LLM（generateObject）→ 去重 → 写入 memories 表
+```
+
+1. **序列化对话**：将 UI 消息中 user/assistant 的文本内容拼成 `用户: ... / 助手: ...` 格式
+2. **调用 LLM**：使用 `generateObject` + Zod schema，输出结构化的 `[{type, content, importance}]`
+3. **去重**：与该 agent+user 已有记忆做字符串级比对（精确匹配 + 子串包含），过滤重复
+4. **写入**：批量 insert 到 memories 表，metadata 标记 `{source: "auto_extract"}`
+
+### 代码位置
+
+| 文件 | 说明 |
+|------|------|
+| `web/src/lib/memory/extract.ts` | 提取逻辑（`extractMemories` + `serialiseConversation`） |
+| `web/src/lib/chat/execute-stream.ts` | 聊天流程中的 after() 调用点 |
+
+### 提取 Prompt
+
+`memoryConfigs.extractionPrompt` 为空时使用内置默认 prompt，指导 LLM：
+- 识别用户偏好、重要事实、关键决策、反馈意见
+- 只提取明确表述的信息，不推测
+- 每条记忆独立、自包含、简洁
+- 无值得记忆的内容时返回空数组
+
+系统会自动将 `memoryTypeDefs` 附加到 prompt 末尾，约束 LLM 只使用已定义的类型 key。
+
+### 提取模型
+
+当前固定使用 `openai:gpt-4o-mini`（成本低、速度快、结构化输出质量好）。
+
 ## 未来规划
 
-- 对话后自动提取记忆
-- 记忆向量化 + 语义检索
+- 记忆向量化 + 语义检索（替代当前字符串去重）
 - 记忆衰减定时任务
+- 提取模型可配置

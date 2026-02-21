@@ -27,6 +27,7 @@ import { renderTemplate, gatherTemplateData } from "@/lib/template/render";
 import { recordUsage } from "@/lib/usage/record";
 import type { RuntimeEventInput } from "@/lib/runtime-events/record";
 import { recordRuntimeEvents } from "@/lib/runtime-events/record";
+import { extractMemories, serialiseConversation } from "@/lib/memory/extract";
 
 export interface ExecuteChatStreamOptions {
   messages: UIMessage[];
@@ -345,6 +346,20 @@ export async function executeChatStream(
           } catch (e) {
             console.error("[chat] failed to save messages:", e);
           }
+        });
+
+        // Memory extraction (non-blocking, best-effort)
+        after(async () => {
+          const conversationText = serialiseConversation(
+            messages as Array<{ role: string; parts?: unknown[] }>
+          );
+          if (!conversationText) return;
+          await extractMemories({
+            agentId,
+            sessionId: sessionId ?? null,
+            userId,
+            conversationText,
+          });
         });
       },
     });
