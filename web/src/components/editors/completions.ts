@@ -103,25 +103,11 @@ export function generateCompletions(
               apply: `{{tool.${t.name}.description}}`,
             },
             {
-              label: `{{tool.${t.name}.params}}`,
-              type: "variable" as const,
-              detail: `${detail} (params)`,
-              boost: base - 0.002,
-              apply: `{{tool.${t.name}.params}}`,
-            },
-            {
               label: `{{tool.${t.name}.parameters}}`,
               type: "variable" as const,
               detail: `${detail} (parameter array)`,
-              boost: base - 0.003,
+              boost: base - 0.002,
               apply: `{{tool.${t.name}.parameters}}`,
-            },
-            {
-              label: `{{tool.${t.name}.json}}`,
-              type: "variable" as const,
-              detail: `${detail} (JSON)`,
-              boost: base - 0.004,
-              apply: `{{tool.${t.name}.json}}`,
             },
           ];
         })
@@ -131,17 +117,10 @@ export function generateCompletions(
     ...(!isTagContext
       ? [
           {
-            label: "{{tool_names}}",
-            type: "variable" as const,
-            detail: "all tool names",
-            boost: 6.9,
-            apply: "{{tool_names}}",
-          },
-          {
             label: "{{tool_entries}}",
             type: "variable" as const,
             detail: "tool array (for loop)",
-            boost: 6.8,
+            boost: 6.9,
             apply: "{{tool_entries}}",
           },
         ]

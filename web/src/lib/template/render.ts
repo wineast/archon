@@ -105,19 +105,17 @@ export function buildToolNamespace(
   defsMap: Record<string, JsonSchema7> = {}
 ): {
   ns: Record<string, unknown>;
-  tool_names: string;
   tool_entries: Array<{
     name: string;
     description: string;
-    params: Array<{ name: string; type: string }>;
+    parameters: Array<{ name: string; type: string; description: string; required: boolean; enum?: unknown[] }>;
   }>;
 } {
   const ns: Record<string, unknown> = {};
-  const names: string[] = [];
   const entries: Array<{
     name: string;
     description: string;
-    params: Array<{ name: string; type: string }>;
+    parameters: Array<{ name: string; type: string; description: string; required: boolean; enum?: unknown[] }>;
   }> = [];
 
   for (const row of toolRows) {
@@ -126,40 +124,29 @@ export function buildToolNamespace(
     const props = schema.properties ?? {};
     const requiredSet = new Set(schema.required ?? []);
 
-    const simpleParams = Object.entries(props).map(([key, propSchema]) => ({
+    const parameters = Object.entries(props).map(([key, propSchema]) => ({
       name: key,
       type: (typeof propSchema.type === "string" ? propSchema.type : "unknown") as string,
+      description: propSchema.description ?? "",
+      required: requiredSet.has(key),
+      ...(propSchema.enum ? { enum: propSchema.enum } : {}),
     }));
 
     ns[row.name] = {
       name: row.name,
       description: row.description,
-      params: Object.keys(props).join(", "),
-      parameters: Object.entries(props).map(([key, propSchema]) => ({
-        name: key,
-        type: (typeof propSchema.type === "string" ? propSchema.type : "unknown") as string,
-        description: propSchema.description ?? "",
-        required: requiredSet.has(key),
-        ...(propSchema.enum ? { enum: propSchema.enum } : {}),
-      })),
-      json: JSON.stringify({
-        name: row.name,
-        description: row.description,
-        parameters: schema,
-      }),
+      parameters,
     };
 
-    names.push(row.name);
     entries.push({
       name: row.name,
       description: row.description,
-      params: simpleParams,
+      parameters,
     });
   }
 
   return {
     ns,
-    tool_names: names.join(", "),
     tool_entries: entries,
   };
 }
@@ -174,7 +161,7 @@ async function renderWithData(
   extraVars: Record<string, unknown> | undefined,
   currentDoc: WikiDocument
 ): Promise<string> {
-  const { ns: toolNs, tool_names, tool_entries } = buildToolNamespace(
+  const { ns: toolNs, tool_entries } = buildToolNamespace(
     data.toolRows,
     data.defsMap
   );
@@ -183,7 +170,6 @@ async function renderWithData(
     ...data.resolvedVars,
     ...extraVars,
     tool: toolNs,
-    tool_names,
     tool_entries,
     ontology_types: data.ontologyTypes,
     ontology: Object.fromEntries(

@@ -41,9 +41,8 @@
 |------|------|------|
 | `{{dataset_key}}` | 数据集变量 | `{{company_name}}` → `"GMCC"` |
 | `{{dataset_key.field}}` | 数据集对象属性 | `{{income_type_enum.w2}}` |
-| `{{tool_names}}` | 所有启用工具名逗号拼接 | `"calculate_dti, route_products"` |
 | `{{tool.name.description}}` | 单个工具信息 | `{{tool.calculate_dti.description}}` |
-| `{% for t in tool_entries %}` | 遍历所有工具 | 每个条目有 `t.name`、`t.description`、`t.params` |
+| `{% for t in tool_entries %}` | 遍历所有工具 | 每个条目有 `t.name`、`t.description`、`t.parameters` |
 | `{% for p in tool.name.parameters %}` | 遍历工具参数 | `p.name`、`p.type`、`p.description`、`p.required` |
 | `{% include 'wiki_key' %}` | 嵌入 Wiki 文档 | `{% include '贷款指南' %}` |
 | `{{ontology_types}}` | 本体类型列表 | `{% for type in ontology_types %}...{% endfor %}` |

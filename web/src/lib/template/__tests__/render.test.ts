@@ -605,56 +605,6 @@ describe("tool namespace", () => {
     expect(result).toBe("calculate_dti");
   });
 
-  it("resolves tool.NAME.params to comma-separated param names", async () => {
-    const schema = {
-      type: "object",
-      properties: {
-        income: { type: "number", description: "Monthly income" },
-        debts: { type: "number", description: "Monthly debts" },
-      },
-      required: ["income", "debts"],
-    };
-    setupDbChain([
-      [],
-      [],
-      [makeTool("calculate_dti", "Calculate DTI", schema)],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "Params: {{tool.calculate_dti.params}}",
-      "agent-1"
-    );
-    expect(result).toBe("Params: income, debts");
-  });
-
-  it("resolves tool.NAME.json to JSON definition", async () => {
-    const schema = {
-      type: "object",
-      properties: {
-        amount: { type: "number", description: "Loan amount" },
-      },
-      required: ["amount"],
-    };
-    setupDbChain([
-      [],
-      [],
-      [makeTool("calc_rate", "Calculate rate", schema)],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "{{tool.calc_rate.json}}",
-      "agent-1"
-    );
-    const parsed = JSON.parse(result);
-    expect(parsed).toEqual({
-      name: "calc_rate",
-      description: "Calculate rate",
-      parameters: schema,
-    });
-  });
-
   it("resolves tool.NAME.parameters for iteration", async () => {
     const schema = {
       type: "object",
@@ -723,24 +673,6 @@ describe("tool namespace", () => {
     expect(result).toBe("A,B,C");
   });
 
-  it("resolves tool_names to comma-separated enabled tool names", async () => {
-    setupDbChain([
-      [],
-      [],
-      [
-        makeTool("tool_a", "First tool"),
-        makeTool("tool_b", "Second tool"),
-      ],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "Tools: {{tool_names}}",
-      "agent-1"
-    );
-    expect(result).toBe("Tools: tool_a, tool_b");
-  });
-
   it("supports {% for %} over tool_entries", async () => {
     setupDbChain([
       [],
@@ -759,7 +691,7 @@ describe("tool namespace", () => {
     expect(result).toBe("search: Search documents;lookup: Lookup data;");
   });
 
-  it("tool_entries includes simplified params", async () => {
+  it("tool_entries includes full parameters", async () => {
     const schema = {
       type: "object",
       properties: {
@@ -776,10 +708,10 @@ describe("tool namespace", () => {
 
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
-      "{% for t in tool_entries %}{% for p in t.params %}{{p.name}}:{{p.type}};{% endfor %}{% endfor %}",
+      "{% for t in tool_entries %}{% for p in t.parameters %}{{p.name}}:{{p.type}}({{p.description}},req={{p.required}});{% endfor %}{% endfor %}",
       "agent-1"
     );
-    expect(result).toBe("x:number;y:string;");
+    expect(result).toBe("x:number(X val,req=true);y:string(Y val,req=false);");
   });
 
   it("tool namespace does not conflict with dataset vars", async () => {
@@ -799,35 +731,6 @@ describe("tool namespace", () => {
     );
   });
 
-  it("returns empty tool_names when no tools", async () => {
-    setupDbChain([
-      [],
-      [],
-      [],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "Tools: [{{tool_names}}]",
-      "agent-1"
-    );
-    expect(result).toBe("Tools: []");
-  });
-
-  it("tool.NAME.params is empty string when tool has no parameters", async () => {
-    setupDbChain([
-      [],
-      [],
-      [makeTool("no_args_tool", "A tool with no args")],
-    ]);
-
-    const { renderSystemPrompt } = await import("../render");
-    const result = await renderSystemPrompt(
-      "Params: [{{tool.no_args_tool.params}}]",
-      "agent-1"
-    );
-    expect(result).toBe("Params: []");
-  });
 });
 
 // ---------------------------------------------------------------------------
