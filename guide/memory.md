@@ -102,9 +102,51 @@ import {
 - **Config** tab：配置记忆策略（注入模式、衰减等）+ 自定义记忆类型定义
 - **Memories** tab：左侧按 userId 分栏（含 All / global / 各用户 + 条数 Badge），右侧为搜索 + 类型过滤 + 记忆表格的 CRUD 管理界面
 
-## 未来规划（P1）
+## 运行时记忆注入
 
-- 运行时自动注入相关记忆到 system prompt
+聊天时自动将相关记忆注入到 Agent 的上下文中，让 Agent 具备跨会话记忆力。
+
+### 开关守卫
+
+两层开关保护，零开销跳过：
+
+1. `agents.memoryEnabled = false` → 完全跳过，不查询任何记忆相关数据
+2. `memoryConfigs.injectionMode = 'none'` → 跳过注入
+
+### 检索策略
+
+代码位于 `web/src/lib/memory/retrieve.ts`：
+
+- 输入：agentId、userId（nullable）、sessionId（可选）
+- 查询条件：未删除、未过期、匹配用户级 + 全局记忆
+- 排序：importance DESC, lastAccessedAt DESC
+- 数量受 `maxInjectedMemories` 限制（默认 10）
+- 检索后非阻塞更新 `lastAccessedAt`
+
+### 格式化
+
+代码位于 `web/src/lib/memory/format-for-injection.ts`：
+
+```
+<memories>
+The following are relevant memories about the user and prior interactions:
+- [preference] (user, importance: 0.8) 用户偏好深色主题
+- [fact] (global, importance: 0.6) 公司使用 React 技术栈
+</memories>
+```
+
+### 注入模式
+
+在 `web/src/lib/chat/execute-stream.ts` 中，renderTemplate() 之前执行：
+
+| injectionMode | 行为 |
+|---------------|------|
+| `system_prompt` | 格式化文本拼接到 system prompt 末尾 |
+| `context` | 格式化文本作为额外的 system message 注入（unshift 到消息列表开头） |
+| `none` | 不注入 |
+
+## 未来规划
+
 - 对话后自动提取记忆
 - 记忆向量化 + 语义检索
 - 记忆衰减定时任务

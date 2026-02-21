@@ -14,6 +14,8 @@ import { createMCPClient } from "@ai-sdk/mcp";
 import { db } from "@/db";
 import { agents, tools, modelConfigs, mcpServers, skills } from "@/db/schema";
 import { eq, and, isNull, asc } from "drizzle-orm";
+import { retrieveMemories } from "@/lib/memory/retrieve";
+import { formatMemoriesForInjection } from "@/lib/memory/format-for-injection";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
   createSession,
@@ -47,9 +49,9 @@ export async function executeChatStream(
 ): Promise<Response> {
   const { messages, sessionId, agentId, userId, hostContext, registeredHostTools } = opts;
 
-  // Get agent's orgId, mcpEnabled, and skillsEnabled for usage recording, MCP gating, and skills logic
+  // Get agent's orgId, mcpEnabled, skillsEnabled, and memoryEnabled
   const [agentRow] = await db
-    .select({ orgId: agents.orgId, mcpEnabled: agents.mcpEnabled, skillsEnabled: agents.skillsEnabled })
+    .select({ orgId: agents.orgId, mcpEnabled: agents.mcpEnabled, skillsEnabled: agents.skillsEnabled, memoryEnabled: agents.memoryEnabled })
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
@@ -181,11 +183,29 @@ export async function executeChatStream(
   // The last message is the new user message
   const userMessage = messages[messages.length - 1];
 
+  // ── Memory injection ──
+  let memoryBlock = "";
+  let memoryInjectionMode: "system_prompt" | "context" | "none" = "none";
+
+  if (agentRow?.memoryEnabled) {
+    const retrieved = await retrieveMemories({ agentId, userId, sessionId });
+    if (retrieved && retrieved.items.length > 0) {
+      memoryInjectionMode = retrieved.config.injectionMode;
+      memoryBlock = formatMemoriesForInjection(retrieved.items);
+    }
+  }
+
+
   let systemPrompt = await renderTemplate(
     activeConfig.systemPrompt || "",
     templateData,
     hostContext ? { host: hostContext } : undefined
   );
+
+  // ── Memory: append to system prompt ──
+  if (memoryBlock && memoryInjectionMode === "system_prompt") {
+    systemPrompt = systemPrompt + "\n\n" + memoryBlock;
+  }
 
   // Load enabled skills and inject summary + get_skill_detail tool (skip if skills feature is disabled)
   const enabledSkills = agentRow?.skillsEnabled !== false
@@ -223,9 +243,16 @@ export async function executeChatStream(
   }
 
   try {
+    const modelMessages = await convertToModelMessages(messages);
+
+    // Inject memories as an extra system message when mode is "context"
+    if (memoryBlock && memoryInjectionMode === "context") {
+      modelMessages.unshift({ role: "system", content: memoryBlock });
+    }
+
     const result = streamText({
       model: gateway(activeConfig.modelId),
-      messages: await convertToModelMessages(messages),
+      messages: modelMessages,
       system: systemPrompt,
       temperature: activeConfig.temperature ?? 0.7,
       tools: allTools,
