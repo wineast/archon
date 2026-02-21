@@ -91,10 +91,3 @@ c = "{{b}}-End"     → "Root-Mid-End"
 
 循环依赖（a→b→a）会在保存时报错。
 
-### 限制
-
-数据集模板中**不可用**：
-
-- `{% include '文档' %}` — Wiki 引用
-- `{{tool.*}}` / `{{tool_names}}` — 工具命名空间
-- `{{ontology_types}}` — 本体命名空间

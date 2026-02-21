@@ -11,6 +11,8 @@ export interface CompletionTool {
 
 export interface CompletionConfig {
   variables: string[];
+  /** When provided, object-typed values expand to {{key.field}} completions */
+  variableMap?: Record<string, unknown>;
   documents: CompletionDocument[];
   tools: CompletionTool[];
 }
@@ -32,7 +34,8 @@ export function generateCompletions(
   textBeforeCursor: string,
   variables: string[],
   documents: CompletionDocument[],
-  tools: CompletionTool[] = []
+  tools: CompletionTool[] = [],
+  variableMap?: Record<string, unknown>
 ): { from: number; items: CompletionOption[] } | null {
   const lastOutputOpen = textBeforeCursor.lastIndexOf("{{");
   const lastTagOpen = textBeforeCursor.lastIndexOf("{%");
@@ -48,16 +51,35 @@ export function generateCompletions(
   const delimLen = 2;
   const typed = textBeforeCursor.slice(lastOpen + delimLen).trimStart();
 
+  // Detect if user typed "key." to trigger nested completions
+  const dotIndex = typed.indexOf(".");
+  const nestedPrefix = dotIndex >= 0 ? typed.slice(0, dotIndex) : null;
+
   const options: CompletionOption[] = [
     // Dataset variables (only in {{ }} context)
     ...(!isTagContext
-      ? variables.map((name, i) => ({
-          label: `{{${name}}}`,
-          type: "variable" as const,
-          detail: "dataset",
-          boost: 10 - i * 0.01,
-          apply: `{{${name}}}`,
-        }))
+      ? nestedPrefix
+        ? // After dot: show only matching variable's fields
+          (() => {
+            const val = variableMap?.[nestedPrefix];
+            if (!val || typeof val !== "object" || Array.isArray(val)) return [];
+            const fields = Object.keys(val as Record<string, unknown>);
+            return fields.map((field, j) => ({
+              label: `{{${nestedPrefix}.${field}}}`,
+              type: "variable" as const,
+              detail: String((val as Record<string, unknown>)[field] ?? ""),
+              boost: 10 - j * 0.001,
+              apply: `{{${nestedPrefix}.${field}}}`,
+            }));
+          })()
+        : // Before dot: show only top-level keys
+          variables.map((name, i) => ({
+            label: `{{${name}}}`,
+            type: "variable" as const,
+            detail: "dataset",
+            boost: 10 - i * 0.01,
+            apply: `{{${name}}}`,
+          }))
       : []),
 
     // Tools — nested object per tool
@@ -186,7 +208,7 @@ export function generateCompletions(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Monaco adapter: CompletionItemProvider                             */
+/*  Monaco adapter: singleton CompletionItemProvider per language      */
 /* ------------------------------------------------------------------ */
 
 function boostToSortText(boost: number): string {
@@ -201,13 +223,34 @@ const completionKindMap: Record<string, number> = {
   function: 1,  // CompletionItemKind.Function
 };
 
-export function createCompletionProvider(
+/**
+ * Registry: maps model URI → config ref.
+ * Multiple editors share one language-level provider; each editor
+ * registers/unregisters its own config keyed by model URI.
+ */
+const configRegistry = new Map<string, React.RefObject<CompletionConfig | null>>();
+const registeredLanguages = new Set<string>();
+
+export function registerEditorConfig(
+  modelUri: string,
   configRef: React.RefObject<CompletionConfig | null>
-): monacoNs.languages.CompletionItemProvider {
-  return {
-    triggerCharacters: ["{", "%", " "],
+) {
+  configRegistry.set(modelUri, configRef);
+  return () => { configRegistry.delete(modelUri); };
+}
+
+export function ensureCompletionProvider(
+  monaco: typeof monacoNs,
+  language: string
+) {
+  if (registeredLanguages.has(language)) return;
+  registeredLanguages.add(language);
+
+  monaco.languages.registerCompletionItemProvider(language, {
+    triggerCharacters: ["{", "%", " ", "."],
     provideCompletionItems(model, position) {
-      const config = configRef.current;
+      const configRef = configRegistry.get(model.uri.toString());
+      const config = configRef?.current;
       if (!config) return { suggestions: [] };
 
       const textBeforeCursor = model.getValueInRange({
@@ -221,19 +264,19 @@ export function createCompletionProvider(
         textBeforeCursor,
         config.variables,
         config.documents,
-        config.tools
+        config.tools,
+        config.variableMap
       );
 
       if (!result) return { suggestions: [] };
 
-      // Calculate the range to replace: from the opening delimiter to current position
+      // Calculate the range to replace
       const beforeCursorOnLine = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
         endLineNumber: position.lineNumber,
         endColumn: position.column,
       });
-      // Find the last {{ or {% on the current line
       const lastOutput = beforeCursorOnLine.lastIndexOf("{{");
       const lastTag = beforeCursorOnLine.lastIndexOf("{%");
       const lastOnLine = Math.max(lastOutput, lastTag);
@@ -261,5 +304,5 @@ export function createCompletionProvider(
 
       return { suggestions };
     },
-  };
+  });
 }

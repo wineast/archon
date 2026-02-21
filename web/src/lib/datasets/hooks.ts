@@ -116,7 +116,6 @@ export async function createDataset(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createDataset failed:", e);
     toast.error((e as Error).message || "Failed to create dataset");
     return null;
   }
@@ -140,7 +139,6 @@ export async function updateDataset(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateDataset failed:", e);
     toast.error((e as Error).message || "Failed to save dataset");
     return null;
   }
@@ -156,7 +154,6 @@ export async function deleteDataset(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteDataset failed:", e);
     toast.error("Failed to delete dataset");
     return false;
   }

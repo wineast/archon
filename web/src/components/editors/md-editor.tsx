@@ -2,16 +2,16 @@
 
 import * as React from "react";
 import Editor, { DiffEditor as MonacoDiffEditor, type OnMount, type DiffOnMount } from "@monaco-editor/react";
-import type * as monacoNs from "monaco-editor";
 import { cn } from "@/lib/utils";
 import { useDarkMode } from "./use-dark-mode";
 import { ARCHON_LIGHT, ARCHON_DARK } from "./theme";
 import { ensureMonacoSetup } from "./monaco-setup";
 import {
-  createCompletionProvider,
   type CompletionConfig,
   type CompletionDocument,
   type CompletionTool,
+  registerEditorConfig,
+  ensureCompletionProvider,
 } from "./completions";
 
 const SHARED_OPTIONS = {
@@ -58,7 +58,7 @@ function MdEditor({
   const isDiff = original !== undefined;
 
   const configRef = React.useRef<CompletionConfig | null>(null);
-  const disposableRef = React.useRef<monacoNs.IDisposable | null>(null);
+  const unregisterRef = React.useRef<(() => void) | null>(null);
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -68,10 +68,13 @@ function MdEditor({
   }, [variables, documents, tools]);
 
   const handleMount: OnMount = (editor, monaco) => {
-    disposableRef.current = monaco.languages.registerCompletionItemProvider(
-      "liquid-markdown",
-      createCompletionProvider(configRef)
-    );
+    // Register singleton provider (idempotent)
+    ensureCompletionProvider(monaco, "liquid-markdown");
+    // Register this editor's config by model URI
+    const uri = editor.getModel()?.uri.toString();
+    if (uri) {
+      unregisterRef.current = registerEditorConfig(uri, configRef);
+    }
 
     // Track empty state for placeholder
     setIsEmpty(editor.getValue() === "");
@@ -80,10 +83,18 @@ function MdEditor({
     });
 
     editor.onDidDispose(() => {
-      disposableRef.current?.dispose();
-      disposableRef.current = null;
+      unregisterRef.current?.();
+      unregisterRef.current = null;
     });
   };
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      unregisterRef.current?.();
+      unregisterRef.current = null;
+    };
+  }, []);
 
   const handleDiffMount: DiffOnMount = (editor) => {
     const modifiedEditor = editor.getModifiedEditor();

@@ -43,6 +43,7 @@ export function DatasetDetail({
         description: draft.description,
         data: draft.data,
       });
+      draftRef.markSaved();
     } finally {
       setSaving(false);
     }

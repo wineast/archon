@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JsonEditor } from "@/components/editors/json-editor";
 import { Textarea } from "@/components/ui/textarea";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
-import { BUILTIN_VAR_NAMES } from "@/lib/template";
 import { DatasetAssistDialog } from "./dataset-assist-dialog";
 
 export interface DatasetFormHandle {
@@ -23,6 +22,7 @@ export interface DatasetFormHandle {
   };
   isDirty: () => boolean;
   reset: () => void;
+  markSaved: () => void;
 }
 
 interface DatasetFormProps {
@@ -103,6 +103,14 @@ export function DatasetForm({
         setDataText(original.data);
         setJsonError(null);
       },
+      markSaved: () => {
+        originalRef.current = JSON.stringify({
+          name: nameRef.current,
+          description: descRef.current,
+          data: dataTextRef.current,
+        });
+        onDirtyChange?.(false);
+      },
     });
   }, [onDraftRef, parseData]);
 
@@ -134,10 +142,9 @@ export function DatasetForm({
   );
 
   // Template editor completions
-  const { datasetVars } = useDatasetVarsMap();
+  const { datasetVars } = useDatasetVarsMap(agentId ?? undefined);
   const templateVariables = useMemo(() => {
-    const datasetKeys = Object.keys(datasetVars);
-    return [...BUILTIN_VAR_NAMES, ...datasetKeys];
+    return Object.keys(datasetVars);
   }, [datasetVars]);
 
   const handlePreview = useCallback(async () => {
@@ -233,27 +240,26 @@ export function DatasetForm({
               <JsonEditor
                 value={dataText}
                 onChange={handleDataChange}
-                height="300px"
+                height="500px"
                 templateVariables={templateVariables}
+                templateVariableMap={datasetVars}
               />
               {jsonError && (
                 <p className="mt-1 text-xs text-destructive">{jsonError}</p>
               )}
             </TabsContent>
             <TabsContent value="preview">
-              <div className="min-h-[300px] rounded-md border p-3">
-                {previewLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Spinner className="size-5" />
-                  </div>
-                ) : previewContent ? (
-                  <pre className="whitespace-pre-wrap break-words font-mono text-xs">
-                    {previewContent}
-                  </pre>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No content to preview</p>
-                )}
-              </div>
+              {previewLoading ? (
+                <div className="flex min-h-[500px] items-center justify-center rounded-md border">
+                  <Spinner className="size-5" />
+                </div>
+              ) : (
+                <JsonEditor
+                  value={previewContent}
+                  height="500px"
+                  readOnly
+                />
+              )}
               {previewJsonError && (
                 <p className="mt-1 text-xs text-destructive">
                   Rendered output is not valid JSON: {previewJsonError}

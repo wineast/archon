@@ -2,12 +2,15 @@
 
 import { useRef, useEffect } from "react";
 import Editor, { DiffEditor as MonacoDiffEditor, type OnMount, type DiffOnMount } from "@monaco-editor/react";
-import type * as monacoNs from "monaco-editor";
 import { cn } from "@/lib/utils";
 import { useDarkMode } from "./use-dark-mode";
 import { ARCHON_LIGHT, ARCHON_DARK } from "./theme";
 import { ensureMonacoSetup } from "./monaco-setup";
-import { createCompletionProvider, type CompletionConfig } from "./completions";
+import {
+  type CompletionConfig,
+  registerEditorConfig,
+  ensureCompletionProvider,
+} from "./completions";
 
 const SHARED_OPTIONS = {
   minimap: { enabled: false },
@@ -29,6 +32,8 @@ interface JsonEditorProps {
   className?: string;
   /** Pass variable names to enable {{}} template autocompletion */
   templateVariables?: string[];
+  /** Pass variable name→data map to enable {{key.field}} nested completions */
+  templateVariableMap?: Record<string, unknown>;
   /** Pass original text to enable diff mode */
   original?: string;
 }
@@ -40,6 +45,7 @@ export function JsonEditor({
   height,
   className,
   templateVariables,
+  templateVariableMap,
   original,
 }: JsonEditorProps) {
   const isDark = useDarkMode();
@@ -49,29 +55,40 @@ export function JsonEditor({
   const isDiff = original !== undefined;
 
   const configRef = useRef<CompletionConfig | null>(null);
-  const disposableRef = useRef<monacoNs.IDisposable | null>(null);
+  const unregisterRef = useRef<(() => void) | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
   // Keep configRef up to date
   useEffect(() => {
     configRef.current = hasTemplateVars
-      ? { variables: templateVariables, documents: [], tools: [] }
+      ? { variables: templateVariables, variableMap: templateVariableMap, documents: [], tools: [] }
       : null;
-  }, [templateVariables, hasTemplateVars]);
+  }, [templateVariables, templateVariableMap, hasTemplateVars]);
 
   const handleMount: OnMount = (editor, monaco) => {
     if (hasTemplateVars) {
-      disposableRef.current = monaco.languages.registerCompletionItemProvider(
-        "liquid-json",
-        createCompletionProvider(configRef)
-      );
+      // Register singleton provider (idempotent)
+      ensureCompletionProvider(monaco, "liquid-json");
+      // Register this editor's config by model URI
+      const uri = editor.getModel()?.uri.toString();
+      if (uri) {
+        unregisterRef.current = registerEditorConfig(uri, configRef);
+      }
     }
     editor.onDidDispose(() => {
-      disposableRef.current?.dispose();
-      disposableRef.current = null;
+      unregisterRef.current?.();
+      unregisterRef.current = null;
     });
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      unregisterRef.current?.();
+      unregisterRef.current = null;
+    };
+  }, []);
 
   const handleDiffMount: DiffOnMount = (editor) => {
     const modifiedEditor = editor.getModifiedEditor();
