@@ -2,7 +2,7 @@ import { db } from "@/db";
 import {
   tools, functions, components, schemas, schemaIncludes, datasets,
   wikiDocuments, modelConfigs, evalCases, evalJudgeConfigs,
-  objectTypes, objectRelations,
+  objectTypes, objectRelations, skills,
 } from "@/db/schema";
 import { eq, and, isNotNull, isNull, inArray, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -11,7 +11,7 @@ import { requireAgentRole } from "@/lib/auth/require-agent-role";
 type ResourceType =
   | "tool" | "function" | "component" | "schema"
   | "dataset" | "wikiDocument" | "modelConfig" | "evalCase"
-  | "evalJudgeConfig" | "objectType" | "objectRelation";
+  | "evalJudgeConfig" | "objectType" | "objectRelation" | "skill";
 
 const tableMap = {
   tool: tools,
@@ -25,6 +25,7 @@ const tableMap = {
   evalJudgeConfig: evalJudgeConfigs,
   objectType: objectTypes,
   objectRelation: objectRelations,
+  skill: skills,
 } as const;
 
 function getTable(type: ResourceType) {
@@ -45,6 +46,7 @@ export async function GET(
     toolRows, functionRows, componentRows, schemaRows,
     datasetRows, wikiRows, modelConfigRows, evalCaseRows,
     evalJudgeConfigRows, objectTypeRows, objectRelationRows,
+    skillRows,
   ] = await Promise.all([
     db.select({ id: tools.id, key: tools.key, name: tools.name, deletedAt: tools.deletedAt })
       .from(tools).where(and(eq(tools.agentId, agentId), isNotNull(tools.deletedAt))),
@@ -68,6 +70,8 @@ export async function GET(
       .from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNotNull(objectTypes.deletedAt))),
     db.select({ id: objectRelations.id, key: objectRelations.key, name: objectRelations.name, deletedAt: objectRelations.deletedAt })
       .from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNotNull(objectRelations.deletedAt))),
+    db.select({ id: skills.id, key: skills.key, name: skills.name, deletedAt: skills.deletedAt })
+      .from(skills).where(and(eq(skills.agentId, agentId), isNotNull(skills.deletedAt))),
   ]);
 
   const result: Record<string, unknown[]> = {
@@ -82,6 +86,7 @@ export async function GET(
     evalJudgeConfig: evalJudgeConfigRows,
     objectType: objectTypeRows,
     objectRelation: objectRelationRows,
+    skill: skillRows,
   };
 
   const totalCount = Object.values(result).reduce((sum, arr) => sum + arr.length, 0);

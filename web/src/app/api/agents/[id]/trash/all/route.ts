@@ -2,7 +2,7 @@ import { db } from "@/db";
 import {
   tools, functions, components, schemas, datasets,
   wikiDocuments, modelConfigs, evalCases, evalJudgeConfigs,
-  objectTypes, objectRelations,
+  objectTypes, objectRelations, skills,
 } from "@/db/schema";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -33,6 +33,7 @@ export async function DELETE(
     db.delete(evalCases).where(and(eq(evalCases.agentId, agentId), isNotNull(evalCases.deletedAt))),
     db.delete(evalJudgeConfigs).where(and(eq(evalJudgeConfigs.agentId, agentId), isNotNull(evalJudgeConfigs.deletedAt))),
     db.delete(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNotNull(objectTypes.deletedAt))),
+    db.delete(skills).where(and(eq(skills.agentId, agentId), isNotNull(skills.deletedAt))),
   ]);
 
   return NextResponse.json({ ok: true });

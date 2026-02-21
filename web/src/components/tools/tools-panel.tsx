@@ -11,21 +11,29 @@ import {
   deleteTool,
   toggleToolEnabled,
 } from "@/lib/tools/hooks";
+import { useSkills } from "@/lib/skills/hooks";
 import type { ToolRow } from "@/db/schema";
 import type { ToolDefinition } from "@/lib/tools/types";
 import { ToolsSidebar } from "./tools-sidebar";
 import { ToolDetail } from "./tool-detail";
+import { BuiltinToolDetail } from "./builtin-tool-detail";
 import { ToolsEmptyState } from "./tools-empty-state";
 import { ToolCreateDialog } from "./tool-create-dialog";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function ToolsPanel({ agentId }: { agentId: string }) {
+export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string; skillsEnabled?: boolean }) {
   const { data: tools = [], mutate } = useSWR<ToolRow[]>(
     toolsApiKey(agentId),
     fetcher
   );
+  const { skills } = useSkills(agentId);
+  const hasEnabledSkills = useMemo(
+    () => skillsEnabled && skills.some((s) => s.enabled),
+    [skillsEnabled, skills]
+  );
   const [activeToolId, setActiveToolId] = useState<string | null>(null);
+  const [activeBuiltinToolKey, setActiveBuiltinToolKey] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -34,11 +42,21 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
     [tools, activeToolId]
   );
 
+  const handleSelectTool = useCallback((id: string) => {
+    setActiveToolId(id);
+    setActiveBuiltinToolKey(null);
+  }, []);
+
+  const handleSelectBuiltin = useCallback((key: string) => {
+    setActiveBuiltinToolKey(key);
+    setActiveToolId(null);
+  }, []);
+
   useEffect(() => {
-    if (activeToolId) {
+    if (activeToolId || activeBuiltinToolKey) {
       setMobileView("detail");
     }
-  }, [activeToolId]);
+  }, [activeToolId, activeBuiltinToolKey]);
 
   const handleOpenCreateDialog = useCallback(() => {
     setCreateDialogOpen(true);
@@ -114,11 +132,16 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
         <ToolsSidebar
           tools={tools}
           activeToolId={activeToolId}
-          onSelect={setActiveToolId}
+          onSelect={handleSelectTool}
           onCreate={handleOpenCreateDialog}
+          hasEnabledSkills={hasEnabledSkills}
+          onSelectBuiltin={handleSelectBuiltin}
+          activeBuiltinToolKey={activeBuiltinToolKey}
         />
         <div className="flex-1 min-w-0 overflow-hidden">
-          {activeTool ? (
+          {activeBuiltinToolKey ? (
+            <BuiltinToolDetail toolKey={activeBuiltinToolKey} />
+          ) : activeTool ? (
             <ToolDetail
               key={activeTool.id}
               tool={activeTool}
@@ -135,12 +158,15 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
 
       {/* Mobile layout */}
       <div className="flex h-full flex-col sm:hidden">
-        {mobileView === "sidebar" || !activeTool ? (
+        {mobileView === "sidebar" || (!activeTool && !activeBuiltinToolKey) ? (
           <ToolsSidebar
             tools={tools}
             activeToolId={activeToolId}
-            onSelect={setActiveToolId}
+            onSelect={handleSelectTool}
             onCreate={handleOpenCreateDialog}
+            hasEnabledSkills={hasEnabledSkills}
+            onSelectBuiltin={handleSelectBuiltin}
+            activeBuiltinToolKey={activeBuiltinToolKey}
           />
         ) : (
           <>
@@ -155,13 +181,17 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
               <span className="text-sm font-medium">Back</span>
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
-              <ToolDetail
-                key={activeTool.id}
-                tool={activeTool}
-                onSave={handleSave}
-                onDelete={handleDelete}
-                onToggle={handleToggle}
-              />
+              {activeBuiltinToolKey ? (
+                <BuiltinToolDetail toolKey={activeBuiltinToolKey} />
+              ) : activeTool ? (
+                <ToolDetail
+                  key={activeTool.id}
+                  tool={activeTool}
+                  onSave={handleSave}
+                  onDelete={handleDelete}
+                  onToggle={handleToggle}
+                />
+              ) : null}
             </div>
           </>
         )}

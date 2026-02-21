@@ -41,6 +41,7 @@ export const RESOURCE_TYPE_LABELS: Record<AuditLogResourceType, string> = {
   memory_config: "记忆配置",
   memory: "记忆",
   mcp_server: "MCP 服务器",
+  skill: "技能",
 };
 
 export const ACTION_LABELS: Record<AuditLogAction, string> = {

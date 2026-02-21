@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import {
+  agents,
   tools,
   schemas,
   wikiDocuments,
@@ -11,6 +12,7 @@ import {
   objectTypes,
   objectRelations,
   mcpServers,
+  skills,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -47,6 +49,7 @@ export interface ResourceSummary {
     transportType: string;
     enabled: boolean;
   }[];
+  skills: { id: string; key: string; name: string; description: string; enabled: boolean; order: number }[];
 }
 
 /**
@@ -56,6 +59,14 @@ export interface ResourceSummary {
 export async function gatherResourceSummary(
   agentId: string
 ): Promise<ResourceSummary> {
+  // Check if skills feature is enabled for this agent
+  const [agentRow] = await db
+    .select({ skillsEnabled: agents.skillsEnabled })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+  const skillsFeatureEnabled = agentRow?.skillsEnabled !== false;
+
   const [
     toolRows,
     schemaRows,
@@ -68,6 +79,7 @@ export async function gatherResourceSummary(
     objectTypeRows,
     objectRelationRows,
     mcpServerRows,
+    skillRows,
   ] = await Promise.all([
     db
       .select({
@@ -178,6 +190,19 @@ export async function gatherResourceSummary(
       })
       .from(mcpServers)
       .where(eq(mcpServers.agentId, agentId)),
+    skillsFeatureEnabled
+      ? db
+          .select({
+            id: skills.id,
+            key: skills.key,
+            name: skills.name,
+            description: skills.description,
+            enabled: skills.enabled,
+            order: skills.order,
+          })
+          .from(skills)
+          .where(eq(skills.agentId, agentId))
+      : Promise.resolve([]),
   ]);
 
   return {
@@ -192,5 +217,6 @@ export async function gatherResourceSummary(
     objectTypes: objectTypeRows,
     objectRelations: objectRelationRows,
     mcpServers: mcpServerRows,
+    skills: skillRows,
   };
 }

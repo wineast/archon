@@ -27,6 +27,7 @@ import {
   Trash2Icon,
   UsersIcon,
   WrenchIcon,
+  ZapIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ import { OntologyPanel } from "@/components/ontology/ontology-panel";
 import { MemoryPanel } from "@/components/memory/memory-panel";
 import { toggleMemoryFeature } from "@/lib/memory/hooks";
 import { McpServersPanel } from "@/components/mcp-servers/mcp-servers-panel";
+import { SkillsPanel } from "@/components/skills/skills-panel";
 import { UsagePanel } from "@/components/usage/usage-panel";
 import { SessionsPanel } from "@/components/sessions/sessions-panel";
 import { VersionsSidebar } from "@/components/versions/versions-sidebar";
@@ -67,6 +69,7 @@ import { cn } from "@/lib/utils";
 import type { AgentRow } from "@/db/schema";
 import { TrashSheet } from "@/components/trash/trash-sheet";
 import { useTrash } from "@/lib/trash/hooks";
+import { toggleSkillsFeature } from "@/lib/skills/hooks";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -87,6 +90,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "memory", label: "Memory", icon: BrainIcon },
   { value: "mcp", label: "MCP", icon: PlugIcon },
   { value: "functions", label: "Functions", icon: FunctionSquareIcon },
+  { value: "skills", label: "Skills", icon: ZapIcon },
   { value: "files", label: "Files", icon: FileIcon },
   { value: "sessions", label: "Sessions", icon: MessageSquareIcon },
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
@@ -130,6 +134,13 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
   const [auditLogOpen, setAuditLogOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const { totalCount: trashCount } = useTrash(agent.id);
+
+  const handleToggleSkills = useCallback(
+    async (enabled: boolean) => {
+      await toggleSkillsFeature(agent.id, enabled, mutateAgent);
+    },
+    [agent.id, mutateAgent]
+  );
 
   const visibleTabs = useMemo(
     () =>
@@ -240,7 +251,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
       case "config":
         return <ChatConfigPanel agentId={agent.id} />;
       case "tools":
-        return <ToolsPanel agentId={agent.id} />;
+        return <ToolsPanel agentId={agent.id} skillsEnabled={currentAgent.skillsEnabled} />;
       case "components":
         return <ComponentsPanel agentId={agent.id} />;
       case "schemas":
@@ -263,6 +274,14 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return <McpServersPanel agentId={agent.id} />;
       case "functions":
         return <FunctionsPanel agentId={agent.id} />;
+      case "skills":
+        return (
+          <SkillsPanel
+            agentId={agent.id}
+            skillsEnabled={currentAgent.skillsEnabled}
+            onToggleFeature={handleToggleSkills}
+          />
+        );
       case "files":
         return <FilesPanel agentId={agent.id} />;
       case "sessions":
@@ -343,7 +362,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         <nav className="hidden w-48 shrink-0 flex-col border-r p-2 sm:flex">
           {visibleTabs.map((t) => {
             const isActive = t.value === activeTab;
-            const showOff = (t.value === "mcp" && currentAgent.mcpEnabled === false) || (t.value === "memory" && !currentAgent.memoryEnabled);
+            const showOff = (t.value === "mcp" && currentAgent.mcpEnabled === false) || (t.value === "memory" && !currentAgent.memoryEnabled) || (t.value === "skills" && !currentAgent.skillsEnabled);
             return (
               <button
                 key={t.value}
@@ -387,7 +406,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         <div className="flex shrink-0 overflow-x-auto border-b sm:hidden">
           {visibleTabs.map((t) => {
             const isActive = t.value === activeTab;
-            const showOff = (t.value === "mcp" && currentAgent.mcpEnabled === false) || (t.value === "memory" && !currentAgent.memoryEnabled);
+            const showOff = (t.value === "mcp" && currentAgent.mcpEnabled === false) || (t.value === "memory" && !currentAgent.memoryEnabled) || (t.value === "skills" && !currentAgent.skillsEnabled);
             return (
               <button
                 key={t.value}

@@ -160,5 +160,18 @@ export function buildSystemPrompt(summary: ResourceSummary): string {
     sections.push("## 当前 MCP Server\n暂无 MCP Server");
   }
 
+  // Skills
+  if (summary.skills.length > 0) {
+    const list = summary.skills
+      .map(
+        (s) =>
+          `- ${s.name} (key: ${s.key}, id: ${s.id}, order: ${s.order}, ${s.enabled ? "启用" : "禁用"}): ${s.description}`
+      )
+      .join("\n");
+    sections.push(`## 当前技能 (${summary.skills.length})\n${list}`);
+  } else {
+    sections.push("## 当前技能\n暂无技能");
+  }
+
   return sections.join("\n\n");
 }

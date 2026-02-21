@@ -9,12 +9,13 @@ import { buildChatConfigTools } from "./chat-config-tools";
 import { buildOntologyTools } from "./ontology-tools";
 import { buildMemoryTools } from "./memory-tools";
 import { buildMcpServerTools } from "./mcp-server-tools";
+import { buildSkillTools } from "./skill-tools";
 
 /**
  * Build all server-side tools for the Build Chat assistant.
  * Each tool operates directly on the database via Drizzle ORM.
  */
-export function buildAllTools(agentId: string) {
+export function buildAllTools(agentId: string, options?: { skillsEnabled?: boolean }) {
   return {
     ...buildToolTools(agentId),
     ...buildSchemaTools(agentId),
@@ -27,5 +28,6 @@ export function buildAllTools(agentId: string) {
     ...buildOntologyTools(agentId),
     ...buildMemoryTools(agentId),
     ...buildMcpServerTools(agentId),
+    ...(options?.skillsEnabled !== false ? buildSkillTools(agentId) : {}),
   };
 }

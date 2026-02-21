@@ -157,6 +157,17 @@ export interface McpServerSnapshotItem {
   enabled: boolean;
 }
 
+/* ─────────── Skill Snapshot Items ─────────── */
+
+export interface SkillSnapshotItem {
+  key: string;
+  name: string;
+  description: string;
+  content: string;
+  enabled: boolean;
+  order: number;
+}
+
 /* ─────────── Agent Snapshot ─────────── */
 
 export interface AgentSnapshot {
@@ -180,6 +191,7 @@ export interface AgentSnapshot {
   objectTypes: ObjectTypeSnapshotItem[];
   objectRelations: ObjectRelationSnapshotItem[];
   mcpServers: McpServerSnapshotItem[];
+  skills: SkillSnapshotItem[];
 }
 
 /* ─────────── Version List Item (without snapshot) ─────────── */
