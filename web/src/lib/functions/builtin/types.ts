@@ -1,4 +1,4 @@
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 export interface BuiltinTestCase {
   name: string;
@@ -22,9 +22,9 @@ export interface BuiltinFunction {
   /** Example / documentation code shown in the read-only detail view */
   code: string;
   /** Optional parameter definitions for the built-in function */
-  parameters?: SchemaProperty[];
+  parameters?: JsonSchema7;
   /** Optional return value definitions */
-  returnParameters?: SchemaProperty[];
+  returnParameters?: JsonSchema7;
   /** Built-in test cases to demonstrate usage */
   testCases?: BuiltinTestCase[];
 }

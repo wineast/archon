@@ -5,7 +5,8 @@ import { eq } from "drizzle-orm";
 import deepEqual from "fast-deep-equal";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
 
 export async function POST(
   req: Request,
@@ -34,17 +35,17 @@ export async function POST(
   const start = Date.now();
 
   // Resolve parameters from schema FK
-  let parameters: SchemaProperty[] = [];
+  let parametersSchema: JsonSchema7 = EMPTY_OBJECT_SCHEMA;
   if (fn.parametersSchemaId) {
     const [schemaRow] = await db.select().from(schemas).where(eq(schemas.id, fn.parametersSchemaId));
-    if (schemaRow) parameters = schemaRow.parameters;
+    if (schemaRow) parametersSchema = schemaRow.parameters as JsonSchema7;
   }
 
   // Validate input
   let validatedInput = input ?? {};
-  if (parameters.length > 0) {
+  if (Object.keys(parametersSchema.properties ?? {}).length > 0) {
     try {
-      const inputSchema = buildInputSchema(parameters);
+      const inputSchema = buildInputSchema(parametersSchema);
       validatedInput = inputSchema.parse(input ?? {});
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

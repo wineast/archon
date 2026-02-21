@@ -15,14 +15,14 @@ import {
 import { RelationList } from "./relation-list";
 import { RelationCreateDialog } from "./relation-create-dialog";
 import { InstancesTab } from "./instances-tab";
-import type { ObjectTypeRow, ObjectRelationRow, SchemaWithIncludes } from "@/db/schema";
+import type { ObjectTypeRow, ObjectRelationRow, SchemaRow } from "@/db/schema";
 
 interface ObjectTypeDetailProps {
   agentId: string;
   objectType: ObjectTypeRow;
   allObjectTypes: ObjectTypeRow[];
   relations: ObjectRelationRow[];
-  schemas: SchemaWithIncludes[];
+  schemas: SchemaRow[];
   onSave: (id: string, data: Omit<ObjectTypeFormValues, "key">) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onCreateRelation: (data: {

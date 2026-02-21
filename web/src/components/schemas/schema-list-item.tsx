@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { SchemaRow } from "@/db/schema";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 interface SchemaListItemProps {
   schema: SchemaRow;
@@ -30,7 +31,7 @@ export function SchemaListItem({
     >
       <span className="min-w-0 flex-1 truncate">{schema.name}</span>
       <Badge variant="secondary" className="shrink-0 text-[10px]">
-        {schema.parameters.length}p
+        {Object.keys((schema.parameters as JsonSchema7).properties ?? {}).length}p
       </Badge>
     </button>
   );

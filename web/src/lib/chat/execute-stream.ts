@@ -88,7 +88,7 @@ export async function executeChatStream(
     .from(tools)
     .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true), isNull(tools.deletedAt)));
 
-  // Gather template data once (includes resolved schemas and datasetsById)
+  // Gather template data once (includes resolved schemas and defsMap)
   const templateData = await gatherTemplateData(agentId);
 
   // Use resolved schema parameters from templateData.schemaMap
@@ -103,7 +103,7 @@ export async function executeChatStream(
     .map((row) => ({
       name: row.name,
       description: row.description,
-      parameters: row.parametersSchemaId ? (templateData.schemaMap[row.parametersSchemaId] ?? []) : [],
+      parameters: row.parametersSchemaId ? (templateData.schemaMap[row.parametersSchemaId] ?? { type: "object", properties: {}, required: [] }) : { type: "object", properties: {}, required: [] },
       returnParameters: row.returnParametersSchemaId
         ? (templateData.schemaMap[row.returnParametersSchemaId] ?? undefined)
         : undefined,

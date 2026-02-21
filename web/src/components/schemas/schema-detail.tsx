@@ -15,12 +15,13 @@ import { SchemaPlayground } from "./schema-playground";
 import { SchemaExamplesPanel } from "./schema-examples-panel";
 import { SchemaTestCasesPanel } from "./schema-test-cases-panel";
 import { buildZodCode } from "@/lib/tools/zod-code-builder";
-import { buildJsonSchema } from "@/lib/tools/schema-builder";
-import type { SchemaWithIncludes } from "@/db/schema";
+import { useDatasets } from "@/lib/datasets/hooks";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import type { SchemaRow } from "@/db/schema";
 
 interface SchemaDetailProps {
-  schema: SchemaWithIncludes;
-  allSchemas: SchemaWithIncludes[];
+  schema: SchemaRow;
+  allSchemas: SchemaRow[];
   agentId?: string;
   onSave: (id: string, data: Omit<SchemaFormValues, "key">) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -38,6 +39,23 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting;
 
+  // AI assist context: summarize all schemas for the AI
+  const schemaAssistContext = useMemo(() => {
+    const lines = allSchemas
+      .filter((s) => s.id !== schema.id)
+      .map((s) => `- ${s.key}: ${s.name}${s.description ? ` — ${s.description}` : ""}`);
+    return lines.length > 0
+      ? `可引用的其他 Schema（通过 $ref: "#/$defs/key"）：\n${lines.join("\n")}`
+      : undefined;
+  }, [allSchemas, schema.id]);
+
+  // Dataset variable names for template autocompletion
+  const { datasets: datasetRows } = useDatasets(agentId);
+  const templateVariableNames = useMemo(
+    () => datasetRows.map((d) => d.key),
+    [datasetRows]
+  );
+
   const handleSave = useCallback(async () => {
     if (!draftRef.current) return;
     const draft = draftRef.current.getDraft();
@@ -47,7 +65,6 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
         name: draft.name,
         description: draft.description,
         parameters: draft.parameters,
-        includeSchemaIds: draft.includeSchemaIds,
       });
       draftRef.current?.markClean();
     } finally {
@@ -82,14 +99,12 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
                 name: schema.name,
                 description: schema.description,
                 parameters: schema.parameters,
-                includeSchemaIds: schema.includeSchemaIds,
               }}
               onDraftRef={handleDraftRef}
               onDirtyChange={setDirty}
-              allSchemas={allSchemas}
-              currentSchemaId={schema.id}
-              agentId={agentId}
               parametersHidden={innerTab === "preview"}
+              context={schemaAssistContext}
+              templateVariableNames={templateVariableNames}
             >
               <Tabs
                 value={innerTab}
@@ -180,43 +195,33 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
 
 interface SchemaPreviewPanelProps {
   schemaKey: string;
-  getParameters: () => import("@/lib/schemas/types").SchemaProperty[];
-  allSchemas: SchemaWithIncludes[];
+  getParameters: () => JsonSchema7;
+  allSchemas: SchemaRow[];
 }
 
 function SchemaPreviewPanel({ schemaKey, getParameters, allSchemas }: SchemaPreviewPanelProps) {
   const [codeTab, setCodeTab] = useState<"zod" | "json">("json");
 
-  const parameters = getParameters();
+  const schema = getParameters();
 
-  const schemaMap = useMemo(() => {
-    const map: Record<string, import("@/lib/schemas/types").SchemaProperty[]> = {};
+  const defsMap = useMemo(() => {
+    const map: Record<string, JsonSchema7> = {};
     for (const s of allSchemas) {
-      map[s.id] = s.parameters;
-    }
-    return map;
-  }, [allSchemas]);
-
-  const schemaKeyMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const s of allSchemas) {
-      map[s.id] = s.key;
+      map[s.key] = s.parameters as JsonSchema7;
     }
     return map;
   }, [allSchemas]);
 
   const zodCode = useMemo(
-    () => buildZodCode(parameters, { schemaMap, schemaKeyMap }),
-    [parameters, schemaMap, schemaKeyMap]
+    () => buildZodCode(schema, { defsMap }),
+    [schema, defsMap]
   );
 
   const jsonText = useMemo(() => {
-    const jsonSchema = buildJsonSchema(parameters, { schemaMap });
-    return JSON.stringify(jsonSchema, null, 2);
-  }, [parameters, schemaMap]);
+    return JSON.stringify(schema, null, 2);
+  }, [schema]);
 
   const currentCode = codeTab === "zod" ? zodCode : jsonText;
-  const currentLang = codeTab === "zod" ? "typescript" : "json";
   const currentFilename = codeTab === "zod" ? `${schemaKey}.ts` : `${schemaKey}.json`;
   const currentMimeType = codeTab === "zod" ? "text/typescript" : "application/json";
 

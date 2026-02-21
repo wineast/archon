@@ -25,15 +25,16 @@ import {
 } from "@/components/ui/sheet";
 import { updateObjectInstance } from "@/lib/ontology/hooks";
 import equal from "fast-deep-equal";
-import type { ObjectInstanceRow, SchemaWithIncludes } from "@/db/schema";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { ObjectInstanceRow, SchemaRow } from "@/db/schema";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import { getDisplayType } from "@/lib/schemas/json-schema-utils";
 
 interface InstanceEditSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agentId: string;
   instance: ObjectInstanceRow | null;
-  schema: SchemaWithIncludes;
+  schema: SchemaRow;
   mutate: () => void;
 }
 
@@ -68,12 +69,13 @@ function InstanceEditSheetInner({
   mutate,
 }: {
   instance: ObjectInstanceRow;
-  schema: SchemaWithIncludes;
+  schema: SchemaRow;
   agentId: string;
   mutate: () => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const originalRef = useRef(buildFormValues(instance.data, schema.parameters));
+  const schemaParams = schema.parameters as JsonSchema7;
+  const originalRef = useRef(buildFormValues(instance.data, schemaParams));
 
   const form = useForm<Record<string, unknown>>({
     defaultValues: originalRef.current,
@@ -91,24 +93,26 @@ function InstanceEditSheetInner({
 
   const handleSave = useCallback(async () => {
     const values = form.getValues();
-    const data = parseFormValues(values, schema.parameters);
+    const data = parseFormValues(values, schemaParams);
     setSaving(true);
     try {
       const result = await updateObjectInstance(instance.id, { data }, mutate);
       if (result) {
-        originalRef.current = buildFormValues(data, schema.parameters);
+        originalRef.current = buildFormValues(data, schemaParams);
         form.reset(originalRef.current);
         setDirty(false);
       }
     } finally {
       setSaving(false);
     }
-  }, [instance.id, schema.parameters, form, mutate]);
+  }, [instance.id, schemaParams, form, mutate]);
 
   const handleReset = useCallback(() => {
     form.reset(originalRef.current);
     setDirty(false);
   }, [form]);
+
+  const entries = Object.entries(schemaParams.properties ?? {});
 
   return (
     <>
@@ -119,8 +123,14 @@ function InstanceEditSheetInner({
 
       <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-3 px-4 pb-4">
-          {schema.parameters.map((prop) => (
-            <EditField key={prop.id} prop={prop} form={form} />
+          {entries.map(([key, propSchema]) => (
+            <EditField
+              key={key}
+              name={key}
+              propSchema={propSchema}
+              isRequired={schemaParams.required?.includes(key) ?? false}
+              form={form}
+            />
           ))}
         </div>
       </ScrollArea>
@@ -149,42 +159,79 @@ function InstanceEditSheetInner({
 }
 
 function EditField({
-  prop,
+  name,
+  propSchema,
+  isRequired,
   form,
 }: {
-  prop: SchemaProperty;
+  name: string;
+  propSchema: JsonSchema7;
+  isRequired: boolean;
   form: ReturnType<typeof useForm<Record<string, unknown>>>;
 }) {
-  const fieldName = prop.name;
+  const displayType = getDisplayType(propSchema);
 
-  switch (prop.type) {
+  switch (displayType) {
     case "string":
+      // String with enum constraint — show select
+      if (propSchema.enum && propSchema.enum.length > 0) {
+        return (
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              {name}
+              {isRequired && <span className="text-destructive ml-0.5">*</span>}
+            </label>
+            <Controller
+              control={form.control}
+              name={name}
+              render={({ field }) => (
+                <Select
+                  value={field.value as string ?? ""}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger className="mt-1 h-8 text-sm">
+                    <SelectValue placeholder={`Select ${name}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(propSchema.enum ?? []).map((val) => (
+                      <SelectItem key={String(val)} value={String(val)}>
+                        {String(val)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+        );
+      }
       return (
         <div>
           <label className="text-xs font-medium text-muted-foreground">
-            {prop.name}
-            {prop.required && <span className="text-destructive ml-0.5">*</span>}
+            {name}
+            {isRequired && <span className="text-destructive ml-0.5">*</span>}
           </label>
           <Input
             className="mt-1 h-8 text-sm"
-            {...form.register(fieldName)}
-            placeholder={prop.description || prop.name}
+            {...form.register(name)}
+            placeholder={propSchema.description || name}
           />
         </div>
       );
 
     case "number":
+    case "integer":
       return (
         <div>
           <label className="text-xs font-medium text-muted-foreground">
-            {prop.name}
-            {prop.required && <span className="text-destructive ml-0.5">*</span>}
+            {name}
+            {isRequired && <span className="text-destructive ml-0.5">*</span>}
           </label>
           <Input
             className="mt-1 h-8 text-sm"
             type="number"
-            {...form.register(fieldName)}
-            placeholder={prop.description || prop.name}
+            {...form.register(name)}
+            placeholder={propSchema.description || name}
           />
         </div>
       );
@@ -193,11 +240,11 @@ function EditField({
       return (
         <div className="flex items-center justify-between py-1">
           <label className="text-xs font-medium text-muted-foreground">
-            {prop.name}
+            {name}
           </label>
           <Controller
             control={form.control}
-            name={fieldName}
+            name={name}
             render={({ field }) => (
               <Switch
                 checked={!!field.value}
@@ -208,49 +255,18 @@ function EditField({
         </div>
       );
 
-    case "enum":
-      return (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">
-            {prop.name}
-            {prop.required && <span className="text-destructive ml-0.5">*</span>}
-          </label>
-          <Controller
-            control={form.control}
-            name={fieldName}
-            render={({ field }) => (
-              <Select
-                value={field.value as string ?? ""}
-                onValueChange={field.onChange}
-              >
-                <SelectTrigger className="mt-1 h-8 text-sm">
-                  <SelectValue placeholder={`Select ${prop.name}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(prop.enum ?? []).map((val) => (
-                    <SelectItem key={val} value={val}>
-                      {val}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-      );
-
     default:
       return (
         <div>
           <label className="text-xs font-medium text-muted-foreground">
-            {prop.name} ({prop.type})
-            {prop.required && <span className="text-destructive ml-0.5">*</span>}
+            {name} ({displayType})
+            {isRequired && <span className="text-destructive ml-0.5">*</span>}
           </label>
           <Textarea
             className="mt-1 text-sm font-mono"
             rows={3}
-            {...form.register(fieldName)}
-            placeholder={`JSON for ${prop.type}`}
+            {...form.register(name)}
+            placeholder={`JSON for ${displayType}`}
           />
         </div>
       );
@@ -259,25 +275,27 @@ function EditField({
 
 function buildFormValues(
   data: Record<string, unknown>,
-  params: SchemaProperty[]
+  schema: JsonSchema7
 ): Record<string, unknown> {
   const values: Record<string, unknown> = {};
-  for (const p of params) {
-    const val = data[p.name];
-    switch (p.type) {
+  for (const [key, propSchema] of Object.entries(schema.properties ?? {})) {
+    const val = data[key];
+    const displayType = getDisplayType(propSchema);
+    switch (displayType) {
       case "boolean":
-        values[p.name] = !!val;
+        values[key] = !!val;
         break;
       case "number":
-        values[p.name] = val != null ? String(val) : "";
+      case "integer":
+        values[key] = val != null ? String(val) : "";
         break;
       case "object":
       case "array":
       case "union":
-        values[p.name] = val != null ? JSON.stringify(val, null, 2) : "";
+        values[key] = val != null ? JSON.stringify(val, null, 2) : "";
         break;
       default:
-        values[p.name] = val != null ? String(val) : "";
+        values[key] = val != null ? String(val) : "";
         break;
     }
   }
@@ -286,34 +304,36 @@ function buildFormValues(
 
 function parseFormValues(
   raw: Record<string, unknown>,
-  params: SchemaProperty[]
+  schema: JsonSchema7
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  for (const p of params) {
-    const val = raw[p.name];
-    switch (p.type) {
-      case "number": {
+  for (const [key, propSchema] of Object.entries(schema.properties ?? {})) {
+    const val = raw[key];
+    const displayType = getDisplayType(propSchema);
+    switch (displayType) {
+      case "number":
+      case "integer": {
         const num = Number(val);
-        result[p.name] = val === "" || val == null ? undefined : num;
+        result[key] = val === "" || val == null ? undefined : num;
         break;
       }
       case "boolean":
-        result[p.name] = !!val;
+        result[key] = !!val;
         break;
       case "object":
       case "array":
       case "union": {
         if (typeof val === "string" && val.trim()) {
           try {
-            result[p.name] = JSON.parse(val);
+            result[key] = JSON.parse(val);
           } catch {
-            result[p.name] = val;
+            result[key] = val;
           }
         }
         break;
       }
       default:
-        if (val !== "" && val != null) result[p.name] = val;
+        if (val !== "" && val != null) result[key] = val;
         break;
     }
   }

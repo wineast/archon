@@ -187,8 +187,7 @@ export function buildDynamicTools(
       def.parameters,
       templateData?.resolvedVars,
       {
-        datasetsById: templateData?.datasetsById,
-        schemaMap: templateData?.schemaMap,
+        defsMap: templateData?.defsMap,
       }
     );
 
@@ -203,13 +202,12 @@ export function buildDynamicTools(
           : executor;
 
       // Chain output validation if returnParameters are defined
-      if (def.returnParameters && def.returnParameters.length > 0 && collector && agentId) {
+      if (def.returnParameters && def.returnParameters.properties && Object.keys(def.returnParameters.properties).length > 0 && collector && agentId) {
         const outputSchema = buildInputSchema(
           def.returnParameters,
           templateData?.resolvedVars,
           {
-            datasetsById: templateData?.datasetsById,
-            schemaMap: templateData?.schemaMap,
+            defsMap: templateData?.defsMap,
           }
         );
         execute = wrapWithOutputValidation(execute, def.name, outputSchema, agentId, collector);

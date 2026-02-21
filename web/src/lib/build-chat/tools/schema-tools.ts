@@ -2,24 +2,41 @@ import { tool, type Tool } from "ai";
 import { z } from "zod";
 import { db } from "@/db";
 import { schemas } from "@/db/schema";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import { eq, and } from "drizzle-orm";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTool = Tool<any, any>;
 
-const parameterSchema: z.ZodType<unknown> = z.object({
-  id: z.string().optional().default(""),
-  name: z.string(),
-  type: z.enum(["string", "number", "boolean", "enum", "object", "array"]),
-  description: z.string().optional().default(""),
-  required: z.boolean().optional().default(false),
-  defaultValue: z.unknown().optional(),
-  enum: z.array(z.string()).optional(),
-  properties: z.lazy(() => z.array(parameterSchema)).optional(),
-  schemaId: z.string().optional(),
-  items: z.lazy(() => parameterSchema).optional(),
-});
+/** JSON Schema 7 validator for chat tool input. Allows arbitrary nesting. */
+const jsonSchemaValidator: z.ZodType<unknown> = z.lazy(() =>
+  z.object({
+    type: z.string().optional(),
+    description: z.string().optional(),
+    default: z.unknown().optional(),
+    const: z.unknown().optional(),
+    enum: z.array(z.unknown()).optional(),
+    properties: z.record(z.string(), jsonSchemaValidator).optional(),
+    required: z.array(z.string()).optional(),
+    additionalProperties: z.union([z.boolean(), jsonSchemaValidator]).optional(),
+    items: z.union([jsonSchemaValidator, z.array(jsonSchemaValidator)]).optional(),
+    prefixItems: z.array(jsonSchemaValidator).optional(),
+    minItems: z.number().optional(),
+    maxItems: z.number().optional(),
+    uniqueItems: z.boolean().optional(),
+    minLength: z.number().optional(),
+    maxLength: z.number().optional(),
+    pattern: z.string().optional(),
+    format: z.string().optional(),
+    minimum: z.number().optional(),
+    maximum: z.number().optional(),
+    oneOf: z.array(jsonSchemaValidator).optional(),
+    anyOf: z.array(jsonSchemaValidator).optional(),
+    allOf: z.array(jsonSchemaValidator).optional(),
+    $ref: z.string().optional(),
+    $defs: z.record(z.string(), jsonSchemaValidator).optional(),
+  }).passthrough()
+);
 
 export function buildSchemaTools(agentId: string): Record<string, AnyTool> {
   return {
@@ -60,7 +77,7 @@ export function buildSchemaTools(agentId: string): Record<string, AnyTool> {
         key: z.string().describe("唯一标识，snake_case"),
         name: z.string().describe("显示名称"),
         description: z.string().optional().default(""),
-        parameters: z.array(parameterSchema).optional().default([]),
+        parameters: jsonSchemaValidator.optional().default({ type: "object", properties: {}, required: [] }),
       }),
       execute: async (params) => {
         const [row] = await db
@@ -68,7 +85,7 @@ export function buildSchemaTools(agentId: string): Record<string, AnyTool> {
           .values({
             ...params,
             agentId,
-            parameters: params.parameters as SchemaProperty[],
+            parameters: params.parameters as JsonSchema7,
           })
           .returning();
         return {
@@ -85,14 +102,14 @@ export function buildSchemaTools(agentId: string): Record<string, AnyTool> {
         key: z.string().optional(),
         name: z.string().optional(),
         description: z.string().optional(),
-        parameters: z.array(parameterSchema).optional(),
+        parameters: jsonSchemaValidator.optional(),
       }),
       execute: async ({ id, ...updates }) => {
         const setValues: Record<string, unknown> = {};
         if (updates.key !== undefined) setValues.key = updates.key;
         if (updates.name !== undefined) setValues.name = updates.name;
         if (updates.description !== undefined) setValues.description = updates.description;
-        if (updates.parameters) setValues.parameters = updates.parameters as SchemaProperty[];
+        if (updates.parameters) setValues.parameters = updates.parameters as JsonSchema7;
         const [row] = await db
           .update(schemas)
           .set(setValues)

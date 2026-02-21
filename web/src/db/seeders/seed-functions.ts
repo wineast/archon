@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { functions, schemas, functionTestCases } from "../schema";
 import { readJson, readDirSafe, fileNameToKey, keyToName, logSection, log } from "../seed-utils";
 import type { SchemaProperty } from "@/lib/schemas/types";
+import { migrateSchemaProperties } from "@/lib/schemas/migrate";
 import type { Seeder } from "./types";
 
 export const seedFunctions: Seeder = {
@@ -33,8 +34,9 @@ export const seedFunctions: Seeder = {
       // Parameters schema
       const paramsFile = file.replace(/\.js$/, ".params.json");
       try {
-        const parameters = readJson<SchemaProperty[]>(join(functionsDir, paramsFile));
-        if (parameters.length > 0) {
+        const rawParams = readJson<SchemaProperty[]>(join(functionsDir, paramsFile));
+        if (rawParams.length > 0) {
+          const parameters = migrateSchemaProperties(rawParams);
           const schemaKey = `${key}_params`;
           const schemaName = `${name} Parameters`;
           const [schemaRow] = await ctx.db
@@ -56,8 +58,9 @@ export const seedFunctions: Seeder = {
       // Return parameters schema
       const returnParamsFile = file.replace(/\.js$/, ".return-params.json");
       try {
-        const returnParameters = readJson<SchemaProperty[]>(join(functionsDir, returnParamsFile));
-        if (returnParameters.length > 0) {
+        const rawReturnParams = readJson<SchemaProperty[]>(join(functionsDir, returnParamsFile));
+        if (rawReturnParams.length > 0) {
+          const returnParameters = migrateSchemaProperties(rawReturnParams);
           const schemaKey = `${key}_return_params`;
           const schemaName = `${name} Return Parameters`;
           const [schemaRow] = await ctx.db

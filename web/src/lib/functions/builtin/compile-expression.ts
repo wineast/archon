@@ -6,31 +6,30 @@ const builtinCompileExpression: BuiltinFunction = {
   description:
     "Compiles a string expression (e.g. math formulas, conditional logic) into an executable function. Powered by the filtrex library.",
   source: "filtrex",
-  parameters: [
-    {
-      id: "expression",
-      name: "expression",
-      type: "string",
-      description: "The expression string to compile, e.g. \"x + y * 2\", \"if score >= 700 then 1 else 0\"",
-      required: true,
+  parameters: {
+    type: "object",
+    properties: {
+      expression: {
+        type: "string",
+        description: "The expression string to compile, e.g. \"x + y * 2\", \"if score >= 700 then 1 else 0\"",
+      },
+      data: {
+        type: "object",
+        description: "An object whose keys are the variable names used in the expression",
+      },
     },
-    {
-      id: "data",
-      name: "data",
-      type: "object",
-      description: "An object whose keys are the variable names used in the expression",
-      required: true,
+    required: ["expression", "data"],
+  },
+  returnParameters: {
+    type: "object",
+    properties: {
+      result: {
+        type: "object",
+        description: "The evaluation result. Type depends on the expression: number for arithmetic, boolean for comparisons/logical.",
+      },
     },
-  ],
-  returnParameters: [
-    {
-      id: "result",
-      name: "result",
-      type: "object",
-      description: "The evaluation result. Type depends on the expression: number for arithmetic, boolean for comparisons/logical.",
-      required: true,
-    },
-  ],
+    required: ["result"],
+  },
   code: `// filtrex compileExpression
 // Compiles a string expression into a callable function.
 //

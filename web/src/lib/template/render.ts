@@ -1,13 +1,12 @@
 import { db } from "@/db";
-import { datasets, wikiDocuments, tools, schemas, schemaIncludes, objectTypes, objectRelations } from "@/db/schema";
-import type { ToolRow, SchemaWithIncludes } from "@/db/schema";
-import { eq, and, asc, inArray, isNull } from "drizzle-orm";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import { wikiDocuments, tools, schemas, objectTypes, objectRelations } from "@/db/schema";
+import type { ToolRow } from "@/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import { getResolvedDatasets } from "@/lib/datasets/queries";
-import { resolveParameters } from "@/lib/schemas/resolve";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,10 +38,11 @@ export interface TemplateData {
   resolvedVars: Record<string, unknown>;
   docs: WikiDocument[];
   toolRows: ToolRow[];
-  schemaMap: Record<string, SchemaProperty[]>;
+  /** Schema lookup by UUID: id → parameters. Used for parametersSchemaId resolution. */
+  schemaMap: Record<string, JsonSchema7>;
+  /** Schema lookup by key: key → parameters. Used for $ref resolution in buildInputSchema. */
+  defsMap: Record<string, JsonSchema7>;
   datasetEntries: Record<string, Array<{ value: string }>>;
-  /** Datasets by UUID: id → resolved data. For enumDatasetId resolution. */
-  datasetsById: Record<string, unknown>;
   ontologyTypes: OntologyTypeTemplateItem[];
 }
 
@@ -103,7 +103,7 @@ async function getEnabledTools(agentId: string): Promise<ToolRow[]> {
 
 export function buildToolNamespace(
   toolRows: ToolRow[],
-  schemaMap: Record<string, SchemaProperty[]> = {}
+  schemaMap: Record<string, JsonSchema7> = {}
 ): {
   ns: Record<string, unknown>;
   tool_names: string;
@@ -122,29 +122,32 @@ export function buildToolNamespace(
   }> = [];
 
   for (const row of toolRows) {
-    const rawParams: SchemaProperty[] = row.parametersSchemaId
-      ? (schemaMap[row.parametersSchemaId] ?? [])
-      : [];
-    const simpleParams = rawParams.map((p: SchemaProperty) => ({
-      name: p.name,
-      type: p.type,
+    const schema: JsonSchema7 = row.parametersSchemaId
+      ? (schemaMap[row.parametersSchemaId] ?? { type: "object", properties: {}, required: [] })
+      : { type: "object", properties: {}, required: [] };
+    const props = schema.properties ?? {};
+    const requiredSet = new Set(schema.required ?? []);
+
+    const simpleParams = Object.entries(props).map(([key, propSchema]) => ({
+      name: key,
+      type: (typeof propSchema.type === "string" ? propSchema.type : "unknown") as string,
     }));
 
     ns[row.name] = {
       name: row.name,
       description: row.description,
-      params: rawParams.map((p: SchemaProperty) => p.name).join(", "),
-      parameters: rawParams.map((p: SchemaProperty) => ({
-        name: p.name,
-        type: p.type,
-        description: p.description,
-        required: p.required,
-        ...(p.enum ? { enum: p.enum } : {}),
+      params: Object.keys(props).join(", "),
+      parameters: Object.entries(props).map(([key, propSchema]) => ({
+        name: key,
+        type: (typeof propSchema.type === "string" ? propSchema.type : "unknown") as string,
+        description: propSchema.description ?? "",
+        required: requiredSet.has(key),
+        ...(propSchema.enum ? { enum: propSchema.enum } : {}),
       })),
       json: JSON.stringify({
         name: row.name,
         description: row.description,
-        parameters: rawParams,
+        parameters: schema,
       }),
     };
 
@@ -210,76 +213,43 @@ export async function gatherTemplateData(
   agentId?: string
 ): Promise<TemplateData> {
   if (!agentId) {
-    return { resolvedVars: {}, docs: [], toolRows: [], schemaMap: {}, datasetEntries: {}, datasetsById: {}, ontologyTypes: [] };
+    return { resolvedVars: {}, docs: [], toolRows: [], schemaMap: {}, defsMap: {}, datasetEntries: {}, ontologyTypes: [] };
   }
 
-  const [{ resolvedVars, datasetEntries }, docs, toolRows, allDatasetRows, objTypeRows, objRelRows] = await Promise.all([
+  const [{ resolvedVars, datasetEntries }, docs, toolRows, objTypeRows, objRelRows] = await Promise.all([
     getResolvedDatasets(agentId),
     getWikiDocs(agentId),
     getEnabledTools(agentId),
-    db.select().from(datasets).where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt))),
     db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))).orderBy(objectTypes.order),
     db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
   ]);
 
-  // Load ALL schemas for this agent and resolve parameters
+  // Load ALL schemas for this agent — directly use stored parameters
   const allSchemaRows = await db
     .select()
     .from(schemas)
     .where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt)));
 
-  // Load schema includes from junction table
-  let includeRows: { schemaId: string; includeSchemaId: string }[] = [];
-  if (allSchemaRows.length > 0) {
-    includeRows = await db
-      .select({ schemaId: schemaIncludes.schemaId, includeSchemaId: schemaIncludes.includeSchemaId })
-      .from(schemaIncludes)
-      .where(inArray(schemaIncludes.schemaId, allSchemaRows.map((r) => r.id)))
-      .orderBy(asc(schemaIncludes.position));
-  }
-
-  // Build includesBySchemaId map
-  const includesBySchemaId = new Map<string, string[]>();
-  for (const row of includeRows) {
-    const arr = includesBySchemaId.get(row.schemaId) ?? [];
-    arr.push(row.includeSchemaId);
-    includesBySchemaId.set(row.schemaId, arr);
-  }
-
-  // Build allSchemasMap with includeSchemaIds attached
-  const allSchemasMap = new Map<string, SchemaWithIncludes>(
-    allSchemaRows.map((r) => [r.id, { ...r, includeSchemaIds: includesBySchemaId.get(r.id) ?? [] }])
-  );
-
-  // Build schemaMap using resolved parameters (strip _source metadata)
-  const schemaMap: Record<string, SchemaProperty[]> = {};
+  // Build schemaMap: id → parameters (used by tool namespace for parametersSchemaId lookup)
+  const schemaMap: Record<string, JsonSchema7> = {};
+  // Build defsMap: key → parameters (used for $ref resolution in buildInputSchema)
+  const defsMap: Record<string, JsonSchema7> = {};
   for (const row of allSchemaRows) {
-    const withIncludes = allSchemasMap.get(row.id)!;
-    schemaMap[row.id] = resolveParameters(withIncludes, allSchemasMap).map((p) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { _source, ...param } = p;
-      return param;
-    });
-  }
-
-  // Build datasetsById: id → resolved data
-  // We need to combine the dataset rows (for IDs) with resolvedVars (for resolved data)
-  const datasetsById: Record<string, unknown> = {};
-  for (const row of allDatasetRows) {
-    // Use the resolved value (which has template rendering applied) if available
-    datasetsById[row.id] = resolvedVars[row.key] ?? row.data;
+    schemaMap[row.id] = row.parameters as JsonSchema7;
+    defsMap[row.key] = row.parameters as JsonSchema7;
   }
 
   // Build ontology template items
   const objTypeIdToRow = new Map(objTypeRows.map((t) => [t.id, t]));
   const ontologyTypes: OntologyTypeTemplateItem[] = objTypeRows.map((t) => {
     // Resolve properties from linked schema
-    const properties: OntologyTypeTemplateItem["properties"] = t.schemaId
-      ? (schemaMap[t.schemaId] ?? []).map((p) => ({
-          name: p.name,
-          type: p.type,
-          required: p.required ?? false,
-          description: p.description ?? "",
+    const linkedSchema = t.schemaId ? schemaMap[t.schemaId] : undefined;
+    const properties: OntologyTypeTemplateItem["properties"] = linkedSchema?.properties
+      ? Object.entries(linkedSchema.properties).map(([key, propSchema]) => ({
+          name: key,
+          type: (typeof propSchema.type === "string" ? propSchema.type : "unknown") as string,
+          required: linkedSchema.required?.includes(key) ?? false,
+          description: propSchema.description ?? "",
         }))
       : [];
 
@@ -309,7 +279,7 @@ export async function gatherTemplateData(
     };
   });
 
-  return { resolvedVars, docs, toolRows, schemaMap, datasetEntries, datasetsById, ontologyTypes };
+  return { resolvedVars, docs, toolRows, schemaMap, defsMap, datasetEntries, ontologyTypes };
 }
 
 /**

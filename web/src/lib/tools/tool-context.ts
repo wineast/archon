@@ -152,7 +152,7 @@ export function createToolContext(agentId?: string): ToolContext {
     const schemaIds = rows
       .map((r) => r.parametersSchemaId)
       .filter((id): id is string => id != null);
-    const schemaMap = new Map<string, import("@/lib/schemas/types").SchemaProperty[]>();
+    const schemaMap = new Map<string, import("@/lib/schemas/types").JsonSchema7>();
     if (schemaIds.length > 0) {
       const schemaRows = await db
         .select({ id: schemas.id, parameters: schemas.parameters })
@@ -170,7 +170,7 @@ export function createToolContext(agentId?: string): ToolContext {
     const fnRecords: FunctionRecord[] = rows.map((r) => ({
       key: r.key,
       code: r.code,
-      parameters: r.parametersSchemaId ? schemaMap.get(r.parametersSchemaId) ?? [] : [],
+      parameters: r.parametersSchemaId ? schemaMap.get(r.parametersSchemaId) ?? {} : {},
     }));
 
     const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords);
@@ -343,7 +343,18 @@ function createOntologyContext(agentId?: string): OntologyContext {
           .select({ parameters: schemas.parameters })
           .from(schemas)
           .where(eq(schemas.id, t.schemaId));
-        if (schema) properties = schema.parameters;
+        if (schema) {
+          // Convert JsonSchema7 properties to a list for the ontology API
+          const params = schema.parameters as import("@/lib/schemas/types").JsonSchema7;
+          if (params.properties) {
+            properties = Object.entries(params.properties).map(([key, propSchema]) => ({
+              name: key,
+              type: typeof propSchema.type === "string" ? propSchema.type : "unknown",
+              required: params.required?.includes(key) ?? false,
+              description: propSchema.description ?? "",
+            }));
+          }
+        }
       }
 
       // Fetch relations where this type is source

@@ -53,11 +53,6 @@ vi.mock("@/db/schema", () => ({
     parameters: "parameters",
     deletedAt: "deleted_at",
   },
-  schemaIncludes: {
-    schemaId: "schema_id",
-    includeSchemaId: "include_schema_id",
-    position: "position",
-  },
   objectTypes: {
     id: "id",
     agentId: "agent_id",
@@ -88,20 +83,18 @@ vi.mock("drizzle-orm", () => ({
 /**
  * Build a mock chain for db.select().from().where()...
  * gatherTemplateData issues queries in this order:
- *   [0] datasets rows      — getResolvedDatasets → getDatasets
+ *   [0] datasets rows       — getResolvedDatasets → getDatasets
  *   [1] wiki doc rows       — getWikiDocs
  *   [2] tool rows           — getEnabledTools
- *   [3] all dataset rows    — for datasetsById
- *   [4] objectTypes rows    — ontology types
- *   [5] objectRelations rows — ontology relations
- *   [6] all schema rows     — for resolveParameters
- *   [7] schema includes     — junction table rows
+ *   [3] objectTypes rows    — ontology types
+ *   [4] objectRelations rows — ontology relations
+ *   [5] all schema rows     — for resolveParameters
  *
  * For convenience, pass 3 items and the helper fills the rest with [].
  */
 function setupDbChain(queries: unknown[][]) {
   // Auto-fill missing trailing queries with empty arrays
-  while (queries.length < 8) queries.push([]);
+  while (queries.length < 6) queries.push([]);
   let callIdx = 0;
   mockSelect.mockImplementation(() => {
     const rows = queries[callIdx] ?? [];
@@ -123,15 +116,37 @@ function setupDbChain(queries: unknown[][]) {
   });
 }
 
-const makeSchemaRow = (id: string, params: unknown[]) => ({
-  id,
-  agentId: "agent-1",
-  key: id,
-  name: id,
-  parameters: params,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-});
+/**
+ * Build a mock schema row. Accepts either:
+ * - a JsonSchema7 object (new format)
+ * - an array of { name, type, description, required, enum? } for convenience (auto-converted)
+ */
+const makeSchemaRow = (id: string, params: unknown) => {
+  // If params is an array (legacy convenience), convert to JsonSchema7
+  let parameters: Record<string, unknown>;
+  if (Array.isArray(params)) {
+    const properties: Record<string, Record<string, unknown>> = {};
+    const required: string[] = [];
+    for (const p of params as Array<{ name: string; type: string; description?: string; required?: boolean; enum?: string[] }>) {
+      const prop: Record<string, unknown> = { type: p.type, description: p.description ?? "" };
+      if (p.enum) prop.enum = p.enum;
+      properties[p.name] = prop;
+      if (p.required) required.push(p.name);
+    }
+    parameters = { type: "object", properties, required };
+  } else {
+    parameters = params as Record<string, unknown>;
+  }
+  return {
+    id,
+    agentId: "agent-1",
+    key: id,
+    name: id,
+    parameters,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+};
 
 const makeTool = (name: string, description: string, schemaId: string | null = null) => ({
   id: `tool-${name}`,
@@ -601,7 +616,6 @@ describe("tool namespace", () => {
       [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
       [],
       [],
-      [],
       [makeSchemaRow("schema-dti", params)],
     ]);
 
@@ -623,7 +637,6 @@ describe("tool namespace", () => {
       [makeTool("calc_rate", "Calculate rate", "schema-rate")],
       [],
       [],
-      [],
       [makeSchemaRow("schema-rate", params)],
     ]);
 
@@ -636,7 +649,13 @@ describe("tool namespace", () => {
     expect(parsed).toEqual({
       name: "calc_rate",
       description: "Calculate rate",
-      parameters: params,
+      parameters: {
+        type: "object",
+        properties: {
+          amount: { type: "number", description: "Loan amount" },
+        },
+        required: ["amount"],
+      },
     });
   });
 
@@ -649,7 +668,6 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calculate_dti", "Calculate DTI", "schema-dti")],
-      [],
       [],
       [],
       [makeSchemaRow("schema-dti", params)],
@@ -674,7 +692,6 @@ describe("tool namespace", () => {
       [makeTool("calc", "Calculate", "schema-calc")],
       [],
       [],
-      [],
       [makeSchemaRow("schema-calc", params)],
     ]);
 
@@ -694,7 +711,6 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("route", "Route products", "schema-route")],
-      [],
       [],
       [],
       [makeSchemaRow("schema-route", params)],
@@ -753,7 +769,6 @@ describe("tool namespace", () => {
       [],
       [],
       [makeTool("calc", "Calculate", "schema-calc")],
-      [],
       [],
       [],
       [makeSchemaRow("schema-calc", params)],

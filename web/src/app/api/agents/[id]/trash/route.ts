@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import {
-  tools, functions, components, schemas, schemaIncludes, datasets,
+  tools, functions, components, schemas, datasets,
   wikiDocuments, modelConfigs, evalCases, evalJudgeConfigs,
   objectTypes, objectRelations, skills,
 } from "@/db/schema";
@@ -158,18 +158,6 @@ export async function DELETE(
   const table = getTable(type);
   if (!table) {
     return NextResponse.json({ error: "invalid type" }, { status: 400 });
-  }
-
-  // For schemas: clean up schemaIncludes junction references before deleting
-  if (type === "schema") {
-    await db
-      .delete(schemaIncludes)
-      .where(
-        or(
-          inArray(schemaIncludes.schemaId, ids),
-          inArray(schemaIncludes.includeSchemaId, ids)
-        )
-      );
   }
 
   await db

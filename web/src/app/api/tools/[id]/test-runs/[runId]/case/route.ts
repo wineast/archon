@@ -61,7 +61,7 @@ export async function POST(
         .select()
         .from(schemas)
         .where(eq(schemas.id, tool.parametersSchemaId));
-      if (schemaRow && schemaRow.parameters.length > 0) {
+      if (schemaRow && schemaRow.parameters.properties && Object.keys(schemaRow.parameters.properties).length > 0) {
         const inputSchema = buildInputSchema(schemaRow.parameters);
         validatedInput = inputSchema.parse(input ?? {});
       }

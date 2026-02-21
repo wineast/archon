@@ -1,4 +1,4 @@
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
 
 /* ─────────── Snapshot Item Types (no id/agentId/createdAt/updatedAt) ─────────── */
@@ -40,8 +40,7 @@ export interface SchemaSnapshotItem {
   key: string;
   name: string;
   description: string;
-  parameters: SchemaProperty[];
-  includeSchemaKeys?: string[];
+  parameters: JsonSchema7;
 }
 
 export interface WikiDocumentSnapshotItem {

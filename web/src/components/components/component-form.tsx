@@ -47,7 +47,7 @@ interface SchemaSelectProps {
   label: string;
   fieldName: "toolInputSchemaId" | "toolOutputSchemaId";
   value: string | null | undefined;
-  schemas: { id: string; key: string; name: string; parameters: import("@/lib/schemas/types").SchemaProperty[] }[];
+  schemas: { id: string; key: string; name: string; parameters: import("@/lib/schemas/types").JsonSchema7 }[];
   form: ReturnType<typeof useForm<ComponentDefinition>>;
 }
 
@@ -83,7 +83,7 @@ function SchemaSelect({ label, fieldName, value, schemas, form }: SchemaSelectPr
           )}
         />
         {selectedSchema && (
-          <SchemaParameterPreview parameters={selectedSchema.parameters} />
+          <SchemaParameterPreview schema={selectedSchema.parameters} />
         )}
       </div>
     </div>

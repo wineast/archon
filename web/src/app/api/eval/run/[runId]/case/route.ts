@@ -9,6 +9,8 @@ import { buildJudgeSchema, toJudgeResult } from "@/lib/eval/judge-dimensions";
 import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResult } from "@/lib/eval/types";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
+import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { recordUsage } from "@/lib/usage/record";
 
@@ -95,19 +97,19 @@ export async function POST(
     for (const row of enabledRows) {
       if (row.parametersSchemaId) schemaIds.add(row.parametersSchemaId);
     }
-    const schemaMap: Record<string, import("@/lib/schemas/types").SchemaProperty[]> = {};
+    const schemaMap: Record<string, JsonSchema7> = {};
     if (schemaIds.size > 0) {
       const schemaRows = await db
         .select()
         .from(schemas)
         .where(inArray(schemas.id, [...schemaIds]));
-      for (const s of schemaRows) schemaMap[s.id] = s.parameters;
+      for (const s of schemaRows) schemaMap[s.id] = s.parameters as JsonSchema7;
     }
 
     const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
       name: row.name,
       description: row.description,
-      parameters: row.parametersSchemaId ? (schemaMap[row.parametersSchemaId] ?? []) : [],
+      parameters: row.parametersSchemaId ? (schemaMap[row.parametersSchemaId] ?? EMPTY_OBJECT_SCHEMA) : EMPTY_OBJECT_SCHEMA,
       handler: row.handler ?? "",
       url: row.url ?? "",
       sandboxMode: row.sandboxMode ?? "light",

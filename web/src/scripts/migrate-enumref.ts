@@ -1,12 +1,15 @@
 /**
- * One-time migration: convert enumRef (string key) → enumDatasetId (UUID).
+ * One-time migration: convert enumRef (string key) → x-enumDatasetId (UUID).
  *
  * Usage:
  *   npx tsx src/scripts/migrate-enumref.ts
  *
- * For each row in `schemas`, recursively walks `parameters` JSONB.
- * When a ToolParameter has `enumRef`, looks up the dataset by key,
- * replaces it with `enumDatasetId`, and removes the `enumRef` field.
+ * For each row in `schemas`, recursively walks `parameters` JsonSchema7.
+ * When a property has `enumRef`, looks up the dataset by key,
+ * replaces it with `x-enumDatasetId`, and removes the `enumRef` field.
+ *
+ * @deprecated This migration is for legacy SchemaProperty → JsonSchema7 format.
+ * It should only need to be run once during the migration period.
  */
 
 import "dotenv/config";
@@ -14,15 +17,13 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
 import { schemas, datasets } from "../db/schema";
-import type { SchemaProperty } from "../lib/schemas/types";
+import type { JsonSchema7 } from "../lib/schemas/types";
 
 const client = postgres(process.env.DATABASE_URL!);
 const db = drizzle({ client });
 
-interface LegacySchemaProperty extends SchemaProperty {
-  enumRef?: string;
-  properties?: LegacySchemaProperty[];
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LegacySchema = JsonSchema7 & { enumRef?: string; [k: string]: any };
 
 async function main() {
   console.log("Fetching all schemas...");
@@ -45,35 +46,43 @@ async function main() {
   let convertedFields = 0;
 
   for (const row of allSchemas) {
-    const params = row.parameters as LegacySchemaProperty[];
+    const params = row.parameters as LegacySchema;
     let changed = false;
 
-    function walk(paramList: LegacySchemaProperty[]) {
-      for (const p of paramList) {
-        if (p.enumRef) {
-          const dsId = datasetMap.get(`${row.agentId}:${p.enumRef}`);
-          if (dsId) {
-            p.enumDatasetId = dsId;
-            console.log(`  [OK] ${row.key}.${p.name}: enumRef="${p.enumRef}" → enumDatasetId="${dsId}"`);
-          } else {
-            console.warn(`  [WARN] ${row.key}.${p.name}: enumRef="${p.enumRef}" — dataset not found, removing anyway`);
-          }
-          delete p.enumRef;
-          changed = true;
-          convertedFields++;
+    function walk(schema: LegacySchema, path: string) {
+      // Check this node for enumRef
+      if (schema.enumRef) {
+        const dsId = datasetMap.get(`${row.agentId}:${schema.enumRef}`);
+        if (dsId) {
+          schema["x-enumDatasetId"] = dsId;
+          console.log(`  [OK] ${row.key}.${path}: enumRef="${schema.enumRef}" → x-enumDatasetId="${dsId}"`);
+        } else {
+          console.warn(`  [WARN] ${row.key}.${path}: enumRef="${schema.enumRef}" — dataset not found, removing anyway`);
         }
-        if (p.properties) {
-          walk(p.properties);
+        delete schema.enumRef;
+        changed = true;
+        convertedFields++;
+      }
+
+      // Recurse into properties
+      if (schema.properties) {
+        for (const [key, propSchema] of Object.entries(schema.properties)) {
+          walk(propSchema as LegacySchema, `${path}.${key}`);
         }
+      }
+
+      // Recurse into items
+      if (schema.items && !Array.isArray(schema.items)) {
+        walk(schema.items as LegacySchema, `${path}.items`);
       }
     }
 
-    walk(params);
+    walk(params, "root");
 
     if (changed) {
       await db
         .update(schemas)
-        .set({ parameters: params as SchemaProperty[] })
+        .set({ parameters: params as JsonSchema7 })
         .where(eq(schemas.id, row.id));
       updatedRows++;
     }

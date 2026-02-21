@@ -2,13 +2,23 @@ import { join } from "path";
 import { eq } from "drizzle-orm";
 import { tools, schemas, toolTestCases } from "../schema";
 import { readJson, toKey, logSection, log } from "../seed-utils";
-import type { SchemaProperty } from "@/lib/schemas/types";
+import type { JsonSchema7, SchemaProperty } from "@/lib/schemas/types";
+import { migrateSchemaProperties } from "@/lib/schemas/migrate";
 import type { Seeder } from "./types";
 
 /** Seed-time parameter with optional enumRef (resolved to enumDatasetId at seed time). */
 interface SeedToolParameter extends SchemaProperty {
   enumRef?: string;
   properties?: SeedToolParameter[];
+}
+
+/** Recursively convert enumRef → enumDatasetId using the dataset key→id map, then migrate to JsonSchema7. */
+function convertAndMigrate(
+  params: SeedToolParameter[],
+  datasetKeyToId: Record<string, string>
+): JsonSchema7 {
+  const converted = convertEnumRefs(params, datasetKeyToId);
+  return migrateSchemaProperties(converted);
 }
 
 /** Recursively convert enumRef → enumDatasetId using the dataset key→id map. */
@@ -59,19 +69,17 @@ export const seedTools: Seeder = {
     const schemaIdMap: Record<string, string> = {};
     for (const t of toolsSeed) {
       if (t.parameters.length === 0) continue;
-      // Convert enumRef → enumDatasetId before inserting
-      const parameters = convertEnumRefs(t.parameters, ctx.datasetKeyToId);
-      t.parameters = parameters as SeedToolParameter[];
+      const parameters = convertAndMigrate(t.parameters, ctx.datasetKeyToId);
       const toolKey = t.key ?? toKey(t.name);
       const schemaKey = `${toolKey}_params`;
       const schemaName = `${t.name} Parameters`;
 
       const [schemaRow] = await ctx.db
         .insert(schemas)
-        .values({ agentId, key: schemaKey, name: schemaName, parameters: t.parameters })
+        .values({ agentId, key: schemaKey, name: schemaName, parameters })
         .onConflictDoUpdate({
           target: [schemas.agentId, schemas.key],
-          set: { name: schemaName, parameters: t.parameters },
+          set: { name: schemaName, parameters },
         })
         .returning();
       schemaIdMap[t.name] = schemaRow.id;

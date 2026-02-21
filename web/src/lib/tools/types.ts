@@ -1,12 +1,4 @@
-import type { SchemaProperty, SchemaPropertyType } from "@/lib/schemas/types";
-
-/** @deprecated Use SchemaProperty from "@/lib/schemas/types" */
-export type ToolParameter = SchemaProperty;
-/** @deprecated Use SchemaPropertyType from "@/lib/schemas/types" */
-export type ToolParamType = SchemaPropertyType;
-
-// Also re-export new names for consumers still importing from here
-export type { SchemaProperty, SchemaPropertyType } from "@/lib/schemas/types";
+import type { JsonSchema7 } from "@/lib/schemas/types";
 
 export interface ToolDefinition {
   id: string;
@@ -27,8 +19,8 @@ export interface ToolDefinition {
 export interface ToolDefinitionPayload {
   name: string;
   description: string;
-  parameters: SchemaProperty[];
-  returnParameters?: SchemaProperty[];
+  parameters: JsonSchema7;
+  returnParameters?: JsonSchema7;
   handler?: string | null;
   url?: string | null;
   executionTarget?: "server" | "client" | "host";
