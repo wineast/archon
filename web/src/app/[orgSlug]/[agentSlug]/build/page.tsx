@@ -81,18 +81,23 @@ interface SettingsTab {
 }
 
 const SETTINGS_TABS: SettingsTab[] = [
+  // ── Agent config ──
   { value: "config", label: "Config", icon: SlidersHorizontalIcon },
-  { value: "tools", label: "Tools", icon: WrenchIcon },
-  { value: "components", label: "Components", icon: PuzzleIcon },
+  // ── Base data (depended on by tools) ──
   { value: "schemas", label: "Schemas", icon: BracesIcon },
   { value: "wiki", label: "Wiki", icon: BookOpenIcon },
   { value: "datasets", label: "Datasets", icon: DatabaseIcon },
+  { value: "functions", label: "Functions", icon: FunctionSquareIcon },
+  { value: "components", label: "Components", icon: PuzzleIcon },
+  // ── Core capabilities (depend on base data) ──
+  { value: "tools", label: "Tools", icon: WrenchIcon },
+  { value: "skills", label: "Skills", icon: ZapIcon },
+  // ── Knowledge & data ──
   { value: "ontology", label: "Ontology", icon: NetworkIcon },
   { value: "memory", label: "Memory", icon: BrainIcon },
   { value: "mcp", label: "MCP", icon: PlugIcon },
-  { value: "functions", label: "Functions", icon: FunctionSquareIcon },
-  { value: "skills", label: "Skills", icon: ZapIcon },
   { value: "files", label: "Files", icon: FileIcon },
+  // ── Operations ──
   { value: "sessions", label: "Sessions", icon: MessageSquareIcon },
   { value: "eval", label: "Evaluate", icon: FlaskConicalIcon },
   { value: "model-config", label: "Model Config", icon: SettingsIcon },
