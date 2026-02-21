@@ -258,10 +258,10 @@ const entries = await context.dataset.getEntries("product_routes");
 在模板中嵌入其他 Wiki 文档的内容：
 
 ```liquid
-{% include '贷款指南' %}
+{% include 'loan_guide' %}
 ```
 
-按文档标题精确匹配。支持嵌套引用（A 引用 B，B 引用 C），系统自动检测循环引用。
+按文档 **key** 精确匹配。支持嵌套引用（A 引用 B，B 引用 C），系统自动检测循环引用。
 
 ---
 

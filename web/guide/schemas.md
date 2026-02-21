@@ -163,7 +163,7 @@ Schema 的 `parameters` 列直接存储标准 JSON Schema 7 对象：
 - 必填属性在父级 `required` 数组中列出
 - 扩展字段使用 `x-` 前缀（如联合类型的 `x-discriminator`）
 - Schema 间引用使用标准 `$ref` + `$defs`
-- 枚举值支持 LiquidJS 模板字符串引用数据集
+- 枚举值支持 LiquidJS 模板 + filter 引用数据集
 
 ---
 
@@ -307,38 +307,41 @@ JSON Schema 表示：`{ "type": "string", "enum": ["CA", "NY", "TX"] }`
 
 **两种枚举值来源**：
 
-1. **模板字符串**（推荐）：在 `enum` 数组中使用 `"{{dataset_key}}"` 引用数据集，运行时展开为实际枚举值
+1. **模板 + filter**（推荐）：在 `enum` 数组中使用 LiquidJS 模板 + `json` filter 引用数据集，显式声明展开意图
 2. **内联值**：直接在 `enum` 数组中定义静态值
 
-**模板字符串示例**：
+**模板语法**：
 
 ```json
 {
   "type": "string",
-  "enum": ["{{us_states}}"]
+  "enum": ["{{ us_states | json }}"]
 }
 ```
 
-运行时，`{{us_states}}` 会被替换为数据集 `us_states` 中的实际值。可以混合使用模板和静态值：
+运行时，`{{ us_states | json }}` 会渲染为 JSON 数组字符串，系统解析后展开为枚举值。可以混合使用模板和静态值：
 
 ```json
 {
   "type": "string",
-  "enum": ["{{us_states}}", "other"]
+  "enum": ["{{ us_states | json }}", "other"]
 }
 ```
 
-**数据集解析规则**：
+**常用 filter 组合**：
 
-| 数据集类型 | 解析方式 | 示例 |
-|-----------|---------|------|
-| 数组 | 直接使用 | `["CA","NY","TX"]` → enum `["CA","NY","TX"]` |
-| 对象（值为字符串） | 取 values | `{"w2":"W2 Income","se":"Self Employed"}` → enum `["W2 Income","Self Employed"]` |
-| 对象（值为非字符串） | 取 keys | `{"a":1,"b":2}` → enum `["a","b"]` |
+| 写法 | 适用场景 | 示例 |
+|------|---------|------|
+| `{{ arr \| json }}` | 数组直接展开 | `["CA","TX"]` → enum `["CA","TX"]` |
+| `{{ obj \| keys \| json }}` | 取对象 keys | `{"CA":"California"}` → enum `["CA"]` |
+| `{{ obj \| values \| json }}` | 取对象 values | `{"CA":"California"}` → enum `["California"]` |
+| `{{ arr \| map: "field" \| json }}` | 取数组对象的某字段 | `[{name:"A"}]` → enum `["A"]` |
+
+**展开规则**：渲染结果为合法 JSON 数组字符串（`[` 开头）时，解析后 spread 为多个枚举值；否则作为字面量字符串使用。不含 `{{ }}` 的元素保留原值。
 
 **无枚举值时的行为**：当模板变量无法解析或枚举所有来源都无法解析出值时，退化为 `z.string()`。
 
-> **编辑器支持**：JSON 编辑器中输入 `{{` 会自动补全可用的数据集变量名。
+> **编辑器支持**：JSON 编辑器中输入 `{{` 会自动补全可用的数据集变量名。详见 [模板引擎文档](template-engine.md) 的 Filter 章节。
 
 ### object
 
@@ -607,7 +610,7 @@ Schema 在系统中有两条转换路径：
 - 不在 `required` 中 + `default` → `.default(value)`
 - 不在 `required` 中 + 无 default → `.optional()`
 - `description` → `.describe(text)`
-- `enum` 值从模板字符串 `"{{dataset_key}}"` / 内联 `enum` 解析
+- `enum` 值从模板 + filter `"{{ dataset_key | json }}"` / 内联 `enum` 解析
 - `$ref` 从 `options.defsMap` 解析，支持递归自引用（`z.lazy()`）
 - `allOf` + `$ref` → 合并 properties/required → 构建 `z.object`
 - `additionalProperties` → `z.record()` 或 `.catchall()`
@@ -682,7 +685,7 @@ Archon 使用以下 `x-` 前缀扩展字段：
 | `x-discriminatorValues` | 联合类型每个变体的判别值 |
 | `x-unionMode` | 联合类型匹配规则：`"oneOf"` 或 `"anyOf"` |
 
-> **注意**：枚举值引用数据集使用模板字符串 `"enum": ["{{dataset_key}}"]`，不再使用 `x-enumDatasetId`。Schema 间引用全部使用标准 `$ref` + 人类可读的 key。
+> **注意**：枚举值引用数据集使用模板 + filter `"enum": ["{{ dataset_key | json }}"]`，不再使用 `x-enumDatasetId`。Schema 间引用全部使用标准 `$ref` + 人类可读的 key。
 
 ---
 
@@ -740,7 +743,7 @@ Schema: borrower_profile (key: borrower_profile)
 
 ### 优先用模板字符串引用数据集
 
-枚举值应该用模板字符串 `"enum": ["{{dataset_key}}"]` 引用数据集，而不是内联在 `enum` 数组中。好处：
+枚举值应该用模板 + filter `"enum": ["{{ dataset_key | json }}"]` 引用数据集，而不是内联在 `enum` 数组中。好处：
 
 - 枚举值集中管理，修改数据集即全局生效
 - 数据集可以在模板中复用

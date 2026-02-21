@@ -78,7 +78,7 @@ export function ModelConfigDetail({
   );
 
   const completionDocs = useMemo(
-    () => wikiDocs.map((d) => ({ title: d.name })),
+    () => wikiDocs.map((d) => ({ key: d.key, title: d.name })),
     [wikiDocs]
   );
 

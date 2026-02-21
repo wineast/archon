@@ -54,9 +54,9 @@ export const WithDocuments: Story = {
     onChange: () => {},
     variables: ["borrower_name", "company_name"],
     documents: [
-      { title: "Company Policies" },
-      { title: "Employee Handbook" },
-      { title: "Code of Conduct" },
+      { key: "company_policies", title: "Company Policies" },
+      { key: "employee_handbook", title: "Employee Handbook" },
+      { key: "code_of_conduct", title: "Code of Conduct" },
     ],
     placeholder: "Enter template with document references...",
   },
@@ -79,7 +79,7 @@ export const Interactive: Story = {
           onChange={setValue}
           height="300px"
           variables={["company_name", "income_type_enum", "state_enum"]}
-          documents={[{ title: "Welcome Guide" }]}
+          documents={[{ key: "welcome_guide", title: "Welcome Guide" }]}
           placeholder="Try typing {{  to trigger autocomplete..."
         />
         <div className="rounded-md border bg-muted/50 p-3">
@@ -134,9 +134,9 @@ Best regards,
       "company_name",
     ],
     documents: [
-      { title: "Header Template" },
-      { title: "Footer Template" },
-      { title: "Legal Disclaimer" },
+      { key: "header_template", title: "Header Template" },
+      { key: "footer_template", title: "Footer Template" },
+      { key: "legal_disclaimer", title: "Legal Disclaimer" },
     ],
   },
 };

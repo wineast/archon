@@ -128,13 +128,13 @@ LiquidJS 模板引擎，通过 `{{ }}` 输出变量、`{% %}` 控制流。
 
 ## 二、模板 include `{% include %}`
 
-按文档标题嵌入 Wiki 文档内容：
+按文档 key 嵌入 Wiki 文档内容：
 
 ```liquid
-{% include '贷款指南' %}
+{% include 'loan_guide' %}
 ```
 
-- **精确匹配**文档标题
+- **精确匹配**文档 key
 - **嵌套引用**：A → B → C，系统自动展开
 - **循环检测**：A → B → A 会报错
 - **Frontmatter**：include 时自动剥离

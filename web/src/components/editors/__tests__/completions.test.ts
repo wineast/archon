@@ -3,7 +3,7 @@ import { generateCompletions } from "../completions";
 
 describe("generateCompletions", () => {
   const variables = ["company_name", "income_type_enum"];
-  const documents = [{ title: "Company Policies" }];
+  const documents = [{ key: "company_policies", title: "Company Policies" }];
 
   describe("basic trigger", () => {
     it("returns null when no {{ or {% is present", () => {
@@ -77,13 +77,13 @@ describe("generateCompletions", () => {
     it("includes document completions (Liquid syntax)", () => {
       const result = generateCompletions("{{", variables, documents);
       const labels = result!.items.map((o) => o.label);
-      expect(labels).toContain("{% include 'Company Policies' %}");
+      expect(labels).toContain("{% include 'company_policies' %}");
     });
 
     it("filters document completions by typed text", () => {
       const result = generateCompletions("{% include", variables, documents);
       const labels = result!.items.map((o) => o.label);
-      expect(labels).toContain("{% include 'Company Policies' %}");
+      expect(labels).toContain("{% include 'company_policies' %}");
     });
   });
 
@@ -109,7 +109,7 @@ describe("generateCompletions", () => {
         (o) => o.label === "{% if ... %}"
       )!.boost;
       const docBoost = items.find(
-        (o) => o.label === "{% include 'Company Policies' %}"
+        (o) => o.label === "{% include 'company_policies' %}"
       )!.boost;
 
       expect(varBoost).toBeGreaterThan(kwBoost);

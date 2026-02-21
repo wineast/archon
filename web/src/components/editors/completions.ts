@@ -1,6 +1,7 @@
 import type * as monacoNs from "monaco-editor";
 
 export interface CompletionDocument {
+  key: string;
   title: string;
 }
 
@@ -182,11 +183,11 @@ export function generateCompletions(
 
     // Documents
     ...documents.map((doc, i) => ({
-      label: `{% include '${doc.title}' %}`,
+      label: `{% include '${doc.key}' %}`,
       type: "function" as const,
-      detail: "document",
+      detail: doc.title,
       boost: 1 - i * 0.01,
-      apply: `{% include '${doc.title}' %}`,
+      apply: `{% include '${doc.key}' %}`,
     })),
   ];
 
