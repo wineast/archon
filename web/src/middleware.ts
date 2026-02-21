@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/share(.*)",
   "/embed(.*)",
   "/api/embed(.*)",
+  "/api/invitation-codes/verify",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

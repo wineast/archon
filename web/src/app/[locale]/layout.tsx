@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { Providers } from "@/components/providers";
+import { PendingInvitationConsumer } from "@/components/auth/pending-invitation-consumer";
 import { routing } from "@/i18n/routing";
 
 const geistSans = Geist({
@@ -46,6 +47,7 @@ export default async function LocaleLayout({
           <NextIntlClientProvider>
             <Providers>{children}</Providers>
           </NextIntlClientProvider>
+          <PendingInvitationConsumer />
           <Toaster />
         </body>
       </html>

@@ -1482,6 +1482,55 @@ export type NewMemoryRow = typeof memories.$inferInsert;
 
 /* ─────────── Org Credit Transactions ─────────── */
 
+/* ─────────── Invitation Codes ─────────── */
+
+export const invitationCodes = pgTable("invitation_codes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: text("code").notNull().unique(),
+  label: text("label").notNull().default(""),
+  maxUses: integer("max_uses"),
+  usedCount: integer("used_count").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export type InvitationCodeRow = typeof invitationCodes.$inferSelect;
+export type NewInvitationCodeRow = typeof invitationCodes.$inferInsert;
+
+export const invitationCodeUsages = pgTable(
+  "invitation_code_usages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    codeId: uuid("code_id")
+      .notNull()
+      .references(() => invitationCodes.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    usedAt: timestamp("used_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("invitation_code_usages_code_user_idx").on(t.codeId, t.userId),
+  ]
+);
+
+export type InvitationCodeUsageRow = typeof invitationCodeUsages.$inferSelect;
+export type NewInvitationCodeUsageRow = typeof invitationCodeUsages.$inferInsert;
+
+/* ─────────── Org Credit Transactions ─────────── */
+
 export const orgCreditTransactionTypes = ["topup", "adjustment", "purchase"] as const;
 export type OrgCreditTransactionType = (typeof orgCreditTransactionTypes)[number];
 
