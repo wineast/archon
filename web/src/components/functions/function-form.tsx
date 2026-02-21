@@ -136,7 +136,7 @@ export function FunctionForm({
           control={form.control}
           render={({ field }) => (
             <InlineSchemaEditor
-              label="Parameters"
+              label="Data (JSON / Template)"
               value={field.value ?? null}
               onChange={field.onChange}
               agentId={agentId}
@@ -148,7 +148,7 @@ export function FunctionForm({
           control={form.control}
           render={({ field }) => (
             <InlineSchemaEditor
-              label="Return Parameters"
+              label="Data (JSON / Template)"
               value={field.value ?? null}
               onChange={field.onChange}
               agentId={agentId}

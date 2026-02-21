@@ -119,13 +119,13 @@ Schema 的 `parameters` 使用 **JSON 编辑器** 直接编辑标准 JSON Schema
 
 详情页有两个子标签：
 - **Edit**：JSON 编辑器，直接编辑 `parameters` JSON
-- **Preview**：模板渲染预览，将当前 JSON Schema 通过 LiquidJS 模板引擎渲染后，以只读 JSON 编辑器展示结果。可用数据仅限**数据集变量**（扁平命名空间，拓扑排序解析），不包含内置变量、tool 命名空间、ontology 等
+- **Preview**：模板渲染预览，将当前 JSON Schema 通过 LiquidJS 模板引擎渲染后，以只读 JSON 编辑器展示结果。可用数据仅限**数据集变量**（扁平命名空间，拓扑排序解析），不包含内置变量、tool 命名空间、ontology 等。Preview 内提供"展开 $ref"开关，打开后将 `$ref` 引用递归展开为实际 Schema 内容
 
 JSON 解析失败时（用户还在打字），表单值不会更新，避免中间状态丢失。
 
 ### AI 辅助编辑
 
-JSON Schema 标签行提供 **AI 编辑** 按钮（SparklesIcon），点击打开 AI 辅助编辑 Dialog：
+Data (JSON / Template) 标签行提供 **AI 编辑** 按钮（SparklesIcon），点击打开 AI 辅助编辑 Dialog：
 
 - **左侧**：Diff 编辑器，对比原始 JSON Schema 和 AI 修改后的结果
 - **右侧**：AI 聊天，用自然语言描述需求（如"添加一个 email 字段"、"把 age 改为可选"）
@@ -138,7 +138,7 @@ AI 支持两种操作：
 
 ### 帮助指南
 
-JSON Schema 标签行的问号图标（CircleHelpIcon）打开 **Guide Dialog**，包含 JSON Schema 编辑的快速参考文档。
+Data (JSON / Template) 标签行的问号图标（CircleHelpIcon）打开 **Guide Dialog**，包含 JSON Schema 编辑的快速参考文档。
 
 ---
 
@@ -632,6 +632,8 @@ Schema 详情页有 **Edit / Preview** 两个子标签：
 切换到 Preview 时，系统将当前 JSON Schema 文本 POST 到 `/api/schema/template/preview`，服务端仅使用**数据集变量**（通过 `getResolvedDatasets` 获取的扁平命名空间）进行渲染。不注入内置变量（date/time 等）、tool 命名空间、ontology 等——Schema 模板只能引用数据集。
 
 渲染结果以只读 JSON 编辑器展示（高度 400px），JSON 解析失败时在编辑器上方显示错误提示。
+
+**展开 $ref**：Preview 标签内提供"展开 $ref"开关（Switch），打开后服务端会将渲染结果中的 `$ref` 引用递归展开为实际 Schema 内容。展开逻辑：查询该 Agent 的所有 Schemas 构建 `defsMap`（key → parameters），对 JSON 中的 `{ "$ref": "#/$defs/key" }` 递归替换为 `defsMap[key]`。循环引用自动检测并保留原始 `$ref` 不展开。
 
 ---
 

@@ -156,7 +156,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
           control={form.control}
           render={({ field }) => (
             <InlineSchemaEditor
-              label="Input Schema"
+              label="Data (JSON / Template)"
               value={field.value ?? null}
               onChange={field.onChange}
             />
