@@ -13,6 +13,7 @@ import {
   type QuickJSHandle,
   type QuickJSRuntime,
 } from "quickjs-emscripten";
+import { isModuleFormat } from "@/lib/modules/detect";
 
 // ── Error types ──
 
@@ -313,6 +314,10 @@ export interface FunctionsSandbox {
  * Functions are compiled in the provided order (caller should topo-sort).
  * Each function result is stored as `globalThis.<key>` so later functions can reference it.
  *
+ * Supports two code formats:
+ * - **Legacy (closure)**: `function fn({ dep }) { return function(input) { ... } }`
+ * - **Module (ES6)**: `import dep from "archon:fn/dep"; export default function(input) { ... }`
+ *
  * @param records - Functions in dependency order
  * @param deps - Host dependencies (e.g. compileExpression)
  * @param opts - Sandbox resource limits
@@ -336,27 +341,86 @@ export async function createFunctionsSandbox(
     }
   }
 
+  // Track which functions use module format (their source is stored for the loader)
+  const moduleSourceMap = new Map<string, string>();
+
+  // Set up module loader for `archon:fn/<key>` and `archon:lib/<name>` imports
+  runtime.setModuleLoader((moduleName) => {
+    if (moduleName.startsWith("archon:fn/")) {
+      const key = moduleName.slice("archon:fn/".length);
+      // If the dependency was compiled as a module, return its source directly
+      const modSrc = moduleSourceMap.get(key);
+      if (modSrc) return modSrc;
+      // Otherwise it was compiled as legacy → already on globalThis as a callable
+      return `export default globalThis.${key};`;
+    }
+    if (moduleName.startsWith("archon:lib/")) {
+      const libName = moduleName.slice("archon:lib/".length);
+      // Map known libs to re-export shims
+      if (libName === "filtrex") {
+        return `export const compileExpression = globalThis.compileExpression;`;
+      }
+      return `export default globalThis.${libName};`;
+    }
+    return { error: new Error(`Unknown module: ${moduleName}`) };
+  });
+
   const compiledKeys: string[] = [];
 
   // Compile each function in order
   for (const rec of records) {
-    const depsObj = rec.depNames.length > 0 ? `{ ${rec.depNames.join(", ")} }` : "";
-    const evalCode = `${rec.code}\nif (typeof fn !== 'function') throw new Error('code must define function fn()');\nfn(${depsObj});`;
-    const result = vm.evalCode(evalCode);
-    if (result.error) {
-      const errDump = vm.dump(result.error);
-      result.error.dispose();
-      vm.dispose();
-      runtime.dispose();
-      throw new SandboxCompilationError(
-        `Failed to compile function "${rec.key}": ${typeof errDump === "object" && errDump?.message ? errDump.message : String(errDump)}`
-      );
+    const useModule = isModuleFormat(rec.code);
+
+    if (useModule) {
+      // Module format: evaluate as ES module, extract default export
+      moduleSourceMap.set(rec.key, rec.code);
+      const result = vm.evalCode(rec.code, `archon:fn:${rec.key}`, { type: "module" });
+      if (result.error) {
+        const errDump = vm.dump(result.error);
+        result.error.dispose();
+        vm.dispose();
+        runtime.dispose();
+        throw new SandboxCompilationError(
+          `Failed to compile function "${rec.key}": ${typeof errDump === "object" && errDump?.message ? errDump.message : String(errDump)}`
+        );
+      }
+
+      // Module evalCode returns the module namespace object; extract "default"
+      const defaultExport = vm.getProp(result.value, "default");
+      result.value.dispose();
+
+      if (vm.typeof(defaultExport) !== "function") {
+        defaultExport.dispose();
+        vm.dispose();
+        runtime.dispose();
+        throw new SandboxCompilationError(
+          `Function "${rec.key}": module must have a default export that is a function`
+        );
+      }
+
+      vm.setProp(vm.global, `__fn_${rec.key}`, defaultExport);
+      vm.setProp(vm.global, rec.key, defaultExport);
+      defaultExport.dispose();
+    } else {
+      // Legacy closure format
+      const depsObj = rec.depNames.length > 0 ? `{ ${rec.depNames.join(", ")} }` : "";
+      const evalSrc = `${rec.code}\nif (typeof fn !== 'function') throw new Error('code must define function fn()');\nfn(${depsObj});`;
+      const result = vm.evalCode(evalSrc);
+      if (result.error) {
+        const errDump = vm.dump(result.error);
+        result.error.dispose();
+        vm.dispose();
+        runtime.dispose();
+        throw new SandboxCompilationError(
+          `Failed to compile function "${rec.key}": ${typeof errDump === "object" && errDump?.message ? errDump.message : String(errDump)}`
+        );
+      }
+
+      vm.setProp(vm.global, `__fn_${rec.key}`, result.value);
+      vm.setProp(vm.global, rec.key, result.value);
+      result.value.dispose();
     }
 
-    // Store as globalThis.__fn_<key> (the callable) and globalThis.<key> (for cross-ref)
-    vm.setProp(vm.global, `__fn_${rec.key}`, result.value);
-    vm.setProp(vm.global, rec.key, result.value);
-    result.value.dispose();
     compiledKeys.push(rec.key);
   }
 

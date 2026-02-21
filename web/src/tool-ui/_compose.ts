@@ -1,5 +1,7 @@
 import type { ComponentType } from "react";
 import { compileSourceWithDeps } from "./_dynamic-renderer";
+import { isModuleFormat } from "@/lib/modules/detect";
+import { inferComponentDepsFromImports } from "@/lib/modules/detect";
 import type { ToolRendererProps } from "./_registry";
 
 // ── Naming helpers ──
@@ -20,11 +22,21 @@ export function pascalToKey(name: string): string {
 
 // ── Dependency inference ──
 
-/** Parse the outer function's destructured parameter names and map PascalCase names to known component keys. */
+/**
+ * Infer component dependencies from source code.
+ * Supports both legacy closure format and ES module format.
+ *
+ * - Legacy: parses PascalCase params from `function ComponentName({ ... })`
+ * - Module: extracts from `import ... from "archon:component/<key>"` statements
+ */
 export function inferComponentDeps(
   source: string,
   knownKeys: Set<string>,
 ): string[] {
+  if (isModuleFormat(source)) {
+    return inferComponentDepsFromImports(source, knownKeys);
+  }
+  // Legacy: parse the outer function's destructured parameter names
   const m = /function\s+\w+\s*\(\s*\{([^}]*)\}\s*\)/.exec(source.trim());
   if (!m || !m[1].trim()) return [];
   const params = m[1].split(",").map((s) => s.trim()).filter(Boolean);

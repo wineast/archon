@@ -4,6 +4,35 @@
 
 ---
 
+## 代码格式
+
+函数支持两种代码格式，系统自动检测：
+
+**旧格式（闭包注入）**：
+
+```js
+function fn({ compileExpression, other_fn }) {
+  return function(input) {
+    return other_fn({ value: compileExpression("x * 2")(input) });
+  }
+}
+```
+
+**新格式（ES6 模块）**：
+
+```js
+import { compileExpression } from "archon:lib/filtrex";
+import other_fn from "archon:fn/other_fn";
+
+export default function(input) {
+  return other_fn({ value: compileExpression("x * 2")(input) });
+}
+```
+
+新格式使用 `archon:*` 虚拟模块导入依赖，详见 [模块系统文档](module-system.md)。两种格式可在同一 Agent 内混用。
+
+---
+
 ## 打开函数面板
 
 进入 Agent 的 **Settings** 页面，选择 **Functions** 标签页。

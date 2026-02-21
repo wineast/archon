@@ -204,4 +204,119 @@ describe("createFunctionsSandbox", () => {
       sandbox.dispose();
     }
   });
+
+  // ── ES module format tests ──
+
+  it("compiles and calls a module-format function", async () => {
+    const sandbox = await createFunctionsSandbox([
+      {
+        key: "add",
+        code: `export default function(input) { return input.a + input.b; }`,
+        depNames: [],
+      },
+    ]);
+    try {
+      expect(sandbox.keys).toEqual(["add"]);
+      expect(sandbox.call("add", { a: 10, b: 20 })).toBe(30);
+    } finally {
+      sandbox.dispose();
+    }
+  });
+
+  it("supports module-format function importing another module-format function", async () => {
+    const sandbox = await createFunctionsSandbox([
+      {
+        key: "double",
+        code: `export default function(input) { return input.value * 2; }`,
+        depNames: [],
+      },
+      {
+        key: "quadruple",
+        code: `import double from "archon:fn/double";
+export default function(input) { return double({ value: double({ value: input.value }) }); }`,
+        depNames: ["double"],
+      },
+    ]);
+    try {
+      expect(sandbox.call("double", { value: 5 })).toBe(10);
+      expect(sandbox.call("quadruple", { value: 5 })).toBe(20);
+    } finally {
+      sandbox.dispose();
+    }
+  });
+
+  it("supports module-format function importing a legacy function", async () => {
+    const sandbox = await createFunctionsSandbox([
+      {
+        key: "double",
+        code: `function fn() { return function(input) { return input.value * 2; } }`,
+        depNames: [],
+      },
+      {
+        key: "calc",
+        code: `import double from "archon:fn/double";
+export default function(input) { return double({ value: input.x }); }`,
+        depNames: ["double"],
+      },
+    ]);
+    try {
+      expect(sandbox.call("calc", { x: 7 })).toBe(14);
+    } finally {
+      sandbox.dispose();
+    }
+  });
+
+  it("supports module-format function importing archon:lib/filtrex", async () => {
+    const { compileExpression } = await import("filtrex");
+    const sandbox = await createFunctionsSandbox(
+      [
+        {
+          key: "evaluate",
+          code: `import { compileExpression } from "archon:lib/filtrex";
+var expr = compileExpression("x + y * 2");
+export default function(input) { return expr(input); }`,
+          depNames: [],
+        },
+      ],
+      { compileExpression }
+    );
+    try {
+      expect(sandbox.call("evaluate", { x: 10, y: 5 })).toBe(20);
+    } finally {
+      sandbox.dispose();
+    }
+  });
+
+  it("throws when module has no default export function", async () => {
+    await expect(
+      createFunctionsSandbox([
+        {
+          key: "bad",
+          code: `export default 42;`,
+          depNames: [],
+        },
+      ])
+    ).rejects.toThrow(SandboxCompilationError);
+  });
+
+  it("mixes legacy and module-format functions in same sandbox", async () => {
+    const sandbox = await createFunctionsSandbox([
+      {
+        key: "legacyAdd",
+        code: `function fn() { return function(input) { return input.a + input.b; } }`,
+        depNames: [],
+      },
+      {
+        key: "moduleDouble",
+        code: `export default function(input) { return input.value * 2; }`,
+        depNames: [],
+      },
+    ]);
+    try {
+      expect(sandbox.call("legacyAdd", { a: 1, b: 2 })).toBe(3);
+      expect(sandbox.call("moduleDouble", { value: 10 })).toBe(20);
+    } finally {
+      sandbox.dispose();
+    }
+  });
 });

@@ -46,9 +46,30 @@ Schema Ref 的作用：
 
 ### 组件源码（Component Source）
 
-JSX 编辑器中编写组件的渲染逻辑。支持两种写法：
+JSX 编辑器中编写组件的渲染逻辑。支持三种写法：
 
-**完整函数形式**（推荐）：
+**ES6 模块形式**（推荐）：
+
+```jsx
+import { useState } from "archon:react";
+import { Badge, Spinner } from "archon:ui";
+
+export default function({ tool, isLoading }) {
+  const { output } = tool;
+  if (isLoading) return <Spinner className="size-4" />;
+
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <Badge>{output.status}</Badge>
+      <h3 className="text-lg font-semibold">{output.plan}</h3>
+    </div>
+  );
+}
+```
+
+使用 `archon:*` 虚拟模块导入依赖，详见 [模块系统文档](module-system.md)。
+
+**完整函数形式**（旧格式，仍支持）：
 
 ```jsx
 function PricingResult({ tool, isLoading }) {
@@ -101,7 +122,9 @@ function MyComponent({ tool, isLoading, isError }) {
 
 ### 可用的依赖
 
-在组件源码中可以直接使用以下依赖，无需 import：
+**ES6 模块形式**：通过 `archon:*` 模块导入，详见 [模块系统文档](module-system.md)。
+
+**旧格式**：在组件源码中可以直接使用以下依赖，无需 import：
 
 **React**：
 `React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment`

@@ -1,5 +1,8 @@
-function Component({ React, useState, Fragment, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipTrigger, ChevronRight, ResultSection, RateSheetLinks, RateSheetPanel }) {
-  return function({ tool, state, isLoading, isComplete, isError }) {
+import { useState, Fragment } from "archon:react";
+import { Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipTrigger, ResultSection, RateSheetLinks, RateSheetPanel } from "archon:ui";
+import { ChevronRight } from "archon:icons";
+
+export default function({ tool, state, isLoading, isComplete, isError }) {
 
   // ============================================================================
   // Breakdown Tooltip Component
@@ -442,5 +445,4 @@ function Component({ React, useState, Fragment, Spinner, Table, TableBody, Table
       />
     </div>
   );
-}
 }

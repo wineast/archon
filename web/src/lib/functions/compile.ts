@@ -19,6 +19,7 @@ import {
   createFunctionsSandbox,
   type FunctionsSandbox,
 } from "./sandbox";
+import { isModuleFormat, inferDepsFromImports } from "@/lib/modules/detect";
 
 // Base dependencies available to all functions (npm packages)
 const BASE_DEPS: Record<string, unknown> = {
@@ -40,9 +41,16 @@ export function parseFnParams(code: string): string[] {
 }
 
 /**
- * Extract function-level dependencies from code (params minus base deps).
+ * Extract function-level dependencies from code.
+ * Supports both legacy closure format and ES module format.
+ *
+ * - Legacy: extracts from `function fn({ dep1, dep2 })` params (minus base deps)
+ * - Module: extracts from `import ... from "archon:fn/<key>"` statements
  */
 export function inferDeps(code: string, knownKeys: Set<string>): string[] {
+  if (isModuleFormat(code)) {
+    return inferDepsFromImports(code, knownKeys);
+  }
   return parseFnParams(code).filter(
     (p) => !BASE_DEP_NAMES.has(p) && knownKeys.has(p)
   );

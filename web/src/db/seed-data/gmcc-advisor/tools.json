@@ -20,7 +20,7 @@
         "enumRef": "state_enum"
       }
     ],
-    "handler": "async ({ income_type, property_state }, context) => {\n  const routes = await context.dataset.getEntries(\"product_routes\");\n  const state = property_state.toUpperCase().trim();\n  const income = income_type.trim();\n  const matched = [];\n  for (const r of routes) {\n    const incomes = r.metadata?.incomes;\n    const states = r.metadata?.states;\n    if (!Array.isArray(incomes) || !Array.isArray(states)) continue;\n    if (incomes.includes(income) && states.includes(state)) matched.push(r);\n  }\n  if (matched.length === 0) {\n    return { income_type: income, property_state: state, matched_count: 0, products: [], message: `未找到匹配的产品。收入类型 \"${income}\" 在州 \"${state}\" 下没有可用产品。` };\n  }\n  const products = await Promise.all(matched.map(async (r) => { const doc = await context.wiki.get(r.metadata.wikiId); return { product_name: r.label || r.value, content: doc?.content || `未找到 ${r.metadata.wikiId} 的核保文档` }; }));\n  return { income_type: income, property_state: state, matched_count: products.length, products, message: `找到 ${products.length} 个匹配产品，请根据以下各产品核保标准继续收集剩余信息并逐项核查。` };\n}",
+    "handler": "import { dataset, wiki } from \"archon:context\";\n\nexport default async function({ income_type, property_state }) {\n  const routes = await dataset.getEntries(\"product_routes\");\n  const state = property_state.toUpperCase().trim();\n  const income = income_type.trim();\n  const matched = [];\n  for (const r of routes) {\n    const incomes = r.metadata?.incomes;\n    const states = r.metadata?.states;\n    if (!Array.isArray(incomes) || !Array.isArray(states)) continue;\n    if (incomes.includes(income) && states.includes(state)) matched.push(r);\n  }\n  if (matched.length === 0) {\n    return { income_type: income, property_state: state, matched_count: 0, products: [], message: `未找到匹配的产品。收入类型 \"${income}\" 在州 \"${state}\" 下没有可用产品。` };\n  }\n  const products = await Promise.all(matched.map(async (r) => { const doc = await wiki.get(r.metadata.wikiId); return { product_name: r.label || r.value, content: doc?.content || `未找到 ${r.metadata.wikiId} 的核保文档` }; }));\n  return { income_type: income, property_state: state, matched_count: products.length, products, message: `找到 ${products.length} 个匹配产品，请根据以下各产品核保标准继续收集剩余信息并逐项核查。` };\n}",
     "enabled": true
   },
   {
@@ -90,7 +90,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_universe\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_universe\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -178,7 +178,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_ocean\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_ocean\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -293,7 +293,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_hermes_ca\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_hermes_ca\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -401,7 +401,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_hermes_non_ca\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_hermes_non_ca\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -527,7 +527,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_thunder\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_thunder\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -583,7 +583,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_fabulous\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_fabulous\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -795,7 +795,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_celebrity\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_celebrity\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -888,7 +888,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_radiant_cra\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_radiant_cra\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -1003,7 +1003,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_radiant_portfolio\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_radiant_portfolio\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   },
@@ -1104,7 +1104,7 @@
         "required": false
       }
     ],
-    "handler": "async (args, context) => {\n  const engine = await context.fn(\"pricing_engine\");\n  const config = await context.dataset.get(\"pricing_config_radiant_au\");\n  return engine({ ...args, config });\n}",
+    "handler": "import { fn, dataset } from \"archon:context\";\n\nexport default async function(args) {\n  const engine = await fn(\"pricing_engine\");\n  const config = await dataset.get(\"pricing_config_radiant_au\");\n  return engine({ ...args, config });\n}",
     "enabled": true,
     "component": "pricing-result"
   }

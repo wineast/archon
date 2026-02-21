@@ -175,4 +175,56 @@ describe("executeToolInSandbox", () => {
     );
     expect(result).toEqual([1, 2, 3]);
   });
+
+  // ── ES module format tests ──
+
+  it("executes a module-format sync handler", async () => {
+    const ctx = createMockContext();
+    const result = await executeToolInSandbox(
+      `export default function(args) { return { result: args.x * 2 }; }`,
+      { x: 21 },
+      ctx
+    );
+    expect(result).toEqual({ result: 42 });
+  });
+
+  it("executes a module-format handler importing archon:context", async () => {
+    const ctx = createMockContext();
+    const result = await executeToolInSandbox(
+      `import { wiki } from "archon:context";
+export default async function(args) {
+  const doc = await wiki.get(args.id);
+  return doc;
+}`,
+      { id: "my-doc" },
+      ctx
+    );
+    expect(result).toEqual({ content: "Hello wiki" });
+    expect(ctx.wiki.get).toHaveBeenCalledWith("my-doc");
+  });
+
+  it("executes a module-format handler with dataset access", async () => {
+    const ctx = createMockContext();
+    const result = await executeToolInSandbox(
+      `import { dataset } from "archon:context";
+export default async function(args) {
+  return await dataset.get(args.key);
+}`,
+      { key: "prices" },
+      ctx
+    );
+    expect(result).toEqual({ key: "value" });
+    expect(ctx.dataset.get).toHaveBeenCalledWith("prices");
+  });
+
+  it("throws on module-format handler with non-function default export", async () => {
+    const ctx = createMockContext();
+    await expect(
+      executeToolInSandbox(
+        `export default 42;`,
+        {},
+        ctx
+      )
+    ).rejects.toThrow(SandboxError);
+  });
 });

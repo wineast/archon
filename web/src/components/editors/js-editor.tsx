@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Editor, { DiffEditor as MonacoDiffEditor, type DiffOnMount } from "@monaco-editor/react";
+import type * as monacoNs from "monaco-editor";
 import { cn } from "@/lib/utils";
 import { useDarkMode } from "./use-dark-mode";
 import { ARCHON_LIGHT, ARCHON_DARK } from "./theme";
-import { ensureMonacoSetup } from "./monaco-setup";
+import { ensureMonacoSetup, setDynamicDeclarations } from "./monaco-setup";
 
 const SHARED_OPTIONS = {
   minimap: { enabled: false },
@@ -27,6 +28,8 @@ interface JsEditorProps {
   className?: string;
   /** Pass original text to enable diff mode */
   original?: string;
+  /** Dynamic type declarations for archon:fn/* and archon:component/* modules */
+  moduleDeclarations?: string;
 }
 
 export function JsEditor({
@@ -36,6 +39,7 @@ export function JsEditor({
   height,
   className,
   original,
+  moduleDeclarations,
 }: JsEditorProps) {
   const isDark = useDarkMode();
   const theme = isDark ? ARCHON_DARK : ARCHON_LIGHT;
@@ -43,6 +47,17 @@ export function JsEditor({
 
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+
+  const monacoRef = useRef<typeof monacoNs | null>(null);
+  const moduleDeclarationsRef = useRef(moduleDeclarations);
+  moduleDeclarationsRef.current = moduleDeclarations;
+
+  // Inject dynamic type declarations when they change
+  useEffect(() => {
+    if (monacoRef.current && moduleDeclarations) {
+      setDynamicDeclarations(monacoRef.current, moduleDeclarations);
+    }
+  }, [moduleDeclarations]);
 
   const handleDiffMount: DiffOnMount = (editor) => {
     const modifiedEditor = editor.getModifiedEditor();
@@ -65,7 +80,13 @@ export function JsEditor({
           modified={value}
           language="typescript"
           theme={theme}
-          beforeMount={ensureMonacoSetup}
+          beforeMount={(m) => {
+            ensureMonacoSetup(m);
+            monacoRef.current = m;
+            if (moduleDeclarationsRef.current) {
+              setDynamicDeclarations(m, moduleDeclarationsRef.current);
+            }
+          }}
           onMount={handleDiffMount}
           options={{
             ...SHARED_OPTIONS,
@@ -81,7 +102,13 @@ export function JsEditor({
           value={value}
           onChange={(v) => onChange?.(v ?? "")}
           theme={theme}
-          beforeMount={ensureMonacoSetup}
+          beforeMount={(m) => {
+            ensureMonacoSetup(m);
+            monacoRef.current = m;
+            if (moduleDeclarationsRef.current) {
+              setDynamicDeclarations(m, moduleDeclarationsRef.current);
+            }
+          }}
           options={{
             ...SHARED_OPTIONS,
             readOnly,

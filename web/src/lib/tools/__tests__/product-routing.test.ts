@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import type { DataEntry, ToolContext, WikiDoc } from "../tool-context";
 import { resolveDatasets } from "@/lib/datasets/queries";
+import { isModuleFormat } from "@/lib/modules/detect";
+import { transformToolHandlerImports } from "@/lib/modules/transform-tool-handler";
 
 // ── Load seed data ──
 const seedDir = path.resolve(__dirname, "../../../db/seed-data/gmcc-advisor");
@@ -33,14 +35,24 @@ const mockDataEntries: DataEntry[] = Object.entries(productRoutes).map(
 // ── Eval the real handler from tools.json ──
 const handlerSource = tools.find((t) => t.name === "route_loan_products")!.handler;
 
-// eslint-disable-next-line no-eval
-const handlerFn = eval(`(${handlerSource})`) as (
+let handlerFn: (
   args: { income_type: string; property_state: string },
   context: ToolContext
 ) => Promise<{
   matched_count: number;
   products: Array<{ product_name: string }>;
 }>;
+
+if (isModuleFormat(handlerSource)) {
+  // Module format: transform imports into IIFE, then wrap in a callable function
+  const transformed = transformToolHandlerImports(handlerSource);
+  // eslint-disable-next-line no-eval
+  handlerFn = (args, context) => eval(`(function(__args, __context){ return ${transformed} })`)(args, context);
+} else {
+  // Legacy format: eval as arrow function expression
+  // eslint-disable-next-line no-eval
+  handlerFn = eval(`(${handlerSource})`);
+}
 
 // ── Mock context ──
 const mockContext = {

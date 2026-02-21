@@ -2,7 +2,9 @@
 
 import { memo, useMemo, type ComponentType } from "react";
 import { transform } from "sucrase";
-import { INJECTED_DEPS } from "./_allowed-components";
+import { INJECTED_DEPS, INJECTED_DEPS_BY_MODULE } from "./_allowed-components";
+import { isModuleFormat } from "@/lib/modules/detect";
+import { transformImports } from "@/lib/modules/transform-imports";
 import type { ToolRendererProps } from "./_registry";
 
 // ── Compilation cache: source string → React component ──
@@ -18,9 +20,11 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
   return Comp;
 }
 
-/** Compile a two-layer closure component source.
+/** Compile a component source into a React component.
  *
- *  Source format:
+ *  Supports two formats:
+ *
+ *  **Legacy (two-layer closure)**:
  *  ```
  *  function Component({ React, useState, DepA }) {  // outer: destructure deps
  *    return function({ tool, state, ... }) {         // inner: render function
@@ -29,33 +33,82 @@ function compileSource(source: string): ComponentType<ToolRendererProps> {
  *  }
  *  ```
  *
- *  Compilation:
- *  1. Sucrase transpile (JSX/TS → JS)
- *  2. `new Function(code + '\nreturn Component;')` → outer function
- *  3. `outer({ ...INJECTED_DEPS, ...extraDeps })` → inner render function
+ *  **Module (ES6 imports)**:
+ *  ```
+ *  import { useState } from "archon:react";
+ *  import { Badge } from "archon:ui";
+ *  export default function({ tool, isLoading }) { ... }
+ *  ```
  *
  *  Does NOT use the source cache (intended for graph compilation). */
 export function compileSourceWithDeps(
   source: string,
   extraDeps?: Record<string, unknown>
 ): ComponentType<ToolRendererProps> {
+  if (isModuleFormat(source)) {
+    return compileModuleSource(source, extraDeps);
+  }
+  return compileLegacySource(source, extraDeps);
+}
+
+/** Compile legacy two-layer closure format. */
+function compileLegacySource(
+  source: string,
+  extraDeps?: Record<string, unknown>
+): ComponentType<ToolRendererProps> {
   const moduleCode = `${source.trim()}\nreturn Component;`;
 
-  // Compile JSX/TS → JS using sucrase
   const { code } = transform(moduleCode, {
     transforms: ["jsx", "typescript"],
     jsxRuntime: "classic",
     production: true,
   });
 
-  // Step 2: compile source into outer closure (no deps injected via new Function)
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
   const factory = new Function(code);
   const outerFn = factory();
 
-  // Step 3: call outer closure with all deps as a single object
   const allDeps = { ...INJECTED_DEPS, ...(extraDeps ?? {}) };
   return outerFn(allDeps) as ComponentType<ToolRendererProps>;
+}
+
+/** Compile ES module format using import transformation. */
+function compileModuleSource(
+  source: string,
+  extraDeps?: Record<string, unknown>
+): ComponentType<ToolRendererProps> {
+  // Transform archon:* imports into __deps__ lookups
+  const { code: transformedCode, modules } = transformImports(source);
+
+  // Transpile JSX/TS → JS
+  const { code } = transform(transformedCode, {
+    transforms: ["jsx", "typescript"],
+    jsxRuntime: "classic",
+    production: true,
+  });
+
+  // Build the __deps__ object from referenced modules
+  const depsObj: Record<string, Record<string, unknown>> = {};
+  for (const mod of modules) {
+    // Check platform-provided module maps first
+    if (mod in INJECTED_DEPS_BY_MODULE) {
+      depsObj[mod] = INJECTED_DEPS_BY_MODULE[mod];
+    } else if (mod.startsWith("archon:component/")) {
+      // Component deps are provided via extraDeps keyed by PascalCase name
+      const key = mod.slice("archon:component/".length);
+      const pascalName = key
+        .split("-")
+        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+        .join("");
+      if (extraDeps && pascalName in extraDeps) {
+        depsObj[mod] = { default: extraDeps[pascalName] };
+      }
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  const factory = new Function("__deps__", code);
+  return factory(depsObj) as ComponentType<ToolRendererProps>;
 }
 
 // ── Public renderer component ──

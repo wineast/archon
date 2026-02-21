@@ -22,12 +22,16 @@ import {
   SandboxError,
   SandboxTimeoutError,
   SandboxMemoryError,
+  SandboxCompilationError,
   type SandboxOptions,
 } from "@/lib/functions/sandbox";
+import { isModuleFormat } from "@/lib/modules/detect";
+import { transformToolHandlerImports } from "@/lib/modules/transform-tool-handler";
 import type { ToolContext } from "./tool-context";
 
 export {
   SandboxError,
+  SandboxCompilationError,
   SandboxTimeoutError,
   SandboxMemoryError,
 } from "@/lib/functions/sandbox";
@@ -288,13 +292,14 @@ function injectToolContext(
 /**
  * Execute a tool handler in an isolated QuickJS async sandbox.
  *
- * The handler code is a JS expression that evaluates to a function:
- *   `(args, context) => { ... }`
+ * Supports two code formats:
+ * - **Legacy**: A JS expression evaluating to a function: `(args, context) => { ... }`
+ * - **Module (ES6)**: `import { wiki } from "archon:context"; export default async function(args) { ... }`
  *
  * Context methods (wiki, dataset, fn, ontology) are available as asyncified
  * host callbacks. The user code can `await` them normally.
  *
- * @param handlerCode - JS code string (arrow fn or function expression)
+ * @param handlerCode - JS code string (arrow fn or function expression, or ES module)
  * @param args - Input arguments to pass to the handler
  * @param context - ToolContext with wiki/dataset/fn/ontology methods
  * @param opts - Sandbox resource limits
@@ -317,6 +322,8 @@ export async function executeToolInSandbox(
 
   const vm: QuickJSAsyncContext = runtime.newContext();
 
+  const useModule = isModuleFormat(handlerCode);
+
   try {
     // Inject context methods as asyncified host callbacks
     injectToolContext(vm, context);
@@ -326,26 +333,40 @@ export async function executeToolInSandbox(
     vm.setProp(vm.global, "__args", argsHandle);
     argsHandle.dispose();
 
-    // Evaluate the handler expression and call it.
-    // Asyncified host functions appear synchronous from QJS's perspective,
-    // so even `await context.wiki.get(...)` works transparently.
-    // If the handler is `async`, the IIFE returns a Promise which we
-    // resolve via executePendingJobs.
-    const wrappedCode =
-      `(function(){ var __fn = ${handlerCode}; return __fn(__args, __context); })()`;
+    if (useModule) {
+      // Module format: transform imports into global references, then evaluate.
+      // We can't use QuickJS ES module mode here because asyncified functions
+      // conflict with module import (stack can't be unwound twice).
+      const transformedCode = transformToolHandlerImports(handlerCode);
 
-    const evalResult = await vm.evalCodeAsync(wrappedCode);
+      const evalResult = await vm.evalCodeAsync(transformedCode);
 
-    if (evalResult.error) {
-      const errDump = vm.dump(evalResult.error);
-      evalResult.error.dispose();
-      throw classifySandboxError(errDump);
+      if (evalResult.error) {
+        const errDump = vm.dump(evalResult.error);
+        evalResult.error.dispose();
+        throw classifySandboxError(errDump);
+      }
+
+      const result = resolveIfPromise(vm, runtime, evalResult.value);
+      evalResult.value.dispose();
+      return result;
+    } else {
+      // Legacy format: evaluate expression and call
+      const wrappedCode =
+        `(function(){ var __fn = ${handlerCode}; return __fn(__args, __context); })()`;
+
+      const evalResult = await vm.evalCodeAsync(wrappedCode);
+
+      if (evalResult.error) {
+        const errDump = vm.dump(evalResult.error);
+        evalResult.error.dispose();
+        throw classifySandboxError(errDump);
+      }
+
+      const result = resolveIfPromise(vm, runtime, evalResult.value);
+      evalResult.value.dispose();
+      return result;
     }
-
-    // The result may be a Promise (async handler). Resolve it.
-    const result = resolveIfPromise(vm, runtime, evalResult.value);
-    evalResult.value.dispose();
-    return result;
   } finally {
     // Async WASM module disposal can throw when GC tries to free host
     // references after the runtime callback map is cleaned up. This is a

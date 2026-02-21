@@ -58,3 +58,41 @@ export const INJECTED_DEPS: Record<string, unknown> = {
   ChevronRight,
   FileText,
 };
+
+// Module-keyed dependency registry for ES module format components.
+// Maps `archon:*` module specifiers to their export objects.
+export const INJECTED_DEPS_BY_MODULE: Record<string, Record<string, unknown>> = {
+  "archon:react": {
+    default: React,
+    React,
+    useState,
+    useMemo,
+    useCallback,
+    useEffect,
+    useRef,
+    Fragment,
+  },
+  "archon:ui": {
+    Badge,
+    Spinner,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+    CollapsibleSection,
+    ResultHeader,
+    ResultSection,
+    RateSheetLinks,
+    RateSheetPanel,
+    SourceDocumentViewer,
+  },
+  "archon:icons": {
+    ChevronRight,
+    FileText,
+  },
+};
