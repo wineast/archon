@@ -37,13 +37,15 @@ interface ComponentTestCasesPanelProps {
   componentSource: string;
   componentKey?: string;
   allComponents?: ComponentRecord[];
-  inputSchema?: JsonSchema7 | null;
+  toolInputSchema?: JsonSchema7 | null;
+  componentInputSchema?: JsonSchema7 | null;
 }
 
 /** Execute a component render test on the client side. */
 async function executeRenderTest(
   componentSource: string,
   data: unknown,
+  scenario: "tool" | "component",
   extraDeps?: Record<string, unknown>
 ): Promise<ComponentTestRunResult> {
   const start = performance.now();
@@ -58,7 +60,8 @@ async function executeRenderTest(
     // Render to string to check for errors
     renderToStaticMarkup(
       createElement(Comp, {
-        data,
+        data: scenario === "component" ? data : undefined,
+        tool: scenario === "tool" ? (data as { name: string; input: unknown; output: unknown }) : undefined,
         state: "output-available",
         isLoading: false,
         isComplete: true,
@@ -80,7 +83,8 @@ export function ComponentTestCasesPanel({
   componentSource,
   componentKey,
   allComponents,
-  inputSchema,
+  toolInputSchema,
+  componentInputSchema,
 }: ComponentTestCasesPanelProps) {
   const { testCases, mutate: mutateCases } =
     useComponentTestCases(componentId);
@@ -145,6 +149,7 @@ export function ComponentTestCasesPanel({
       name: string;
       data: unknown;
       tags: string[];
+      scenario: "tool" | "component";
     }) => {
       await createComponentTestCase(componentId, payload, mutateCases);
       setShowCreateForm(false);
@@ -179,10 +184,12 @@ export function ComponentTestCasesPanel({
   const appendSchemaWarnings = useCallback(
     async (
       result: ComponentTestRunResult,
-      data: unknown
+      data: unknown,
+      scenario: "tool" | "component"
     ): Promise<ComponentTestRunResult> => {
-      if (!inputSchema) return result;
-      const schemaResult = await validateAgainstSchema(inputSchema, data);
+      const schema = scenario === "tool" ? toolInputSchema : componentInputSchema;
+      if (!schema) return result;
+      const schemaResult = await validateAgainstSchema(schema, data);
       if (schemaResult && !schemaResult.valid) {
         const warnings = schemaResult.errors.map(
           (e) => `${e.path ? `${e.path}: ` : ""}${e.message}`
@@ -191,13 +198,13 @@ export function ComponentTestCasesPanel({
       }
       return result;
     },
-    [inputSchema]
+    [toolInputSchema, componentInputSchema]
   );
 
   const handleRun = useCallback(
-    async (data: unknown): Promise<ComponentTestRunResult> => {
-      const result = await executeRenderTest(componentSource, data, compositionDeps);
-      return appendSchemaWarnings(result, data);
+    async (data: unknown, scenario: "tool" | "component"): Promise<ComponentTestRunResult> => {
+      const result = await executeRenderTest(componentSource, data, scenario, compositionDeps);
+      return appendSchemaWarnings(result, data, scenario);
     },
     [componentSource, compositionDeps, appendSchemaWarnings]
   );
@@ -230,8 +237,9 @@ export function ComponentTestCasesPanel({
       let passed = 0;
       for (let i = 0; i < filteredCases.length; i++) {
         const tc = filteredCases[i];
-        const renderResult = await executeRenderTest(componentSource, tc.data, compositionDeps);
-        const result = await appendSchemaWarnings(renderResult, tc.data);
+        const tcScenario = (tc.scenario ?? "tool") as "tool" | "component";
+        const renderResult = await executeRenderTest(componentSource, tc.data, tcScenario, compositionDeps);
+        const result = await appendSchemaWarnings(renderResult, tc.data, tcScenario);
         if (result.passed) passed++;
 
         // 3. Save result

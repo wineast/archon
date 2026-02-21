@@ -47,7 +47,8 @@ export interface ComponentTestCaseItemProps {
   ) => Promise<void>;
   onDelete: (caseId: string) => Promise<void>;
   onRun: (
-    data: unknown
+    data: unknown,
+    scenario: "tool" | "component"
   ) => Promise<ComponentTestRunResult>;
   runResult?: ComponentTestRunResult;
   busy: boolean;
@@ -126,13 +127,14 @@ export function ComponentTestCaseItem({
     }
     setRunning(true);
     try {
-      const r = await onRun(parsed);
+      const tcScenario = (testCase.scenario ?? "tool") as "tool" | "component";
+      const r = await onRun(parsed, tcScenario);
       setLocalResult(r);
       setPreviewKey((k) => k + 1);
     } finally {
       setRunning(false);
     }
-  }, [dataValue, onRun]);
+  }, [dataValue, onRun, testCase.scenario]);
 
   const handleAddTag = useCallback(
     (value: string) => {
@@ -359,7 +361,8 @@ export function ComponentTestCaseItem({
                       fallbackLabel="preview"
                     >
                       <DynamicComponentRenderer
-                        data={parsedData}
+                        data={testCase.scenario === "component" ? parsedData : undefined}
+                        tool={testCase.scenario === "tool" ? parsedData : undefined}
                         state="output-available"
                         source={componentSource}
                       />

@@ -1,6 +1,10 @@
 # 组件（Components）使用指南
 
-组件是通用的可视化渲染器，接收任意 JSON 数据并渲染为用户友好的 UI 界面。组件以 JSX 函数形式存储在数据库中，支持 Tailwind CSS 和内置 UI 组件库。组件通过关联工具在对话中使用——当 AI 调用工具时，系统自动将工具调用数据映射为 `{ name, input, output }` 传给组件渲染。
+组件是通用的可视化渲染器，接收任意 JSON 数据并渲染为用户友好的 UI 界面。组件以 JSX 函数形式存储在数据库中，支持 Tailwind CSS 和内置 UI 组件库。
+
+组件同时支持两种使用场景：
+- **Tool 场景**：通过关联工具在对话中使用——当 AI 调用工具时，系统将工具调用数据映射为 `tool = { name, input, output }` 传给组件渲染
+- **Component 场景**：被其他组件或页面引用时，接收自定义的 `data` 数据
 
 ---
 
@@ -32,13 +36,17 @@
 - **Name**：组件显示名称
 - **Description**：组件用途描述
 
-### Input Schema
+### Tool Input Schema
 
-组件必须定义 Input Schema（JSON Schema 7 格式），描述组件接收的数据结构。使用 JSON 编辑器直接编辑 Schema 对象。
+描述组件在 **Tool 场景**下接收的数据结构（JSON Schema 7 格式）。Tool Input Schema 必须包含 `name`、`input`、`output` 三个属性，对应工具调用的名称、输入参数和输出结果。
 
-Schema 的作用：
-- **Playground**：根据 Input Schema 验证数据是否符合预期结构
-- **Test Cases**：运行测试时自动校验数据并显示 Schema 告警
+### Component Input Schema
+
+描述组件在 **Component 场景**下接收的自定义数据结构（JSON Schema 7 格式）。
+
+两个 Schema 的作用：
+- **Playground**：根据当前选择的场景，使用对应的 Schema 验证数据
+- **Test Cases**：运行测试时按测试用例的场景自动校验数据并显示 Schema 告警
 - **文档化**：明确标注组件期望接收的数据结构，方便团队协作
 
 ### 组件源码（Component Source）
@@ -89,7 +97,7 @@ function PricingResult({ data, isLoading }) {
 </div>
 ```
 
-片段形式会自动被包装为函数，注入 `data`、`state`、`isLoading`、`isComplete`、`isError` 变量。
+片段形式会自动被包装为函数，注入 `data`、`tool`、`state`、`isLoading`、`isComplete`、`isError` 变量。
 
 ### 注入的 Props
 
@@ -97,24 +105,28 @@ function PricingResult({ data, isLoading }) {
 
 | Prop | 类型 | 说明 |
 |------|------|------|
-| `data` | `unknown` | 传入的数据（在对话中使用时，为 `{ name, input, output }`） |
+| `tool` | `{ name: string; input: unknown; output: unknown } \| undefined` | Tool 场景下的工具数据（Component 场景为 undefined） |
+| `data` | `unknown \| undefined` | Component 场景下的自定义数据（Tool 场景为 undefined） |
 | `state` | `string` | 当前状态：`input-streaming`、`input-available`、`output-available`、`error`（默认 `output-available`） |
 | `isLoading` | `boolean` | 是否正在加载（等待工具返回） |
 | `isComplete` | `boolean` | 工具调用是否已完成 |
 | `isError` | `boolean` | 工具调用是否出错 |
 
-**JSX 片段中的便捷变量**：在片段形式中，以下变量自动可用，无需从 props 解构：
-- `data`、`state`、`isLoading`、`isComplete`、`isError`
-
-**对话中的数据映射**：当组件通过工具关联在对话中使用时，系统自动将工具调用的 `name`、`input`、`output` 组装为 `data = { name, input, output }` 传入组件。因此在对话场景中可以通过 `data.name`、`data.input`、`data.output` 访问工具数据。
-
-典型用法：
+**Tool 场景典型用法**：
 
 ```jsx
-function MyComponent({ data, isLoading, isError }) {
+export default function({ tool, isLoading, isError }) {
   if (isLoading) return <Spinner className="size-4" />;
   if (isError) return <p className="text-destructive">出错了</p>;
-  return <div>{data.output.message}</div>;
+  return <div>{tool.output.message}</div>;
+}
+```
+
+**Component 场景典型用法**：
+
+```jsx
+export default function({ data }) {
+  return <div>{data.title}</div>;
 }
 ```
 
@@ -144,18 +156,25 @@ function MyComponent({ data, isLoading, isError }) {
 
 Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 
+### 场景切换
+
+Playground 顶部有 **Tool / Component** 场景切换 Tab：
+- **Tool**：使用 Tool Input Schema 校验数据，数据通过 `tool` prop 注入组件
+- **Component**：使用 Component Input Schema 校验数据，数据通过 `data` prop 注入组件
+
 ### 使用方法
 
-1. 在 **Data** 区域填写 JSON 数据：
-   - 可以从右上角的 **Load** 下拉菜单加载已有数据，菜单按 Examples 和 Test Cases 分组显示
-2. 在 **State** 下拉框中选择组件状态：
+1. 选择场景（Tool 或 Component）
+2. 在 **Data** 区域填写 JSON 数据：
+   - 可以从右上角的 **Load** 下拉菜单加载已有数据，菜单只显示当前场景的测试用例
+3. 在 **State** 下拉框中选择组件状态：
    - `output-available`（默认）— isComplete=true
    - `input-streaming` — isLoading=true
    - `input-available` — isLoading=true
    - `error` — isError=true
    - 旁边的 Badge 会实时显示 `isLoading`、`isComplete`、`isError` 的派生值
-3. 下方的 **Preview** 区域会实时渲染组件
-4. 点击 **Refresh** 按钮强制刷新预览
+4. 下方的 **Preview** 区域会实时渲染组件
+5. 点击 **Refresh** 按钮强制刷新预览
 
 ### 保存为测试用例
 
@@ -168,7 +187,7 @@ Playground 提供即时预览功能，用于快速测试组件的渲染效果。
    - **Show as Example**（可选）：开启后同时作为 Example 展示
 3. 点击 **Save** 保存
 
-保存后，新的测试用例会立即出现在 Load 下拉菜单和 Test Cases Tab 中。
+保存时会自动记录当前选择的场景（Tool / Component）。
 
 ---
 
@@ -181,6 +200,7 @@ Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 1. 点击底部的 **Add Test Case** 按钮
 2. 填写：
    - **Name**：测试用例名称
+   - **Scenario**：选择 Tool 或 Component 场景
    - **Tags**：标签（用于分组过滤）
    - **Data (JSON)**：组件接收的数据 JSON
 3. 点击 **Save**
@@ -190,7 +210,7 @@ Playground 提供即时预览功能，用于快速测试组件的渲染效果。
 - **单个运行**：点击测试用例右侧的 ▶ 按钮
 - **批量运行**：点击顶部工具栏的 **Run All** 按钮
 
-运行结果会显示 Passed/Failed 状态和渲染耗时。
+运行结果会显示 Passed/Failed 状态和渲染耗时。运行时会根据测试用例的场景，使用对应的 Schema 校验数据，并通过对应的 prop（`tool` 或 `data`）注入组件。
 
 ### 标签过滤
 
@@ -222,7 +242,7 @@ Examples 的数据来自 **Test Cases**——只有被标记为 "Show as Example
 
 每个 Example 卡片包含：
 - **标题**：测试用例名称
-- **渲染区域**：使用组件源码 + 测试用例的 data 数据实时渲染
+- **渲染区域**：根据测试用例的场景（Tool / Component），使用对应的 prop 注入数据实时渲染
 
 ### 空状态
 
@@ -243,7 +263,7 @@ Examples 与 Playground 一样支持组件组合（composition）——如果当
 3. 在表单底部的 **Component** 下拉框中选择对应的组件 Key
 4. 保存
 
-当 AI 调用该工具时，系统自动将工具调用数据映射为 `{ name: toolName, input, output }` 传给关联的组件渲染。
+当 AI 调用该工具时，系统自动将工具调用数据映射为 `tool = { name: toolName, input, output }` 传给关联的组件渲染。
 
 ---
 
@@ -262,25 +282,27 @@ Examples 与 Playground 一样支持组件组合（composition）——如果当
 
 ---
 
-## 示例：定价结果组件
+## 示例：定价结果组件（Tool 场景）
 
 完整示例，展示一个工具返回定价方案后的渲染组件：
 
 **组件源码**：
 
 ```jsx
-function PricingResult({ data, isLoading }) {
+import { Spinner } from "archon:ui";
+
+export default function({ tool, isLoading }) {
   if (isLoading) return <Spinner className="size-4" />;
-  if (!data?.output) return null;
+  if (!tool?.output) return null;
 
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{data.output.plan}</h3>
-        <span className="text-2xl font-bold text-primary">{data.output.price}</span>
+        <h3 className="text-lg font-semibold">{tool.output.plan}</h3>
+        <span className="text-2xl font-bold text-primary">{tool.output.price}</span>
       </div>
       <ul className="mt-4 space-y-2">
-        {data.output.features?.map((f, i) => (
+        {tool.output.features?.map((f, i) => (
           <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="size-1.5 rounded-full bg-primary" />
             {f}
@@ -292,7 +314,7 @@ function PricingResult({ data, isLoading }) {
 }
 ```
 
-**测试用例数据**（在 Test Cases 中创建）：
+**测试用例数据**（在 Test Cases 中创建，Scenario 选择 Tool）：
 
 - Data (JSON):
 ```json

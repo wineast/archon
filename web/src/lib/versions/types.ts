@@ -33,8 +33,8 @@ export interface ComponentSnapshotItem {
   description: string;
   componentSource: string;
   generatedCss: string;
-  inputSchema: JsonSchema7 | null;
-  outputSchema: JsonSchema7 | null;
+  toolInputSchema: JsonSchema7 | null;
+  componentInputSchema: JsonSchema7 | null;
   testCases: ComponentTestCaseSnapshotItem[];
 }
 
@@ -118,6 +118,7 @@ export interface ComponentTestCaseSnapshotItem {
   name: string;
   data: unknown;
   tags: string[];
+  scenario: "tool" | "component";
 }
 
 /* ─────────── Ontology Snapshot Items ─────────── */

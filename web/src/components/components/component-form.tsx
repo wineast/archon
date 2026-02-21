@@ -9,12 +9,11 @@ import { InlineSchemaEditor } from "@/components/schemas/inline-schema-editor";
 import { inferComponentDeps, keyToPascal, type ComponentRecord } from "@/tool-ui";
 import type { ComponentDefinition } from "@/lib/components/types";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BoxIcon, SparklesIcon, WrenchIcon } from "lucide-react";
+import { SparklesIcon } from "lucide-react";
 import {
   Controller,
   FormProvider,
   useForm,
-  useWatch,
 } from "react-hook-form";
 import deepEqual from "fast-deep-equal";
 import { Button } from "@/components/ui/button";
@@ -35,29 +34,11 @@ interface ComponentFormProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-const TOOL_SCHEMA_TEMPLATE = {
-  type: "object",
-  properties: {
-    name: { type: "string", description: "工具名称" },
-    input: { type: "object", properties: {}, description: "工具输入参数" },
-    output: { type: "object", properties: {}, description: "工具输出结果" },
-  },
-  required: ["name", "input", "output"],
-};
-
-const COMPONENT_SCHEMA_TEMPLATE = {
-  type: "object",
-  properties: {},
-  required: [],
-};
-
 export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
   const originalRef = useRef<ComponentDefinition>({ ...component });
   const currentSource = form.watch("componentSource");
   const [jsxAssistOpen, setJsxAssistOpen] = useState(false);
-
-  const scenario = useWatch({ control: form.control, name: "scenario" });
 
   // Infer referenced components from JSX source
   const referencedComponents = useMemo(() => {
@@ -88,12 +69,6 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
     return () => subscription.unsubscribe();
   }, [form, onDirtyChange]);
 
-  const handleScenarioChange = (newScenario: "tool" | "component") => {
-    form.setValue("scenario", newScenario, { shouldDirty: true });
-    const template = newScenario === "tool" ? TOOL_SCHEMA_TEMPLATE : COMPONENT_SCHEMA_TEMPLATE;
-    form.setValue("inputSchema", template, { shouldDirty: true });
-  };
-
   return (
     <FormProvider {...form}>
       <div className="space-y-3 min-w-0">
@@ -118,45 +93,25 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             placeholder="Describe what this component renders..."
           />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground">
-              场景
-            </label>
-            <div className="flex items-center rounded-md border border-border p-0.5">
-              <button
-                type="button"
-                onClick={() => handleScenarioChange("tool")}
-                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                  scenario === "tool"
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <WrenchIcon className="size-3" />
-                工具
-              </button>
-              <button
-                type="button"
-                onClick={() => handleScenarioChange("component")}
-                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                  scenario === "component"
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <BoxIcon className="size-3" />
-                组件
-              </button>
-            </div>
-          </div>
-        </div>
         <Controller
-          name="inputSchema"
+          name="toolInputSchema"
           control={form.control}
           render={({ field }) => (
             <InlineSchemaEditor
-              label="Input (JSON Schema / Template)"
+              label="Tool Input Schema"
+              value={field.value ?? null}
+              onChange={field.onChange}
+              agentId={agentId}
+              requireObjectRoot
+            />
+          )}
+        />
+        <Controller
+          name="componentInputSchema"
+          control={form.control}
+          render={({ field }) => (
+            <InlineSchemaEditor
+              label="Component Input Schema"
               value={field.value ?? null}
               onChange={field.onChange}
               agentId={agentId}

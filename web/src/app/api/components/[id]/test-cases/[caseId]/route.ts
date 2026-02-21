@@ -34,6 +34,7 @@ export async function PUT(
       ...(body.data !== undefined && { data: body.data }),
       ...(body.tags !== undefined && { tags: body.tags }),
       ...(body.showAsExample !== undefined && { showAsExample: body.showAsExample }),
+      ...(body.scenario !== undefined && { scenario: body.scenario }),
     })
     .where(eq(componentTestCases.id, caseId))
     .returning();

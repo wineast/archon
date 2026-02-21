@@ -114,7 +114,8 @@ function compileModuleSource(
 // ── Public renderer component ──
 
 interface DynamicComponentRendererProps {
-  data: unknown;
+  data?: unknown;
+  tool?: { name: string; input: unknown; output: unknown };
   state?: string;
   source?: string;
   /** Pre-compiled component (from compileComponentGraph). When provided, source is ignored. */
@@ -123,6 +124,7 @@ interface DynamicComponentRendererProps {
 
 export const DynamicComponentRenderer = memo(function DynamicComponentRenderer({
   data,
+  tool,
   state,
   source,
   compiledComponent,
@@ -142,6 +144,7 @@ export const DynamicComponentRenderer = memo(function DynamicComponentRenderer({
   return (
     <Component
       data={data}
+      tool={tool}
       state={resolvedState}
       isLoading={isLoading}
       isComplete={isComplete}

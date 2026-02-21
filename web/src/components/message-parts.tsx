@@ -76,8 +76,8 @@ export function MessageParts({
             ? (part as { toolName: string }).toolName
             : part.type.split("-").slice(1).join("-");
 
-          // Mapping layer: construct generic data from tool call parts
-          const data = { name: toolName, input: part.input, output: part.output };
+          // Mapping layer: construct tool prop from tool call parts
+          const toolProp = { name: toolName, input: part.input, output: part.output };
 
           // 1a) Pre-compiled component (with composition support)
           const compiledComp = getCompiledComponent(toolName);
@@ -85,7 +85,7 @@ export function MessageParts({
             return (
               <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackLabel={toolName}>
                 <DynamicComponentRenderer
-                  data={data}
+                  tool={toolProp}
                   state={part.state}
                   compiledComponent={compiledComp}
                 />
@@ -99,7 +99,7 @@ export function MessageParts({
             return (
               <DynamicComponentErrorBoundary key={`tool-${i}`} fallbackLabel={toolName}>
                 <DynamicComponentRenderer
-                  data={data}
+                  tool={toolProp}
                   state={part.state}
                   source={dynamicSource}
                 />

@@ -43,7 +43,8 @@ export async function POST(req: Request) {
       key: body.key,
       name: body.name,
       description: body.description ?? "",
-      inputSchema: body.inputSchema ?? null,
+      toolInputSchema: body.toolInputSchema ?? null,
+      componentInputSchema: body.componentInputSchema ?? null,
       componentSource,
       generatedCss,
     })

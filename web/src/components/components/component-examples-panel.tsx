@@ -113,6 +113,7 @@ function ExampleCard({
         >
           <DynamicComponentRenderer
             data={testCase.data}
+            tool={testCase.scenario === "tool" ? (testCase.data as { name: string; input: unknown; output: unknown }) : undefined}
             state="output-available"
             source={compiledComponent ? undefined : componentSource}
             compiledComponent={compiledComponent}

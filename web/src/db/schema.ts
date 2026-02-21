@@ -809,9 +809,8 @@ export const components = pgTable(
     description: text("description").notNull().default(""),
     componentSource: text("component_source").notNull().default(""),
     generatedCss: text("generated_css").notNull().default(""),
-    scenario: text("scenario").$type<"tool" | "component">().notNull().default("tool"),
-    inputSchema: jsonb("input_schema").$type<JsonSchema7>(),
-    outputSchema: jsonb("output_schema").$type<JsonSchema7>(),
+    toolInputSchema: jsonb("tool_input_schema").$type<JsonSchema7>(),
+    componentInputSchema: jsonb("component_input_schema").$type<JsonSchema7>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -844,6 +843,7 @@ export const componentTestCases = pgTable(
       .notNull()
       .default({}),
     tags: text("tags").array().notNull().default([]),
+    scenario: text("scenario").$type<"tool" | "component">().notNull().default("tool"),
     showAsExample: boolean("show_as_example").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

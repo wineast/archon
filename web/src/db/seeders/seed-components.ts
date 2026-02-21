@@ -70,6 +70,7 @@ export const seedComponents: Seeder = {
             name: string;
             data: unknown;
             tags?: string[];
+            scenario?: "tool" | "component";
             showAsExample?: boolean;
           }>
         >;
@@ -93,6 +94,7 @@ export const seedComponents: Seeder = {
                 name: tc.name,
                 data: tc.data,
                 tags: tc.tags ?? [],
+                scenario: tc.scenario ?? "tool",
                 showAsExample: tc.showAsExample ?? false,
               }))
             );

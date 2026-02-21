@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 
 export interface ComponentRendererProps {
   data: unknown;
+  tool?: { name: string; input: unknown; output: unknown };
   state?: string;
   isLoading?: boolean;
   isComplete?: boolean;

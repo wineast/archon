@@ -73,9 +73,8 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
                 key: component.key,
                 name: component.name,
                 description: component.description,
-                scenario: component.scenario,
-                inputSchema: component.inputSchema ?? null,
-                outputSchema: component.outputSchema ?? null,
+                toolInputSchema: component.toolInputSchema ?? null,
+                componentInputSchema: component.componentInputSchema ?? null,
                 componentSource: component.componentSource,
               }}
               agentId={agentId}
@@ -159,7 +158,8 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
           componentSource={component.componentSource}
           componentKey={component.key}
           allComponents={allComponents}
-          inputSchema={component.inputSchema ?? null}
+          toolInputSchema={component.toolInputSchema ?? null}
+          componentInputSchema={component.componentInputSchema ?? null}
         />
       </TabsContent>
 
@@ -169,7 +169,8 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
           componentSource={component.componentSource}
           componentKey={component.key}
           allComponents={allComponents}
-          inputSchema={component.inputSchema ?? null}
+          toolInputSchema={component.toolInputSchema ?? null}
+          componentInputSchema={component.componentInputSchema ?? null}
         />
       </TabsContent>
     </Tabs>
