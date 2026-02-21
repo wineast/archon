@@ -24,7 +24,8 @@
     "permanentDeleteFailed": "永久删除失败",
     "builtIn": "Built-in",
     "custom": "Custom",
-    "default": "Default"
+    "default": "Default",
+    "export": "导出"
   },
   "nav": {
     "agents": "Agents",
@@ -101,7 +102,12 @@
     "createFailed": "创建 Agent 失败",
     "updateFailed": "更新 Agent 失败",
     "deleteFailed": "删除 Agent 失败",
-    "restoreFailed": "恢复 Agent 失败"
+    "restoreFailed": "恢复 Agent 失败",
+    "exportFailed": "导出 Agent 失败",
+    "importAgent": "导入",
+    "importSuccess": "Agent 导入成功",
+    "importFailed": "导入 Agent 失败",
+    "importInvalidFormat": "无效的 Agent 导出文件"
   },
   "trash": {
     "title": "回收站",

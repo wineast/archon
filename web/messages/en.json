@@ -24,7 +24,8 @@
     "permanentDeleteFailed": "Failed to permanently delete",
     "builtIn": "Built-in",
     "custom": "Custom",
-    "default": "Default"
+    "default": "Default",
+    "export": "Export"
   },
   "nav": {
     "agents": "Agents",
@@ -101,7 +102,12 @@
     "createFailed": "Failed to create Agent",
     "updateFailed": "Failed to update Agent",
     "deleteFailed": "Failed to delete Agent",
-    "restoreFailed": "Failed to restore Agent"
+    "restoreFailed": "Failed to restore Agent",
+    "exportFailed": "Failed to export Agent",
+    "importAgent": "Import",
+    "importSuccess": "Agent imported successfully",
+    "importFailed": "Failed to import Agent",
+    "importInvalidFormat": "Invalid agent export file"
   },
   "trash": {
     "title": "Trash",
