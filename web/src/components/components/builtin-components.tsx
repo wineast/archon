@@ -24,10 +24,18 @@ export interface BuiltinExample {
   render: () => ReactNode;
 }
 
+export interface BuiltinPropDef {
+  name: string;
+  type: string;
+  default?: string;
+  description: string;
+}
+
 export interface BuiltinComponentDef {
   key: string;
   name: string;
   description: string;
+  props?: BuiltinPropDef[];
   examples: BuiltinExample[];
 }
 
@@ -37,6 +45,11 @@ export const BUILTIN_COMPONENTS: BuiltinComponentDef[] = [
     name: "Badge",
     description:
       "Inline status indicator with multiple color variants.",
+    props: [
+      { name: "children", type: "ReactNode", description: "Badge content" },
+      { name: "variant", type: '"default" | "secondary" | "destructive" | "outline" | "ghost" | "link"', default: '"default"', description: "Visual style variant" },
+      { name: "className", type: "string", description: "Additional CSS classes" },
+    ],
     examples: [
       {
         name: "Variants",
@@ -55,6 +68,9 @@ export const BUILTIN_COMPONENTS: BuiltinComponentDef[] = [
     key: "spinner",
     name: "Spinner",
     description: "Animated loading indicator with customizable size.",
+    props: [
+      { name: "className", type: "string", description: 'CSS classes for sizing (e.g. "size-8")' },
+    ],
     examples: [
       {
         name: "Default Size",
@@ -71,6 +87,10 @@ export const BUILTIN_COMPONENTS: BuiltinComponentDef[] = [
     name: "Table",
     description:
       "Composite table components with responsive scrolling, hover states, and border styling.",
+    props: [
+      { name: "children", type: "ReactNode", description: "Table sub-components (TableHeader, TableBody, etc.)" },
+      { name: "className", type: "string", description: "Additional CSS classes" },
+    ],
     examples: [
       {
         name: "Basic Table",
@@ -110,6 +130,10 @@ export const BUILTIN_COMPONENTS: BuiltinComponentDef[] = [
     name: "Tooltip",
     description:
       "Radix-based tooltip with smooth animation, configurable placement, and arrow indicator.",
+    props: [
+      { name: "children", type: "ReactNode", description: "TooltipTrigger + TooltipContent" },
+      { name: "delayDuration", type: "number", default: "200", description: "Delay before showing (ms)" },
+    ],
     examples: [
       {
         name: "Basic Usage",
