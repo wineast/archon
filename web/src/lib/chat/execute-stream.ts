@@ -10,6 +10,8 @@ import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import { db } from "@/db";
 import { agents, tools, modelConfigs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { retrieveMemories } from "@/lib/memory/retrieve";
+import { formatMemoriesForInjection } from "@/lib/memory/format-for-injection";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
   createSession,
@@ -43,9 +45,9 @@ export async function executeChatStream(
 ): Promise<Response> {
   const { messages, sessionId, agentId, userId, hostContext, registeredHostTools } = opts;
 
-  // Get agent's orgId for usage recording
+  // Get agent's orgId + memoryEnabled for usage recording & memory injection
   const [agentRow] = await db
-    .select({ orgId: agents.orgId })
+    .select({ orgId: agents.orgId, memoryEnabled: agents.memoryEnabled })
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
@@ -120,16 +122,39 @@ export async function executeChatStream(
   // The last message is the new user message
   const userMessage = messages[messages.length - 1];
 
-  const systemPrompt = await renderTemplate(
+  // ── Memory injection ──
+  let memoryBlock = "";
+  let memoryInjectionMode: "system_prompt" | "context" | "none" = "none";
+
+  if (agentRow?.memoryEnabled) {
+    const retrieved = await retrieveMemories({ agentId, userId, sessionId });
+    if (retrieved && retrieved.items.length > 0) {
+      memoryInjectionMode = retrieved.config.injectionMode;
+      memoryBlock = formatMemoriesForInjection(retrieved.items);
+    }
+  }
+
+  let systemPrompt = await renderTemplate(
     activeConfig.systemPrompt || "",
     templateData,
     hostContext ? { host: hostContext } : undefined
   );
 
+  if (memoryBlock && memoryInjectionMode === "system_prompt") {
+    systemPrompt = systemPrompt + "\n\n" + memoryBlock;
+  }
+
   try {
+    const modelMessages = await convertToModelMessages(messages);
+
+    // Inject memories as an extra system message when mode is "context"
+    if (memoryBlock && memoryInjectionMode === "context") {
+      modelMessages.unshift({ role: "system", content: memoryBlock });
+    }
+
     const result = streamText({
       model: gateway(activeConfig.modelId),
-      messages: await convertToModelMessages(messages),
+      messages: modelMessages,
       system: systemPrompt,
       temperature: activeConfig.temperature ?? 0.7,
       tools: allTools,

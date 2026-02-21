@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/select";
 import { MEMORY_TYPE_PRESETS } from "@/db/schema";
 import type { MemoryConfigRow, MemoryTypeDef } from "@/db/schema";
+import { GuideDialog } from "@/components/ui/guide-dialog";
+import injectionModeGuide from "../../../guide/memory-injection-mode.md";
 
 interface MemoryConfigDetailProps {
   config: MemoryConfigRow | null;
@@ -263,7 +265,13 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
 
           {/* Injection Mode */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Injection Mode</label>
+            <div className="flex items-center gap-1">
+              <label className="text-sm font-medium">Injection Mode</label>
+              <GuideDialog
+                title="Injection Mode"
+                content={injectionModeGuide}
+              />
+            </div>
             <Select value={injectionMode} onValueChange={(v) => setInjectionMode(v as typeof injectionMode)}>
               <SelectTrigger>
                 <SelectValue />

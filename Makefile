@@ -172,18 +172,18 @@ db-studio:
 # Docker PostgreSQL
 # ============================================================
 
-## 启动本地 Docker PostgreSQL
+## 启动本地 Docker PostgreSQL（始终使用主仓库的 compose 文件，worktree 共享同一容器）
 db-up:
 	@echo "🐘 [db-up] 启动 Docker PostgreSQL..."
-	docker compose up -d --wait
+	docker compose -f "$$(git worktree list --porcelain | head -1 | sed 's/worktree //')/docker-compose.yml" up -d --wait
 
 ## 停止容器
 db-down:
-	docker compose down
+	docker compose -f "$$(git worktree list --porcelain | head -1 | sed 's/worktree //')/docker-compose.yml" down
 
 ## 停止并删除数据卷
 db-destroy:
-	docker compose down -v
+	docker compose -f "$$(git worktree list --porcelain | head -1 | sed 's/worktree //')/docker-compose.yml" down -v
 
 ## 切回 Neon 云 DB（删除覆盖文件，.env.local 恢复生效）
 db-neon-env:
