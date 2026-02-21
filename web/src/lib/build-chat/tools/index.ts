@@ -8,6 +8,7 @@ import { buildModelConfigTools } from "./model-config-tools";
 import { buildChatConfigTools } from "./chat-config-tools";
 import { buildOntologyTools } from "./ontology-tools";
 import { buildMemoryTools } from "./memory-tools";
+import { buildMcpServerTools } from "./mcp-server-tools";
 
 /**
  * Build all server-side tools for the Build Chat assistant.
@@ -25,5 +26,6 @@ export function buildAllTools(agentId: string) {
     ...buildChatConfigTools(agentId),
     ...buildOntologyTools(agentId),
     ...buildMemoryTools(agentId),
+    ...buildMcpServerTools(agentId),
   };
 }

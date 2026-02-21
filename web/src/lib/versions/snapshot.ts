@@ -17,6 +17,7 @@ import {
   componentTestCases,
   objectTypes,
   objectRelations,
+  mcpServers,
 } from "@/db/schema";
 import { eq, and, asc, inArray, isNull } from "drizzle-orm";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
@@ -40,6 +41,7 @@ import type {
   ComponentTestCaseSnapshotItem,
   ObjectTypeSnapshotItem,
   ObjectRelationSnapshotItem,
+  McpServerSnapshotItem,
 } from "./types";
 import type { ToolParameter } from "@/lib/tools/types";
 
@@ -96,6 +98,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
     componentTestCaseRows,
     objectTypeRows,
     objectRelationRows,
+    mcpServerRows,
   ] = await Promise.all([
     _db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
     _db.select().from(tools).where(and(eq(tools.agentId, agentId), isNull(tools.deletedAt))),
@@ -132,6 +135,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
       .where(and(eq(components.agentId, agentId), isNull(components.deletedAt))),
     _db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))),
     _db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
+    _db.select().from(mcpServers).where(and(eq(mcpServers.agentId, agentId), isNull(mcpServers.deletedAt))),
   ]);
 
   if (!agent) throw new Error("Agent not found");
@@ -349,6 +353,17 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         order: r.order,
       })
     ),
+    mcpServers: mcpServerRows.map(
+      (s): McpServerSnapshotItem => ({
+        key: s.key,
+        name: s.name,
+        description: s.description,
+        url: s.url,
+        transportType: s.transportType,
+        headers: s.headers,
+        enabled: s.enabled,
+      })
+    ),
   };
 }
 
@@ -376,6 +391,7 @@ export async function restoreSnapshot(
     tx.delete(chatConfigs).where(eq(chatConfigs.agentId, agentId)),
     tx.delete(evalCases).where(eq(evalCases.agentId, agentId)),
     tx.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.agentId, agentId)),
+    tx.delete(mcpServers).where(eq(mcpServers.agentId, agentId)),
   ]);
 
   // 2a. Rebuild datasets first (schemas may reference them via enumDatasetId in parameters)
@@ -684,6 +700,22 @@ export async function restoreSnapshot(
         temperature: j.temperature,
         dimensions: j.dimensions,
         isDefault: j.isDefault,
+      }))
+    );
+  }
+
+  // 12. Rebuild MCP servers
+  if (snapshot.mcpServers?.length) {
+    await tx.insert(mcpServers).values(
+      snapshot.mcpServers.map((s) => ({
+        agentId,
+        key: s.key,
+        name: s.name,
+        description: s.description,
+        url: s.url,
+        transportType: s.transportType,
+        headers: s.headers,
+        enabled: s.enabled,
       }))
     );
   }

@@ -10,6 +10,7 @@ import {
   chatConfigs,
   objectTypes,
   objectRelations,
+  mcpServers,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -37,6 +38,15 @@ export interface ResourceSummary {
     targetTypeId: string;
     relationType: string;
   }[];
+  mcpServers: {
+    id: string;
+    key: string;
+    name: string;
+    description: string;
+    url: string;
+    transportType: string;
+    enabled: boolean;
+  }[];
 }
 
 /**
@@ -57,6 +67,7 @@ export async function gatherResourceSummary(
     chatConfigRows,
     objectTypeRows,
     objectRelationRows,
+    mcpServerRows,
   ] = await Promise.all([
     db
       .select({
@@ -155,6 +166,18 @@ export async function gatherResourceSummary(
       })
       .from(objectRelations)
       .where(eq(objectRelations.agentId, agentId)),
+    db
+      .select({
+        id: mcpServers.id,
+        key: mcpServers.key,
+        name: mcpServers.name,
+        description: mcpServers.description,
+        url: mcpServers.url,
+        transportType: mcpServers.transportType,
+        enabled: mcpServers.enabled,
+      })
+      .from(mcpServers)
+      .where(eq(mcpServers.agentId, agentId)),
   ]);
 
   return {
@@ -168,5 +191,6 @@ export async function gatherResourceSummary(
     chatConfig: chatConfigRows[0] ?? null,
     objectTypes: objectTypeRows,
     objectRelations: objectRelationRows,
+    mcpServers: mcpServerRows,
   };
 }
