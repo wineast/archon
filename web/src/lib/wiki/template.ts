@@ -15,8 +15,6 @@ function buildContext(ctx: TemplateContext): Record<string, unknown> {
     currentDate: now.toLocaleDateString("en-US"),
     currentTime: now.toLocaleTimeString("en-US"),
     documentTitle: ctx.currentDoc.name,
-    documentCount: ctx.documents.length,
-    documentList: ctx.documents.map((d) => d.name),
     ...ctx.variables,
   };
 }

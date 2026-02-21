@@ -11,7 +11,7 @@
 | 位置 | 说明 | 可用数据 | 代码入口 |
 |------|------|---------|---------|
 | **系统提示词** | 模型配置的 `systemPrompt` 字段 | 全部（内置变量、数据集、tool、`{% include %}` Wiki） | `renderTemplate()` — `chat/route.ts`、`eval/.../case/route.ts`、`template/preview/route.ts` |
-| **Wiki 文档内容** | Wiki 编辑器中的文档正文 | 全部 + Wiki 专属变量（`documentTitle`、`documentCount`、`documentList`、`currentDate`、`currentTime`）；支持 `{% include '标题' %}` | `processTemplate()` — `wiki-editor.tsx`（预览）、`tool-context.ts`（工具运行时读取） |
+| **Wiki 文档内容** | Wiki 编辑器中的文档正文 | 全部 + Wiki 专属变量（`documentTitle`、`currentDate`、`currentTime`）；支持 `{% include 'key' %}` | `processTemplate()` — `wiki-editor.tsx`（预览）、`tool-context.ts`（工具运行时读取） |
 | **评估 Judge 提示词** | Eval Judge 的 `systemPrompt` 字段 | 全部 + 额外变量（`model`、`caseName`、`toolNames`） | `renderTemplate()` — `eval/.../case/route.ts` |
 | **数据集模板** | data 字段内含 `{{ }}` 的数据集 | **所有已解析的前序数据集**（拓扑排序，不含 tool 命名空间，不支持 `{% include %}`） | `renderField()` / `renderObjectField()` — `datasets/queries.ts` |
 | **工具 JS Handler** | handler 为 JS 代码时，第二个参数 `context` 提供运行时数据访问 API | 通过 API 访问 wiki、dataset（返回值已经过模板渲染） | `createToolContext()` — `tool-context.ts` |
@@ -228,7 +228,7 @@ const results = await context.wiki.search("关键词");
 ### context.dataset
 
 ```js
-// 获取数据集值（已解析 layer 引用）
+// 获取数据集值（已解析模板引用）
 const company = await context.dataset.get("company_name");
 // → "GMCC" | null
 
@@ -319,9 +319,8 @@ const entries = await context.dataset.getEntries("product_routes");
 当同名变量存在多个来源时，按以下优先级（高覆盖低）：
 
 1. 调用时传入的额外变量（最高）
-2. Layer 1 数据集（渲染后）
-3. Layer 0 数据集
-4. 内置变量（最低）
+2. 数据集（拓扑排序后依次渲染）
+3. 内置变量（最低）
 
 `tool.*` 为独立命名空间，不受上述覆盖影响。
 

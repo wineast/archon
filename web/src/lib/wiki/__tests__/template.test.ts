@@ -32,17 +32,7 @@ describe("processTemplate", () => {
       expect(result).toBe("Title: Hello");
     });
 
-    it("replaces {{documentCount}}", () => {
-      const doc1 = makeDoc({ id: "1" });
-      const doc2 = makeDoc({ id: "2" });
-      const result = processTemplate(
-        "Total: {{documentCount}}",
-        makeCtx(doc1, [doc1, doc2])
-      );
-      expect(result).toBe("Total: 2");
-    });
-
-    it("replaces {{currentDate}}", () => {
+it("replaces {{currentDate}}", () => {
       const doc = makeDoc();
       const result = processTemplate("Date: {{currentDate}}", makeCtx(doc));
       expect(result).toMatch(/Date: \d{1,2}\/\d{1,2}\/\d{4}/);
@@ -149,15 +139,6 @@ describe("processTemplate", () => {
       expect(result).toBe("");
     });
 
-    it("iterates over built-in documentList", () => {
-      const doc1 = makeDoc({ id: "1", name: "Doc A" });
-      const doc2 = makeDoc({ id: "2", name: "Doc B" });
-      const result = processTemplate(
-        "{% for item in documentList %}- {{item}}\n{% endfor %}",
-        makeCtx(doc1, [doc1, doc2])
-      );
-      expect(result).toBe("- Doc A\n- Doc B\n");
-    });
   });
 
   describe("{% include 'key' %} document embedding", () => {

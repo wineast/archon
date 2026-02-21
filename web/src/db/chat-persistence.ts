@@ -208,6 +208,18 @@ export async function getSessionMessages(sessionId: string) {
     .orderBy(messages.createdAt);
 }
 
+export async function updateSessionMetadata(
+  id: string,
+  patch: Record<string, unknown>
+) {
+  const session = await getSession(id);
+  const merged = { ...(session?.metadata ?? {}), ...patch };
+  await db
+    .update(chatSessions)
+    .set({ metadata: merged, updatedAt: new Date() })
+    .where(eq(chatSessions.id, id));
+}
+
 export async function deleteSession(id: string) {
   await db.delete(chatSessions).where(eq(chatSessions.id, id));
 }

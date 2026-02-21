@@ -111,6 +111,7 @@ export const agents = pgTable(
       .$onUpdate(() => new Date()),
     memoryEnabled: boolean("memory_enabled").notNull().default(false),
     skillsEnabled: boolean("skills_enabled").notNull().default(true),
+    contextCompressionEnabled: boolean("context_compression_enabled").notNull().default(false),
     isPlatform: boolean("is_platform").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },

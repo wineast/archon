@@ -30,6 +30,14 @@ import { recordRuntimeEvents } from "@/lib/runtime-events/record";
 import { extractMemories, serialiseConversation } from "@/lib/memory/extract";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { QuotaExceededError } from "@/lib/credits/errors";
+import {
+  shouldCompress,
+  compressMessages,
+  getCompressionData,
+  saveCompressionData,
+  KEEP_RECENT_COUNT,
+  type CompressionMetadata,
+} from "@/lib/chat/compress";
 
 export interface ExecuteChatStreamOptions {
   messages: UIMessage[];
@@ -54,7 +62,7 @@ export async function executeChatStream(
 
   // Get agent's orgId, mcpEnabled, skillsEnabled, and memoryEnabled
   const [agentRow] = await db
-    .select({ orgId: agents.orgId, mcpEnabled: agents.mcpEnabled, skillsEnabled: agents.skillsEnabled, memoryEnabled: agents.memoryEnabled })
+    .select({ orgId: agents.orgId, mcpEnabled: agents.mcpEnabled, skillsEnabled: agents.skillsEnabled, memoryEnabled: agents.memoryEnabled, contextCompressionEnabled: agents.contextCompressionEnabled })
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
@@ -243,7 +251,24 @@ export async function executeChatStream(
   }
 
   try {
-    const modelMessages = await convertToModelMessages(messages);
+    // ── Context compression: load existing compression data ──
+    let compressionData: CompressionMetadata | null = null;
+    if (agentRow?.contextCompressionEnabled && sessionId) {
+      compressionData = await getCompressionData(sessionId);
+    }
+
+    const messagesToConvert = compressionData
+      ? messages.slice(compressionData.compressedCount)
+      : messages;
+    const modelMessages = await convertToModelMessages(messagesToConvert);
+
+    // Inject compression summary as system message
+    if (compressionData) {
+      modelMessages.unshift({
+        role: "system",
+        content: `<conversation_summary>\n${compressionData.summary}\n</conversation_summary>`,
+      });
+    }
 
     // Inject memories as an extra system message when mode is "context"
     if (memoryBlock && memoryInjectionMode === "context") {
@@ -360,6 +385,46 @@ export async function executeChatStream(
             conversationText,
           });
         });
+
+        // Context compression (non-blocking, best-effort)
+        if (agentRow?.contextCompressionEnabled && sessionId) {
+          after(async () => {
+            try {
+              if (!shouldCompress(totalUsage.inputTokens ?? 0, activeConfig.modelId)) return;
+              if (messages.length <= KEEP_RECENT_COUNT) return;
+
+              const newCutoff = messages.length - KEEP_RECENT_COUNT;
+              const oldCutoff = compressionData?.compressedCount ?? 0;
+              if (newCutoff <= oldCutoff) return;
+
+              const newMessages = messages.slice(oldCutoff, newCutoff);
+              const textToCompress = [
+                compressionData?.summary
+                  ? `之前的摘要：\n${compressionData.summary}`
+                  : "",
+                serialiseConversation(
+                  newMessages as Array<{ role: string; parts?: unknown[] }>
+                ),
+              ]
+                .filter(Boolean)
+                .join("\n\n");
+
+              if (!textToCompress) return;
+
+              const summary = await compressMessages(textToCompress, orgId);
+              await saveCompressionData(sessionId, {
+                summary,
+                compressedCount: newCutoff,
+                lastCompressedAt: new Date().toISOString(),
+              });
+              console.log(
+                `[context-compression] agent=${agentId} session=${sessionId} compressed ${newCutoff - oldCutoff} messages`
+              );
+            } catch (e) {
+              console.error("[context-compression] failed:", e);
+            }
+          });
+        }
       },
     });
 
