@@ -36,14 +36,55 @@ LiquidJS 模板引擎，通过 `{{ }}` 输出变量、`{% %}` 控制流。
 | `{dataset_key}` | any | 数据集值（拓扑排序后解析） |
 | `tool.{name}.name` | `string` | 工具名称 |
 | `tool.{name}.description` | `string` | 工具描述 |
-| `tool.{name}.params` | `string` | 参数名逗号拼接 |
-| `tool.{name}.parameters` | `array` | 参数定义数组 |
-| `tool.{name}.json` | `string` | 工具完整 JSON |
+| `tool.{name}.params` | `string` | 参数名逗号拼接，如 `"query, limit"` |
+| `tool.{name}.parameters` | `array` | 参数定义数组：`[{name, type, description, required, enum?}]` |
+| `tool.{name}.json` | `string` | 工具完整 JSON（含原始 JSON Schema） |
 | `tool_names` | `string` | 所有工具名逗号拼接 |
-| `tool_entries` | `array` | 工具概要数组 |
+| `tool_entries` | `array` | 工具概要数组：`[{name, description, params: [{name, type}]}]`（简化版，不含 description/required/enum） |
 | `ontology_types` | `array` | 本体论类型数组 |
 | `ontology.{key}` | `object` | 按 key 访问本体论类型 |
 | `host` | `object` | 宿主上下文（embed 场景） |
+
+### 工具变量详细度对比
+
+三种工具变量提供不同粒度的信息，按需选用：
+
+| 变量 | 内容 | 详细度 |
+|------|------|--------|
+| `tool_entries[].params` | `[{name, type}]` | 最简——只有参数名和类型 |
+| `tool.{name}.parameters` | `[{name, type, description, required, enum?}]` | 较完整——含描述、必填、枚举 |
+| `tool.{name}.json` | 完整 JSON（含原始 JSON Schema） | 最完整——可直接用于 function calling |
+
+**`tool_entries` 示例数据**：
+
+```json
+[
+  {
+    "name": "search",
+    "description": "Search documents",
+    "params": [
+      { "name": "query", "type": "string" },
+      { "name": "limit", "type": "number" }
+    ]
+  },
+  {
+    "name": "lookup",
+    "description": "Lookup data",
+    "params": [
+      { "name": "key", "type": "string" }
+    ]
+  }
+]
+```
+
+**`tool.search.parameters` 示例数据**（较完整版）：
+
+```json
+[
+  { "name": "query", "type": "string", "description": "搜索关键词", "required": true },
+  { "name": "limit", "type": "number", "description": "返回数量", "required": false }
+]
+```
 
 ### Filter（管道语法）
 
