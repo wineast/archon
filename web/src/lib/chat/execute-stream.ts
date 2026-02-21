@@ -1,6 +1,5 @@
 import {
   streamText,
-  gateway,
   tool,
   type Tool,
   type UIMessage,
@@ -28,6 +27,8 @@ import { recordUsage } from "@/lib/usage/record";
 import type { RuntimeEventInput } from "@/lib/runtime-events/record";
 import { recordRuntimeEvents } from "@/lib/runtime-events/record";
 import { extractMemories, serialiseConversation } from "@/lib/memory/extract";
+import { resolveModel } from "@/lib/ai/resolve-model";
+import { QuotaExceededError } from "@/lib/credits/errors";
 
 export interface ExecuteChatStreamOptions {
   messages: UIMessage[];
@@ -222,11 +223,11 @@ export async function executeChatStream(
       (s) => `- ${s.name} (key: ${s.key}): ${s.description}`
     );
     systemPrompt +=
-      `\n\n## 可用技能\n以下技能提供额外能力。需要时调用 get_skill_detail 工具获取完整指引。\n` +
+      `\n\n## 可用技能\n当用户请求与某个技能相关时，必须先调用 get_skill_detail 获取完整指引，再严格按照指引执行。不要凭自身知识猜测，技能内容是唯一执行依据。\n` +
       skillSummaryLines.join("\n");
 
     allTools.get_skill_detail = tool({
-      description: "获取技能的完整内容指引。当需要使用某个技能时，先调用此工具获取详细指引。",
+      description: "获取技能的完整执行指引。当用户请求匹配某个技能时，必须先调用此工具获取指引再执行，不要跳过。",
       inputSchema: z.object({ skill_key: z.string().describe("技能的 key") }),
       execute: async ({ skill_key }: { skill_key: string }) => {
         const matched = enabledSkills.find((s) => s.key === skill_key);
@@ -252,7 +253,7 @@ export async function executeChatStream(
     }
 
     const result = streamText({
-      model: gateway(activeConfig.modelId),
+      model: await resolveModel(activeConfig.modelId, orgId),
       messages: modelMessages,
       system: systemPrompt,
       temperature: activeConfig.temperature ?? 0.7,
@@ -375,6 +376,13 @@ export async function executeChatStream(
 
     return response;
   } catch (e) {
+    // Quota exceeded → 402
+    if (e instanceof QuotaExceededError) {
+      return new Response(
+        JSON.stringify({ error: "quota_exceeded", message: e.message }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
     // Capture stream initialization errors
     const errorMsg = e instanceof Error ? e.message : String(e);
     eventCollector.push({

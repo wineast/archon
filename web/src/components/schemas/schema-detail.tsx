@@ -105,6 +105,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
               parametersHidden={innerTab === "preview"}
               context={schemaAssistContext}
               templateVariableNames={templateVariableNames}
+              agentId={agentId}
             >
               <Tabs
                 value={innerTab}

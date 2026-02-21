@@ -1,6 +1,5 @@
 import {
   streamText,
-  gateway,
   type UIMessage,
   convertToModelMessages,
   stepCountIs,
@@ -12,6 +11,8 @@ import { getPlatformSettings } from "@/lib/platform-settings/queries";
 import { db } from "@/db";
 import { agents } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { resolveModel } from "@/lib/ai/resolve-model";
+import { QuotaExceededError } from "@/lib/credits/errors";
 
 export interface ExecuteBuildChatStreamOptions {
   messages: UIMessage[];
@@ -31,15 +32,29 @@ export async function executeBuildChatStream(
   const [summary, settings, [agentRow]] = await Promise.all([
     gatherResourceSummary(agentId),
     getPlatformSettings(),
-    db.select({ skillsEnabled: agents.skillsEnabled }).from(agents).where(eq(agents.id, agentId)).limit(1),
+    db.select({ skillsEnabled: agents.skillsEnabled, orgId: agents.orgId }).from(agents).where(eq(agents.id, agentId)).limit(1),
   ]);
   const skillsEnabled = agentRow?.skillsEnabled !== false;
+  const orgId = agentRow?.orgId ?? null;
   const systemPrompt = buildSystemPrompt(summary);
 
   const allTools = buildAllTools(agentId, { skillsEnabled });
 
+  let model;
+  try {
+    model = await resolveModel(settings.buildChatModel, orgId);
+  } catch (e) {
+    if (e instanceof QuotaExceededError) {
+      return new Response(
+        JSON.stringify({ error: "quota_exceeded", message: e.message }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    throw e;
+  }
+
   const result = streamText({
-    model: gateway(settings.buildChatModel),
+    model,
     messages: await convertToModelMessages(messages),
     system: systemPrompt,
     temperature: settings.buildChatTemperature,

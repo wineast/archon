@@ -189,6 +189,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             onOpenChange={setJsxAssistOpen}
             jsxSource={currentSource}
             onApply={(src) => form.setValue("componentSource", src, { shouldDirty: true })}
+            agentId={agentId}
           />
           <Controller
             name="componentSource"

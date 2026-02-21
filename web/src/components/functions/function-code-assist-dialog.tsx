@@ -58,6 +58,7 @@ interface FunctionCodeAssistDialogProps {
   code: string;
   context?: string;
   onApply: (newCode: string) => void;
+  agentId?: string;
 }
 
 function buildSystemPrompt(currentCode: string, context?: string): string {
@@ -166,6 +167,7 @@ export function FunctionCodeAssistDialog({
   code,
   context,
   onApply,
+  agentId,
 }: FunctionCodeAssistDialogProps) {
   const [draftCode, setDraftCode] = useState(code);
   const [originalCode, setOriginalCode] = useState(code);
@@ -194,9 +196,10 @@ export function FunctionCodeAssistDialog({
         body: () => ({
           currentCode: draftCodeRef.current,
           context,
+          agentId,
         }),
       }),
-    [context]
+    [context, agentId]
   );
 
   const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<FunctionCodeAssistMessage>({

@@ -233,6 +233,7 @@ export function FunctionForm({
             code={currentCode}
             context={codeAssistContext}
             onApply={(newCode) => form.setValue("code", newCode, { shouldDirty: true })}
+            agentId={agentId}
           />
           <div className="mt-1">
             <Controller

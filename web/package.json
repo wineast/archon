@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "storybook": "storybook dev -p $(node -p \"try{require('../.worktree/meta.json').storybook}catch{6006}\")",
+    "storybook": "storybook dev --no-open -p $(node -p \"try{require('../.worktree/meta.json').storybook}catch{6006}\")",
     "build-storybook": "storybook build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
@@ -20,8 +20,13 @@
     "vercel-build": "npm run db:migrate && next build"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.46",
+    "@ai-sdk/deepseek": "^2.0.20",
+    "@ai-sdk/google": "^3.0.30",
     "@ai-sdk/mcp": "^1.0.21",
+    "@ai-sdk/openai": "^3.0.30",
     "@ai-sdk/react": "^3.0.87",
+    "@ai-sdk/xai": "^3.0.57",
     "@clerk/nextjs": "^6.37.4",
     "@dagrejs/dagre": "^2.0.4",
     "@monaco-editor/react": "^4.7.0",

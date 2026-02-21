@@ -41,6 +41,8 @@ interface SchemaFormProps {
   context?: string;
   /** Dataset variable names for template autocompletion in JSON editor. */
   templateVariableNames?: string[];
+  /** Agent ID for BYOK model resolution in AI assist. */
+  agentId?: string;
 }
 
 const SCHEMA_GUIDE_CONTENT = `
@@ -201,6 +203,7 @@ export function SchemaForm({
   parametersHidden,
   context,
   templateVariableNames,
+  agentId,
 }: SchemaFormProps) {
   const form = useForm<SchemaFormValues>({ defaultValues: { ...schema } });
   const originalRef = useRef<SchemaFormValues>({ ...schema });
@@ -289,6 +292,7 @@ export function SchemaForm({
           onOpenChange={setSchemaAssistOpen}
           schema={JSON.stringify(form.getValues("parameters") ?? EMPTY_OBJECT_SCHEMA, null, 2)}
           context={context}
+          agentId={agentId}
           onApply={(newSchemaText) => {
             try {
               form.setValue("parameters", JSON.parse(newSchemaText), { shouldDirty: true });

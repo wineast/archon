@@ -8,7 +8,9 @@ import {
   ArrowLeftIcon,
   BarChart3Icon,
   BuildingIcon,
+  KeyIcon,
   UsersIcon,
+  WalletIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OrgMembersPanel } from "@/components/orgs/org-members-panel";
 import { OrgUsagePanel } from "@/components/orgs/org-usage-panel";
+import { OrgApiKeysPanel } from "@/components/orgs/org-api-keys-panel";
+import { OrgCreditsPanel } from "@/components/orgs/org-credits-panel";
 import { useOrgRole } from "@/lib/auth/hooks";
 import { updateOrg, useOrgs } from "@/lib/orgs/hooks";
 import { cn } from "@/lib/utils";
@@ -36,6 +40,8 @@ interface SettingsTab {
 const TABS: SettingsTab[] = [
   { value: "info", label: "基本信息", icon: BuildingIcon, minRole: "manage" },
   { value: "members", label: "成员", icon: UsersIcon, minRole: "manage" },
+  { value: "api-keys", label: "API Keys", icon: KeyIcon, minRole: "manage" },
+  { value: "credits", label: "额度", icon: WalletIcon, minRole: "manage" },
   { value: "usage", label: "用量", icon: BarChart3Icon, minRole: "manage" },
 ];
 
@@ -129,6 +135,10 @@ function OrgSettingsContent({ org }: { org: OrgRow }) {
         return <OrgInfoPanel org={org} />;
       case "members":
         return <OrgMembersPanel orgId={org.id} />;
+      case "api-keys":
+        return <OrgApiKeysPanel orgId={org.id} />;
+      case "credits":
+        return <OrgCreditsPanel orgId={org.id} />;
       case "usage":
         return <OrgUsagePanel orgId={org.id} />;
       default:

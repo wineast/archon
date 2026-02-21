@@ -57,6 +57,7 @@ interface JsxAssistDialogProps {
   onOpenChange: (open: boolean) => void;
   jsxSource: string;
   onApply: (newSource: string) => void;
+  agentId?: string;
 }
 
 function buildSystemPrompt(currentJsx: string): string {
@@ -177,6 +178,7 @@ export function JsxAssistDialog({
   onOpenChange,
   jsxSource,
   onApply,
+  agentId,
 }: JsxAssistDialogProps) {
   const [draftJsx, setDraftJsx] = useState(jsxSource);
   const [originalJsx, setOriginalJsx] = useState(jsxSource);
@@ -204,9 +206,10 @@ export function JsxAssistDialog({
         api: "/api/jsx-assist",
         body: () => ({
           currentJsx: draftJsxRef.current,
+          agentId,
         }),
       }),
-    []
+    [agentId]
   );
 
   const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<JsxAssistMessage>({
