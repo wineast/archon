@@ -6,6 +6,7 @@ import deepEqual from "fast-deep-equal";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
+import { getDefsMap, resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 
 export async function POST(
   req: Request,
@@ -33,14 +34,16 @@ export async function POST(
 
   const start = Date.now();
 
-  // Read inline parameters schema
-  const parametersSchema = fn.parametersSchema ?? EMPTY_OBJECT_SCHEMA;
+  // Resolve $ref in parameters schema
+  const defsMap = fn.agentId ? await getDefsMap(fn.agentId) : {};
+  const parametersSchema =
+    resolveInlineSchema(fn.parametersSchema ?? null, defsMap) ?? EMPTY_OBJECT_SCHEMA;
 
   // Validate input
   let validatedInput = input ?? {};
   if (Object.keys(parametersSchema.properties ?? {}).length > 0) {
     try {
-      const inputSchema = buildInputSchema(parametersSchema);
+      const inputSchema = buildInputSchema(parametersSchema, undefined, { defsMap });
       validatedInput = inputSchema.parse(input ?? {});
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

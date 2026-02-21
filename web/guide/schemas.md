@@ -677,6 +677,17 @@ Schema 编辑器有 **Edit / Preview / Parameters** 三个子标签（无模板�
    └── 验证失败时注入 _outputValidationWarning（不阻断）
 ```
 
+### 函数 / 工具测试运行中的 $ref 解析
+
+函数编译（`resolveAndCompileFunctions`）和测试运行路由同样支持 `$ref` 解析：
+
+- **函数编译**：`tool-context.ts` 调用 `getDefsMap(agentId)` 获取轻量 defsMap，传入 `resolveAndCompileFunctions()` → `buildInputSchema()` 解析嵌套 `$ref`
+- **函数测试运行**：`/api/functions/[id]/test-cases/run` 路由先调用 `resolveInlineSchema()` 解析顶层 `$ref`，再将 `defsMap` 传入 `buildInputSchema()`
+- **工具测试运行**：`/api/tools/[id]/test-cases/run` 路由同理
+- **Eval 运行**：`/api/eval/run/[runId]/case` 路由在构建 `toolPayloads` 时调用 `resolveInlineSchema()` 解析顶层 `$ref`
+
+`getDefsMap(agentId)` 是 `gatherTemplateData()` 中 defsMap 构建逻辑的轻量提取，只查 schemas 表，不加载 wiki/tool/dataset 等数据。适用于只需要 `$ref` 解析、不需要模板渲染的场景。
+
 ---
 
 ## x- 扩展字段
