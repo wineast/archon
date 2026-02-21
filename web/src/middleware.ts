@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 
@@ -37,7 +38,7 @@ export default clerkMiddleware(async (auth, request) => {
         : routing.defaultLocale;
       const signInUrl = new URL(`/${locale}/sign-in`, request.url);
       signInUrl.searchParams.set("redirect_url", request.url);
-      return Response.redirect(signInUrl);
+      return NextResponse.redirect(signInUrl);
     }
   }
 
