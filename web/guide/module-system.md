@@ -82,7 +82,7 @@ export default async function(args) {
 | 成员 | 类型 | 说明 |
 |------|------|------|
 | `wiki` | object | Wiki 文档查询（get / findByPrefix / search） |
-| `dataset` | object | 数据集查询（get / getEntries） |
+| `dataset` | object | 数据集查询（get） |
 | `fn` | function | 获取已编译函数：`await fn("key")` |
 | `ontology` | object | 本体 CRUD（types / query / get / create / update / delete / link / unlink / graph） |
 

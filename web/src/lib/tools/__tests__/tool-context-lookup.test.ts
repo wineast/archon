@@ -106,42 +106,6 @@ describe("ToolContext.dataset", () => {
     expect(result).toEqual({ product: { label: "Universe" } });
   });
 
-  it("getEntries() returns entries from object dataset", async () => {
-    mockDbRows([
-      {
-        key: "products",
-        data: {
-          universe: {
-            label: "GMCC Universe",
-            states: ["CA", "TX"],
-          },
-          ocean: {
-            label: "GMCC Ocean",
-            states: ["CA"],
-          },
-        },
-      },
-    ]);
-
-    const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext("agent-1");
-    const result = await ctx.dataset.getEntries("products");
-    expect(result).toHaveLength(2);
-    expect(result[0].value).toBe("universe");
-    expect(result[0].label).toBe("GMCC Universe");
-    expect(result[1].value).toBe("ocean");
-    expect(result[1].label).toBe("GMCC Ocean");
-  });
-
-  it("getEntries() returns empty array for non-object datasets", async () => {
-    mockDbRows([{ key: "name",data: "simple string" }]);
-
-    const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext("agent-1");
-    const result = await ctx.dataset.getEntries("name");
-    expect(result).toEqual([]);
-  });
-
   it("get() returns null when no agentId provided", async () => {
     const { createToolContext } = await import("../tool-context");
     const ctx = createToolContext(); // no agentId

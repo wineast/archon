@@ -232,18 +232,10 @@ const results = await context.wiki.search("关键词");
 const company = await context.dataset.get("company_name");
 // → "GMCC" | null
 
-// 获取对象类型数据集的条目列表
-const entries = await context.dataset.getEntries("product_routes");
-// → [{ value: "universe", label: "GMCC Universe", metadata: { incomes: [...], states: [...] } }, ...]
+// 获取对象类型数据集（返回原始 JSON）
+const routes = await context.dataset.get("product_routes");
+// → { universe: { label: "GMCC Universe", incomes: [...], states: [...] }, ... } | null
 ```
-
-`getEntries()` 将对象类型数据集转换为条目数组：
-
-| 字段 | 类型 | 来源 |
-|------|------|------|
-| `e.value` | `string` | 对象的 key（如 `"universe"`） |
-| `e.label` | `string \| null` | 对象值中的 `.label` 字段（如 `"GMCC Universe"`），无则为 null |
-| `e.metadata` | `object` | 对象值本身（如 `{ "label": "GMCC Universe", "incomes": [...] }`） |
 
 > **注意**：`wiki.get()` 返回的 content 经过完整模板渲染（含 `{% include %}`），而 `wiki.findByPrefix()` 和 `wiki.search()` 返回的 content 是原始正文（仅去除 frontmatter），不经过渲染。
 

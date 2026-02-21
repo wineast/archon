@@ -14,12 +14,6 @@ declare module "archon:context" {
     content: string;
   }
 
-  export interface DataEntry {
-    value: string;
-    label: string | null;
-    metadata: Record<string, unknown> | null;
-  }
-
   export const wiki: {
     get(id: string): Promise<WikiDoc | null>;
     findByPrefix(prefix: string): Promise<Array<{ id: string; name: string; meta: Record<string, unknown> | null; content: string }>>;
@@ -28,7 +22,6 @@ declare module "archon:context" {
 
   export const dataset: {
     get(key: string): Promise<unknown>;
-    getEntries(key: string): Promise<DataEntry[]>;
   };
 
   export const fn: (key: string) => Promise<(...args: unknown[]) => unknown>;

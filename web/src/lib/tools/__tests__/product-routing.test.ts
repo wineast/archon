@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import type { DataEntry, ToolContext, WikiDoc } from "../tool-context";
+import type { ToolContext, WikiDoc } from "../tool-context";
 import { resolveDatasets } from "@/lib/datasets/queries";
 import { isModuleFormat } from "@/lib/modules/detect";
 import { transformToolHandlerImports } from "@/lib/modules/transform-tool-handler";
@@ -24,7 +24,7 @@ const productRoutes = resolvedVars.product_routes as Record<
   Record<string, unknown>
 >;
 
-const mockDataEntries: DataEntry[] = Object.entries(productRoutes).map(
+const mockDataEntries = Object.entries(productRoutes).map(
   ([key, val]) => ({
     value: key,
     label: (val.label as string) ?? null,
@@ -70,15 +70,6 @@ const mockContext = {
   dataset: {
     async get(key: string) {
       return resolvedVars[key] ?? null;
-    },
-    async getEntries(key: string) {
-      const val = resolvedVars[key];
-      if (!val || typeof val !== "object" || Array.isArray(val)) return [];
-      return Object.entries(val as Record<string, unknown>).map(([k, v]) => ({
-        value: k,
-        label: ((v as Record<string, unknown>)?.label as string | null) ?? null,
-        metadata: v as Record<string, unknown>,
-      }));
     },
   },
   async fn(key: string) {
