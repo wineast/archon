@@ -92,6 +92,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 详情页底部操作栏统一样式：容器 `flex items-center gap-2 border-t px-4 py-2`；Save 按钮带 `SaveIcon` + "Saving..." 文字切换；Reset 按钮 `variant="ghost"` 带 `RotateCcwIcon`；Delete 按钮 `variant="destructive"` 用 `flex-1` 隔开靠右，带 "Deleting..." 文字切换
 - 代码预览统一使用 Monaco 只读编辑器（`readOnly`）：JS/TS 用 `JsEditor`，JSON 用 `JsonEditor`，不用 `CodeBlockContent`（shiki）或 `<pre>` 标签。固定高度（如 `height="400px"`）启用内部滚动，不要 `height="auto"` 导致无限撑高
 - 工具栏中 Copy/Export 等辅助按钮用 `size="icon" variant="ghost"` 只显示图标，不加文字，保持紧凑
+- 编辑区 label 行辅助按钮顺序：`Label` → `GuideDialog(?)` → `AI 编辑`——信息参考紧跟 label，操作按钮放最后
 
 ### Storybook
 - Story 的 `name` 字段统一使用中文，如 `name: "基础示例"`、`name: "交互演示"`

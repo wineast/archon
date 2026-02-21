@@ -270,11 +270,12 @@ export function SchemaForm({
           />
         </div>
 
-        {/* Parameters header with AI edit + Guide */}
+        {/* Parameters header with Guide + AI edit */}
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium text-muted-foreground">
             Parameters
           </label>
+          <GuideDialog title="Schema 编辑指南" content={SCHEMA_GUIDE_CONTENT} />
           <Button
             type="button"
             variant="ghost"
@@ -285,7 +286,6 @@ export function SchemaForm({
             <SparklesIcon className="size-3" />
             AI 编辑
           </Button>
-          <GuideDialog title="Schema 编辑指南" content={SCHEMA_GUIDE_CONTENT} />
         </div>
         <SchemaCodeAssistDialog
           open={schemaAssistOpen}
