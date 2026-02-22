@@ -20,7 +20,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { TemplateTextarea } from "@/components/ui/template-textarea";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
-import { BUILTIN_VAR_NAMES } from "@/lib/template";
+import { TIME_VAR_NAMES, EVAL_VAR_NAMES } from "@/lib/template";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
 import { ModelCombobox } from "@/components/model-config/model-combobox";
 import type { EvalJudgeConfigRow } from "@/db/schema";
@@ -57,12 +57,17 @@ export function JudgeConfigDetail({
   const { data: wikiDocs = [] } = useSWR(wikiApiKey(agentId), wikiFetcher);
 
   const allVariables = useMemo(() => {
-    const toolNames = toolDefinitions
-      .filter((d) => d.enabled)
-      .map((d) => d.name);
     const datasetKeys = Object.keys(datasetVars);
-    return [...BUILTIN_VAR_NAMES, ...toolNames, ...datasetKeys];
-  }, [toolDefinitions, datasetVars]);
+    return [...TIME_VAR_NAMES, ...EVAL_VAR_NAMES, ...datasetKeys];
+  }, [datasetVars]);
+
+  const completionTools = useMemo(
+    () =>
+      toolDefinitions
+        .filter((t) => t.enabled)
+        .map((t) => ({ name: t.name, description: t.description })),
+    [toolDefinitions]
+  );
 
   const completionDocs = useMemo(
     () => wikiDocs.map((d) => ({ key: d.key, title: d.name })),
@@ -170,6 +175,7 @@ export function JudgeConfigDetail({
               variables={allVariables}
               variableMap={datasetVars}
               documents={completionDocs}
+              tools={completionTools}
               placeholder="Judge system prompt... (supports {{variables}}, {{lookup &quot;key&quot;}}, {{include &quot;doc&quot;}})"
             />
           </div>

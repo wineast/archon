@@ -10,6 +10,7 @@ import {
   type CompletionConfig,
   type CompletionDocument,
   type CompletionTool,
+  type CompletionOntologyType,
   registerEditorConfig,
   ensureCompletionProvider,
 } from "./completions";
@@ -20,6 +21,7 @@ const SHARED_OPTIONS = {
   automaticLayout: true,
   lineNumbersMinChars: 3,
   overviewRulerLanes: 0,
+  fixedOverflowWidgets: true,
   scrollbar: {
     verticalScrollbarSize: 8,
     horizontalScrollbarSize: 8,
@@ -34,6 +36,7 @@ interface MdEditorProps {
   variableMap?: Record<string, unknown>;
   documents?: CompletionDocument[];
   tools?: CompletionTool[];
+  ontologyTypes?: CompletionOntologyType[];
   placeholder?: string;
   className?: string;
   height?: string;
@@ -49,6 +52,7 @@ function MdEditor({
   variableMap,
   documents = [],
   tools = [],
+  ontologyTypes,
   placeholder = "",
   className,
   height,
@@ -67,8 +71,8 @@ function MdEditor({
 
   // Keep configRef up to date
   React.useEffect(() => {
-    configRef.current = { variables, variableMap, documents, tools };
-  }, [variables, variableMap, documents, tools]);
+    configRef.current = { variables, variableMap, documents, tools, ontologyTypes };
+  }, [variables, variableMap, documents, tools, ontologyTypes]);
 
   const handleMount: OnMount = (editor, monaco) => {
     // Register singleton provider (idempotent)
@@ -166,4 +170,5 @@ export type {
   MdEditorProps,
   CompletionDocument,
   CompletionTool,
+  CompletionOntologyType,
 };

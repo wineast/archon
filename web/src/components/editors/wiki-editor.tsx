@@ -18,8 +18,9 @@ import {
 import { MdEditor } from "@/components/editors/md-editor";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
-import { BUILTIN_VAR_NAMES } from "@/lib/template";
+import { TIME_VAR_NAMES } from "@/lib/template";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
+import { useObjectTypes } from "@/lib/ontology/hooks";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
@@ -48,10 +49,11 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
   const { tools: allTools } = useTools(agentId);
   const { datasetVars } = useDatasetVarsMap(agentId);
   const { data: wikiDocs = [] } = useSWR(wikiApiKey(agentId), wikiFetcher);
+  const { objectTypes } = useObjectTypes(agentId);
 
   const allVariables = useMemo(() => {
     const datasetKeys = Object.keys(datasetVars);
-    return [...BUILTIN_VAR_NAMES, ...datasetKeys];
+    return [...TIME_VAR_NAMES, ...datasetKeys];
   }, [datasetVars]);
 
   const completionTools = useMemo(
@@ -65,6 +67,11 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
   const completionDocs = useMemo(
     () => wikiDocs.map((d) => ({ key: d.key, title: d.name })),
     [wikiDocs]
+  );
+
+  const completionOntologyTypes = useMemo(
+    () => objectTypes.map((t) => ({ key: t.key, name: t.name })),
+    [objectTypes]
   );
 
   const snapshotRef = useRef({ name: doc.name, content: doc.content });
@@ -157,6 +164,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
               variableMap={datasetVars}
               documents={completionDocs}
               tools={completionTools}
+              ontologyTypes={completionOntologyTypes}
               placeholder="Write your content in Markdown..."
               className="h-full"
             />

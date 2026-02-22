@@ -18,6 +18,7 @@ const SHARED_OPTIONS = {
   automaticLayout: true,
   lineNumbersMinChars: 3,
   overviewRulerLanes: 0,
+  fixedOverflowWidgets: true,
   scrollbar: {
     verticalScrollbarSize: 8,
     horizontalScrollbarSize: 8,
