@@ -249,9 +249,9 @@ ${draftCode}
 
 ${toolContext ? `## 工具信息\n\n${toolContext}\n\n` : ""}## Handler 架构
 
-Handler 是一个异步函数，签名为 \`async (args, context) => result\`
+Handler 使用 ES module 格式：\`import { wiki } from "archon:context"; export default async function(args) { ... }\`
 
-## Context API: context.wiki / context.dataset / context.fn / context.ontology
+## Context API: wiki / dataset / fn / ontology（通过 \`import\` 从 \`archon:context\` 导入）
 
 （完整内容见 API 路由）`;
   }, [draftCode, toolName, toolDescription]);

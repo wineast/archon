@@ -43,16 +43,16 @@ let handlerFn: (
   products: Array<{ product_name: string }>;
 }>;
 
-if (isModuleFormat(handlerSource)) {
-  // Module format: transform imports into IIFE, then wrap in a callable function
-  const transformed = transformToolHandlerImports(handlerSource);
-  // eslint-disable-next-line no-eval
-  handlerFn = (args, context) => eval(`(function(__args, __context){ return ${transformed} })`)(args, context);
-} else {
-  // Legacy format: eval as arrow function expression
-  // eslint-disable-next-line no-eval
-  handlerFn = eval(`(${handlerSource})`);
+if (!isModuleFormat(handlerSource)) {
+  throw new Error(
+    "Legacy handler format is no longer supported. Please use ES module format."
+  );
 }
+
+// Module format: transform imports into IIFE, then wrap in a callable function
+const transformed = transformToolHandlerImports(handlerSource);
+// eslint-disable-next-line no-eval
+handlerFn = (args, context) => eval(`(function(__args, __context){ return ${transformed} })`)(args, context);
 
 // ── Mock context ──
 const mockContext = {

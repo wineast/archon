@@ -81,17 +81,6 @@ export default async function(args) {
 | `archon:fn/<key>` | 导入其他函数 | `import calc from "archon:fn/pricing_engine"` |
 | `archon:lib/filtrex` | Filtrex 表达式引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
 
-### Handler 代码中的引用（旧闭包格式）
-
-```js
-async (args, context) => {
-  const doc = await context.wiki.get("key");
-  const val = await context.dataset.get("key");
-  const fn = await context.fn("key");
-  return fn(args);
-}
-```
-
 ### 被其他资源引用
 
 | 引用方 | 语法 | 说明 |

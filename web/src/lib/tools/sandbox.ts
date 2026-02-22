@@ -4,9 +4,11 @@
  * All user code runs inside a QuickJS VM (compiled to WASM), with no access
  * to Node.js APIs, filesystem, network, or process globals.
  *
+ * Handler code must be ES module format:
+ * `import { wiki } from "archon:context"; export default async function(args) { ... }`
+ *
  * ToolContext methods are injected as asyncified host callbacks, allowing
- * user code to `await context.wiki.get(...)` etc. while the host executes
- * the real DB query.
+ * user code to `await wiki.get(...)` etc. while the host executes the real DB query.
  */
 
 import {
@@ -289,14 +291,13 @@ function injectToolContext(
 /**
  * Execute a tool handler in an isolated QuickJS async sandbox.
  *
- * Supports two code formats:
- * - **Legacy**: A JS expression evaluating to a function: `(args, context) => { ... }`
- * - **Module (ES6)**: `import { wiki } from "archon:context"; export default async function(args) { ... }`
+ * Handler code must be ES module format:
+ * `import { wiki } from "archon:context"; export default async function(args) { ... }`
  *
  * Context methods (wiki, dataset, fn, ontology) are available as asyncified
  * host callbacks. The user code can `await` them normally.
  *
- * @param handlerCode - JS code string (arrow fn or function expression, or ES module)
+ * @param handlerCode - ES module code string with `export default` function
  * @param args - Input arguments to pass to the handler
  * @param context - ToolContext with wiki/dataset/fn/ontology methods
  * @param opts - Sandbox resource limits
@@ -319,7 +320,12 @@ export async function executeToolInSandbox(
 
   const vm: QuickJSAsyncContext = runtime.newContext();
 
-  const useModule = isModuleFormat(handlerCode);
+  if (!isModuleFormat(handlerCode)) {
+    throw new SandboxError(
+      "Legacy handler format is no longer supported. Please use ES module format: " +
+      '`import { wiki } from "archon:context"; export default async function(args) { ... }`'
+    );
+  }
 
   try {
     // Inject context methods as asyncified host callbacks
@@ -330,40 +336,22 @@ export async function executeToolInSandbox(
     vm.setProp(vm.global, "__args", argsHandle);
     argsHandle.dispose();
 
-    if (useModule) {
-      // Module format: transform imports into global references, then evaluate.
-      // We can't use QuickJS ES module mode here because asyncified functions
-      // conflict with module import (stack can't be unwound twice).
-      const transformedCode = transformToolHandlerImports(handlerCode);
+    // Module format: transform imports into global references, then evaluate.
+    // We can't use QuickJS ES module mode here because asyncified functions
+    // conflict with module import (stack can't be unwound twice).
+    const transformedCode = transformToolHandlerImports(handlerCode);
 
-      const evalResult = await vm.evalCodeAsync(transformedCode);
+    const evalResult = await vm.evalCodeAsync(transformedCode);
 
-      if (evalResult.error) {
-        const errDump = vm.dump(evalResult.error);
-        evalResult.error.dispose();
-        throw classifySandboxError(errDump);
-      }
-
-      const result = resolveIfPromise(vm, runtime, evalResult.value);
-      evalResult.value.dispose();
-      return result;
-    } else {
-      // Legacy format: evaluate expression and call
-      const wrappedCode =
-        `(function(){ var __fn = ${handlerCode}; return __fn(__args, __context); })()`;
-
-      const evalResult = await vm.evalCodeAsync(wrappedCode);
-
-      if (evalResult.error) {
-        const errDump = vm.dump(evalResult.error);
-        evalResult.error.dispose();
-        throw classifySandboxError(errDump);
-      }
-
-      const result = resolveIfPromise(vm, runtime, evalResult.value);
-      evalResult.value.dispose();
-      return result;
+    if (evalResult.error) {
+      const errDump = vm.dump(evalResult.error);
+      evalResult.error.dispose();
+      throw classifySandboxError(errDump);
     }
+
+    const result = resolveIfPromise(vm, runtime, evalResult.value);
+    evalResult.value.dispose();
+    return result;
   } finally {
     // Async WASM module disposal can throw when GC tries to free host
     // references after the runtime callback map is cleaned up. This is a

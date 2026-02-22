@@ -68,12 +68,13 @@ ${currentCode}
 
 ${toolContext ? `## 工具信息\n\n${toolContext}\n\n` : ""}## Handler 架构
 
-Handler 是一个异步函数，签名为 \`async (args, context) => result\`：
+Handler 使用 ES module 格式，通过 \`import\` 导入 Context API，通过 \`export default\` 导出处理函数：
 
 \`\`\`javascript
-async (args, context) => {
+import { wiki, dataset, fn, ontology } from "archon:context";
+
+export default async function(args) {
   // args — 工具定义的 parameters 解析后的对象
-  // context — 运行时数据访问 API
   // 返回值为任意可序列化的 JSON 对象
   return { result: "..." };
 }
@@ -81,36 +82,38 @@ async (args, context) => {
 
 ## Context API
 
-### context.wiki
+通过 \`import { wiki, dataset, fn, ontology } from "archon:context"\` 导入。
+
+### wiki
 \`\`\`javascript
-const doc = await context.wiki.get("key-or-id");    // { meta, content }
-const docs = await context.wiki.findByPrefix("prefix-");  // [{ id, title, meta, content }]
-const results = await context.wiki.search("关键词");       // [{ id, title, meta, content }]
+const doc = await wiki.get("key-or-id");    // { meta, content }
+const docs = await wiki.findByPrefix("prefix-");  // [{ id, title, meta, content }]
+const results = await wiki.search("关键词");       // [{ id, title, meta, content }]
 \`\`\`
 
-### context.dataset
+### dataset
 \`\`\`javascript
-const val = await context.dataset.get("company_name");       // "GMCC" | null
+const val = await dataset.get("company_name");       // "GMCC" | null
 \`\`\`
 
-### context.fn(key)
+### fn(key)
 \`\`\`javascript
-const calc = await context.fn("calculate_price");
+const calc = await fn("calculate_price");
 const result = await calc({ quantity: 10 });
 \`\`\`
 
-### context.ontology
+### ontology
 \`\`\`javascript
-const types = await context.ontology.types();
-const type = await context.ontology.type("customer");
-const items = await context.ontology.query("customer", { city: "北京" });
-const item = await context.ontology.get("customer", id);
-const created = await context.ontology.create("customer", { name: "张三" });
-await context.ontology.update("customer", id, data);
-await context.ontology.delete("customer", id);
-await context.ontology.link(sourceId, "has_order", targetId);
-await context.ontology.unlink(sourceId, "has_order", targetId);
-const graph = await context.ontology.graph("customer", id, { depth: 2 });
+const types = await ontology.types();
+const type = await ontology.type("customer");
+const items = await ontology.query("customer", { city: "北京" });
+const item = await ontology.get("customer", id);
+const created = await ontology.create("customer", { name: "张三" });
+await ontology.update("customer", id, data);
+await ontology.delete("customer", id);
+await ontology.link(sourceId, "has_order", targetId);
+await ontology.unlink(sourceId, "has_order", targetId);
+const graph = await ontology.graph("customer", id, { depth: 2 });
 \`\`\`
 
 ## 可用工具
@@ -126,7 +129,7 @@ const graph = await context.ontology.graph("customer", id, { depth: 2 });
 2. 大范围重写或结构调整使用 update_code
 3. edit_code 的 old_text 必须与当前代码中的文本精确匹配（包括空格和换行）
 4. 代码必须是合法的 JavaScript
-5. Handler 必须是 \`async (args, context) => { ... }\` 格式的箭头函数
+5. Handler 必须是 ES module 格式：\`import { ... } from "archon:context"; export default async function(args) { ... }\`
 6. 用中文回复用户的问题和说明`,
     tools: {
       update_code: tool({

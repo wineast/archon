@@ -73,11 +73,8 @@ export async function executeToolInSandbox(
   // context.fn() → 沙盒内 context.fn()
   // context.ontology.* → 沙盒内 context.ontology.*
 
-  // 执行 handler
-  const result = await ctx.evalCodeAsync(`
-    const handler = ${handlerCode};
-    handler(args, context);
-  `)
+  // 执行 handler（ES module 格式，经过 import 变换后执行）
+  const result = await ctx.evalCodeAsync(transformedCode)
 
   return result
 }
@@ -109,14 +106,15 @@ npm install @jitl/quickjs-wasmfile-release-asyncify
 
 ### 测试要点
 
-- 纯同步 handler：`(args) => ({ result: args.x * 2 })`
-- context.wiki 调用：`async (args, ctx) => ({ doc: await ctx.wiki.get(args.id) })`
-- context.dataset 调用：`async (args, ctx) => ({ data: await ctx.dataset.get(args.key) })`
-- context.fn 调用：`async (args, ctx) => ({ val: await ctx.fn('myFn')(args) })`
-- context.ontology 调用：`async (args, ctx) => ({ items: await ctx.ontology.query(args.type) })`
-- 超时测试：`() => { while(true){} }` → 应在 5s 内终止
-- 非法访问：`() => process.env` → 应报错（process 未定义）
-- 非法访问：`() => fetch('https://evil.com')` → 应报错（fetch 未定义）
+- 纯同步 handler：`export default function(args) { return { result: args.x * 2 }; }`
+- wiki 调用：`import { wiki } from "archon:context"; export default async function(args) { return { doc: await wiki.get(args.id) }; }`
+- dataset 调用：`import { dataset } from "archon:context"; export default async function(args) { return { data: await dataset.get(args.key) }; }`
+- fn 调用：`import { fn } from "archon:context"; export default async function(args) { const myFn = await fn('myFn'); return { val: myFn(args) }; }`
+- ontology 调用：`import { ontology } from "archon:context"; export default async function(args) { return { items: await ontology.query(args.type) }; }`
+- 超时测试：`export default function() { while(true){} }` → 应在 5s 内终止
+- 非法访问：`export default function() { return process.env; }` → 应报错（process 未定义）
+- 非法访问：`export default function() { return fetch('https://evil.com'); }` → 应报错（fetch 未定义）
+- 旧格式拒绝：`(args) => args` → 应抛出 SandboxError
 
 ## P2：Vercel Sandbox 重型沙盒
 
@@ -185,8 +183,10 @@ npm install @vercel/sandbox
 ├─────────────────────────────────────────────────────┤
 │ Handler     [简单]  [代码]                           │
 │ ┌─────────────────────────────────────────────────┐ │
-│ │ async (args, context) => {                      │ │
-│ │   const data = await context.dataset.get('...')  │ │
+│ │ import { dataset } from "archon:context";        │ │
+│ │                                                 │ │
+│ │ export default async function(args) {           │ │
+│ │   const data = await dataset.get('...')         │ │
 │ │   return { result: data }                       │ │
 │ │ }                                               │ │
 │ └─────────────────────────────────────────────────┘ │

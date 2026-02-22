@@ -36,18 +36,6 @@ export default function(input) {
 
 ## 工具 Handler
 
-### 旧格式
-
-```js
-async (args, context) => {
-  const doc = await context.wiki.get(args.docId);
-  const calc = await context.fn("pricing_engine");
-  return calc({ config: doc.meta });
-}
-```
-
-### 新格式
-
 ```js
 import { wiki, fn } from "archon:context";
 
