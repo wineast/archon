@@ -611,7 +611,7 @@ export async function restoreSnapshot(
   }
 
   // 6. Rebuild wiki documents (two-pass for parentKey)
-  if (snapshot.wikiDocuments.length > 0) {
+  if (snapshot.wikiDocuments?.length) {
     // First pass: insert all with parentId = null
     const wikiValues = snapshot.wikiDocuments.map((w) => ({
       agentId,
