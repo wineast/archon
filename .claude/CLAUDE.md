@@ -114,6 +114,11 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
   - 运行时注入（如 `BASE_DEPS`、`archon:ui` 模块）通过 **key** 与 DB 池资源匹配
   - `agentResourceRefs.enabled` 控制启用/禁用，**影响实际运行时行为**——禁用的 builtin 资源不注入沙箱/编译器
   - 用户代码引用了被禁用的 builtin 资源时，应得到明确的编译错误提示
+- **池引用详情视图规则**：
+  - 池引用（不论 origin）的资源定义字段全部**只读**，不可编辑——表单字段 disabled，隐藏 Save/Delete
+  - 用户只能操作引用层面的控制：enabled 开关、移除引用
+  - Builtin 资源额外隐藏不适用的编辑区域（Tool 隐藏 handler/执行环境，Function 隐藏 code 编辑器，Component 隐藏 JSX/CSS 编辑器）
+  - 顶部显示来源 badge（`系统内置` / `共享池`）说明为何不可编辑
 
 ### Template Engine（LiquidJS）
 - 使用文档见 `web/guide/template-engine.md`
