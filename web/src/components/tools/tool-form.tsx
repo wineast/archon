@@ -267,6 +267,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
                   code={form.getValues("handler") ?? ""}
                   toolName={name}
                   toolDescription={form.getValues("description")}
+                  agentId={agentId}
                   onApply={(src) => form.setValue("handler", src, { shouldDirty: true })}
                 />
                 {executionTarget === "server" && (

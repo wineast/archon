@@ -24,6 +24,9 @@ import { useDatasetVarsMap, useDatasets } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
+import { useOrgConfiguredProviders } from "@/lib/orgs/configured-providers-hooks";
+import { getDisabledProviders } from "@/lib/models/get-disabled-providers";
+import { useModels } from "@/lib/models/hooks";
 import { ModelCombobox } from "./model-combobox";
 import { PromptAssistDialog } from "./prompt-assist-dialog";
 
@@ -59,6 +62,18 @@ export function ModelConfigDetail({
   const [promptAssistOpen, setPromptAssistOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting || activating;
+
+  // Get orgId from agent for provider filtering
+  const { data: agentData } = useSWR<{ orgId: string }>(
+    agentId ? `/api/agents/${agentId}` : null,
+    (url: string) => fetch(url).then((r) => r.json())
+  );
+  const { configuredProviders } = useOrgConfiguredProviders(agentData?.orgId);
+  const { models: allModels } = useModels();
+  const disabledProviders = useMemo(
+    () => getDisabledProviders(allModels.map((m) => m.provider), configuredProviders),
+    [allModels, configuredProviders]
+  );
 
   const { tools: allTools } = useTools(agentId);
   const { datasetVars } = useDatasetVarsMap(agentId);
@@ -177,6 +192,7 @@ export function ModelConfigDetail({
               className="mt-1"
               value={modelId}
               onChange={setModelId}
+              disabledProviders={disabledProviders}
             />
           </div>
           <div>

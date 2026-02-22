@@ -1,6 +1,5 @@
 import {
   streamText,
-  gateway,
   tool,
   UIMessage,
   convertToModelMessages,
@@ -10,6 +9,10 @@ import { after } from "next/server";
 import { requireAuth } from "@/lib/auth/require-agent-role";
 import { NextResponse } from "next/server";
 import { recordUsage } from "@/lib/usage/record";
+import { resolveModel } from "@/lib/ai/resolve-model";
+import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
+import { getOrgAssistModel } from "@/lib/orgs/build-chat-settings";
+import { QuotaExceededError } from "@/lib/credits/errors";
 
 export const maxDuration = 30;
 
@@ -21,25 +24,39 @@ export async function POST(req: Request) {
     messages,
     currentContent,
     documentName,
+    agentId,
   }: {
     messages: UIMessage[];
     currentContent: string;
     documentName?: string;
+    agentId?: string;
   } = await req.json();
 
   const currentUserId = authResult.id;
+  const orgId = await getOrgIdByAgentId(agentId);
+  const modelId = orgId ? await getOrgAssistModel(orgId) : "anthropic/claude-sonnet-4";
+
+  let model;
+  try {
+    model = await resolveModel(modelId, orgId);
+  } catch (e) {
+    if (e instanceof QuotaExceededError) {
+      return Response.json({ error: "quota_exceeded", message: e.message }, { status: 402 });
+    }
+    throw e;
+  }
 
   const result = streamText({
-    model: gateway("claude-sonnet-4-20250514"),
+    model,
     messages: await convertToModelMessages(messages),
     onFinish: ({ totalUsage }) => {
       after(async () => {
         await recordUsage({
-          orgId: null,
-          agentId: null,
+          orgId,
+          agentId: agentId ?? null,
           userId: currentUserId,
           sessionId: null,
-          modelId: "claude-sonnet-4-20250514",
+          modelId,
           usage: {
             inputTokens: totalUsage.inputTokens,
             outputTokens: totalUsage.outputTokens,

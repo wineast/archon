@@ -24,9 +24,14 @@ interface ModelComboboxProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  disabledProviders?: string[];
 }
 
-export function ModelCombobox({ value, onChange, className }: ModelComboboxProps) {
+export function ModelCombobox({ value, onChange, className, disabledProviders }: ModelComboboxProps) {
+  const disabledSet = useMemo(
+    () => new Set(disabledProviders ?? []),
+    [disabledProviders]
+  );
   const [open, setOpen] = useState(false);
   const { models } = useModels();
 
@@ -74,26 +79,39 @@ export function ModelCombobox({ value, onChange, className }: ModelComboboxProps
           <CommandInput placeholder="Search models..." />
           <CommandList>
             <CommandEmpty>No models found.</CommandEmpty>
-            {Array.from(grouped.entries()).map(([provider, items]) => (
-              <CommandGroup key={provider} heading={provider}>
-                {items.map((m) => (
-                  <CommandItem
-                    key={m.modelId}
-                    value={m.modelId}
-                    onSelect={(v) => {
-                      onChange(v);
-                      setOpen(false);
-                    }}
-                  >
-                    <ModelSelectorLogo provider={m.provider} />
-                    <span className="truncate">{m.name}</span>
-                    {value === m.modelId && (
-                      <CheckIcon className="ml-auto size-3.5" />
-                    )}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ))}
+            {Array.from(grouped.entries()).map(([provider, items]) => {
+              const isProviderDisabled = disabledSet.has(provider);
+              return (
+                <CommandGroup
+                  key={provider}
+                  heading={
+                    isProviderDisabled
+                      ? `${provider} (请先配置 API Key)`
+                      : provider
+                  }
+                >
+                  {items.map((m) => (
+                    <CommandItem
+                      key={m.modelId}
+                      value={m.modelId}
+                      disabled={isProviderDisabled}
+                      onSelect={(v) => {
+                        if (isProviderDisabled) return;
+                        onChange(v);
+                        setOpen(false);
+                      }}
+                      className={isProviderDisabled ? "opacity-50" : ""}
+                    >
+                      <ModelSelectorLogo provider={m.provider} />
+                      <span className="truncate">{m.name}</span>
+                      {value === m.modelId && !isProviderDisabled && (
+                        <CheckIcon className="ml-auto size-3.5" />
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              );
+            })}
           </CommandList>
         </Command>
       </PopoverContent>

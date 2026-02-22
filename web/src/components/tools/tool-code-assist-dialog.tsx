@@ -58,6 +58,7 @@ interface ToolCodeAssistDialogProps {
   code: string;
   toolName?: string;
   toolDescription?: string;
+  agentId?: string;
   onApply: (newCode: string) => void;
 }
 
@@ -123,6 +124,7 @@ export function ToolCodeAssistDialog({
   code,
   toolName,
   toolDescription,
+  agentId,
   onApply,
 }: ToolCodeAssistDialogProps) {
   const [draftCode, setDraftCode] = useState(code);
@@ -153,9 +155,10 @@ export function ToolCodeAssistDialog({
           currentCode: draftCodeRef.current,
           toolName,
           toolDescription,
+          agentId,
         }),
       }),
-    [toolName, toolDescription]
+    [toolName, toolDescription, agentId]
   );
 
   const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<ToolCodeAssistMessage>({

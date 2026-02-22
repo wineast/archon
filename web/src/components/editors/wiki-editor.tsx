@@ -222,6 +222,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
         onOpenChange={setAssistOpen}
         content={content}
         documentName={name}
+        agentId={agentId}
         onApply={setContent}
       />
     </>

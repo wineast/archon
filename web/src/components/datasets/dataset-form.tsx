@@ -276,6 +276,7 @@ export function DatasetForm({
         datasetName={name}
         datasetDescription={description}
         templateVariables={templateVariables}
+        agentId={agentId ?? undefined}
         onApply={(newData) => handleDataChange(newData)}
       />
     </>

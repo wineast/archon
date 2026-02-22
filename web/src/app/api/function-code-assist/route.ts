@@ -12,8 +12,7 @@ import { recordUsage } from "@/lib/usage/record";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
 import { QuotaExceededError } from "@/lib/credits/errors";
-
-const MODEL_ID = "anthropic/claude-sonnet-4-20250514";
+import { getOrgAssistModel } from "@/lib/orgs/build-chat-settings";
 
 export const maxDuration = 30;
 
@@ -35,10 +34,11 @@ export async function POST(req: Request) {
 
   const currentUserId = authResult.id;
   const orgId = await getOrgIdByAgentId(agentId);
+  const modelId = orgId ? await getOrgAssistModel(orgId) : "anthropic/claude-sonnet-4";
 
   let model;
   try {
-    model = await resolveModel(MODEL_ID, orgId);
+    model = await resolveModel(modelId, orgId);
   } catch (e) {
     if (e instanceof QuotaExceededError) {
       return Response.json({ error: "quota_exceeded", message: e.message }, { status: 402 });
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
           agentId: agentId ?? null,
           userId: currentUserId,
           sessionId: null,
-          modelId: MODEL_ID,
+          modelId,
           usage: {
             inputTokens: totalUsage.inputTokens,
             outputTokens: totalUsage.outputTokens,

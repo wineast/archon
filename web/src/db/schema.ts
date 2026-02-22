@@ -31,6 +31,7 @@ export const orgs = pgTable("orgs", {
   creditBalanceUSD: real("credit_balance_usd").notNull().default(0),
   buildChatModel: text("build_chat_model"),
   buildChatTemperature: real("build_chat_temperature"),
+  assistModel: text("assist_model"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

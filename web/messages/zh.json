@@ -216,7 +216,8 @@
     "slugHint": "URL 路径标识，仅支持小写字母、数字和连字符",
     "buildChat": "Build 助手",
     "buildChatModel": "模型",
-    "buildChatTemperature": "Temperature"
+    "buildChatTemperature": "Temperature",
+    "assistModel": "AI 辅助模型"
   },
   "share": {
     "preview": "分享预览",
