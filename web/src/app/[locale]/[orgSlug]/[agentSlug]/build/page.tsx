@@ -530,7 +530,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         onOpenChange={setAuditLogOpen}
       />
 
-      <SupportBubble />
+      <SupportBubble orgId={agent.orgId} />
     </div>
   );
 }

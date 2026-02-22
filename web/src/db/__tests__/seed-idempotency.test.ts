@@ -63,7 +63,7 @@ describe("seed idempotency", () => {
       expect(personalOrgs.length, `user ${user.email} should have exactly 1 personal org`).toBe(1);
     }
 
-    // Each personal org has 3 slot agents (builder, assist, evaluator)
+    // Each personal org has 4 slot agents (builder, assist, evaluator, support)
     const personalOrgRows = await db
       .select({ id: orgs.id })
       .from(orgs)
@@ -73,7 +73,7 @@ describe("seed idempotency", () => {
         .select()
         .from(orgSlots)
         .where(sql`${orgSlots.orgId} = ${org.id}`);
-      expect(slots.length, `org ${org.id} should have 3 slot agents`).toBe(3);
+      expect(slots.length, `org ${org.id} should have 4 slot agents`).toBe(4);
     }
 
     // OrgSlots: no duplicate (orgId, slotKey)

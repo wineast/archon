@@ -231,8 +231,6 @@
     "userRole": "User",
     "removeAdmin": "Remove Admin",
     "setAdmin": "Set as Admin",
-    "platformAgents": "Platform Agents ({count})",
-    "noPlatformAgents": "No platform agents",
     "resourcePool": "Resource Pool",
     "poolResources": "Pool Resources ({count})",
     "noPoolResources": "No pool resources",

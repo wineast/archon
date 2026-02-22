@@ -46,7 +46,12 @@ vi.mock("@/db/schema", () => ({
   tools: { agentId: "agentId" },
   components: Symbol("components"),
   orgSlots: { orgId: "orgId", slotKey: "slotKey", agentId: "agentId" },
-  SLOT_KEYS: ["builder", "assist", "evaluator"],
+  embedTokens: Symbol("embedTokens"),
+  SLOT_KEYS: ["builder", "assist", "evaluator", "support"],
+}));
+
+vi.mock("nanoid", () => ({
+  nanoid: () => "mock-nanoid-token-32chars-abcdef",
 }));
 
 const mockEnsureBuiltinToolRefs = vi.fn();
@@ -71,12 +76,13 @@ describe("ensureOrgDefaults", () => {
     selectLimitResult = [];
   });
 
-  it("creates 3 agents + modelConfigs + orgSlots when none exist", async () => {
+  it("creates 4 agents + modelConfigs + orgSlots when none exist", async () => {
     await ensureOrgDefaults("org-1");
 
-    // For each of 3 slots: agent insert + agentVersion insert + modelConfig insert + orgSlot insert = 12
-    // Plus 1 judgeConfig insert for evaluator slot = 13
-    expect(mockInsert).toHaveBeenCalledTimes(13);
+    // For each of 4 slots: agent insert + agentVersion insert + modelConfig insert + orgSlot insert = 16
+    // Plus 1 judgeConfig insert for evaluator slot = 17
+    // Plus 1 embedToken insert for support slot = 18
+    expect(mockInsert).toHaveBeenCalledTimes(18);
   });
 
   it("seeds builtin tool refs only for builder slot", async () => {
@@ -92,11 +98,33 @@ describe("ensureOrgDefaults", () => {
     );
   });
 
+  it("seeds embed token only for support slot", async () => {
+    await ensureOrgDefaults("org-1");
+
+    // Check that embedTokens symbol was passed to insert for the support slot
+    const embedTokensSymbol = (await import("@/db/schema")).embedTokens;
+    const embedInsertCalls = mockInsert.mock.calls.filter(
+      (call: unknown[]) => call[0] === embedTokensSymbol
+    );
+    expect(embedInsertCalls).toHaveLength(1);
+
+    // Verify the embed token values
+    const embedValuesCalls = mockValues.mock.calls;
+    const embedCall = embedValuesCalls.find(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return val.name === "Support Widget";
+      }
+    );
+    expect(embedCall).toBeDefined();
+    expect((embedCall![0] as Record<string, unknown>).token).toMatch(/^et_/);
+  });
+
   it("skips agent creation if agent already exists, but still ensures orgSlot", async () => {
     selectLimitResult = [{ id: "existing-agent" }];
     await ensureOrgDefaults("org-1");
 
-    // Only orgSlot inserts for 3 slots = 3
-    expect(mockInsert).toHaveBeenCalledTimes(3);
+    // Only orgSlot inserts for 4 slots = 4
+    expect(mockInsert).toHaveBeenCalledTimes(4);
   });
 });

@@ -13,14 +13,7 @@
 | `builder` | Build Chat 对话助手 | build-chat | anthropic/claude-sonnet-4 | 0.3 |
 | `assist` | AI 辅助编辑 | assist | anthropic/claude-sonnet-4 | 0.7 |
 | `evaluator` | Agent 评估 | evaluator | anthropic/claude-sonnet-4 | 0.3 |
-
-## Scope 体系
-
-只保留两级 scope：
-- `platform`：全局平台 Agent（如 archon-support），仅超管可见
-- `org`：组织 Agent（系统创建和用户创建一视同仁）
-
-用户创建的 agent 默认 `scope: "org"`。
+| `support` | 客服聊天气泡 | support | anthropic/claude-sonnet-4 | 0.7 |
 
 ## 数据模型
 
@@ -45,14 +38,16 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 ## 组织初始化
 
 创建组织时 `ensureOrgDefaults(orgId)` 幂等创建：
-- 3 个 agent（build-chat、assist、evaluator），`scope: "org"`
+- 4 个 agent（build-chat、assist、evaluator、support）
 - 每个 agent 的默认 modelConfig
-- 3 条 orgSlots 记录
+- 4 条 orgSlots 记录
 - builder agent 的系统工具
+- evaluator agent 的默认 judgeConfig
+- support agent 的默认 embed token
 
 ## 删除保护
 
-不再按 scope 判断，改为引用检查：
+引用检查机制：
 - 删除 agent 前检查 `orgSlots` 和 `agentSlotOverrides` 是否有引用
 - 有引用则返回 409 Conflict
 - 用户需先解除引用再删除
@@ -61,6 +56,7 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 
 - **Build Chat**（`execute-stream.ts`）：使用 `resolveSlot(agentId, "builder")` 获取模型和温度
 - **AI 辅助编辑**（`assist-utils.ts`）：使用 `resolveSlot(agentId, "assist")` 获取模型
+- **Support Bubble**（`support-bubble.tsx`）：通过 org API 获取 support agent 的 embed token
 
 ## UI
 

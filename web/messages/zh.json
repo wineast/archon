@@ -231,8 +231,6 @@
     "userRole": "User",
     "removeAdmin": "取消超管",
     "setAdmin": "设为超管",
-    "platformAgents": "平台 Agent ({count})",
-    "noPlatformAgents": "暂无平台 Agent",
     "resourcePool": "共享资源池",
     "poolResources": "池资源 ({count})",
     "noPoolResources": "暂无池资源",

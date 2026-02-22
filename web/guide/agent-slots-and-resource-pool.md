@@ -21,13 +21,7 @@
 | `builder` | Build Chat 对话助手 | build-chat | stream |
 | `assist` | AI 辅助编辑 | assist | stream |
 | `evaluator` | Agent 评估 | evaluator | structured |
-
-### Scope 简化
-
-去掉 `user` scope，只保留 `platform | org`：
-- 用户创建的 agent → `scope: "org"`（默认值改为 "org"）
-- 系统创建和用户创建一视同仁，不再有 `isBuiltin` / 删除保护
-- `scope: "platform"` 仅用于 archon-support 等全局 agent
+| `support` | 客服聊天气泡 | support | embed |
 
 ### 数据模型
 
@@ -39,7 +33,7 @@
 |------|------|------|
 | id | UUID | 主键 |
 | orgId | UUID FK | 关联组织 |
-| slotKey | TEXT | 槽位标识（builder/assist/evaluator） |
+| slotKey | TEXT | 槽位标识（builder/assist/evaluator/support） |
 | agentId | UUID FK | 指向的 agent |
 | createdAt | TIMESTAMP | 创建时间 |
 | updatedAt | TIMESTAMP | 更新时间 |
@@ -105,8 +99,9 @@ runEval(agentId):
 ### 组织初始化变更
 
 创建组织时：
-1. 创建 build-chat、assist、evaluator 三个 agent（`scope: "org"`）
-2. 创建 orgSlots 记录：`{ builder → build-chat, assist → assist, evaluator → evaluator }`
+1. 创建 build-chat、assist、evaluator、support 四个 agent
+2. 创建 orgSlots 记录：`{ builder → build-chat, assist → assist, evaluator → evaluator, support → support }`
+3. support agent 额外创建默认 embed token
 
 ### UI
 
@@ -119,7 +114,7 @@ runEval(agentId):
 ### 清理
 
 - 删除 `RESERVED_SLUGS` 常量和保留 slug 校验
-- 删除 `scope: "org"` 删除保护
+- 删除 `agents.scope` 字段（不再有 platform/org 区分）
 - `getBuiltinAgentConfig()` → `getAgentModelConfig(agentId)`（通用查询任意 agent 的 active modelConfig）
 - `ensureBuiltinAgents()` → `ensureOrgDefaults()`（创建默认 agent + 设置 orgSlots）
 
@@ -150,7 +145,7 @@ runEval(agentId):
 
 ### WS-1: agent-slots ✅ 已完成
 
-- schema: orgSlots、agentSlotOverrides 表，scope 简化
+- schema: orgSlots、agentSlotOverrides 表，删除 scope 字段
 - `resolveSlot()` 工具函数
 - `ensureOrgDefaults()` 替代 `ensureBuiltinAgents()`
 - 消费端改造（execute-stream、assist-utils）

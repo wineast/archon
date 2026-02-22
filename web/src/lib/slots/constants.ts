@@ -38,4 +38,13 @@ export const SLOT_DEFS: Record<SlotKey, SlotDef> = {
     defaultModel: "anthropic/claude-sonnet-4",
     defaultTemperature: 0.3,
   },
+  support: {
+    label: "Support",
+    description: "客服聊天气泡，帮助用户了解和使用功能",
+    defaultAgentSlug: "support",
+    defaultAgentName: "Support",
+    defaultAgentIcon: "headset",
+    defaultModel: "anthropic/claude-sonnet-4",
+    defaultTemperature: 0.7,
+  },
 };

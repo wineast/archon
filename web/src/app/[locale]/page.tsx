@@ -19,6 +19,7 @@ import { useOrgs } from "@/lib/orgs/hooks";
 import type { AgentRow } from "@/db/schema";
 import { useCurrentUser, useOrgRole } from "@/lib/auth/hooks";
 import { useOrgStore } from "@/stores/org-store";
+import { SupportBubble } from "@/components/support-bubble/support-bubble";
 
 export default function AgentsPage() {
   const t = useTranslations("agent");
@@ -181,6 +182,8 @@ export default function AgentsPage() {
         onOpenChange={setTrashOpen}
         agentsMutate={mutate}
       />
+
+      {currentOrgId && <SupportBubble orgId={currentOrgId} />}
     </div>
   );
 }

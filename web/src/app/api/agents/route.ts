@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { agents, agentMembers, agentVersions, orgMembers, orgs } from "@/db/schema";
-import { and, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireAuth } from "@/lib/auth/require-agent-role";
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     const rows = await db
       .select()
       .from(agents)
-      .where(and(isNull(agents.deletedAt), ne(agents.scope, "platform"), ...(conditions.length ? conditions : [])))
+      .where(and(isNull(agents.deletedAt), ...(conditions.length ? conditions : [])))
       .orderBy(desc(agents.updatedAt));
 
     // Fetch org slugs for all agents
@@ -66,7 +66,6 @@ export async function GET(req: Request) {
     .where(
       and(
         isNull(agents.deletedAt),
-        ne(agents.scope, "platform"),
         or(
           eq(agentMembers.userId, user.id),
           sql`${orgMembers.userId} IS NOT NULL`,
