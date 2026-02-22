@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 import { compileSourceWithDeps } from "./_dynamic-renderer";
-import { isModuleFormat } from "@/lib/modules/detect";
 import { inferComponentDepsFromImports } from "@/lib/modules/detect";
 import type { ComponentRendererProps } from "./_registry";
 
@@ -13,39 +12,17 @@ export function keyToPascal(key: string): string {
     .join("");
 }
 
-export function pascalToKey(name: string): string {
-  return name
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
-    .toLowerCase();
-}
-
 // ── Dependency inference ──
 
 /**
  * Infer component dependencies from source code.
- * Supports both legacy closure format and ES module format.
- *
- * - Legacy: parses PascalCase params from `function ComponentName({ ... })`
- * - Module: extracts from `import ... from "archon:component/<key>"` statements
+ * Extracts from `import ... from "archon:component/<key>"` statements.
  */
 export function inferComponentDeps(
   source: string,
   knownKeys: Set<string>,
 ): string[] {
-  if (isModuleFormat(source)) {
-    return inferComponentDepsFromImports(source, knownKeys);
-  }
-  // Legacy: parse the outer function's destructured parameter names
-  const m = /function\s+\w+\s*\(\s*\{([^}]*)\}\s*\)/.exec(source.trim());
-  if (!m || !m[1].trim()) return [];
-  const params = m[1].split(",").map((s) => s.trim()).filter(Boolean);
-  const found = new Set<string>();
-  for (const param of params) {
-    const key = pascalToKey(param);
-    if (knownKeys.has(key)) found.add(key);
-  }
-  return Array.from(found);
+  return inferComponentDepsFromImports(source, knownKeys);
 }
 
 // ── Topological sort (Kahn's algorithm) ──

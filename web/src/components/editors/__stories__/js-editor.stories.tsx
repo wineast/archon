@@ -61,9 +61,10 @@ export const ToolHandler: Story = {
 export const WithJsx: Story = {
   name: "JSX 组件",
   args: {
-    value: `function Component({ React, Spinner, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell }) {
-  return function({ tool, isLoading }) {
-  var output = tool.output;
+    value: `import { Spinner, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "archon:ui";
+
+export default function({ tool, isLoading }) {
+  const output = tool.output;
   if (isLoading) return <Spinner />;
 
   return (
@@ -87,7 +88,6 @@ export const WithJsx: Story = {
       </Table>
     </div>
   );
-  }
 }`,
     onChange: () => {},
     height: "400px",

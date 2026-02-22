@@ -76,21 +76,6 @@ export default function({ tool, isLoading }) {
 
 使用 `archon:*` 虚拟模块导入依赖，详见 [模块系统文档](module-system.md)。
 
-**完整函数形式**（旧格式，仍支持）：
-
-```jsx
-function PricingResult({ data, isLoading }) {
-  if (isLoading) return <Spinner className="size-4" />;
-
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <h3 className="text-lg font-semibold">{data.output.plan}</h3>
-      <span className="text-2xl font-bold text-primary">{data.output.price}</span>
-    </div>
-  );
-}
-```
-
 **JSX 片段形式**（简单场景）：
 
 ```jsx
@@ -134,23 +119,7 @@ export default function({ data }) {
 
 ### 可用的依赖
 
-**ES6 模块形式**：通过 `archon:*` 模块导入，详见 [模块系统文档](module-system.md)。
-
-**旧格式**：在组件源码中可以直接使用以下依赖，无需 import：
-
-**React**：
-`React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment`
-
-**UI 组件**：
-- `Badge` — 标签徽章
-- `Spinner` — 加载动画
-- `Table`、`TableBody`、`TableCell`、`TableHead`、`TableHeader`、`TableRow` — 表格
-- `Tooltip`、`TooltipContent`、`TooltipTrigger` — 提示气泡
-- `CollapsibleSection` — 可折叠区域
-- `ResultHeader`、`ResultSection` — 结果展示布局
-
-**图标**：
-`ChevronRight`、`FileText`
+通过 `archon:*` 模块导入，详见 [模块系统文档](module-system.md)。
 
 ---
 

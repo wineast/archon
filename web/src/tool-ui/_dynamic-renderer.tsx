@@ -2,8 +2,7 @@
 
 import { memo, useMemo, type ComponentType } from "react";
 import { transform } from "sucrase";
-import { INJECTED_DEPS, INJECTED_DEPS_BY_MODULE } from "./_allowed-components";
-import { isModuleFormat } from "@/lib/modules/detect";
+import { INJECTED_DEPS_BY_MODULE } from "./_allowed-components";
 import { transformImports } from "@/lib/modules/transform-imports";
 import type { ComponentRendererProps } from "./_registry";
 
@@ -20,20 +19,8 @@ function compileSource(source: string): ComponentType<ComponentRendererProps> {
   return Comp;
 }
 
-/** Compile a component source into a React component.
+/** Compile a component source (ES module format) into a React component.
  *
- *  Supports two formats:
- *
- *  **Legacy (two-layer closure)**:
- *  ```
- *  function Component({ React, useState, DepA }) {  // outer: destructure deps
- *    return function({ data, state, ... }) {         // inner: render function
- *      ...
- *    }
- *  }
- *  ```
- *
- *  **Module (ES6 imports)**:
  *  ```
  *  import { useState } from "archon:react";
  *  import { Badge } from "archon:ui";
@@ -45,31 +32,7 @@ export function compileSourceWithDeps(
   source: string,
   extraDeps?: Record<string, unknown>
 ): ComponentType<ComponentRendererProps> {
-  if (isModuleFormat(source)) {
-    return compileModuleSource(source, extraDeps);
-  }
-  return compileLegacySource(source, extraDeps);
-}
-
-/** Compile legacy two-layer closure format. */
-function compileLegacySource(
-  source: string,
-  extraDeps?: Record<string, unknown>
-): ComponentType<ComponentRendererProps> {
-  const moduleCode = `${source.trim()}\nreturn Component;`;
-
-  const { code } = transform(moduleCode, {
-    transforms: ["jsx", "typescript"],
-    jsxRuntime: "classic",
-    production: true,
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
-  const factory = new Function(code);
-  const outerFn = factory();
-
-  const allDeps = { ...INJECTED_DEPS, ...(extraDeps ?? {}) };
-  return outerFn(allDeps) as ComponentType<ComponentRendererProps>;
+  return compileModuleSource(source, extraDeps);
 }
 
 /** Compile ES module format using import transformation. */

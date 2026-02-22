@@ -115,38 +115,6 @@ export default function({ data, tool }) {
 });
 
 // ---------------------------------------------------------------------------
-// Legacy format — tool prop
-// ---------------------------------------------------------------------------
-describe("compileSourceWithDeps (legacy format) — tool prop", () => {
-  it("receives tool prop via the inner function", () => {
-    const source = `
-function Component({ React }) {
-  return function({ tool }) {
-    return React.createElement("div", null, tool.output.result);
-  };
-}`;
-    const html = render(source, {
-      data: undefined,
-      tool: { name: "calc", input: { x: 1 }, output: { result: 42 } },
-    });
-    expect(html).toContain("42");
-  });
-
-  it("renders data prop in legacy component scenario", () => {
-    const source = `
-function Component({ React }) {
-  return function({ data }) {
-    return React.createElement("span", null, data.label);
-  };
-}`;
-    const html = render(source, {
-      data: { label: "Price" },
-    });
-    expect(html).toContain("Price");
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Both props coexist
 // ---------------------------------------------------------------------------
 describe("compileSourceWithDeps — dual prop coexistence", () => {
