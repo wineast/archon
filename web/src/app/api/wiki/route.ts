@@ -6,11 +6,13 @@ import type { WikiDocument } from "@/lib/wiki/types";
 import type { WikiDocumentRow } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
-import { getAgentResources } from "@/lib/pool/queries";
+import { getAgentResources, type WithPoolMeta } from "@/lib/pool/queries";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
-function toWikiDocument(row: WikiDocumentRow): WikiDocument {
-  return {
+function toWikiDocument(row: WithPoolMeta<WikiDocumentRow>): WithPoolMeta<WikiDocument>;
+function toWikiDocument(row: WikiDocumentRow): WikiDocument;
+function toWikiDocument(row: WikiDocumentRow & { _source?: string; _refId?: string; _refEnabled?: boolean }) {
+  const base: WikiDocument = {
     id: row.id,
     parentId: row.parentId,
     key: row.key,
@@ -20,6 +22,10 @@ function toWikiDocument(row: WikiDocumentRow): WikiDocument {
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),
   };
+  if ("_source" in row && row._source) {
+    return { ...base, _source: row._source, _refId: row._refId, _refEnabled: row._refEnabled };
+  }
+  return base;
 }
 
 export async function GET(req: Request) {
