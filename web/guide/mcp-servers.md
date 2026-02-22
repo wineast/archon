@@ -63,8 +63,9 @@ MCP (Model Context Protocol) Server 模块允许子 Agent 在 chat 运行时连�
 2. 使用 `@ai-sdk/mcp` 的 `createMCPClient` 并行连接所有服务器
 3. 获取每个服务器的工具，加 `mcp_{serverKey}__` 前缀防命名冲突
 4. 合并到 `allTools` 传给 `streamText`
-5. 连接失败记录 `mcp_connect_error` runtime event，不阻断聊天
-6. `onFinish` 后异步关闭所有 MCP client
+5. 每个 MCP 工具的 `execute` 包装 `wrapMcpExecuteWithTiming`，记录 `tool_call` / `tool_error` / `tool_timeout` 事件（metadata 含 `serverKey`、`serverId`）
+6. 连接失败记录 `mcp_connect_error` runtime event，不阻断聊天
+7. `onFinish` 后异步关闭所有 MCP client
 
 ## 版本快照
 

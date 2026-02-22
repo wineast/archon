@@ -12,6 +12,7 @@
 | `tool_timeout` | 工具执行超时 |
 | `tool_output_validation` | 工具输出校验失败 |
 | `stream_error` | 流式传输错误 |
+| `mcp_connect_error` | MCP Server 连接失败 |
 
 ## 严重级别
 
@@ -48,6 +49,23 @@
 1. **execute-stream.ts** — 主对话 + embed 对话（含 tool_call / stream_error / mcp_connect_error 等事件）
 2. **build-chat/execute-stream.ts** — Build Chat 配置助手
 3. **assist-utils.ts** — 7 个 AI Assist 路由共用（prompt/tool-code/wiki/function-code/dataset/schema-code/jsx）
+
+## MCP 工具运行时日志
+
+MCP 工具调用与普通工具一样记录 `tool_call` / `tool_error` / `tool_timeout` 事件。
+
+实现文件：`web/src/lib/chat/wrap-mcp-tool.ts`
+
+MCP 工具的 `execute` 函数在合并进 `allTools` 前通过 `wrapMcpExecuteWithTiming` 包装，与普通工具的 `wrapExecutorWithTiming` 模式一致。
+
+metadata 额外包含：
+
+| 字段 | 说明 |
+|------|------|
+| `serverKey` | MCP Server 的 key 标识 |
+| `serverId` | MCP Server 的 UUID |
+
+toolName 格式为 `mcp_{serverKey}__{originalToolName}`，与运行时传给 LLM 的工具名一致。
 
 ## UI
 
