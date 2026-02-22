@@ -179,7 +179,7 @@ export function InlineSchemaEditor({
           <JsonEditor
             value={customJson}
             onChange={handleChange}
-            height="200px"
+            height="300px"
             templateVariables={hasTemplateSupport ? templateVariables : undefined}
             templateVariableMap={hasTemplateSupport ? datasetVars : undefined}
           />
@@ -190,13 +190,13 @@ export function InlineSchemaEditor({
         {hasTemplateSupport && (
           <TabsContent value="preview">
             {previewLoading ? (
-              <div className="flex min-h-[200px] items-center justify-center rounded-md border">
+              <div className="flex min-h-[300px] items-center justify-center rounded-md border">
                 <Spinner className="size-5" />
               </div>
             ) : (
               <JsonEditor
                 value={previewContent}
-                height="200px"
+                height="300px"
                 readOnly
               />
             )}

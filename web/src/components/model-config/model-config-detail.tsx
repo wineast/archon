@@ -22,8 +22,9 @@ import { MdEditor } from "@/components/editors/md-editor";
 import type { ModelConfigRow } from "@/db/schema";
 import { useDatasetVarsMap, useDatasets } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
-import { BUILTIN_VAR_NAMES } from "@/lib/template";
+import { TIME_VAR_NAMES } from "@/lib/template";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
+import { useObjectTypes } from "@/lib/ontology/hooks";
 import { ModelCombobox } from "./model-combobox";
 import { PromptAssistDialog } from "./prompt-assist-dialog";
 
@@ -63,10 +64,11 @@ export function ModelConfigDetail({
   const { tools: allTools } = useTools(agentId);
   const { datasetVars } = useDatasetVarsMap(agentId);
   const { data: wikiDocs = [] } = useSWR(wikiApiKey(agentId), wikiFetcher);
+  const { objectTypes } = useObjectTypes(agentId);
 
   const allVariables = useMemo(() => {
     const datasetKeys = Object.keys(datasetVars);
-    return [...BUILTIN_VAR_NAMES, ...datasetKeys];
+    return [...TIME_VAR_NAMES, ...datasetKeys];
   }, [datasetVars]);
 
   const completionTools = useMemo(
@@ -82,6 +84,10 @@ export function ModelConfigDetail({
     [wikiDocs]
   );
 
+  const completionOntologyTypes = useMemo(
+    () => objectTypes.map((t) => ({ key: t.key, name: t.name })),
+    [objectTypes]
+  );
 
   const dirty =
     name !== config.name ||
@@ -213,6 +219,7 @@ export function ModelConfigDetail({
                   variableMap={datasetVars}
                   documents={completionDocs}
                   tools={completionTools}
+                  ontologyTypes={completionOntologyTypes}
                   placeholder="Enter system prompt... (supports {{variables}}, {{lookup &quot;key&quot;}}, {{include &quot;doc&quot;}})"
                 />
               </TabsContent>

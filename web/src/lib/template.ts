@@ -52,8 +52,8 @@ export function resolveTemplate(
   });
 }
 
-/** List all available built-in variable names. */
-export const BUILTIN_VAR_NAMES = [
+/** Time-related built-in variable names (available in all template contexts). */
+export const TIME_VAR_NAMES = [
   "date",
   "time",
   "datetime",
@@ -61,7 +61,17 @@ export const BUILTIN_VAR_NAMES = [
   "year",
   "month",
   "day",
+] as const;
+
+/** Eval-specific built-in variable names (only in eval/judge context). */
+export const EVAL_VAR_NAMES = [
   "model",
   "caseCount",
   "caseName",
+] as const;
+
+/** List all available built-in variable names. */
+export const BUILTIN_VAR_NAMES = [
+  ...TIME_VAR_NAMES,
+  ...EVAL_VAR_NAMES,
 ] as const;

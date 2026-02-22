@@ -117,6 +117,57 @@ describe("generateCompletions", () => {
     });
   });
 
+  describe("ontology completions", () => {
+    const ontologyTypes = [
+      { key: "customer", name: "Customer" },
+      { key: "order", name: "Order" },
+    ];
+
+    it("includes ontology completions with nested variants in {{ context", () => {
+      const result = generateCompletions("{{", variables, documents, [], undefined, ontologyTypes);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels).toContain("{{ontology.customer.name}}");
+      expect(labels).toContain("{{ontology.customer.description}}");
+      expect(labels).toContain("{{ontology.customer.properties}}");
+      expect(labels).toContain("{{ontology.customer.relations}}");
+      expect(labels).toContain("{{ontology.order.name}}");
+      expect(labels).toContain("{{ontology.order.description}}");
+      expect(labels).toContain("{{ontology.order.properties}}");
+      expect(labels).toContain("{{ontology.order.relations}}");
+    });
+
+    it("includes top-level ontology_types helper", () => {
+      const result = generateCompletions("{{", variables, documents, [], undefined, ontologyTypes);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels).toContain("{{ontology_types}}");
+    });
+
+    it("does not include ontology completions in {%% tag context", () => {
+      const result = generateCompletions("{%", variables, documents, [], undefined, ontologyTypes);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels.some((l: string) => l.includes("ontology"))).toBe(false);
+    });
+
+    it("does not generate ontology completions when ontologyTypes is undefined", () => {
+      const result = generateCompletions("{{", variables, documents);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels.some((l: string) => l.includes("ontology"))).toBe(false);
+    });
+
+    it("does not generate ontology_types when ontologyTypes is empty", () => {
+      const result = generateCompletions("{{", variables, documents, [], undefined, []);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels.some((l: string) => l.includes("ontology"))).toBe(false);
+    });
+
+    it("filters ontology completions by typed text", () => {
+      const result = generateCompletions("{{ontology.customer", variables, documents, [], undefined, ontologyTypes);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels).toContain("{{ontology.customer.name}}");
+      expect(labels).not.toContain("{{ontology.order.name}}");
+    });
+  });
+
   describe("edge cases", () => {
     it("works with no tools parameter (defaults to empty)", () => {
       const result = generateCompletions("{{", variables, documents);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { resolveTemplate, BUILTIN_VAR_NAMES } from "../template";
+import { resolveTemplate, BUILTIN_VAR_NAMES, TIME_VAR_NAMES, EVAL_VAR_NAMES } from "../template";
 
 describe("template", () => {
   beforeEach(() => {
@@ -189,9 +189,39 @@ describe("template", () => {
     });
   });
 
+  describe("TIME_VAR_NAMES", () => {
+    it("has exactly 7 entries", () => {
+      expect(TIME_VAR_NAMES).toHaveLength(7);
+    });
+
+    it("contains all time-related names", () => {
+      const expected = ["date", "time", "datetime", "timestamp", "year", "month", "day"];
+      for (const name of expected) {
+        expect(TIME_VAR_NAMES).toContain(name);
+      }
+    });
+  });
+
+  describe("EVAL_VAR_NAMES", () => {
+    it("has exactly 3 entries", () => {
+      expect(EVAL_VAR_NAMES).toHaveLength(3);
+    });
+
+    it("contains all eval-specific names", () => {
+      const expected = ["model", "caseCount", "caseName"];
+      for (const name of expected) {
+        expect(EVAL_VAR_NAMES).toContain(name);
+      }
+    });
+  });
+
   describe("BUILTIN_VAR_NAMES", () => {
     it("has exactly 10 entries", () => {
       expect(BUILTIN_VAR_NAMES).toHaveLength(10);
+    });
+
+    it("equals TIME_VAR_NAMES + EVAL_VAR_NAMES", () => {
+      expect([...BUILTIN_VAR_NAMES]).toEqual([...TIME_VAR_NAMES, ...EVAL_VAR_NAMES]);
     });
 
     it("contains all expected names", () => {

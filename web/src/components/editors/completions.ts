@@ -10,12 +10,18 @@ export interface CompletionTool {
   description?: string;
 }
 
+export interface CompletionOntologyType {
+  key: string;
+  name: string;
+}
+
 export interface CompletionConfig {
   variables: string[];
   /** When provided, object-typed values expand to {{key.field}} completions */
   variableMap?: Record<string, unknown>;
   documents: CompletionDocument[];
   tools: CompletionTool[];
+  ontologyTypes?: CompletionOntologyType[];
 }
 
 export interface CompletionOption {
@@ -36,7 +42,8 @@ export function generateCompletions(
   variables: string[],
   documents: CompletionDocument[],
   tools: CompletionTool[] = [],
-  variableMap?: Record<string, unknown>
+  variableMap?: Record<string, unknown>,
+  ontologyTypes?: CompletionOntologyType[]
 ): { from: number; items: CompletionOption[] } | null {
   const lastOutputOpen = textBeforeCursor.lastIndexOf("{{");
   const lastTagOpen = textBeforeCursor.lastIndexOf("{%");
@@ -123,6 +130,57 @@ export function generateCompletions(
             detail: "tool array (for loop)",
             boost: 6.9,
             apply: "{{tool_entries}}",
+          },
+        ]
+      : []),
+
+    // Ontology — nested object per type
+    ...(!isTagContext && ontologyTypes
+      ? ontologyTypes.flatMap((t, i) => {
+          const detail = t.name || t.key;
+          const base = 6.5 - i * 0.01;
+          return [
+            {
+              label: `{{ontology.${t.key}.name}}`,
+              type: "variable" as const,
+              detail: `${detail} (name)`,
+              boost: base,
+              apply: `{{ontology.${t.key}.name}}`,
+            },
+            {
+              label: `{{ontology.${t.key}.description}}`,
+              type: "variable" as const,
+              detail: `${detail} (description)`,
+              boost: base - 0.001,
+              apply: `{{ontology.${t.key}.description}}`,
+            },
+            {
+              label: `{{ontology.${t.key}.properties}}`,
+              type: "variable" as const,
+              detail: `${detail} (properties)`,
+              boost: base - 0.002,
+              apply: `{{ontology.${t.key}.properties}}`,
+            },
+            {
+              label: `{{ontology.${t.key}.relations}}`,
+              type: "variable" as const,
+              detail: `${detail} (relations)`,
+              boost: base - 0.003,
+              apply: `{{ontology.${t.key}.relations}}`,
+            },
+          ];
+        })
+      : []),
+
+    // Top-level ontology helper
+    ...(!isTagContext && ontologyTypes && ontologyTypes.length > 0
+      ? [
+          {
+            label: "{{ontology_types}}",
+            type: "variable" as const,
+            detail: "ontology types array",
+            boost: 6.4,
+            apply: "{{ontology_types}}",
           },
         ]
       : []),
@@ -245,7 +303,8 @@ export function ensureCompletionProvider(
         config.variables,
         config.documents,
         config.tools,
-        config.variableMap
+        config.variableMap,
+        config.ontologyTypes
       );
 
       if (!result) return { suggestions: [] };

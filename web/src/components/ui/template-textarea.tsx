@@ -3,6 +3,8 @@
 import {
   MdEditor,
   type CompletionDocument,
+  type CompletionTool,
+  type CompletionOntologyType,
 } from "@/components/editors/md-editor";
 
 /**
@@ -15,6 +17,8 @@ export function TemplateTextarea({
   variables,
   variableMap,
   documents,
+  tools,
+  ontologyTypes,
   placeholder,
   className,
   height,
@@ -24,6 +28,8 @@ export function TemplateTextarea({
   variables?: string[];
   variableMap?: Record<string, unknown>;
   documents?: CompletionDocument[];
+  tools?: CompletionTool[];
+  ontologyTypes?: CompletionOntologyType[];
   placeholder?: string;
   className?: string;
   height?: string;
@@ -35,6 +41,8 @@ export function TemplateTextarea({
       variables={variables}
       variableMap={variableMap}
       documents={documents}
+      tools={tools}
+      ontologyTypes={ontologyTypes}
       placeholder={placeholder}
       className={className}
       height={height}
