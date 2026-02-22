@@ -7,7 +7,7 @@ import { isModuleFormat } from "@/lib/modules/detect";
 import { transformToolHandlerImports } from "@/lib/modules/transform-tool-handler";
 
 // ── Load fixture data ──
-const fixturePath = path.resolve(__dirname, "../../../../../fixtures/gmcc-advisor.json");
+const fixturePath = path.resolve(__dirname, "../../../../../data/fixtures/gmcc-advisor.json");
 const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8")) as {
   versions: Array<{
     snapshot: {
