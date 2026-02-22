@@ -363,6 +363,33 @@ export async function executeChatStream(
       modelMessages.unshift({ role: "system", content: memoryBlock });
     }
 
+    // ── Eager persist: session + user message (before streaming) ──
+    if (sessionId && userMessage) {
+      try {
+        if (messages.length === 1) {
+          const title =
+            extractTextContent(userMessage.parts as unknown[]).slice(0, 100) ||
+            "New Chat";
+          await createSession({
+            id: sessionId,
+            title,
+            model: activeConfig.modelId,
+            systemPrompt: activeConfig.systemPrompt,
+            agentId,
+            userId: userId ?? undefined,
+          });
+        }
+        await saveMessage({
+          id: crypto.randomUUID(),
+          sessionId,
+          role: userMessage.role as "user" | "assistant" | "system",
+          parts: userMessage.parts as unknown[],
+        });
+      } catch (e) {
+        console.error("[chat] failed to eagerly save session/user message:", e);
+      }
+    }
+
     const result = streamText({
       model: await resolveModel(activeConfig.modelId, orgId),
       messages: modelMessages,
@@ -419,33 +446,10 @@ export async function executeChatStream(
           await Promise.allSettled(mcpClients.map((c) => c.close()));
         });
 
+        // Save assistant response (session + user message already persisted before streaming)
         if (!sessionId || !userMessage) return;
         after(async () => {
           try {
-            // 1. Ensure session exists
-            if (messages.length === 1) {
-              const title =
-                extractTextContent(userMessage.parts as unknown[]).slice(
-                  0,
-                  100
-                ) || "New Chat";
-              await createSession({
-                id: sessionId,
-                title,
-                model: activeConfig.modelId,
-                systemPrompt: activeConfig.systemPrompt,
-                agentId,
-                userId: userId ?? undefined,
-              });
-            }
-            // 2. Save user message
-            await saveMessage({
-              id: crypto.randomUUID(),
-              sessionId,
-              role: userMessage.role as "user" | "assistant" | "system",
-              parts: userMessage.parts as unknown[],
-            });
-            // 3. Save assistant response
             const uiParts = responseMessagesToUIParts(response.messages);
             if (uiParts.length > 0) {
               await saveMessage({
@@ -456,7 +460,7 @@ export async function executeChatStream(
               });
             }
           } catch (e) {
-            console.error("[chat] failed to save messages:", e);
+            console.error("[chat] failed to save assistant message:", e);
           }
         });
 

@@ -168,18 +168,11 @@ describe("executeBuildChatStream monitoring", () => {
     ]);
   });
 
-  it("creates session and saves messages on first message", async () => {
+  it("creates session and saves user message eagerly (before streaming), saves assistant in after()", async () => {
     const messages = makeMessages(1);
     await executeBuildChatStream({ messages, agentId: "agent-1", userId: "user-1", sessionId: "sess-1" });
 
-    capturedOnFinish!({
-      totalUsage: { inputTokens: 200, outputTokens: 80 },
-      response: { messages: [] },
-      steps: [],
-    });
-
-    for (const cb of afterCallbacks) await cb();
-
+    // Session + user message saved eagerly (before onFinish)
     expect(mockCreateSession).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "sess-1",
@@ -187,6 +180,20 @@ describe("executeBuildChatStream monitoring", () => {
         userId: "user-1",
       })
     );
+    expect(mockSaveMessage).toHaveBeenCalledTimes(1); // user message only
+    expect(mockSaveMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "sess-1", role: "user" })
+    );
+
+    // Trigger onFinish → after callbacks for assistant message
+    capturedOnFinish!({
+      totalUsage: { inputTokens: 200, outputTokens: 80 },
+      response: { messages: [] },
+      steps: [],
+    });
+    for (const cb of afterCallbacks) await cb();
+
+    // Now assistant message also saved
     expect(mockSaveMessage).toHaveBeenCalledTimes(2);
   });
 
@@ -206,5 +213,25 @@ describe("executeBuildChatStream monitoring", () => {
     expect(mockRecordRuntimeEvents).toHaveBeenCalled();
     expect(mockCreateSession).not.toHaveBeenCalled();
     expect(mockSaveMessage).not.toHaveBeenCalled();
+  });
+
+  it("does not create session on subsequent messages but still saves user message eagerly", async () => {
+    const messages = makeMessages(3);
+    await executeBuildChatStream({ messages, agentId: "agent-1", userId: "user-1", sessionId: "sess-1" });
+
+    // No session creation for subsequent messages
+    expect(mockCreateSession).not.toHaveBeenCalled();
+    // User message saved eagerly
+    expect(mockSaveMessage).toHaveBeenCalledTimes(1);
+
+    capturedOnFinish!({
+      totalUsage: { inputTokens: 200, outputTokens: 80 },
+      response: { messages: [] },
+      steps: [],
+    });
+    for (const cb of afterCallbacks) await cb();
+
+    // Assistant also saved
+    expect(mockSaveMessage).toHaveBeenCalledTimes(2);
   });
 });

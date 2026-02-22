@@ -98,6 +98,33 @@ export function createAssistHandler(config: AssistConfig) {
     const streamStartTime = performance.now();
     const userMessage = messages[messages.length - 1];
 
+    // ── Eager persist: session + user message (before streaming) ──
+    if (sessionId && userMessage) {
+      try {
+        if (messages.length === 1) {
+          const title =
+            extractTextContent(userMessage.parts as unknown[]).slice(0, 100) ||
+            config.source;
+          await createSession({
+            id: sessionId,
+            title,
+            model: modelId,
+            systemPrompt: system,
+            agentId,
+            userId: currentUserId,
+          });
+        }
+        await saveMessage({
+          id: crypto.randomUUID(),
+          sessionId,
+          role: userMessage.role as "user" | "assistant" | "system",
+          parts: userMessage.parts as unknown[],
+        });
+      } catch (e) {
+        console.error(`[${config.source}] failed to eagerly save session/user message:`, e);
+      }
+    }
+
     const result = streamText({
       model,
       messages: await convertToModelMessages(messages),
@@ -146,29 +173,10 @@ export function createAssistHandler(config: AssistConfig) {
           await recordRuntimeEvents(events);
         });
 
-        // Session persistence
+        // Save assistant response (session + user message already persisted before streaming)
         if (!sessionId || !userMessage) return;
         after(async () => {
           try {
-            if (messages.length === 1) {
-              const title =
-                extractTextContent(userMessage.parts as unknown[]).slice(0, 100) ||
-                config.source;
-              await createSession({
-                id: sessionId,
-                title,
-                model: modelId,
-                systemPrompt: system,
-                agentId,
-                userId: currentUserId,
-              });
-            }
-            await saveMessage({
-              id: crypto.randomUUID(),
-              sessionId,
-              role: userMessage.role as "user" | "assistant" | "system",
-              parts: userMessage.parts as unknown[],
-            });
             const uiParts = responseMessagesToUIParts(response.messages);
             if (uiParts.length > 0) {
               await saveMessage({
@@ -179,7 +187,7 @@ export function createAssistHandler(config: AssistConfig) {
               });
             }
           } catch (e) {
-            console.error(`[${config.source}] failed to save messages:`, e);
+            console.error(`[${config.source}] failed to save assistant message:`, e);
           }
         });
       },

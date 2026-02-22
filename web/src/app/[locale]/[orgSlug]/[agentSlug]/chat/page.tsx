@@ -238,6 +238,19 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
     onToolCall: ({ toolCall }) => {
       executeClientTool(toolCall, addToolOutput, toolsList);
     },
+    onError: (error) => {
+      // Parse structured error from API response
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.error === "quota_exceeded") {
+          toast.error(parsed.message || t("quotaExceeded"));
+          return;
+        }
+      } catch {
+        // not JSON, fall through
+      }
+      toast.error(error.message || t("chatError"));
+    },
   });
 
   /* ── Session handlers ── */
@@ -370,7 +383,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
     setInput("");
     if (isFirstMessageRef.current) {
       isFirstMessageRef.current = false;
-      setTimeout(() => mutateSessions(), 2000);
+      setTimeout(() => mutateSessions(), 500);
     }
   }, [sendMessage, mutateSessions]);
 
@@ -390,7 +403,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
       sendMessage({ text: suggestion });
       if (isFirstMessageRef.current) {
         isFirstMessageRef.current = false;
-        setTimeout(() => mutateSessions(), 2000);
+        setTimeout(() => mutateSessions(), 500);
       }
     },
     [sendMessage, mutateSessions]
