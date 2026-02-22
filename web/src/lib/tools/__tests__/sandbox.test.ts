@@ -34,7 +34,7 @@ describe("executeToolInSandbox", () => {
   it("executes a pure sync handler", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "(args) => ({ result: args.x * 2 })",
+      `export default function(args) { return { result: args.x * 2 }; }`,
       { x: 21 },
       ctx
     );
@@ -44,7 +44,7 @@ describe("executeToolInSandbox", () => {
   it("executes a handler returning a string", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "(args) => `Hello ${args.name}`",
+      "export default function(args) { return `Hello ${args.name}`; }",
       { name: "World" },
       ctx
     );
@@ -54,17 +54,21 @@ describe("executeToolInSandbox", () => {
   it("executes an async handler with await", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "async (args) => { const x = await Promise.resolve(args.x + 1); return { value: x }; }",
+      `export default async function(args) { const x = await Promise.resolve(args.x + 1); return { value: x }; }`,
       { x: 10 },
       ctx
     );
     expect(result).toEqual({ value: 11 });
   });
 
-  it("calls context.wiki.get", async () => {
+  it("calls wiki.get via import", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "async (args, context) => { const doc = await context.wiki.get(args.id); return doc; }",
+      `import { wiki } from "archon:context";
+export default async function(args) {
+  const doc = await wiki.get(args.id);
+  return doc;
+}`,
       { id: "my-doc" },
       ctx
     );
@@ -73,10 +77,13 @@ describe("executeToolInSandbox", () => {
     expect(ctx.wiki.get).toHaveBeenCalledWith("my-doc");
   });
 
-  it("calls context.dataset.get", async () => {
+  it("calls dataset.get via import", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "async (args, context) => { return await context.dataset.get(args.key); }",
+      `import { dataset } from "archon:context";
+export default async function(args) {
+  return await dataset.get(args.key);
+}`,
       { key: "prices" },
       ctx
     );
@@ -84,10 +91,13 @@ describe("executeToolInSandbox", () => {
     expect(ctx.dataset.get).toHaveBeenCalledWith("prices");
   });
 
-  it("calls context.ontology.create", async () => {
+  it("calls ontology.create via import", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "async (args, context) => { return await context.ontology.create(args.type, args.data); }",
+      `import { ontology } from "archon:context";
+export default async function(args) {
+  return await ontology.create(args.type, args.data);
+}`,
       { type: "customer", data: { name: "Alice" } },
       ctx
     );
@@ -100,16 +110,19 @@ describe("executeToolInSandbox", () => {
   it("times out on infinite loop", async () => {
     const ctx = createMockContext();
     await expect(
-      executeToolInSandbox("() => { while(true){} }", {}, ctx, {
-        timeoutMs: 200,
-      })
+      executeToolInSandbox(
+        `export default function() { while(true){} }`,
+        {},
+        ctx,
+        { timeoutMs: 200 }
+      )
     ).rejects.toThrow(SandboxTimeoutError);
   });
 
   it("cannot access process global", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "(args) => ({ hasProcess: typeof process !== 'undefined' })",
+      `export default function() { return { hasProcess: typeof process !== 'undefined' }; }`,
       {},
       ctx
     );
@@ -119,7 +132,7 @@ describe("executeToolInSandbox", () => {
   it("cannot access fetch global", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "(args) => ({ hasFetch: typeof fetch !== 'undefined' })",
+      `export default function() { return { hasFetch: typeof fetch !== 'undefined' }; }`,
       {},
       ctx
     );
@@ -129,7 +142,7 @@ describe("executeToolInSandbox", () => {
   it("cannot access require", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "(args) => ({ hasRequire: typeof require !== 'undefined' })",
+      `export default function() { return { hasRequire: typeof require !== 'undefined' }; }`,
       {},
       ctx
     );
@@ -140,7 +153,7 @@ describe("executeToolInSandbox", () => {
     const ctx = createMockContext();
     await expect(
       executeToolInSandbox(
-        "(args) => { throw new Error('boom'); }",
+        `export default function() { throw new Error('boom'); }`,
         {},
         ctx
       )
@@ -150,33 +163,63 @@ describe("executeToolInSandbox", () => {
   it("throws SandboxError on syntax error", async () => {
     const ctx = createMockContext();
     await expect(
-      executeToolInSandbox("(args => { invalid syntax !!!", {}, ctx)
+      executeToolInSandbox(
+        `export default function() { invalid syntax !!! }`,
+        {},
+        ctx
+      )
     ).rejects.toThrow(SandboxError);
   });
 
   it("handles handler returning null", async () => {
     const ctx = createMockContext();
-    const result = await executeToolInSandbox("() => null", {}, ctx);
+    const result = await executeToolInSandbox(
+      `export default function() { return null; }`,
+      {},
+      ctx
+    );
     expect(result).toBeNull();
   });
 
   it("handles handler returning undefined", async () => {
     const ctx = createMockContext();
-    const result = await executeToolInSandbox("() => {}", {}, ctx);
+    const result = await executeToolInSandbox(
+      `export default function() {}`,
+      {},
+      ctx
+    );
     expect(result).toBeUndefined();
   });
 
   it("handles handler returning array", async () => {
     const ctx = createMockContext();
     const result = await executeToolInSandbox(
-      "(args) => [args.a, args.b, args.a + args.b]",
+      `export default function(args) { return [args.a, args.b, args.a + args.b]; }`,
       { a: 1, b: 2 },
       ctx
     );
     expect(result).toEqual([1, 2, 3]);
   });
 
-  // ── ES module format tests ──
+  it("throws SandboxError on legacy arrow function format", async () => {
+    const ctx = createMockContext();
+    await expect(
+      executeToolInSandbox(
+        `(args) => ({ result: args.x * 2 })`,
+        { x: 21 },
+        ctx
+      )
+    ).rejects.toThrow(SandboxError);
+    await expect(
+      executeToolInSandbox(
+        `(args) => ({ result: args.x * 2 })`,
+        { x: 21 },
+        ctx
+      )
+    ).rejects.toThrow(/Legacy handler format is no longer supported/);
+  });
+
+  // ── ES module format tests (with imports) ──
 
   it("executes a module-format sync handler", async () => {
     const ctx = createMockContext();

@@ -25,9 +25,7 @@ return await res.json();
 
 ### 代码模式
 
-支持两种写法格式：
-
-**ES6 模块格式（推荐）**：
+使用 ES module 格式编写 Handler：
 
 ```js
 import { wiki, dataset, fn, ontology } from "archon:context";
@@ -38,56 +36,49 @@ export default async function(args) {
 }
 ```
 
+- `args` — 工具定义的 parameters 解析后的对象
+- 通过 `import` 从 `archon:context` 导入运行时 API（见下方）
+- 返回值为任意可序列化的 JSON 对象
+
 工具 Handler 只支持 `archon:context` 一个虚拟模块：
 
 | 命名空间 | 用途 | 示例 |
 |----------|------|------|
 | `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, fn } from "archon:context"` |
 
-**旧闭包格式**：
-
-```js
-async (args, context) => {
-  const doc = await context.wiki.get(args.docId);
-  return { title: doc?.meta?.title, content: doc?.content };
-}
-```
-
-- `args` — 工具定义的 parameters 解析后的对象
-- `context` — 运行时数据访问 API（见下方）
-- 返回值为任意可序列化的 JSON 对象
-
-系统通过检测 `import`/`export` 关键字自动判断格式。
-
 ## Context API
 
-代码模式下，第二个参数 `context` 提供以下 API：
+通过 `import { wiki, dataset, fn, ontology } from "archon:context"` 导入运行时 API。
 
-### context.wiki
+### wiki
 
 ```js
+import { wiki } from "archon:context";
+
 // 按 key 或 ID 获取文档（content 经过模板渲染）
-const doc = await context.wiki.get("product-intro");
+const doc = await wiki.get("product-intro");
 // → { meta: { ... } | null, content: "渲染后的正文" }
 
 // 按 key 前缀批量查找（content 为原始正文）
-const docs = await context.wiki.findByPrefix("product-");
+const docs = await wiki.findByPrefix("product-");
 // → [{ id, title, meta, content }, ...]
 
 // 按内容关键词搜索（content 为原始正文）
-const results = await context.wiki.search("关键词");
+const results = await wiki.search("关键词");
 // → [{ id, title, meta, content }, ...]
 ```
 
-### context.dataset
+### dataset
 
 ```js
+import { dataset } from "archon:context";
+
 // 获取数据集值
-const val = await context.dataset.get("company_name");
+const val = await dataset.get("company_name");
 // → "GMCC" | null
 
 // 获取对象类型数据集的条目列表
-const entries = await context.dataset.getEntries("product_routes");
+const entries = await dataset.getEntries("product_routes");
 // → [{ value, label, metadata }, ...]
 ```
 
@@ -97,49 +88,53 @@ const entries = await context.dataset.getEntries("product_routes");
 | `e.label` | `string \| null` | 对象值中的 `.label` 字段 |
 | `e.metadata` | `object` | 对象值本身 |
 
-### context.fn(key)
+### fn(key)
 
 调用 Functions 页面定义的函数：
 
 ```js
-const calc = await context.fn("calculate_price");
+import { fn } from "archon:context";
+
+const calc = await fn("calculate_price");
 const result = await calc({ quantity: 10, unitPrice: 99 });
 ```
 
-### context.ontology
+### ontology
 
 操作知识图谱（Ontology）：
 
 ```js
+import { ontology } from "archon:context";
+
 // 列出所有对象类型
-const types = await context.ontology.types();
+const types = await ontology.types();
 
 // 获取类型详情（含属性和关系定义）
-const type = await context.ontology.type("customer");
+const type = await ontology.type("customer");
 
 // 查询实例（可选 filters）
-const customers = await context.ontology.query("customer", { city: "北京" });
+const customers = await ontology.query("customer", { city: "北京" });
 
 // 获取单个实例（含关联链接）
-const c = await context.ontology.get("customer", instanceId);
+const c = await ontology.get("customer", instanceId);
 
 // 创建实例
-const created = await context.ontology.create("customer", { name: "张三" });
+const created = await ontology.create("customer", { name: "张三" });
 
 // 更新实例（merge data）
-await context.ontology.update("customer", id, { phone: "138..." });
+await ontology.update("customer", id, { phone: "138..." });
 
 // 删除实例
-await context.ontology.delete("customer", id);
+await ontology.delete("customer", id);
 
 // 创建关联
-await context.ontology.link(sourceId, "has_order", targetId);
+await ontology.link(sourceId, "has_order", targetId);
 
 // 删除关联
-await context.ontology.unlink(sourceId, "has_order", targetId);
+await ontology.unlink(sourceId, "has_order", targetId);
 
 // 获取关系图（BFS，默认深度 2，最大 5）
-const graph = await context.ontology.graph("customer", id, { depth: 2 });
+const graph = await ontology.graph("customer", id, { depth: 2 });
 // → { nodes: [...], edges: [...] }
 ```
 
@@ -157,8 +152,10 @@ const graph = await context.ontology.graph("customer", id, { depth: 2 });
 ### 查询 Wiki 文档并返回摘要
 
 ```js
-async (args, context) => {
-  const results = await context.wiki.search(args.keyword);
+import { wiki } from "archon:context";
+
+export default async function(args) {
+  const results = await wiki.search(args.keyword);
   return {
     count: results.length,
     summaries: results.slice(0, 5).map(d => ({
@@ -172,8 +169,10 @@ async (args, context) => {
 ### 根据数据集条目路由匹配
 
 ```js
-async (args, context) => {
-  const entries = await context.dataset.getEntries("products");
+import { dataset } from "archon:context";
+
+export default async function(args) {
+  const entries = await dataset.getEntries("products");
   const matched = entries.filter(e =>
     e.metadata.category === args.category
   );
@@ -184,8 +183,10 @@ async (args, context) => {
 ### 调用 Function 计算
 
 ```js
-async (args, context) => {
-  const calc = await context.fn("loan_calculator");
+import { fn } from "archon:context";
+
+export default async function(args) {
+  const calc = await fn("loan_calculator");
   return await calc({
     principal: args.amount,
     rate: args.rate,

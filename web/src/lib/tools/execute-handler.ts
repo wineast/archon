@@ -13,7 +13,7 @@ export type SandboxMode = "light" | "full";
 /**
  * Execute a tool handler in a sandboxed environment.
  *
- * @param handlerCode - JS expression that evaluates to a function: `(args, context) => ...`
+ * @param handlerCode - ES module code string with `export default` function
  * @param args - Input arguments
  * @param context - ToolContext with wiki/dataset/fn/ontology
  * @param sandboxMode - "light" (QuickJS) or "full" (Vercel Sandbox, P2)

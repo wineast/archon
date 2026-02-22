@@ -27,14 +27,14 @@ const validPayload: ToolDefinitionPayload = {
     },
     required: ["query"],
   },
-  handler: "(args) => ({ results: [], total: 0 })",
+  handler: `export default function(args) { return { results: [], total: 0 }; }`,
 };
 
 const noParamPayload: ToolDefinitionPayload = {
   name: "getCurrentTime",
   description: "Get current time",
   parameters: EMPTY_PARAMS,
-  handler: "() => ({ time: '12:00' })",
+  handler: `export default function() { return { time: '12:00' }; }`,
 };
 
 describe("buildDynamicTools", () => {
@@ -145,13 +145,13 @@ describe("buildDynamicTools", () => {
         name: "tool1",
         description: "First",
         parameters: EMPTY_PARAMS,
-        handler: "() => ({ a: 1 })",
+        handler: `export default function() { return { a: 1 }; }`,
       };
       const payload2: ToolDefinitionPayload = {
         name: "tool2",
         description: "Second",
         parameters: EMPTY_PARAMS,
-        handler: "() => ({ b: 2 })",
+        handler: `export default function() { return { b: 2 }; }`,
       };
       const tools = buildDynamicTools([payload1, payload2]);
 
@@ -166,13 +166,13 @@ describe("buildDynamicTools", () => {
         name: "dup",
         description: "First",
         parameters: EMPTY_PARAMS,
-        handler: "() => ({})",
+        handler: `export default function() { return {}; }`,
       };
       const p2: ToolDefinitionPayload = {
         name: "dup",
         description: "Second",
         parameters: EMPTY_PARAMS,
-        handler: "() => ({})",
+        handler: `export default function() { return {}; }`,
       };
       const tools = buildDynamicTools([p1, p2]);
       expect(tools.dup.description).toBe("Second");
@@ -307,7 +307,7 @@ describe("output validation", () => {
         },
         required: ["status"],
       },
-      handler: "() => ({ status: 123 })",
+      handler: `export default function() { return { status: 123 }; }`,
     };
     const tools = buildDynamicTools([payload], undefined, agentId, collector);
     const result = await tools.myTool.execute!({}, opts);
@@ -321,7 +321,7 @@ describe("output validation", () => {
       name: "myTool",
       description: "A tool without output validation",
       parameters: EMPTY_PARAMS,
-      handler: "() => ({ anything: 'goes' })",
+      handler: `export default function() { return { anything: 'goes' }; }`,
     };
     const tools = buildDynamicTools([payload], undefined, agentId, collector);
     const result = await tools.myTool.execute!({}, opts);

@@ -59,7 +59,7 @@ export async function generateCrudToolsForType(
       toolName: `create_${typeKey}`,
       toolDescription: `Create a new ${objType.name} instance. ${objType.description}`,
       parametersSchema: { "$ref": `#/$defs/${schema.key}` } as JsonSchema7,
-      handler: `async (args, context) => context.ontology.create("${typeKey}", args)`,
+      handler: `import { ontology } from "archon:context";\nexport default async function(args) { return await ontology.create("${typeKey}", args); }`,
     },
     {
       toolKey: `get_${typeKey}`,
@@ -72,7 +72,7 @@ export async function generateCrudToolsForType(
         },
         required: ["id"],
       } as JsonSchema7,
-      handler: `async (args, context) => context.ontology.get("${typeKey}", args.id)`,
+      handler: `import { ontology } from "archon:context";\nexport default async function(args) { return await ontology.get("${typeKey}", args.id); }`,
     },
     {
       toolKey: `query_${typeKey}s`,
@@ -83,7 +83,7 @@ export async function generateCrudToolsForType(
         properties: queryProperties,
         required: [],
       } as JsonSchema7,
-      handler: `async (args, context) => context.ontology.query("${typeKey}", args)`,
+      handler: `import { ontology } from "archon:context";\nexport default async function(args) { return await ontology.query("${typeKey}", args); }`,
     },
     {
       toolKey: `update_${typeKey}`,
@@ -94,7 +94,7 @@ export async function generateCrudToolsForType(
         properties: updateProperties,
         required: ["id"],
       } as JsonSchema7,
-      handler: `async (args, context) => { const { id, ...data } = args; return context.ontology.update("${typeKey}", id, data); }`,
+      handler: `import { ontology } from "archon:context";\nexport default async function(args) { const { id, ...data } = args; return await ontology.update("${typeKey}", id, data); }`,
     },
   ];
 

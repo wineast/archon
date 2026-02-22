@@ -14,7 +14,7 @@ import { executeToolInSandbox } from "./sandbox";
 /**
  * Execute a tool handler in a Vercel Sandbox Firecracker micro-VM.
  *
- * @param handlerCode - JS expression evaluating to `(args, context) => ...`
+ * @param handlerCode - ES module code string with `export default` function
  * @param args - Input arguments
  * @param context - ToolContext (proxied to VM via IPC)
  */
