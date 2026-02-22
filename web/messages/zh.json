@@ -97,7 +97,8 @@
     "recoverButton": "撤销注销",
     "recovering": "撤销中...",
     "recoverFailed": "撤销注销失败",
-    "continueSignOut": "继续退出"
+    "continueSignOut": "继续退出",
+    "cancelButton": "取消"
   },
   "agent": {
     "createNew": "新建 Agent",

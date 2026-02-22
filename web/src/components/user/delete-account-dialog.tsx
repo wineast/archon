@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { ACCOUNT_DELETION_GRACE_DAYS } from "@/lib/auth/account-deletion";
+import { ACCOUNT_DELETION_GRACE_DAYS } from "@/lib/auth/account-deletion-constants";
 
 interface DeleteAccountDialogProps {
   open: boolean;
@@ -91,7 +91,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={anyBusy}>
-              {t("cancel", { ns: "common" })}
+              {t("cancelButton")}
             </Button>
             <Button
               variant="destructive"

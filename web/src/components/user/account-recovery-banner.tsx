@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useCurrentUser } from "@/lib/auth/hooks";
-import { ACCOUNT_DELETION_GRACE_DAYS } from "@/lib/auth/account-deletion";
+import { ACCOUNT_DELETION_GRACE_DAYS } from "@/lib/auth/account-deletion-constants";
 
 export function AccountRecoveryBanner() {
   const t = useTranslations("user");

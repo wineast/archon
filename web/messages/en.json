@@ -97,7 +97,8 @@
     "recoverButton": "Cancel deletion",
     "recovering": "Cancelling...",
     "recoverFailed": "Failed to cancel deletion",
-    "continueSignOut": "Sign out"
+    "continueSignOut": "Sign out",
+    "cancelButton": "Cancel"
   },
   "agent": {
     "createNew": "New Agent",

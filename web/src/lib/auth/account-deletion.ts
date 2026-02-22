@@ -3,7 +3,8 @@ import { users, orgs, orgMembers } from "@/db/schema";
 import { eq, and, lt, isNotNull } from "drizzle-orm";
 import { createClerkClient } from "@clerk/nextjs/server";
 
-export const ACCOUNT_DELETION_GRACE_DAYS = 7;
+import { ACCOUNT_DELETION_GRACE_DAYS } from "./account-deletion-constants";
+export { ACCOUNT_DELETION_GRACE_DAYS };
 
 const clerk = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY!,
