@@ -31,7 +31,7 @@
     "agents": "Agents",
     "admin": "管理后台",
     "trash": "回收站",
-    "settings": "设置"
+    "settings": "构造"
   },
   "auth": {
     "signIn": {
@@ -155,7 +155,7 @@
     "deleteSessionFailed": "删除会话失败"
   },
   "build": {
-    "titleSuffix": "· 设置",
+    "titleSuffix": "· 构造",
     "disabledBadge": "已关闭",
     "auditLog": "操作日志",
     "config": "Config",

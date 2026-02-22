@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { DownloadIcon, EllipsisVerticalIcon, PencilIcon, SettingsIcon, Trash2Icon } from "lucide-react";
+import { DownloadIcon, EllipsisVerticalIcon, PencilIcon, WrenchIcon, Trash2Icon } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,7 +76,7 @@ export function AgentCard({ agent, onEdit, onDelete, onExport }: AgentCardProps)
                 {canEdit && (
                   <DropdownMenuItem asChild>
                     <Link href={`/${orgSlug}/${agent.slug}/build`} onClick={(e) => e.stopPropagation()}>
-                      <SettingsIcon className="size-4" />
+                      <WrenchIcon className="size-4" />
                       {tn("settings")}
                     </Link>
                   </DropdownMenuItem>

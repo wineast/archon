@@ -31,7 +31,7 @@
     "agents": "Agents",
     "admin": "Admin",
     "trash": "Trash",
-    "settings": "Settings"
+    "settings": "Build"
   },
   "auth": {
     "signIn": {
@@ -155,7 +155,7 @@
     "deleteSessionFailed": "Failed to delete session"
   },
   "build": {
-    "titleSuffix": "· Settings",
+    "titleSuffix": "· Build",
     "disabledBadge": "Disabled",
     "auditLog": "Audit Log",
     "config": "Config",

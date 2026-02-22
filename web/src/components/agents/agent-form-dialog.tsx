@@ -100,21 +100,6 @@ export function AgentFormDialog({
     [setValue]
   );
 
-  const handleReset = useCallback(() => {
-    if (agent) {
-      reset({
-        name: agent.name,
-        slug: agent.slug,
-        description: agent.description,
-        icon: agent.icon,
-      });
-      setSlugManual(true);
-    } else {
-      reset({ name: "", slug: "", description: "", icon: "bot" });
-      setSlugManual(false);
-    }
-  }, [agent, reset]);
-
   const onSubmit = useCallback(
     async (data: AgentFormData) => {
       if (!data.name.trim()) return;
@@ -194,11 +179,6 @@ export function AgentFormDialog({
             />
           </div>
           <DialogFooter>
-            {isEdit && (
-              <Button type="button" variant="outline" onClick={handleReset} disabled={busy}>
-                {tc("reset")}
-              </Button>
-            )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               {tc("cancel")}
             </Button>
