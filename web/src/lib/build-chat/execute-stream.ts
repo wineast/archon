@@ -8,10 +8,10 @@ import { after } from "next/server";
 import { gatherResourceSummary } from "./resource-summary";
 import { buildSystemPrompt } from "./system-prompt";
 import { buildAllTools } from "./tools";
-import { getOrgBuildChatSettings } from "@/lib/orgs/build-chat-settings";
+import { getBuiltinAgentConfig } from "@/lib/builtin-agents/get-config";
 import { db } from "@/db";
-import { agents } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { agents, tools as toolsTable } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { QuotaExceededError } from "@/lib/credits/errors";
 import { recordUsage } from "@/lib/usage/record";
@@ -37,7 +37,7 @@ export interface ExecuteBuildChatStreamOptions {
 /**
  * Stream logic for the Build Chat assistant.
  * Uses org-configured model & temperature, with server-side tools to operate on agent resources.
- * No message persistence — operations are persisted to resource tables.
+ * System tools are filtered by DB enabled state.
  */
 export async function executeBuildChatStream(
   opts: ExecuteBuildChatStreamOptions
@@ -51,16 +51,33 @@ export async function executeBuildChatStream(
   const skillsEnabled = agentRow?.skillsEnabled !== false;
   const orgId = agentRow?.orgId ?? null;
 
-  const settings = orgId
-    ? await getOrgBuildChatSettings(orgId)
-    : { buildChatModel: DEFAULT_MODEL, buildChatTemperature: DEFAULT_TEMPERATURE };
+  // Get model config from builtin agent
+  const config = orgId
+    ? await getBuiltinAgentConfig(orgId, "build-chat")
+    : { agentId: "", model: DEFAULT_MODEL, temperature: DEFAULT_TEMPERATURE };
 
   const systemPrompt = buildSystemPrompt(summary);
-  const allTools = buildAllTools(agentId, { skillsEnabled });
+  const codeTools = buildAllTools(agentId, { skillsEnabled });
+
+  // Filter tools by DB enabled state if build-chat agent exists
+  let filteredTools = codeTools;
+  if (config.agentId) {
+    const dbTools = await db
+      .select({ key: toolsTable.key, enabled: toolsTable.enabled })
+      .from(toolsTable)
+      .where(and(eq(toolsTable.agentId, config.agentId), eq(toolsTable.isSystem, true)));
+
+    if (dbTools.length > 0) {
+      const enabledKeys = new Set(dbTools.filter((t) => t.enabled).map((t) => t.key));
+      filteredTools = Object.fromEntries(
+        Object.entries(codeTools).filter(([key]) => enabledKeys.has(key))
+      );
+    }
+  }
 
   let model;
   try {
-    model = await resolveModel(settings.buildChatModel, orgId);
+    model = await resolveModel(config.model, orgId);
   } catch (e) {
     if (e instanceof QuotaExceededError) {
       return new Response(
@@ -78,8 +95,8 @@ export async function executeBuildChatStream(
     model,
     messages: await convertToModelMessages(messages),
     system: systemPrompt,
-    temperature: settings.buildChatTemperature,
-    tools: allTools,
+    temperature: config.temperature,
+    tools: filteredTools,
     stopWhen: stepCountIs(10),
     onFinish: ({ totalUsage, response, steps }) => {
       // Usage recording
@@ -89,7 +106,7 @@ export async function executeBuildChatStream(
           agentId,
           userId,
           sessionId: sessionId ?? null,
-          modelId: settings.buildChatModel,
+          modelId: config.model,
           usage: {
             inputTokens: totalUsage.inputTokens,
             outputTokens: totalUsage.outputTokens,
@@ -113,7 +130,7 @@ export async function executeBuildChatStream(
           severity: "info",
           durationMs: Math.round(performance.now() - streamStartTime),
           metadata: {
-            modelId: settings.buildChatModel,
+            modelId: config.model,
             inputTokens: totalUsage.inputTokens,
             outputTokens: totalUsage.outputTokens,
             toolCallCount,
@@ -136,7 +153,7 @@ export async function executeBuildChatStream(
             await createSession({
               id: sessionId,
               title,
-              model: settings.buildChatModel,
+              model: config.model,
               systemPrompt,
               agentId,
               userId,

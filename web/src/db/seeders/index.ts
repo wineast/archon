@@ -2,6 +2,7 @@ export { seedModels } from "./seed-models";
 export { seedAgent } from "./seed-agent";
 export { seedUsers } from "./seed-users";
 export { seedOrgs } from "./seed-orgs";
+export { seedBuiltinAgents } from "./seed-builtin-agents";
 export { seedComponents } from "./seed-components";
 export { seedTools } from "./seed-tools";
 export { seedWiki } from "./seed-wiki";
@@ -34,12 +35,14 @@ import { seedVersion } from "./seed-version";
 import { seedMemory } from "./seed-memory";
 import { seedMcpServers } from "./seed-mcp-servers";
 import { seedEmbedToken } from "./seed-embed-token";
+import { seedBuiltinAgents } from "./seed-builtin-agents";
 
 /** Global seeders — run once before any agent. */
 export const globalPipeline: Seeder[] = [
   seedModels,
   seedUsers,
   seedOrgs,
+  seedBuiltinAgents,
 ];
 
 /** Per-agent seeder step. `requires` is a file/dir that must exist in agentDir. */

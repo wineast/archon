@@ -1,5 +1,6 @@
 import { join } from "path";
 import { agents, agentMembers, users } from "../schema";
+import type { AgentScope } from "../schema";
 import { readJson, logSection, log } from "../seed-utils";
 import { eq, and } from "drizzle-orm";
 import type { Seeder } from "./types";
@@ -14,8 +15,13 @@ export const seedAgent: Seeder = {
       slug: string;
       description: string;
       icon: string;
+      scope?: AgentScope;
+      /** @deprecated use scope instead */
       isPlatform?: boolean;
     }>(join(ctx.agentDir, "agent.json"));
+
+    // Resolve scope: prefer explicit scope, fallback from legacy isPlatform
+    const scope: AgentScope = agentSeed.scope ?? (agentSeed.isPlatform ? "platform" : "user");
 
     // Check if agent already exists in this org
     const [existing] = await ctx.db
@@ -34,7 +40,7 @@ export const seedAgent: Seeder = {
           name: agentSeed.name,
           description: agentSeed.description,
           icon: agentSeed.icon,
-          isPlatform: agentSeed.isPlatform ?? false,
+          scope,
         })
         .where(eq(agents.id, existing.id))
         .returning();
@@ -46,7 +52,7 @@ export const seedAgent: Seeder = {
           slug: agentSeed.slug,
           description: agentSeed.description,
           icon: agentSeed.icon,
-          isPlatform: agentSeed.isPlatform ?? false,
+          scope,
           orgId: ctx.orgId,
           isPublic: true,
         })

@@ -45,12 +45,14 @@ vi.mock("@/db", () => ({
 
 vi.mock("@/db/schema", () => ({
   agents: { id: "id", skillsEnabled: "skillsEnabled", orgId: "orgId" },
+  tools: { key: "key", enabled: "enabled", agentId: "agentId", isSystem: "isSystem" },
 }));
 
-vi.mock("@/lib/orgs/build-chat-settings", () => ({
-  getOrgBuildChatSettings: vi.fn().mockResolvedValue({
-    buildChatModel: "anthropic/claude-sonnet-4",
-    buildChatTemperature: 0.3,
+vi.mock("@/lib/builtin-agents/get-config", () => ({
+  getBuiltinAgentConfig: vi.fn().mockResolvedValue({
+    agentId: "",
+    model: "anthropic/claude-sonnet-4",
+    temperature: 0.3,
   }),
 }));
 

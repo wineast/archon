@@ -7,7 +7,7 @@ Build 页面右下角的客服聊天气泡，帮助用户了解和使用 Archon 
 - 客服助手本身是一个 Archon Agent（slug: `archon-support`），通过 embed 体系嵌入 build 页面
 - 使用现有的 `widget.js` 嵌入脚本（dogfooding），不单独实现 UI
 - API 按 slug 查询 agent + embed token，无需额外 schema 字段
-- 该 Agent 标记为 `isPlatform: true`（在 `agent.json` 中设置），普通用户的 Agent 列表 API 会过滤掉平台级 Agent，仅超级管理员可见
+- 该 Agent 标记为 `scope: "platform"`（在 `agent.json` 中设置），普通用户的 Agent 列表 API 会过滤掉平台级 Agent，仅超级管理员可见
 
 ## 数据流
 

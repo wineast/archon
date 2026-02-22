@@ -3,5 +3,5 @@
   "slug": "archon-support",
   "description": "Archon 平台客服助手",
   "icon": "headset",
-  "isPlatform": true
+  "scope": "platform"
 }

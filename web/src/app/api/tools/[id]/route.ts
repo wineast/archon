@@ -25,6 +25,22 @@ export async function PATCH(
   const ctx = await requireAgentRole(existing.agentId!, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  // System tools: only allow toggling enabled
+  if (existing.isSystem) {
+    if (typeof body.enabled !== "boolean" || Object.keys(body).length !== 1) {
+      return NextResponse.json(
+        { error: "System tools can only be enabled/disabled" },
+        { status: 403 }
+      );
+    }
+    const [updated] = await db
+      .update(tools)
+      .set({ enabled: body.enabled })
+      .where(eq(tools.id, id))
+      .returning();
+    return NextResponse.json(updated);
+  }
+
   for (const [field, label] of [
     ["parametersSchema", "parametersSchema"],
     ["returnParametersSchema", "returnParametersSchema"],
@@ -82,6 +98,13 @@ export async function DELETE(
 
   const ctx = await requireAgentRole(existing.agentId!, "editor");
   if (ctx instanceof NextResponse) return ctx;
+
+  if (existing.isSystem) {
+    return NextResponse.json(
+      { error: "System tools cannot be deleted" },
+      { status: 403 }
+    );
+  }
 
   await db.update(tools).set({ deletedAt: new Date() }).where(eq(tools.id, id));
 

@@ -18,7 +18,7 @@ import {
 } from "@/db/chat-persistence";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
-import { getOrgAssistModel } from "@/lib/orgs/build-chat-settings";
+import { getBuiltinAgentConfig } from "@/lib/builtin-agents/get-config";
 import { QuotaExceededError } from "@/lib/credits/errors";
 
 /**
@@ -77,7 +77,10 @@ export function createAssistHandler(config: AssistConfig) {
 
     const currentUserId = authResult.id;
     const orgId = await getOrgIdByAgentId(agentId);
-    const modelId = orgId ? await getOrgAssistModel(orgId) : "anthropic/claude-sonnet-4";
+    const assistConfig = orgId
+      ? await getBuiltinAgentConfig(orgId, "assist")
+      : null;
+    const modelId = assistConfig?.model ?? "anthropic/claude-sonnet-4";
 
     let model;
     try {

@@ -15,6 +15,11 @@ import {
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
 
+/* ─────────── Agent Scope Constants ─────────── */
+
+export const AGENT_SCOPES = ["platform", "org", "user"] as const;
+export type AgentScope = (typeof AGENT_SCOPES)[number];
+
 /* ─────────── Org Role Constants ─────────── */
 
 export const ORG_ROLE_LEVELS = { member: 0, admin: 1, owner: 2 } as const;
@@ -29,9 +34,6 @@ export const orgs = pgTable("orgs", {
   isPersonal: boolean("is_personal").notNull().default(false),
   avatarUrl: text("avatar_url"),
   creditBalanceUSD: real("credit_balance_usd").notNull().default(0),
-  buildChatModel: text("build_chat_model"),
-  buildChatTemperature: real("build_chat_temperature"),
-  assistModel: text("assist_model"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -113,7 +115,7 @@ export const agents = pgTable(
     memoryEnabled: boolean("memory_enabled").notNull().default(false),
     skillsEnabled: boolean("skills_enabled").notNull().default(false),
     contextCompressionEnabled: boolean("context_compression_enabled").notNull().default(false),
-    isPlatform: boolean("is_platform").notNull().default(false),
+    scope: text("scope").notNull().default("user").$type<AgentScope>(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
@@ -427,6 +429,7 @@ export const tools = pgTable(
     description: text("description").notNull(),
     parametersSchema: jsonb("parameters_schema").$type<JsonSchema7>(),
     returnParametersSchema: jsonb("return_parameters_schema").$type<JsonSchema7>(),
+    isSystem: boolean("is_system").notNull().default(false),
     handler: text("handler"),
     url: text("url"),
     componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),

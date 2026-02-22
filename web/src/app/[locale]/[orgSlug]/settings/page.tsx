@@ -8,7 +8,6 @@ import useSWR from "swr";
 import {
   ArrowLeftIcon,
   BarChart3Icon,
-  BotIcon,
   BuildingIcon,
   KeyIcon,
   UsersIcon,
@@ -23,7 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { OrgMembersPanel } from "@/components/orgs/org-members-panel";
 import { OrgUsagePanel } from "@/components/orgs/org-usage-panel";
 import { OrgApiKeysPanel } from "@/components/orgs/org-api-keys-panel";
-import { OrgBuildChatPanel } from "@/components/orgs/org-build-chat-panel";
+
 import { OrgCreditsPanel } from "@/components/orgs/org-credits-panel";
 import { useOrgRole } from "@/lib/auth/hooks";
 import { updateOrg, useOrgs } from "@/lib/orgs/hooks";
@@ -44,7 +43,6 @@ const TABS: SettingsTab[] = [
   { value: "info", label: "info", icon: BuildingIcon, minRole: "manage" },
   { value: "members", label: "members", icon: UsersIcon, minRole: "manage" },
   { value: "api-keys", label: "apiKeys", icon: KeyIcon, minRole: "manage" },
-  { value: "build-chat", label: "buildChat", icon: BotIcon, minRole: "manage" },
   { value: "credits", label: "credits", icon: WalletIcon, minRole: "manage" },
   { value: "usage", label: "usage", icon: BarChart3Icon, minRole: "manage" },
 ];
@@ -144,8 +142,6 @@ function OrgSettingsContent({ org }: { org: OrgRow }) {
         return <OrgMembersPanel orgId={org.id} />;
       case "api-keys":
         return <OrgApiKeysPanel orgId={org.id} />;
-      case "build-chat":
-        return <OrgBuildChatPanel orgId={org.id} />;
       case "credits":
         return <OrgCreditsPanel orgId={org.id} />;
       case "usage":

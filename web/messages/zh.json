@@ -221,7 +221,9 @@
     "superAdmin": "Super Admin",
     "userRole": "User",
     "removeAdmin": "取消超管",
-    "setAdmin": "设为超管"
+    "setAdmin": "设为超管",
+    "platformAgents": "平台 Agent ({count})",
+    "noPlatformAgents": "暂无平台 Agent"
   },
   "org": {
     "settingsSuffix": "· 组织设置",
@@ -233,10 +235,7 @@
     "name": "名称",
     "slugLabel": "Slug",
     "slugHint": "URL 路径标识，仅支持小写字母、数字和连字符",
-    "buildChat": "Build 助手",
-    "buildChatModel": "模型",
-    "buildChatTemperature": "Temperature",
-    "assistModel": "AI 辅助模型"
+    "buildChat": "Build 助手"
   },
   "share": {
     "preview": "分享预览",

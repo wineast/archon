@@ -221,7 +221,9 @@
     "superAdmin": "Super Admin",
     "userRole": "User",
     "removeAdmin": "Remove Admin",
-    "setAdmin": "Set as Admin"
+    "setAdmin": "Set as Admin",
+    "platformAgents": "Platform Agents ({count})",
+    "noPlatformAgents": "No platform agents"
   },
   "org": {
     "settingsSuffix": "· Organization Settings",
@@ -233,10 +235,7 @@
     "name": "Name",
     "slugLabel": "Slug",
     "slugHint": "URL path identifier, only lowercase letters, numbers and hyphens",
-    "buildChat": "Build Assistant",
-    "buildChatModel": "Model",
-    "buildChatTemperature": "Temperature",
-    "assistModel": "AI Assist Model"
+    "buildChat": "Build Assistant"
   },
   "share": {
     "preview": "Share Preview",

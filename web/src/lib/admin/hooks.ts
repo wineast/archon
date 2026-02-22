@@ -6,6 +6,32 @@ import type { User } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+export interface AdminAgent {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string;
+  description: string;
+  scope: string;
+  orgSlug: string;
+  orgName: string;
+  createdAt: string;
+}
+
+export function useAdminAgents() {
+  const { data, error, isLoading, mutate } = useSWR<AdminAgent[]>(
+    "/api/admin/agents",
+    fetcher
+  );
+
+  return {
+    agents: data ?? [],
+    isLoading,
+    error,
+    mutate,
+  };
+}
+
 export function useAdminUsers() {
   const { data, error, isLoading, mutate } = useSWR<User[]>(
     "/api/admin/users",

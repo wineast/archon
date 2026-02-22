@@ -130,6 +130,20 @@ export async function DELETE(
   const ctx = await requireAgentRole(id, "owner");
   if (ctx instanceof NextResponse) return ctx;
 
+  // Prevent deleting org-level builtin agents
+  const [target] = await db
+    .select({ scope: agents.scope })
+    .from(agents)
+    .where(eq(agents.id, id))
+    .limit(1);
+
+  if (target?.scope === "org") {
+    return NextResponse.json(
+      { error: "Organization-level agents cannot be deleted" },
+      { status: 403 }
+    );
+  }
+
   await db.update(agents).set({ deletedAt: new Date() }).where(eq(agents.id, id));
   return NextResponse.json({ ok: true });
 }
