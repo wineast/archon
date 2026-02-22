@@ -6,6 +6,7 @@ import type { MemoryTypeDef } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { QuotaExceededError } from "@/lib/credits/errors";
+import { generateEmbedding } from "./embedding";
 
 /* ─────────── Default Extraction Prompt ─────────── */
 
@@ -106,9 +107,16 @@ async function _extractMemoriesInner(
   const fresh = await dedup(agentId, userId, extracted);
   if (fresh.length === 0) return;
 
+  // Generate embeddings (best-effort, failures → null)
+  const embeddings = await Promise.all(
+    fresh.map((m) =>
+      generateEmbedding(m.content, agent.orgId).catch(() => null)
+    )
+  );
+
   // Insert
   await db.insert(memories).values(
-    fresh.map((m) => ({
+    fresh.map((m, i) => ({
       agentId,
       userId,
       sessionId,
@@ -116,6 +124,7 @@ async function _extractMemoriesInner(
       content: m.content,
       importance: m.importance,
       metadata: { source: "auto_extract" } as Record<string, unknown>,
+      embedding: embeddings[i],
     }))
   );
 

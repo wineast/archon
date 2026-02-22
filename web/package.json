@@ -13,8 +13,8 @@
     "build-storybook": "storybook build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:push": "drizzle-kit push",
-    "db:reset": "tsx src/db/reset.ts && drizzle-kit push --force && tsx src/db/seed.ts",
+    "db:push": "tsx src/db/ensure-extensions.ts && drizzle-kit push && tsx src/db/ensure-extensions.ts",
+    "db:reset": "tsx src/db/reset.ts && tsx src/db/ensure-extensions.ts && drizzle-kit push --force && tsx src/db/ensure-extensions.ts && tsx src/db/seed.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "vercel-build": "npm run db:migrate && next build"

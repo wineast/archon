@@ -1,9 +1,10 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
-import { memories } from "@/db/schema";
+import { memories, agents } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
+import { generateEmbedding } from "@/lib/memory/embedding";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -40,6 +41,20 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  // Look up orgId for BYOK embedding
+  const [agentRow] = await db
+    .select({ orgId: agents.orgId })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+
+  let embedding: number[] | null = null;
+  try {
+    embedding = await generateEmbedding(body.content, agentRow?.orgId);
+  } catch {
+    // Best-effort: embedding failure doesn't block creation
+  }
+
   const [row] = await db
     .insert(memories)
     .values({
@@ -51,6 +66,7 @@ export async function POST(req: Request) {
       importance: body.importance ?? 0.5,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
       metadata: body.metadata ?? null,
+      embedding,
     })
     .returning();
 
