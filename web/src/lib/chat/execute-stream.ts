@@ -35,6 +35,7 @@ import {
   compressMessages,
   getCompressionData,
   saveCompressionData,
+  getInputMax,
   KEEP_RECENT_COUNT,
   type CompressionMetadata,
 } from "@/lib/chat/compress";
@@ -251,10 +252,49 @@ export async function executeChatStream(
   }
 
   try {
-    // ── Context compression: load existing compression data ──
+    // ── Context compression: check & compress BEFORE streaming ──
     let compressionData: CompressionMetadata | null = null;
     if (agentRow?.contextCompressionEnabled && sessionId) {
       compressionData = await getCompressionData(sessionId);
+
+      // Based on last request's inputTokens, decide if new compression is needed
+      if (
+        compressionData?.lastInputTokens != null &&
+        messages.length > KEEP_RECENT_COUNT
+      ) {
+        const inputMax = await getInputMax(activeConfig.modelId);
+        if (shouldCompress(compressionData.lastInputTokens, inputMax)) {
+          const newCutoff = messages.length - KEEP_RECENT_COUNT;
+          const oldCutoff = compressionData.compressedCount;
+          if (newCutoff > oldCutoff) {
+            const toCompress = messages.slice(oldCutoff, newCutoff);
+            const text = [
+              compressionData.summary
+                ? `之前的摘要：\n${compressionData.summary}`
+                : "",
+              serialiseConversation(
+                toCompress as Array<{ role: string; parts?: unknown[] }>
+              ),
+            ]
+              .filter(Boolean)
+              .join("\n\n");
+
+            if (text) {
+              const summary = await compressMessages(text, orgId);
+              compressionData = {
+                ...compressionData,
+                summary,
+                compressedCount: newCutoff,
+                lastCompressedAt: new Date().toISOString(),
+              };
+              await saveCompressionData(sessionId, compressionData);
+              console.log(
+                `[context-compression] agent=${agentId} session=${sessionId} compressed ${newCutoff - oldCutoff} messages`
+              );
+            }
+          }
+        }
+      }
     }
 
     const messagesToConvert = compressionData
@@ -263,7 +303,7 @@ export async function executeChatStream(
     const modelMessages = await convertToModelMessages(messagesToConvert);
 
     // Inject compression summary as system message
-    if (compressionData) {
+    if (compressionData?.summary) {
       modelMessages.unshift({
         role: "system",
         content: `<conversation_summary>\n${compressionData.summary}\n</conversation_summary>`,
@@ -386,42 +426,19 @@ export async function executeChatStream(
           });
         });
 
-        // Context compression (non-blocking, best-effort)
+        // Save lastInputTokens for next request's compression decision
         if (agentRow?.contextCompressionEnabled && sessionId) {
           after(async () => {
             try {
-              if (!shouldCompress(totalUsage.inputTokens ?? 0, activeConfig.modelId)) return;
-              if (messages.length <= KEEP_RECENT_COUNT) return;
-
-              const newCutoff = messages.length - KEEP_RECENT_COUNT;
-              const oldCutoff = compressionData?.compressedCount ?? 0;
-              if (newCutoff <= oldCutoff) return;
-
-              const newMessages = messages.slice(oldCutoff, newCutoff);
-              const textToCompress = [
-                compressionData?.summary
-                  ? `之前的摘要：\n${compressionData.summary}`
-                  : "",
-                serialiseConversation(
-                  newMessages as Array<{ role: string; parts?: unknown[] }>
-                ),
-              ]
-                .filter(Boolean)
-                .join("\n\n");
-
-              if (!textToCompress) return;
-
-              const summary = await compressMessages(textToCompress, orgId);
+              const existing = await getCompressionData(sessionId);
               await saveCompressionData(sessionId, {
-                summary,
-                compressedCount: newCutoff,
-                lastCompressedAt: new Date().toISOString(),
+                summary: existing?.summary ?? "",
+                compressedCount: existing?.compressedCount ?? 0,
+                lastCompressedAt: existing?.lastCompressedAt ?? new Date().toISOString(),
+                lastInputTokens: totalUsage.inputTokens ?? 0,
               });
-              console.log(
-                `[context-compression] agent=${agentId} session=${sessionId} compressed ${newCutoff - oldCutoff} messages`
-              );
             } catch (e) {
-              console.error("[context-compression] failed:", e);
+              console.error("[context-compression] save lastInputTokens failed:", e);
             }
           });
         }

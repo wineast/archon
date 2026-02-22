@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { getContextWindow } from "tokenlens";
 import { db } from "@/db";
-import { chatSessions } from "@/db/schema";
+import { chatSessions, models } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { resolveModel } from "@/lib/ai/resolve-model";
 
@@ -15,7 +15,7 @@ export const KEEP_RECENT_COUNT = 10;
 /** Trigger compression when inputTokens exceeds this ratio of model's inputMax. */
 const THRESHOLD_RATIO = 0.75;
 
-/** Fallback input max when tokenlens has no data for the model. */
+/** Fallback input max when neither DB nor tokenlens has data for the model. */
 const FALLBACK_INPUT_MAX = 128_000;
 
 /* ─────────── Types ─────────── */
@@ -24,6 +24,7 @@ export interface CompressionMetadata {
   summary: string;
   compressedCount: number;
   lastCompressedAt: string;
+  lastInputTokens?: number;
 }
 
 /* ─────────── Compression Prompt ─────────── */
@@ -41,14 +42,29 @@ const COMPRESSION_SYSTEM_PROMPT = `你是一个对话摘要助手。请将以下
 /* ─────────── Public API ─────────── */
 
 /**
+ * Resolve the effective input max (context window) for a model.
+ * Priority: models table `contextWindow` → tokenlens → 128K fallback.
+ */
+export async function getInputMax(modelId: string): Promise<number> {
+  const [row] = await db
+    .select({ contextWindow: models.contextWindow })
+    .from(models)
+    .where(eq(models.modelId, modelId))
+    .limit(1);
+  if (row?.contextWindow) return row.contextWindow;
+  const ctx = getContextWindow(modelId);
+  if (ctx?.inputMax) return ctx.inputMax;
+  return FALLBACK_INPUT_MAX;
+}
+
+/**
  * Check whether the current input token count exceeds the compression threshold.
+ * Pure function — caller resolves inputMax via `getInputMax()`.
  */
 export function shouldCompress(
   inputTokens: number,
-  modelId: string
+  inputMax: number
 ): boolean {
-  const ctx = getContextWindow(modelId);
-  const inputMax = ctx?.inputMax ?? FALLBACK_INPUT_MAX;
   return inputTokens > inputMax * THRESHOLD_RATIO;
 }
 

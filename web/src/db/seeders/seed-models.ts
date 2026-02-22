@@ -9,7 +9,7 @@ export const seedModels: Seeder = {
     logSection("Seeding global models");
 
     const modelsSeed = readJson<
-      Array<{ modelId: string; name: string; provider: string }>
+      Array<{ modelId: string; name: string; provider: string; contextWindow?: number }>
     >(join(__dirname, "../seed-data/models.json"));
 
     await Promise.all(
@@ -19,7 +19,7 @@ export const seedModels: Seeder = {
           .values(m)
           .onConflictDoUpdate({
             target: models.modelId,
-            set: { name: m.name, provider: m.provider },
+            set: { name: m.name, provider: m.provider, contextWindow: m.contextWindow ?? null },
           }),
       ),
     );
