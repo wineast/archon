@@ -55,17 +55,10 @@ vi.mock("nanoid", () => ({
 }));
 
 const mockEnsureBuiltinToolRefs = vi.fn();
-vi.mock("@/lib/pool/seed-builtin-tools", () => ({
+const mockEnsureBuiltinWikiRefs = vi.fn();
+vi.mock("@/lib/pool/builtin-refs", () => ({
   ensureBuiltinToolRefs: (...args: unknown[]) => mockEnsureBuiltinToolRefs(...args),
-}));
-
-vi.mock("@/lib/pool/seed-builtin-functions", () => ({
-  ensureBuiltinPoolFunctions: vi.fn(),
-}));
-
-const mockEnsureBuiltinPoolComponents = vi.fn();
-vi.mock("@/lib/pool/seed-builtin-components", () => ({
-  ensureBuiltinPoolComponents: (...args: unknown[]) => mockEnsureBuiltinPoolComponents(...args),
+  ensureBuiltinWikiRefs: (...args: unknown[]) => mockEnsureBuiltinWikiRefs(...args),
 }));
 
 import { ensureOrgDefaults } from "../ensure-org-defaults";
@@ -118,6 +111,17 @@ describe("ensureOrgDefaults", () => {
     );
     expect(embedCall).toBeDefined();
     expect((embedCall![0] as Record<string, unknown>).token).toMatch(/^et_/);
+  });
+
+  it("seeds builtin wiki refs only for assist slot", async () => {
+    await ensureOrgDefaults("org-1");
+
+    expect(mockEnsureBuiltinWikiRefs).toHaveBeenCalledTimes(1);
+    expect(mockEnsureBuiltinWikiRefs).toHaveBeenCalledWith(
+      expect.anything(),
+      "new-agent-id",
+      "new-agent-id",
+    );
   });
 
   it("skips agent creation if agent already exists, but still ensures orgSlot", async () => {

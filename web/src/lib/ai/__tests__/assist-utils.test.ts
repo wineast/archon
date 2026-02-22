@@ -53,12 +53,60 @@ vi.mock("@/lib/credits/errors", () => ({
   QuotaExceededError: class QuotaExceededError extends Error {},
 }));
 
+const mockRenderTemplate = vi.fn().mockResolvedValue("rendered system prompt");
+const mockGatherTemplateData = vi.fn().mockResolvedValue({
+  resolvedVars: {},
+  docs: [],
+  toolRows: [],
+  defsMap: {},
+  datasetEntries: {},
+  ontologyTypes: [],
+});
+
+vi.mock("@/lib/template/render", () => ({
+  renderTemplate: (...args: unknown[]) => mockRenderTemplate(...args),
+  gatherTemplateData: (...args: unknown[]) => mockGatherTemplateData(...args),
+}));
+
+vi.mock("@/lib/versions/resolve", () => ({
+  resolveEditingVersionId: vi.fn().mockResolvedValue("version-1"),
+}));
+
+vi.mock("@/db", () => ({
+  db: {
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: () => [{ systemPrompt: "raw LiquidJS template" }],
+        }),
+      }),
+    }),
+  },
+}));
+
+vi.mock("@/db/schema", () => ({
+  modelConfigs: {
+    agentId: "agentId",
+    isActive: "isActive",
+    systemPrompt: "systemPrompt",
+  },
+}));
+
+vi.mock("drizzle-orm", () => ({
+  and: (...args: unknown[]) => args,
+  eq: (a: unknown, b: unknown) => ({ a, b }),
+}));
+
 // Capture the onFinish callback from streamText
 let capturedOnFinish: ((...args: unknown[]) => void) | null = null;
+let capturedSystem: string | undefined;
+let capturedTools: Record<string, unknown> | undefined;
 
 vi.mock("ai", () => ({
   streamText: vi.fn((opts: Record<string, unknown>) => {
     capturedOnFinish = opts.onFinish as typeof capturedOnFinish;
+    capturedSystem = opts.system as string;
+    capturedTools = opts.tools as Record<string, unknown>;
     return {
       toUIMessageStreamResponse: () => new Response("ok"),
     };
@@ -95,11 +143,15 @@ describe("buildAssistTools", () => {
 describe("createAssistHandler", () => {
   beforeEach(() => {
     capturedOnFinish = null;
+    capturedSystem = undefined;
+    capturedTools = undefined;
     afterCallbacks.length = 0;
     mockRecordUsage.mockClear();
     mockRecordRuntimeEvents.mockClear();
     mockCreateSession.mockClear();
     mockSaveMessage.mockClear();
+    mockRenderTemplate.mockClear();
+    mockGatherTemplateData.mockClear();
   });
 
   afterEach(() => {
@@ -115,13 +167,14 @@ describe("createAssistHandler", () => {
 
   const config = {
     source: "prompt-assist" as const,
-    buildParams: (body: Record<string, unknown>) => ({
+    buildParams: async (body: Record<string, unknown>) => ({
       messages: body.messages as UIMessage[],
       agentId: body.agentId as string | undefined,
       sessionId: body.sessionId as string | undefined,
-      system: "test system prompt",
+      fieldContext: "system-prompt",
+      currentContent: "current prompt text",
+      entity: "prompt",
     }),
-    tools: buildAssistTools("prompt"),
   };
 
   function makeRequest(body: Record<string, unknown>) {
@@ -130,6 +183,38 @@ describe("createAssistHandler", () => {
       body: JSON.stringify(body),
     });
   }
+
+  it("loads system prompt from DB and renders with template engine", async () => {
+    const handler = createAssistHandler(config);
+    const messages = makeMessages(1);
+    await handler(makeRequest({ messages, agentId: "agent-1", sessionId: "sess-1" }));
+
+    // gatherTemplateData should be called with assist agent's ID and version
+    expect(mockGatherTemplateData).toHaveBeenCalledWith("assist-agent-1", "version-1");
+
+    // renderTemplate should be called with raw prompt, data, and extraVars
+    expect(mockRenderTemplate).toHaveBeenCalledWith(
+      "raw LiquidJS template",
+      expect.anything(),
+      expect.objectContaining({
+        fieldContext: "system-prompt",
+        currentContent: "current prompt text",
+        entity: "prompt",
+      }),
+    );
+
+    // The rendered system prompt should be passed to streamText
+    expect(capturedSystem).toBe("rendered system prompt");
+  });
+
+  it("builds tools from entity parameter", async () => {
+    const handler = createAssistHandler(config);
+    const messages = makeMessages(1);
+    await handler(makeRequest({ messages, agentId: "agent-1", sessionId: "sess-1" }));
+
+    expect(capturedTools).toHaveProperty("update_prompt");
+    expect(capturedTools).toHaveProperty("edit_prompt");
+  });
 
   it("records usage on finish", async () => {
     const handler = createAssistHandler(config);

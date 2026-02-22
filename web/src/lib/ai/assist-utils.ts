@@ -20,6 +20,11 @@ import { resolveModel } from "@/lib/ai/resolve-model";
 import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
 import { resolveSlot } from "@/lib/slots";
 import { QuotaExceededError } from "@/lib/credits/errors";
+import { gatherTemplateData, renderTemplate } from "@/lib/template/render";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
+import { db } from "@/db";
+import { modelConfigs } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 
 /**
  * Build the standard update/edit tool pair used by all AI assist routes.
@@ -44,18 +49,30 @@ export function buildAssistTools(entity: string) {
   };
 }
 
-type StreamTextTools = NonNullable<Parameters<typeof streamText>[0]["tools"]>;
-
 export interface AssistConfig {
   source: UsageSource;
-  /** Parse the request body and return messages, optional agentId, sessionId, and system prompt. */
-  buildParams: (body: Record<string, unknown>) => {
+  /** Parse the request body and return messages, optional agentId, sessionId, and context for the assist template. */
+  buildParams: (body: Record<string, unknown>) => Promise<{
     messages: UIMessage[];
     agentId?: string;
     sessionId?: string;
-    system: string;
-  };
-  tools: StreamTextTools;
+    fieldContext: string;
+    currentContent: string;
+    entity: string;
+  }>;
+}
+
+/**
+ * Load the active system prompt for a given agent.
+ */
+async function loadAssistSystemPrompt(agentId: string): Promise<string> {
+  const [config] = await db
+    .select({ systemPrompt: modelConfigs.systemPrompt })
+    .from(modelConfigs)
+    .where(and(eq(modelConfigs.agentId, agentId), eq(modelConfigs.isActive, true)))
+    .limit(1);
+
+  return config?.systemPrompt ?? "";
 }
 
 /**
@@ -64,6 +81,7 @@ export interface AssistConfig {
  * Shared logic:
  * - Authentication (requireAuth)
  * - Model resolution (resolveModel + quota check)
+ * - System prompt loading from assist agent DB + LiquidJS template rendering
  * - streamText() call
  * - Non-blocking usage recording via after()
  */
@@ -73,7 +91,8 @@ export function createAssistHandler(config: AssistConfig) {
     if (authResult instanceof NextResponse) return authResult;
 
     const body = await req.json();
-    const { messages, agentId, sessionId, system } = config.buildParams(body);
+    const { messages, agentId, sessionId, fieldContext, currentContent, entity } =
+      await config.buildParams(body);
 
     const currentUserId = authResult.id;
     const orgId = await getOrgIdByAgentId(agentId);
@@ -94,6 +113,24 @@ export function createAssistHandler(config: AssistConfig) {
       }
       throw e;
     }
+
+    // Load system prompt from assist agent's model config and render through LiquidJS
+    const assistAgentId = assistConfig?.agentId;
+    let system = "";
+    if (assistAgentId) {
+      const rawPrompt = await loadAssistSystemPrompt(assistAgentId);
+      if (rawPrompt) {
+        const versionId = await resolveEditingVersionId(assistAgentId);
+        const templateData = await gatherTemplateData(assistAgentId, versionId);
+        system = await renderTemplate(rawPrompt, templateData, {
+          fieldContext,
+          currentContent,
+          entity,
+        });
+      }
+    }
+
+    const tools = buildAssistTools(entity);
 
     const streamStartTime = performance.now();
     const userMessage = messages[messages.length - 1];
@@ -192,7 +229,7 @@ export function createAssistHandler(config: AssistConfig) {
         });
       },
       system,
-      tools: config.tools,
+      tools,
     });
 
     return result.toUIMessageStreamResponse();

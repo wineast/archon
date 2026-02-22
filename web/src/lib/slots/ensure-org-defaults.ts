@@ -4,9 +4,7 @@ import { SLOT_KEYS } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { SLOT_DEFS } from "./constants";
-import { ensureBuiltinToolRefs } from "@/lib/pool/seed-builtin-tools";
-import { ensureBuiltinPoolFunctions } from "@/lib/pool/seed-builtin-functions";
-import { ensureBuiltinPoolComponents } from "@/lib/pool/seed-builtin-components";
+import { ensureBuiltinToolRefs, ensureBuiltinWikiRefs } from "@/lib/pool/builtin-refs";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "@/db/schema";
@@ -24,10 +22,6 @@ type DbLike = PostgresJsDatabase<typeof schema>;
  */
 export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promise<void> {
   const db = database ?? appDb;
-
-  // Seed builtin pool resources (idempotent)
-  await ensureBuiltinPoolFunctions(db);
-  await ensureBuiltinPoolComponents(db);
 
   for (const slotKey of SLOT_KEYS) {
     const def = SLOT_DEFS[slotKey];
@@ -91,6 +85,11 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
         await ensureBuiltinToolRefs(db, agentId, version.id);
       }
 
+      // Seed builtin wiki refs for assist slot
+      if (slotKey === "assist") {
+        await ensureBuiltinWikiRefs(db, agentId, version.id);
+      }
+
       // Seed default judge config for evaluator slot
       if (slotKey === "evaluator") {
         await db.insert(judgeConfigs).values({
@@ -130,4 +129,3 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
       .onConflictDoNothing();
   }
 }
-
