@@ -104,6 +104,17 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 当前为开发阶段，schema 变更直接用 `make db-push`，不要生成迁移文件
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 
+### 资源共享池
+- **所有资源都必须存在于数据库中**，禁止前端硬编码资源列表（如 `BUILTIN_FUNCTIONS`、`BUILTIN_COMPONENTS` 常量）
+- 内置资源（如 system tools、compileExpression、Badge/Spinner/Table/Tooltip）必须作为 `origin: "builtin"` 的池资源存入数据库
+- Agent 使用池资源需要通过 `agentResourceRefs` 引用并启用，不会自动出现在 Agent 的资源列表中
+- 资源来源（origin）三种：`builtin`（系统内置）、`user`（用户创建）、`marketplace`（市场下载，预留）
+- 共享池支持 7 种资源类型：tool、component、function、dataset、wiki、schema、mcp-server
+- **Builtin 资源的运行时与资源管理分离**：
+  - 运行时注入（如 `BASE_DEPS`、`archon:ui` 模块）通过 **key** 与 DB 池资源匹配
+  - `agentResourceRefs.enabled` 控制启用/禁用，**影响实际运行时行为**——禁用的 builtin 资源不注入沙箱/编译器
+  - 用户代码引用了被禁用的 builtin 资源时，应得到明确的编译错误提示
+
 ### Template Engine（LiquidJS）
 - 使用文档见 `web/guide/template-engine.md`
 - 数据源：数据集（2 层 JSON）+ 工具定义
