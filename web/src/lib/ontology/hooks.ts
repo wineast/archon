@@ -49,7 +49,7 @@ export async function createObjectType(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createObjectType failed:", e);
+    console.warn("createObjectType failed:", e);
     toast.error("Failed to create object type");
     return null;
   }
@@ -70,7 +70,7 @@ export async function updateObjectType(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateObjectType failed:", e);
+    console.warn("updateObjectType failed:", e);
     toast.error("Failed to save object type");
     return null;
   }
@@ -89,7 +89,7 @@ export async function deleteObjectType(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteObjectType failed:", e);
+    console.warn("deleteObjectType failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to delete object type");
     return false;
   }
@@ -139,7 +139,7 @@ export async function createObjectRelation(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createObjectRelation failed:", e);
+    console.warn("createObjectRelation failed:", e);
     toast.error("Failed to create relation");
     return null;
   }
@@ -160,7 +160,7 @@ export async function updateObjectRelation(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateObjectRelation failed:", e);
+    console.warn("updateObjectRelation failed:", e);
     toast.error("Failed to save relation");
     return null;
   }
@@ -179,7 +179,7 @@ export async function deleteObjectRelation(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteObjectRelation failed:", e);
+    console.warn("deleteObjectRelation failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to delete relation");
     return false;
   }
@@ -226,7 +226,7 @@ export async function createObjectInstance(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createObjectInstance failed:", e);
+    console.warn("createObjectInstance failed:", e);
     toast.error("Failed to create instance");
     return null;
   }
@@ -247,7 +247,7 @@ export async function updateObjectInstance(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateObjectInstance failed:", e);
+    console.warn("updateObjectInstance failed:", e);
     toast.error("Failed to save instance");
     return null;
   }
@@ -265,7 +265,7 @@ export async function deleteObjectInstance(id: string, mutate: () => void) {
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteObjectInstance failed:", e);
+    console.warn("deleteObjectInstance failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to delete instance");
     return false;
   }
@@ -298,7 +298,7 @@ export async function batchCreateObjectInstances(
     }
     return result;
   } catch (e) {
-    console.error("batchCreateObjectInstances failed:", e);
+    console.warn("batchCreateObjectInstances failed:", e);
     toast.error("Failed to batch import instances");
     return null;
   }
@@ -347,7 +347,7 @@ export async function createObjectLink(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createObjectLink failed:", e);
+    console.warn("createObjectLink failed:", e);
     toast.error("Failed to create link");
     return null;
   }
@@ -365,7 +365,7 @@ export async function deleteObjectLink(id: string, mutate: () => void) {
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteObjectLink failed:", e);
+    console.warn("deleteObjectLink failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to delete link");
     return false;
   }
@@ -395,7 +395,7 @@ export async function generateCrudTools(
     mutate();
     return result;
   } catch (e) {
-    console.error("generateCrudTools failed:", e);
+    console.warn("generateCrudTools failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to generate CRUD tools");
     return null;
   }

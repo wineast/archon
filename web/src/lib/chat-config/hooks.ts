@@ -39,7 +39,7 @@ export async function updateChatConfig(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateChatConfig failed:", e);
+    console.warn("updateChatConfig failed:", e);
     toast.error("Failed to save config");
     return null;
   }

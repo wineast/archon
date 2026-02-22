@@ -74,7 +74,7 @@ export async function setBaseline(
     mutate();
     return true;
   } catch (e) {
-    console.error("setBaseline failed:", e);
+    console.warn("setBaseline failed:", e);
     toast.error("Failed to set baseline");
     return false;
   }
@@ -94,7 +94,7 @@ export async function clearBaseline(
     mutate();
     return true;
   } catch (e) {
-    console.error("clearBaseline failed:", e);
+    console.warn("clearBaseline failed:", e);
     toast.error("Failed to clear baseline");
     return false;
   }

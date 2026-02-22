@@ -59,7 +59,7 @@ export async function createFunction(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createFunction failed:", e);
+    console.warn("createFunction failed:", e);
     toast.error("Failed to create function");
     return null;
   }
@@ -80,7 +80,7 @@ export async function updateFunction(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateFunction failed:", e);
+    console.warn("updateFunction failed:", e);
     toast.error("Failed to save function");
     return null;
   }
@@ -96,7 +96,7 @@ export async function deleteFunction(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteFunction failed:", e);
+    console.warn("deleteFunction failed:", e);
     toast.error("Failed to delete function");
     return false;
   }

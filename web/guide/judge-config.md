@@ -66,7 +66,7 @@ Judge Config **仅**存储评分维度，不包含模型/提示词/温度。评�
   - Key（只读）
   - Name
   - Dimensions 编辑器（key/label/weight 行列表，支持增删）
-  - 底部操作栏：Activate / Save / Reset / Delete
+  - 底部操作栏：Active Switch / Save / Reset / Delete
 
 底部区域显示评估记录聚合面板（当前 Agent 作为 Judge 的所有评测运行记录）。
 

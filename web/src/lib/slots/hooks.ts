@@ -58,7 +58,7 @@ export async function updateOrgSlot(
     mutate();
     return true;
   } catch (e) {
-    console.error("updateOrgSlot failed:", e);
+    console.warn("updateOrgSlot failed:", e);
     toast.error("Failed to update slot");
     return false;
   }
@@ -96,7 +96,7 @@ export async function updateAgentSlotOverride(
     mutate();
     return true;
   } catch (e) {
-    console.error("updateAgentSlotOverride failed:", e);
+    console.warn("updateAgentSlotOverride failed:", e);
     toast.error("Failed to update slot override");
     return false;
   }
@@ -117,7 +117,7 @@ export async function deleteAgentSlotOverride(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteAgentSlotOverride failed:", e);
+    console.warn("deleteAgentSlotOverride failed:", e);
     toast.error("Failed to remove slot override");
     return false;
   }

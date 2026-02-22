@@ -22,7 +22,7 @@ export async function toggleRagFeature(
     if (!res.ok) throw new Error(await res.text());
     mutateAgent();
   } catch (e) {
-    console.error("toggleRagFeature failed:", e);
+    console.warn("toggleRagFeature failed:", e);
     toast.error("Failed to toggle RAG feature");
   }
 }
@@ -62,7 +62,7 @@ export async function updateRagConfig(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateRagConfig failed:", e);
+    console.warn("updateRagConfig failed:", e);
     toast.error("Failed to save RAG config");
     return null;
   }
@@ -109,7 +109,7 @@ export async function uploadRagDocument(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("uploadRagDocument failed:", e);
+    console.warn("uploadRagDocument failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to upload document");
     return null;
   }
@@ -127,7 +127,7 @@ export async function deleteRagDocument(id: string, mutate: () => void) {
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteRagDocument failed:", e);
+    console.warn("deleteRagDocument failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to delete document");
     return false;
   }

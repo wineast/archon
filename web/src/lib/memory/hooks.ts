@@ -22,7 +22,7 @@ export async function toggleMemoryFeature(
     if (!res.ok) throw new Error(await res.text());
     mutateAgent();
   } catch (e) {
-    console.error("toggleMemoryFeature failed:", e);
+    console.warn("toggleMemoryFeature failed:", e);
     toast.error("Failed to toggle memory feature");
   }
 }
@@ -62,7 +62,7 @@ export async function updateMemoryConfig(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateMemoryConfig failed:", e);
+    console.warn("updateMemoryConfig failed:", e);
     toast.error("Failed to save memory config");
     return null;
   }
@@ -109,7 +109,7 @@ export async function createMemory(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createMemory failed:", e);
+    console.warn("createMemory failed:", e);
     toast.error("Failed to create memory");
     return null;
   }
@@ -130,7 +130,7 @@ export async function updateMemory(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateMemory failed:", e);
+    console.warn("updateMemory failed:", e);
     toast.error("Failed to save memory");
     return null;
   }
@@ -148,7 +148,7 @@ export async function deleteMemory(id: string, mutate: () => void) {
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteMemory failed:", e);
+    console.warn("deleteMemory failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to delete memory");
     return false;
   }

@@ -55,7 +55,7 @@ export async function createAgent(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createAgent failed:", e);
+    console.warn("createAgent failed:", e);
     toast.error(t("createFailed"));
     return null;
   }
@@ -77,7 +77,7 @@ export async function updateAgent(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateAgent failed:", e);
+    console.warn("updateAgent failed:", e);
     toast.error(t("updateFailed"));
     return null;
   }
@@ -97,7 +97,7 @@ export async function deleteAgent(
     toast.success(t?.("movedToTrash") ?? "已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteAgent failed:", e);
+    console.warn("deleteAgent failed:", e);
     toast.error(t?.("deleteFailed") ?? "删除 Agent 失败");
     return false;
   }
@@ -119,7 +119,7 @@ export async function restoreAgent(
     toast.success(t?.("restored") ?? "已恢复");
     return true;
   } catch (e) {
-    console.error("restoreAgent failed:", e);
+    console.warn("restoreAgent failed:", e);
     toast.error(t?.("restoreFailed") ?? "恢复 Agent 失败");
     return false;
   }
@@ -139,7 +139,7 @@ export async function permanentDeleteAgent(
     toast.success(t?.("permanentlyDeleted") ?? "已永久删除");
     return true;
   } catch (e) {
-    console.error("permanentDeleteAgent failed:", e);
+    console.warn("permanentDeleteAgent failed:", e);
     toast.error(t?.("permanentDeleteFailed") ?? "永久删除失败");
     return false;
   }
@@ -160,7 +160,7 @@ export async function exportAgent(
     a.click();
     URL.revokeObjectURL(url);
   } catch (e) {
-    console.error("exportAgent failed:", e);
+    console.warn("exportAgent failed:", e);
     toast.error(t("exportFailed"));
   }
 }
@@ -202,7 +202,7 @@ export async function importAgent(
     toast.success(t("importSuccess"));
     return res.json();
   } catch (e) {
-    console.error("importAgent failed:", e);
+    console.warn("importAgent failed:", e);
     toast.error(t("importFailed"));
     return null;
   }

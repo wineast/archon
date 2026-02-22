@@ -43,7 +43,7 @@ export async function createDocument(
     await mutate([...docs, created], { revalidate: false });
     return created.id;
   } catch (e) {
-    console.error("createDocument failed:", e);
+    console.warn("createDocument failed:", e);
     toast.error("Failed to create document");
     return null;
   }
@@ -72,7 +72,7 @@ export async function updateDocument(
     );
     return true;
   } catch (e) {
-    console.error("updateDocument failed:", e);
+    console.warn("updateDocument failed:", e);
     toast.error("Failed to save document");
     return false;
   }
@@ -97,7 +97,7 @@ export async function deleteDocument(
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteDocument failed:", e);
+    console.warn("deleteDocument failed:", e);
     toast.error("Failed to delete document");
     return false;
   }
@@ -129,7 +129,7 @@ export async function moveDocument(
     );
     return true;
   } catch (e) {
-    console.error("moveDocument failed:", e);
+    console.warn("moveDocument failed:", e);
     toast.error("Failed to move document");
     return false;
   }
@@ -179,7 +179,7 @@ export async function reorderDocument(
       { revalidate: false }
     );
   } catch (e) {
-    console.error("reorderDocument failed:", e);
+    console.warn("reorderDocument failed:", e);
     toast.error("Failed to reorder document");
   }
 }

@@ -63,7 +63,7 @@ export async function createSkill(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createSkill failed:", e);
+    console.warn("createSkill failed:", e);
     toast.error((e as Error).message || "Failed to create skill");
     return null;
   }
@@ -87,7 +87,7 @@ export async function updateSkill(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateSkill failed:", e);
+    console.warn("updateSkill failed:", e);
     toast.error((e as Error).message || "Failed to save skill");
     return null;
   }
@@ -115,7 +115,7 @@ export async function toggleSkillsFeature(
     if (!res.ok) throw new Error("Failed to toggle skills feature");
     mutateAgent();
   } catch (e) {
-    console.error("toggleSkillsFeature failed:", e);
+    console.warn("toggleSkillsFeature failed:", e);
     toast.error((e as Error).message || "Failed to toggle skills feature");
   }
 }
@@ -130,7 +130,7 @@ export async function deleteSkill(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteSkill failed:", e);
+    console.warn("deleteSkill failed:", e);
     toast.error("Failed to delete skill");
     return false;
   }

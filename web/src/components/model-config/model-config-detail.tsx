@@ -2,8 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
-  CheckIcon,
-  PowerIcon,
   RotateCcwIcon,
   SaveIcon,
   SparklesIcon,
@@ -18,6 +16,7 @@ import { GuideDialog } from "@/components/ui/guide-dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MdEditor } from "@/components/editors/md-editor";
 import promptEditingGuide from "../../../guide/prompt-editing.md";
@@ -285,21 +284,19 @@ export function ModelConfigDetail({
 
       {/* Bottom bar */}
       <div className="flex items-center gap-2 border-t px-4 py-2">
-        <Button
-          variant={config.isActive ? "outline" : "ghost"}
-          size="sm"
-          onClick={handleActivate}
-          disabled={busy || config.isActive}
-        >
-          {activating ? (
-            <Spinner className="mr-1 size-3" />
-          ) : config.isActive ? (
-            <CheckIcon className="mr-1 size-3" />
-          ) : (
-            <PowerIcon className="mr-1 size-3" />
-          )}
-          {config.isActive ? "Active" : "Activate"}
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Switch
+            className="scale-75"
+            checked={config.isActive}
+            onCheckedChange={(checked) => {
+              if (checked) handleActivate();
+            }}
+            disabled={busy || config.isActive}
+          />
+          <span className="text-xs text-muted-foreground">
+            {config.isActive ? "Active" : "Inactive"}
+          </span>
+        </div>
         <Button
           size="sm"
           onClick={handleSave}

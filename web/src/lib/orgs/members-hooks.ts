@@ -49,7 +49,7 @@ export async function inviteOrgMember(
     return res.json();
   } catch (e) {
     const msg = e instanceof Error ? e.message : "邀请成员失败";
-    console.error("inviteOrgMember failed:", e);
+    console.warn("inviteOrgMember failed:", e);
     toast.error(msg);
     return null;
   }
@@ -75,7 +75,7 @@ export async function updateOrgMemberRole(
     return res.json();
   } catch (e) {
     const msg = e instanceof Error ? e.message : "修改角色失败";
-    console.error("updateOrgMemberRole failed:", e);
+    console.warn("updateOrgMemberRole failed:", e);
     toast.error(msg);
     return null;
   }
@@ -98,7 +98,7 @@ export async function removeOrgMember(
     return true;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "移除成员失败";
-    console.error("removeOrgMember failed:", e);
+    console.warn("removeOrgMember failed:", e);
     toast.error(msg);
     return false;
   }
@@ -123,7 +123,7 @@ export async function transferOrgOwnership(
     return true;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "转让所有权失败";
-    console.error("transferOrgOwnership failed:", e);
+    console.warn("transferOrgOwnership failed:", e);
     toast.error(msg);
     return false;
   }

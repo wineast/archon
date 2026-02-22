@@ -62,7 +62,7 @@ export async function createJudgeConfig(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createJudgeConfig failed:", e);
+    console.warn("createJudgeConfig failed:", e);
     toast.error("Failed to create judge config");
     return null;
   }
@@ -83,7 +83,7 @@ export async function updateJudgeConfig(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateJudgeConfig failed:", e);
+    console.warn("updateJudgeConfig failed:", e);
     toast.error("Failed to save judge config");
     return null;
   }
@@ -99,7 +99,7 @@ export async function deleteJudgeConfig(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteJudgeConfig failed:", e);
+    console.warn("deleteJudgeConfig failed:", e);
     toast.error("Failed to delete judge config");
     return false;
   }
@@ -119,7 +119,7 @@ export async function activateJudgeConfig(
     activeMutate();
     return res.json();
   } catch (e) {
-    console.error("activateJudgeConfig failed:", e);
+    console.warn("activateJudgeConfig failed:", e);
     toast.error("Failed to activate judge config");
     return null;
   }

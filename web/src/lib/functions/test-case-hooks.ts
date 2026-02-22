@@ -53,7 +53,7 @@ export async function createFunctionTestCase(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createFunctionTestCase failed:", e);
+    console.warn("createFunctionTestCase failed:", e);
     toast.error("Failed to create test case");
     return null;
   }
@@ -75,7 +75,7 @@ export async function updateFunctionTestCase(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateFunctionTestCase failed:", e);
+    console.warn("updateFunctionTestCase failed:", e);
     toast.error("Failed to update test case");
     return null;
   }
@@ -94,7 +94,7 @@ export async function deleteFunctionTestCase(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteFunctionTestCase failed:", e);
+    console.warn("deleteFunctionTestCase failed:", e);
     toast.error("Failed to delete test case");
     return false;
   }
@@ -151,7 +151,7 @@ export async function fetchFunctionTestRunDetail(
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
   } catch (e) {
-    console.error("fetchFunctionTestRunDetail failed:", e);
+    console.warn("fetchFunctionTestRunDetail failed:", e);
     toast.error("Failed to load run detail");
     return null;
   }
@@ -170,7 +170,7 @@ export async function deleteFunctionTestRun(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteFunctionTestRun failed:", e);
+    console.warn("deleteFunctionTestRun failed:", e);
     toast.error("Failed to delete run");
     return false;
   }

@@ -44,7 +44,7 @@ export async function createComponent(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createComponent failed:", e);
+    console.warn("createComponent failed:", e);
     toast.error("Failed to create component");
     return null;
   }
@@ -65,7 +65,7 @@ export async function updateComponent(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateComponent failed:", e);
+    console.warn("updateComponent failed:", e);
     toast.error("Failed to save component");
     return null;
   }
@@ -81,7 +81,7 @@ export async function deleteComponent(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteComponent failed:", e);
+    console.warn("deleteComponent failed:", e);
     toast.error("Failed to delete component");
     return false;
   }

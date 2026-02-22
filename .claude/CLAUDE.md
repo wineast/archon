@@ -90,7 +90,10 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 新增按钮放在底部固定区域
 - 表单 label 统一样式：`text-xs font-medium text-muted-foreground`，label 与控件间距用 `mt-1`
 - Edit/Preview 切换统一使用 Radix `<Tabs>` 组件，禁止用 Button 自行实现模式切换——详见 `web/guide/edit-preview-pattern.md`。表单内嵌的 default variant Tabs 统一小尺寸：`TabsList` 加 `h-7`、`TabsTrigger` 加 `text-xs`、`Tabs` 与上方 label 间距用 `mt-1`；`variant="line"` 的导航级 Tabs 保持默认尺寸
-- 详情页底部操作栏统一样式：容器 `flex items-center gap-2 border-t px-4 py-2`；Save 按钮带 `SaveIcon` + "Saving..." 文字切换；Reset 按钮 `variant="ghost"` 带 `RotateCcwIcon`；Delete 按钮 `variant="destructive"` 用 `flex-1` 隔开靠右，带 "Deleting..." 文字切换
+- 详情页底部操作栏统一样式：容器 `flex items-center gap-2 border-t px-4 py-2`；Save 按钮带 `SaveIcon` + "Saving..." 文字切换；Reset 按钮 `variant="ghost"` 带 `RotateCcwIcon` + "Reset" 文字；Delete 按钮 `variant="destructive"` 用 `flex-1` 隔开靠右，带 "Deleting..." 文字切换；多个异步按钮通过 `busy` 变量互斥 disabled
+- 详情页底部操作栏 Switch 开关：有开关语义的资源在最左侧放 `<Switch className="scale-75" />` + 状态文字（`text-xs text-muted-foreground`），包裹在 `flex items-center gap-1.5` 容器中。根据数据语义区分两种：
+  - **启用型**（`enabled` 字段，如 Tool、Skill、MCP Server）：文字 "Enabled" / "Disabled"，双向可切换
+  - **激活型**（`isActive` 字段，如 Model Config、Judge Config）：文字 "Active" / "Inactive"，同组只能有一个 active，已激活时 Switch `disabled`（不可手动关闭，需激活其他配置来替换）
 - **弹窗（Dialog/Sheet）表单只放 Cancel + Primary Action 两个按钮**，禁止加 Reset 按钮——关闭弹窗本身即放弃修改，Reset 在弹窗场景下多余且增加认知负担。Reset 仅用于常驻详情页底部操作栏
 - 代码预览统一使用 Monaco 只读编辑器（`readOnly`）：JS/TS 用 `JsEditor`，JSON 用 `JsonEditor`，不用 `CodeBlockContent`（shiki）或 `<pre>` 标签。固定高度（如 `height="400px"`）启用内部滚动，不要 `height="auto"` 导致无限撑高
 - 工具栏中 Copy/Export 等辅助按钮用 `size="icon" variant="ghost"` 只显示图标，不加文字，保持紧凑

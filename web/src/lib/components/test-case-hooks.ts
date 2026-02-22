@@ -53,7 +53,7 @@ export async function createComponentTestCase(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createComponentTestCase failed:", e);
+    console.warn("createComponentTestCase failed:", e);
     toast.error("Failed to create test case");
     return null;
   }
@@ -75,7 +75,7 @@ export async function updateComponentTestCase(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateComponentTestCase failed:", e);
+    console.warn("updateComponentTestCase failed:", e);
     toast.error("Failed to update test case");
     return null;
   }
@@ -94,7 +94,7 @@ export async function deleteComponentTestCase(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteComponentTestCase failed:", e);
+    console.warn("deleteComponentTestCase failed:", e);
     toast.error("Failed to delete test case");
     return false;
   }
@@ -130,7 +130,7 @@ export async function fetchComponentTestRunDetail(
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
   } catch (e) {
-    console.error("fetchComponentTestRunDetail failed:", e);
+    console.warn("fetchComponentTestRunDetail failed:", e);
     toast.error("Failed to load run detail");
     return null;
   }
@@ -149,7 +149,7 @@ export async function deleteComponentTestRun(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteComponentTestRun failed:", e);
+    console.warn("deleteComponentTestRun failed:", e);
     toast.error("Failed to delete run");
     return false;
   }

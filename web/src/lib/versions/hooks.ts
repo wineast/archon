@@ -68,7 +68,7 @@ export async function switchVersion(
     revalidateAll();
     return true;
   } catch (e) {
-    console.error("switchVersion failed:", e);
+    console.warn("switchVersion failed:", e);
     toast.error("Failed to switch version");
     return false;
   }
@@ -88,7 +88,7 @@ export async function publishVersion(
     mutate();
     return true;
   } catch (e) {
-    console.error("publishVersion failed:", e);
+    console.warn("publishVersion failed:", e);
     toast.error("Failed to publish version");
     return false;
   }
@@ -108,7 +108,7 @@ export async function rollbackVersion(
     mutate();
     return true;
   } catch (e) {
-    console.error("rollbackVersion failed:", e);
+    console.warn("rollbackVersion failed:", e);
     toast.error("Failed to rollback version");
     return false;
   }
@@ -128,7 +128,7 @@ export async function deleteVersion(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteVersion failed:", e);
+    console.warn("deleteVersion failed:", e);
     toast.error("Failed to delete version");
     return false;
   }

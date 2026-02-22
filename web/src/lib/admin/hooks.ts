@@ -65,7 +65,7 @@ export async function updateUserRole(
     return res.json();
   } catch (e) {
     const msg = e instanceof Error ? e.message : "修改用户角色失败";
-    console.error("updateUserRole failed:", e);
+    console.warn("updateUserRole failed:", e);
     toast.error(msg);
     return null;
   }

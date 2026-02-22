@@ -68,7 +68,7 @@ export async function restoreResources(
     toast.success(t?.("restored") ?? "已恢复");
     return true;
   } catch (e) {
-    console.error("restoreResources failed:", e);
+    console.warn("restoreResources failed:", e);
     toast.error(t?.("restoreFailed") ?? "恢复失败");
     return false;
   }
@@ -92,7 +92,7 @@ export async function permanentDeleteResources(
     toast.success(t?.("permanentlyDeleted") ?? "已永久删除");
     return true;
   } catch (e) {
-    console.error("permanentDeleteResources failed:", e);
+    console.warn("permanentDeleteResources failed:", e);
     toast.error(t?.("permanentDeleteFailed") ?? "永久删除失败");
     return false;
   }
@@ -112,7 +112,7 @@ export async function clearTrash(
     toast.success(t?.("cleared") ?? "回收站已清空");
     return true;
   } catch (e) {
-    console.error("clearTrash failed:", e);
+    console.warn("clearTrash failed:", e);
     toast.error(t?.("clearFailed") ?? "清空回收站失败");
     return false;
   }

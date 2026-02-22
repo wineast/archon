@@ -45,7 +45,7 @@ export async function createSchema(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createSchema failed:", e);
+    console.warn("createSchema failed:", e);
     toast.error("Failed to create schema");
     return null;
   }
@@ -66,7 +66,7 @@ export async function updateSchema(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateSchema failed:", e);
+    console.warn("updateSchema failed:", e);
     toast.error("Failed to save schema");
     return null;
   }
@@ -85,7 +85,7 @@ export async function deleteSchema(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteSchema failed:", e);
+    console.warn("deleteSchema failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to delete schema");
     return false;
   }

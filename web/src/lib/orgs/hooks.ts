@@ -36,7 +36,7 @@ export async function createOrg(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createOrg failed:", e);
+    console.warn("createOrg failed:", e);
     toast.error("创建组织失败");
     return null;
   }
@@ -57,7 +57,7 @@ export async function updateOrg(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateOrg failed:", e);
+    console.warn("updateOrg failed:", e);
     toast.error("更新组织失败");
     return null;
   }
@@ -79,7 +79,7 @@ export async function deleteOrg(
     return true;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "删除组织失败";
-    console.error("deleteOrg failed:", e);
+    console.warn("deleteOrg failed:", e);
     toast.error(msg);
     return false;
   }

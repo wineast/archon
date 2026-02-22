@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CheckIcon, PlugIcon, PowerIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { PlugIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { McpServerForm, type McpServerFormHandle } from "./mcp-server-form";
@@ -150,21 +151,17 @@ export function McpServerDetail({
           />
         ) : (
         <div className="flex items-center gap-2 border-t px-4 py-2">
-          <Button
-            variant={mcpServer.enabled ? "outline" : "ghost"}
-            size="sm"
-            onClick={() => handleToggle(!mcpServer.enabled)}
-            disabled={busy}
-          >
-            {toggling ? (
-              <Spinner className="mr-1 size-3" />
-            ) : mcpServer.enabled ? (
-              <CheckIcon className="mr-1 size-3" />
-            ) : (
-              <PowerIcon className="mr-1 size-3" />
-            )}
-            {mcpServer.enabled ? "Enabled" : "Disabled"}
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Switch
+              className="scale-75"
+              checked={mcpServer.enabled}
+              onCheckedChange={handleToggle}
+              disabled={busy}
+            />
+            <span className="text-xs text-muted-foreground">
+              {mcpServer.enabled ? "Enabled" : "Disabled"}
+            </span>
+          </div>
           <Button
             variant="outline"
             size="sm"

@@ -46,7 +46,7 @@ export async function createTool(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createTool failed:", e);
+    console.warn("createTool failed:", e);
     toast.error("Failed to create tool");
     return null;
   }
@@ -67,7 +67,7 @@ export async function updateTool(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateTool failed:", e);
+    console.warn("updateTool failed:", e);
     toast.error("Failed to save tool");
     return null;
   }
@@ -83,7 +83,7 @@ export async function deleteTool(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteTool failed:", e);
+    console.warn("deleteTool failed:", e);
     toast.error("Failed to delete tool");
     return false;
   }

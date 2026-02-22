@@ -3,8 +3,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { nanoid } from "nanoid";
 import {
-  CheckIcon,
-  PowerIcon,
   RotateCcwIcon,
   SaveIcon,
   Trash2Icon,
@@ -16,6 +14,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import type { JudgeConfigRow } from "@/db/schema";
 import type { Dimension } from "@/lib/eval/types";
 
@@ -40,6 +39,7 @@ export function JudgeConfigDetail({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const busy = saving || deleting;
 
   const isDirty = useMemo(() => {
     if (name !== config.name) return true;
@@ -194,37 +194,48 @@ export function JudgeConfigDetail({
 
       {/* Bottom action bar */}
       <div className="flex items-center gap-2 border-t px-4 py-2">
-        {!config.isActive && (
-          <Button variant="outline" size="sm" onClick={handleActivate}>
-            <PowerIcon className="mr-1.5 size-3.5" />
-            Activate
-          </Button>
-        )}
-        {config.isActive && (
-          <span className="flex items-center gap-1 text-xs text-emerald-600">
-            <CheckIcon className="size-3" />
-            Active
+        <div className="flex items-center gap-1.5">
+          <Switch
+            className="scale-75"
+            checked={config.isActive}
+            onCheckedChange={(checked) => {
+              if (checked) handleActivate();
+            }}
+            disabled={busy || config.isActive}
+          />
+          <span className="text-xs text-muted-foreground">
+            {config.isActive ? "Active" : "Inactive"}
           </span>
-        )}
-
-        <Button size="sm" onClick={handleSave} disabled={saving || !isDirty}>
-          {saving ? <Spinner className="mr-1.5 size-3" /> : <SaveIcon className="mr-1.5 size-3.5" />}
+        </div>
+        <Button size="sm" onClick={handleSave} disabled={busy || !isDirty}>
+          {saving ? (
+            <Spinner className="mr-1 size-3" />
+          ) : (
+            <SaveIcon className="mr-1 size-3" />
+          )}
           {saving ? "Saving..." : "Save"}
         </Button>
-
-        <Button variant="ghost" size="sm" onClick={handleReset} disabled={!isDirty}>
-          <RotateCcwIcon className="mr-1.5 size-3.5" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleReset}
+          disabled={busy || !isDirty}
+        >
+          <RotateCcwIcon className="mr-1 size-3" />
+          Reset
         </Button>
-
         <div className="flex-1" />
-
         <Button
           variant="destructive"
           size="sm"
-          disabled={deleting || config.isActive}
+          disabled={busy || config.isActive}
           onClick={() => setConfirmOpen(true)}
         >
-          {deleting ? <Spinner className="mr-1.5 size-3" /> : <Trash2Icon className="mr-1.5 size-3.5" />}
+          {deleting ? (
+            <Spinner className="mr-1 size-3" />
+          ) : (
+            <Trash2Icon className="mr-1 size-3" />
+          )}
           {deleting ? "Deleting..." : "Delete"}
         </Button>
       </div>

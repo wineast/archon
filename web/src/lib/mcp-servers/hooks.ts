@@ -60,7 +60,7 @@ export async function createMcpServer(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createMcpServer failed:", e);
+    console.warn("createMcpServer failed:", e);
     toast.error((e as Error).message || "Failed to create MCP server");
     return null;
   }
@@ -84,7 +84,7 @@ export async function updateMcpServer(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateMcpServer failed:", e);
+    console.warn("updateMcpServer failed:", e);
     toast.error((e as Error).message || "Failed to save MCP server");
     return null;
   }
@@ -100,7 +100,7 @@ export async function deleteMcpServer(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteMcpServer failed:", e);
+    console.warn("deleteMcpServer failed:", e);
     toast.error("Failed to delete MCP server");
     return false;
   }
@@ -144,7 +144,7 @@ export async function testMcpServer(
     });
     return res.json();
   } catch (e) {
-    console.error("testMcpServer failed:", e);
+    console.warn("testMcpServer failed:", e);
     return { ok: false, error: (e as Error).message };
   }
 }
@@ -163,7 +163,7 @@ export async function executeMcpTool(
     });
     return res.json();
   } catch (e) {
-    console.error("executeMcpTool failed:", e);
+    console.warn("executeMcpTool failed:", e);
     return { ok: false, error: (e as Error).message };
   }
 }

@@ -38,7 +38,7 @@ export async function createInvitationCode(
     return res.json();
   } catch (e) {
     const msg = e instanceof Error ? e.message : "创建邀请码失败";
-    console.error("createInvitationCode failed:", e);
+    console.warn("createInvitationCode failed:", e);
     toast.error(msg);
     return null;
   }
@@ -63,7 +63,7 @@ export async function updateInvitationCode(
     return res.json();
   } catch (e) {
     const msg = e instanceof Error ? e.message : "更新邀请码失败";
-    console.error("updateInvitationCode failed:", e);
+    console.warn("updateInvitationCode failed:", e);
     toast.error(msg);
     return null;
   }
@@ -82,7 +82,7 @@ export async function deleteInvitationCode(id: string, mutate: () => void) {
     return true;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "删除邀请码失败";
-    console.error("deleteInvitationCode failed:", e);
+    console.warn("deleteInvitationCode failed:", e);
     toast.error(msg);
     return false;
   }

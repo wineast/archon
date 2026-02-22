@@ -62,7 +62,7 @@ export async function deleteAgentFile(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteAgentFile failed:", e);
+    console.warn("deleteAgentFile failed:", e);
     toast.error("Failed to delete file");
     return false;
   }

@@ -54,7 +54,7 @@ export async function createEvalCase(
     mutate();
     return row;
   } catch (e) {
-    console.error("createEvalCase failed:", e);
+    console.warn("createEvalCase failed:", e);
     toast.error("Failed to create case");
     return null;
   }
@@ -76,7 +76,7 @@ export async function updateEvalCase(
     mutate();
     return row;
   } catch (e) {
-    console.error("updateEvalCase failed:", e);
+    console.warn("updateEvalCase failed:", e);
     toast.error("Failed to save case");
     return null;
   }
@@ -95,7 +95,7 @@ export async function deleteEvalCase(
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteEvalCase failed:", e);
+    console.warn("deleteEvalCase failed:", e);
     toast.error("Failed to delete case");
     return false;
   }
@@ -125,7 +125,7 @@ export async function fetchEvalRunDetail(
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
   } catch (e) {
-    console.error("fetchEvalRunDetail failed:", e);
+    console.warn("fetchEvalRunDetail failed:", e);
     toast.error("Failed to load run detail");
     return null;
   }
@@ -143,7 +143,7 @@ export async function deleteEvalRun(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteEvalRun failed:", e);
+    console.warn("deleteEvalRun failed:", e);
     toast.error("Failed to delete run");
     return false;
   }

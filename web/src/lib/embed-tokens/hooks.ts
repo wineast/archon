@@ -35,7 +35,7 @@ export async function createEmbedToken(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createEmbedToken failed:", e);
+    console.warn("createEmbedToken failed:", e);
     toast.error("Failed to create token");
     return null;
   }
@@ -60,7 +60,7 @@ export async function updateEmbedToken(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateEmbedToken failed:", e);
+    console.warn("updateEmbedToken failed:", e);
     toast.error("Failed to update token");
     return null;
   }
@@ -80,7 +80,7 @@ export async function deleteEmbedToken(
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteEmbedToken failed:", e);
+    console.warn("deleteEmbedToken failed:", e);
     toast.error("Failed to delete token");
     return false;
   }

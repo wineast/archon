@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CheckIcon, PowerIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { SkillForm, type SkillFormHandle } from "./skill-form";
 import type { SkillRow } from "@/db/schema";
 
@@ -97,21 +98,17 @@ export function SkillDetail({
       </ScrollArea>
 
       <div className="flex items-center gap-2 border-t px-4 py-2">
-        <Button
-          variant={skill.enabled ? "outline" : "ghost"}
-          size="sm"
-          onClick={() => handleToggle(!skill.enabled)}
-          disabled={busy}
-        >
-          {toggling ? (
-            <Spinner className="mr-1 size-3" />
-          ) : skill.enabled ? (
-            <CheckIcon className="mr-1 size-3" />
-          ) : (
-            <PowerIcon className="mr-1 size-3" />
-          )}
-          {skill.enabled ? "Enabled" : "Disabled"}
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Switch
+            className="scale-75"
+            checked={skill.enabled}
+            onCheckedChange={handleToggle}
+            disabled={busy}
+          />
+          <span className="text-xs text-muted-foreground">
+            {skill.enabled ? "Enabled" : "Disabled"}
+          </span>
+        </div>
         <Button
           size="sm"
           onClick={handleSave}

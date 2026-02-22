@@ -62,7 +62,7 @@ export async function createModelConfig(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("createModelConfig failed:", e);
+    console.warn("createModelConfig failed:", e);
     toast.error("Failed to create model config");
     return null;
   }
@@ -83,7 +83,7 @@ export async function updateModelConfig(
     mutate();
     return res.json();
   } catch (e) {
-    console.error("updateModelConfig failed:", e);
+    console.warn("updateModelConfig failed:", e);
     toast.error("Failed to save model config");
     return null;
   }
@@ -99,7 +99,7 @@ export async function deleteModelConfig(id: string, mutate: () => void) {
     toast.success("已移至回收站");
     return true;
   } catch (e) {
-    console.error("deleteModelConfig failed:", e);
+    console.warn("deleteModelConfig failed:", e);
     toast.error("Failed to delete model config");
     return false;
   }
@@ -119,7 +119,7 @@ export async function activateModelConfig(
     activeMutate();
     return res.json();
   } catch (e) {
-    console.error("activateModelConfig failed:", e);
+    console.warn("activateModelConfig failed:", e);
     toast.error("Failed to activate model config");
     return null;
   }

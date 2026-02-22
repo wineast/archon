@@ -34,7 +34,7 @@ export async function deleteSession(id: string, mutate: () => void, t?: (key: st
     mutate();
     return true;
   } catch (e) {
-    console.error("deleteSession failed:", e);
+    console.warn("deleteSession failed:", e);
     toast.error(t?.("deleteSessionFailed") ?? "删除会话失败");
     return false;
   }
