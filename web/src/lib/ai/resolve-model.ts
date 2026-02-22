@@ -4,22 +4,45 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createXai } from "@ai-sdk/xai";
 import { createDeepSeek } from "@ai-sdk/deepseek";
+import { createMistral } from "@ai-sdk/mistral";
+import { createCohere } from "@ai-sdk/cohere";
+import { createPerplexity } from "@ai-sdk/perplexity";
 import { getOrgApiKey } from "./org-api-keys";
 import type { ByokProvider } from "@/db/schema";
 import { BYOK_PROVIDERS } from "@/db/schema";
 import { getOrgCreditBalance } from "@/lib/credits/queries";
 import { QuotaExceededError } from "@/lib/credits/errors";
 
+/* ─────────── OpenAI-Compatible Base URLs ─────────── */
+
+const OPENAI_COMPAT_BASE_URLS: Partial<Record<ByokProvider, string>> = {
+  alibaba: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  moonshot: "https://api.moonshot.cn/v1",
+  zhipu: "https://open.bigmodel.cn/api/paas/v4",
+  minimax: "https://api.minimax.chat/v1",
+  bytedance: "https://ark.cn-beijing.volces.com/api/v3",
+};
+
 /* ─────────── Provider Factory Map ─────────── */
 
 type ProviderFactory = (apiKey: string, modelName: string) => LanguageModel;
 
 const PROVIDER_FACTORIES: Record<ByokProvider, ProviderFactory> = {
+  // 官方 SDK
   anthropic: (apiKey, model) => createAnthropic({ apiKey })(model),
   openai: (apiKey, model) => createOpenAI({ apiKey })(model),
   google: (apiKey, model) => createGoogleGenerativeAI({ apiKey })(model),
   xai: (apiKey, model) => createXai({ apiKey })(model),
   deepseek: (apiKey, model) => createDeepSeek({ apiKey })(model),
+  mistral: (apiKey, model) => createMistral({ apiKey })(model),
+  cohere: (apiKey, model) => createCohere({ apiKey })(model),
+  perplexity: (apiKey, model) => createPerplexity({ apiKey })(model),
+  // OpenAI 兼容
+  alibaba: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.alibaba })(model),
+  moonshot: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.moonshot })(model),
+  zhipu: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.zhipu })(model),
+  minimax: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.minimax })(model),
+  bytedance: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.bytedance })(model),
 };
 
 /* ─────────── Helpers ─────────── */

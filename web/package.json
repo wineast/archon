@@ -21,10 +21,13 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.46",
+    "@ai-sdk/cohere": "^3.0.21",
     "@ai-sdk/deepseek": "^2.0.20",
     "@ai-sdk/google": "^3.0.30",
     "@ai-sdk/mcp": "^1.0.21",
+    "@ai-sdk/mistral": "^3.0.20",
     "@ai-sdk/openai": "^3.0.30",
+    "@ai-sdk/perplexity": "^3.0.19",
     "@ai-sdk/react": "^3.0.87",
     "@ai-sdk/xai": "^3.0.57",
     "@clerk/localizations": "^3.37.0",

@@ -21,6 +21,14 @@ const PROVIDER_LABELS: Record<ByokProvider, string> = {
   google: "Google",
   xai: "xAI",
   deepseek: "DeepSeek",
+  mistral: "Mistral",
+  cohere: "Cohere",
+  perplexity: "Perplexity",
+  alibaba: "阿里云百炼",
+  moonshot: "Moonshot (Kimi)",
+  zhipu: "智谱 AI",
+  minimax: "MiniMax",
+  bytedance: "火山引擎",
 };
 
 interface OrgApiKeysPanelProps {
