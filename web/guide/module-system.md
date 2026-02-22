@@ -10,7 +10,6 @@
 |---------|------|---------|
 | `archon:fn/<key>` | 导入同 Agent 下的其他函数 | 函数 |
 | `archon:context` | 导入平台 API（wiki/dataset/fn/ontology） | 工具 Handler |
-| `archon:lib/filtrex` | 导入 filtrex 库的 compileExpression | 函数、工具 Handler |
 | `archon:react` | React core hooks | 组件 |
 | `archon:ui` | UI 组件（Badge, Table 等） | 组件 |
 | `archon:icons` | Lucide 图标 | 组件 |
@@ -21,11 +20,10 @@
 ## 函数
 
 ```js
-import { compileExpression } from "archon:lib/filtrex";
 import other_fn from "archon:fn/other_fn";
 
 export default function(input) {
-  return other_fn({ value: compileExpression("x * 2")(input) });
+  return other_fn({ value: input.x * 2 });
 }
 ```
 
@@ -46,12 +44,11 @@ export default async function(args) {
 }
 ```
 
-工具 Handler 支持两个虚拟模块：
+工具 Handler 支持一个虚拟模块：
 
 | 模块 | 用途 |
 |------|------|
 | `archon:context` | 运行时 API（wiki / dataset / fn / ontology） |
-| `archon:lib/filtrex` | 表达式过滤引擎（compileExpression） |
 
 `archon:context` 可导出的成员：
 

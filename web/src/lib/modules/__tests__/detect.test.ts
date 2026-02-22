@@ -42,11 +42,10 @@ describe("isModuleFormat", () => {
 
   it("detects multi-line module code", () => {
     const code = `
-import { compileExpression } from "archon:lib/filtrex";
 import other from "archon:fn/other";
 
 export default function(input) {
-  return compileExpression("x + 1")(input);
+  return other(input);
 }`;
     expect(isModuleFormat(code)).toBe(true);
   });

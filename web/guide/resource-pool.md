@@ -220,23 +220,23 @@ type WithPoolMeta<T> = T & {
 
 ### 运行时依赖注入
 
-Builtin 函数不仅是池资源本身，还关联着运行时依赖（如 filtrex 的 `compileExpression`）。Agent 的用户函数通过 `import { compileExpression } from "archon:lib/filtrex"` 使用这些依赖。
+Builtin 函数不仅是池资源本身，还关联着运行时依赖（如 filtrex 的 `compileExpression`）。依赖通过 `BASE_DEPS` 注入为 `globalThis` 全局变量，函数代码直接使用，无需 import。
 
 依赖注入遵循 **引用即可用** 原则：
 
 1. `tool-context.ts` 中 `getCompiledFunctions()` 调用 `getReferencedBuiltinFunctionKeys(agentId)` 查询 Agent 引用的 builtin 函数
 2. `buildBaseDeps(referencedKeys)` 根据引用的 key 构建过滤后的依赖 map
-3. 沙箱模块加载器只在对应依赖存在时才响应 `archon:lib/*` 请求，否则返回编译错误
+3. 依赖注入为 `globalThis` 全局变量，函数代码可直接使用
 
-这意味着：Agent 必须从共享池添加 builtin 函数引用，其用户函数才能使用对应的 `archon:lib/*` 导入。未引用时 import 会得到编译错误提示。
+Agent 必须从共享池添加 builtin 函数引用，运行时才会注入对应依赖。
 
 > 注意：函数的 ref 不使用 `enabled` 字段（该字段为 tool 等资源预留），ref 存在即表示可用。
 
 ### 当前 Builtin 函数列表
 
-| Key | 名称 | 依赖 | 说明 |
-|-----|------|------|------|
-| `compileExpression` | Compile Expression | `archon:lib/filtrex` | 将字符串表达式编译为可执行函数（数学公式、条件逻辑等） |
+| Key | 名称 | 说明 |
+|-----|------|------|
+| `compileExpression` | Compile Expression | 将字符串表达式编译为可执行函数（数学公式、条件逻辑等），底层使用 filtrex |
 
 ---
 

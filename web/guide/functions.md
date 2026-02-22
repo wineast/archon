@@ -11,17 +11,16 @@
 函数使用 ES module 格式，通过 `archon:*` 虚拟模块导入依赖：
 
 ```js
-import { compileExpression } from "archon:lib/filtrex";
 import other_fn from "archon:fn/other_fn";
 
 export default function(input) {
-  return other_fn({ value: compileExpression("x * 2")(input) });
+  return other_fn({ value: input.x * 2 });
 }
 ```
 
 - `export default` 必须导出一个函数，接收 `input` 参数
 - 函数之间的依赖通过 `archon:fn/<key>` 导入
-- 内置库（如 `archon:lib/filtrex`）需要先从共享池添加对应的 builtin 函数引用，否则 import 会编译报错
+- 内置函数（如 `compileExpression`）需从共享池添加对应的 builtin 函数引用后，通过 `archon:fn/<key>` 导入使用
 - 详见 [模块系统文档](module-system.md)
 
 ---
@@ -39,7 +38,7 @@ export default function(input) {
 
 ### 运行时依赖
 
-Agent 的用户函数中使用 `import { compileExpression } from "archon:lib/filtrex"` 时，系统会检查该 Agent 是否引用了对应的 builtin 函数。如果未引用，import 会产生编译错误。
+Builtin 函数（如 `compileExpression`）通过 `BASE_DEPS` 注入为 `globalThis` 全局变量。Agent 必须从共享池添加对应 builtin 函数引用，运行时才会注入依赖。
 
 ---
 

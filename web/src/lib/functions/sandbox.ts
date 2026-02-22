@@ -254,21 +254,8 @@ export async function compileAndExecFn(
       }
     }
 
-    // Set up module loader for archon:lib/* imports
+    // Set up module loader (no supported modules in one-shot mode)
     runtime.setModuleLoader((moduleName) => {
-      if (moduleName.startsWith("archon:lib/")) {
-        const libName = moduleName.slice("archon:lib/".length);
-        if (libName === "filtrex") {
-          if (deps?.compileExpression) {
-            return `export const compileExpression = globalThis.compileExpression;`;
-          }
-          return { error: new Error(`Module "archon:lib/filtrex" is not available. Enable the "compileExpression" builtin function for this agent.`) };
-        }
-        if (deps?.[libName]) {
-          return `export default globalThis.${libName};`;
-        }
-        return { error: new Error(`Unknown module: ${moduleName}`) };
-      }
       return { error: new Error(`Unknown module: ${moduleName}`) };
     });
 
@@ -357,26 +344,13 @@ export async function createFunctionsSandbox(
   // Store module source for the loader so dependent modules can import them
   const moduleSourceMap = new Map<string, string>();
 
-  // Set up module loader for `archon:fn/<key>` and `archon:lib/<name>` imports
+  // Set up module loader for `archon:fn/<key>` imports
   runtime.setModuleLoader((moduleName) => {
     if (moduleName.startsWith("archon:fn/")) {
       const key = moduleName.slice("archon:fn/".length);
       const modSrc = moduleSourceMap.get(key);
       if (modSrc) return modSrc;
       return { error: new Error(`Unknown function module: archon:fn/${key}`) };
-    }
-    if (moduleName.startsWith("archon:lib/")) {
-      const libName = moduleName.slice("archon:lib/".length);
-      if (libName === "filtrex") {
-        if (deps?.compileExpression) {
-          return `export const compileExpression = globalThis.compileExpression;`;
-        }
-        return { error: new Error(`Module "archon:lib/filtrex" is not available. Enable the "compileExpression" builtin function for this agent.`) };
-      }
-      if (deps?.[libName]) {
-        return `export default globalThis.${libName};`;
-      }
-      return { error: new Error(`Unknown module: ${moduleName}`) };
     }
     return { error: new Error(`Unknown module: ${moduleName}`) };
   });
