@@ -7,6 +7,7 @@ import type { WikiDocumentRow } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
 import { getAgentResources } from "@/lib/pool/queries";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 function toWikiDocument(row: WikiDocumentRow): WikiDocument {
   return {
@@ -30,7 +31,8 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await getAgentResources<WikiDocumentRow>(agentId, "wiki");
+  const versionId = await resolveEditingVersionId(agentId);
+  const rows = await getAgentResources<WikiDocumentRow>(agentId, "wiki", versionId);
   return NextResponse.json(rows.map(toWikiDocument));
 }
 
@@ -44,6 +46,8 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  const versionId = await resolveEditingVersionId(agentId);
+
   if (!body.name || !body.key) {
     return NextResponse.json(
       { error: "name and key are required" },
@@ -55,6 +59,7 @@ export async function POST(req: Request) {
     .insert(wikiDocuments)
     .values({
       agentId,
+      versionId,
       parentId: body.parentId ?? null,
       name: body.name,
       key: body.key,

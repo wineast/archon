@@ -56,6 +56,10 @@ vi.mock("@/lib/slots", () => ({
   }),
 }));
 
+vi.mock("@/lib/versions/resolve", () => ({
+  resolveEditingVersionId: vi.fn().mockResolvedValue("mock-version-id"),
+}));
+
 vi.mock("@/lib/ai/resolve-model", () => ({
   resolveModel: vi.fn().mockResolvedValue({ modelId: "anthropic/claude-sonnet-4" }),
 }));

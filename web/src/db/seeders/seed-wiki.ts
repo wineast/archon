@@ -39,9 +39,9 @@ export const seedWiki: Seeder = {
       entries.map((e) =>
         ctx.db
           .insert(wikiDocuments)
-          .values({ ...e, agentId: ctx.agentId })
+          .values({ ...e, agentId: ctx.agentId, versionId: ctx.versionId })
           .onConflictDoUpdate({
-            target: [wikiDocuments.agentId, wikiDocuments.key],
+            target: [wikiDocuments.versionId, wikiDocuments.key],
             set: { name: e.name, content: e.content, order: e.order },
           }),
       ),

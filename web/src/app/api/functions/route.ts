@@ -6,6 +6,7 @@ import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { logAudit } from "@/lib/audit/log";
 import { getAgentResources } from "@/lib/pool/queries";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -16,7 +17,8 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await getAgentResources<FunctionRow>(agentId, "function");
+  const versionId = await resolveEditingVersionId(agentId);
+  const rows = await getAgentResources<FunctionRow>(agentId, "function", versionId);
   return NextResponse.json(rows);
 }
 
@@ -30,6 +32,8 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  const versionId = await resolveEditingVersionId(agentId);
+
   for (const [field, label] of [
     ["parametersSchema", "parametersSchema"],
     ["returnParametersSchema", "returnParametersSchema"],
@@ -42,6 +46,7 @@ export async function POST(req: Request) {
     .insert(functions)
     .values({
       agentId,
+      versionId,
       key: body.key,
       name: body.name,
       description: body.description ?? "",

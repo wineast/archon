@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { agents, agentVersions, users } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
-import { buildSnapshot } from "@/lib/versions/snapshot";
+import { copyVersionResources } from "@/lib/versions/copy-resources";
 
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
 
@@ -76,20 +76,36 @@ export async function POST(
     );
   }
 
-  const snapshot = await buildSnapshot(agentId);
+  // Fetch the agent's current editingVersionId to copy resources from
+  const [agent] = await db
+    .select({ editingVersionId: agents.editingVersionId })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+
+  if (!agent?.editingVersionId) {
+    return NextResponse.json(
+      { error: "Agent has no editing version" },
+      { status: 400 }
+    );
+  }
 
   const [row] = await db.transaction(async (tx) => {
+    // 1. Insert new version
     const inserted = await tx
       .insert(agentVersions)
       .values({
         agentId,
         version,
         changelog: changelog ?? "",
-        snapshot,
         createdBy: ctx.user.id,
       })
       .returning();
 
+    // 2. Copy all resources from current editing version to the new version
+    await copyVersionResources(agentId, agent.editingVersionId!, inserted[0].id, tx);
+
+    // 3. Update editing pointer to the new version
     await tx
       .update(agents)
       .set({ editingVersionId: inserted[0].id })

@@ -27,6 +27,7 @@ export const seedMcpServers: Seeder = {
         .insert(mcpServers)
         .values({
           agentId: ctx.agentId,
+          versionId: ctx.versionId,
           key: s.key,
           name: s.name,
           description: s.description,
@@ -36,7 +37,7 @@ export const seedMcpServers: Seeder = {
           enabled: s.enabled,
         })
         .onConflictDoUpdate({
-          target: [mcpServers.agentId, mcpServers.key],
+          target: [mcpServers.versionId, mcpServers.key],
           set: {
             name: s.name,
             description: s.description,

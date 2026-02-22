@@ -26,9 +26,9 @@ export const seedEval: Seeder = {
     const judgeKey = judgeConfigSeed.key ?? toKey(judgeConfigSeed.name);
     const [judgeConfig] = await ctx.db
       .insert(evalJudgeConfigs)
-      .values({ ...judgeConfigSeed, key: judgeKey, dimensions: judgeConfigSeed.dimensions ?? [], agentId })
+      .values({ ...judgeConfigSeed, key: judgeKey, dimensions: judgeConfigSeed.dimensions ?? [], agentId, versionId: ctx.versionId })
       .onConflictDoUpdate({
-        target: [evalJudgeConfigs.agentId, evalJudgeConfigs.key],
+        target: [evalJudgeConfigs.versionId, evalJudgeConfigs.key],
         set: {
           name: judgeConfigSeed.name,
           model: judgeConfigSeed.model,
@@ -83,9 +83,10 @@ export const seedEval: Seeder = {
           assertions: c.assertions.map((a): Assertion => ({ ...a, id: nanoid() })),
           tags: c.tags,
           agentId,
+          versionId: ctx.versionId,
         })
         .onConflictDoUpdate({
-          target: [evalCases.agentId, evalCases.key],
+          target: [evalCases.versionId, evalCases.key],
           set: {
             name: c.name,
             mode: c.mode,

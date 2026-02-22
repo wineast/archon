@@ -161,7 +161,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "Welcome to {{company}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("Welcome to Acme Corp");
   });
@@ -172,7 +174,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "Year: {{year}}, Date: {{date}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
 
     const now = new Date();
@@ -186,7 +190,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "Today: {{currentDate}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toMatch(/Today: \d{1,2}\/\d{1,2}\/\d{4}/);
   });
@@ -213,7 +219,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% include 'faq' %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("Q: What? A: This.");
   });
@@ -233,7 +241,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "State: {{state_enum.CA}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("State: California");
   });
@@ -249,7 +259,8 @@ describe("renderSystemPrompt", () => {
     const result = await renderSystemPrompt(
       "Hello {{name}}",
       "agent-1",
-      { name: "Override" }
+      { name: "Override" },
+      "mock-version-id"
     );
     expect(result).toBe("Hello Override");
   });
@@ -261,7 +272,8 @@ describe("renderSystemPrompt", () => {
     const result = await renderSystemPrompt(
       "Model: {{model}}, Cases: {{caseCount}}",
       "agent-1",
-      { model: "gpt-4o", caseCount: 10 }
+      { model: "gpt-4o", caseCount: 10 },
+      "mock-version-id"
     );
     expect(result).toBe("Model: gpt-4o, Cases: 10");
   });
@@ -274,7 +286,7 @@ describe("renderSystemPrompt", () => {
 
     const { renderSystemPrompt } = await import("../render");
     const original = "Hello {{world}}";
-    const result = await renderSystemPrompt(original, "agent-1");
+    const result = await renderSystemPrompt(original, "agent-1", undefined, "mock-version-id");
     expect(result).toBe(original);
   });
 
@@ -294,7 +306,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "Rate: {{rate}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("Rate: 0.75");
   });
@@ -309,7 +323,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% if enabled %}ON{% else %}OFF{% endif %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("ON");
   });
@@ -324,7 +340,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% if enabled %}ON{% else %}OFF{% endif %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("OFF");
   });
@@ -339,7 +357,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% for lang in langs %}{{lang}};{% endfor %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("en;zh;es;");
   });
@@ -354,7 +374,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% for s in scores %}{{s}};{% endfor %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("1;2;3;");
   });
@@ -369,7 +391,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{{office.city}}, {{office.state}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("LA, CA");
   });
@@ -380,7 +404,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "Before {{missing}} after",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("Before  after");
   });
@@ -402,7 +428,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{{routes.universe.label}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("GMCC Universe");
   });
@@ -422,7 +450,9 @@ describe("renderSystemPrompt", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       '{{routes.universe.states | join: ", "}}',
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("CA, TX, NY");
   });
@@ -439,7 +469,7 @@ describe("renderWikiContent", () => {
 
   it("returns empty string as-is", async () => {
     const { renderWikiContent } = await import("../render");
-    const result = await renderWikiContent("", "agent-1", "doc-1");
+    const result = await renderWikiContent("", "agent-1", "doc-1", "mock-version-id");
     expect(result).toBe("");
   });
 
@@ -476,7 +506,8 @@ describe("renderWikiContent", () => {
     const result = await renderWikiContent(
       "{{org}}\n{% include 'footer' %}",
       "agent-1",
-      "doc-1"
+      "doc-1",
+      "mock-version-id"
     );
     expect(result).toContain("TestOrg");
     expect(result).toContain("-- End --");
@@ -490,7 +521,7 @@ describe("renderWikiContent", () => {
 
     const { renderWikiContent } = await import("../render");
     const original = "Some {{content}}";
-    const result = await renderWikiContent(original, "agent-1", "doc-1");
+    const result = await renderWikiContent(original, "agent-1", "doc-1", "mock-version-id");
     expect(result).toBe(original);
   });
 
@@ -521,7 +552,8 @@ describe("renderWikiContent", () => {
     const result = await renderWikiContent(
       "合格：{{ocean_incomes}}。\n不合格：{{ocean_incomes_excluded}}。\n州：{{ocean_states}}。",
       "agent-1",
-      "wiki-uw-ocean"
+      "wiki-uw-ocean",
+      "mock-version-id"
     );
     expect(result).toContain("合格：Full Doc - W2 Wage Earner、NQM-WVOE。");
     expect(result).toContain("不合格：NQM-DSCR。");
@@ -548,7 +580,9 @@ describe("tool namespace", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "Tool: {{tool.route_loan.description}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("Tool: Route loan products to the best match");
   });
@@ -563,7 +597,9 @@ describe("tool namespace", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{{tool.calculate_dti.name}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("calculate_dti");
   });
@@ -586,7 +622,9 @@ describe("tool namespace", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% for p in tool.calculate_dti.parameters %}{{p.name}}:{{p.type}};{% endfor %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("income:number;debts:number;");
   });
@@ -609,7 +647,9 @@ describe("tool namespace", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% for p in tool.calc.parameters %}{{p.name}}({{p.description}},req={{p.required}});{% endfor %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("amount(Loan amount,req=true);rate(Interest rate,req=false);");
   });
@@ -631,7 +671,9 @@ describe("tool namespace", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       '{% for p in tool.route.parameters %}{{p.enum | join: ","}}{% endfor %}',
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("A,B,C");
   });
@@ -649,7 +691,9 @@ describe("tool namespace", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% for t in tool_entries %}{{t.name}}: {{t.description}};{% endfor %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("search: Search documents;lookup: Lookup data;");
   });
@@ -672,7 +716,9 @@ describe("tool namespace", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "{% for t in tool_entries %}{% for p in t.parameters %}{{p.name}}:{{p.type}}({{p.description}},req={{p.required}});{% endfor %}{% endfor %}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe("x:number(X val,req=true);y:string(Y val,req=false);");
   });
@@ -687,7 +733,9 @@ describe("tool namespace", () => {
     const { renderSystemPrompt } = await import("../render");
     const result = await renderSystemPrompt(
       "var={{search}} tool={{tool.search.description}}",
-      "agent-1"
+      "agent-1",
+      undefined,
+      "mock-version-id"
     );
     expect(result).toBe(
       "var=custom-search tool=Search tool description"

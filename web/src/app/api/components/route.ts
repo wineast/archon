@@ -7,6 +7,7 @@ import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { compileCssForComponent } from "@/lib/components/compile-css";
 import { logAudit } from "@/lib/audit/log";
 import { getAgentResources } from "@/lib/pool/queries";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -17,7 +18,8 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await getAgentResources<ComponentRow>(agentId, "component");
+  const versionId = await resolveEditingVersionId(agentId);
+  const rows = await getAgentResources<ComponentRow>(agentId, "component", versionId);
   return NextResponse.json(rows);
 }
 
@@ -30,6 +32,8 @@ export async function POST(req: Request) {
 
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
+
+  const versionId = await resolveEditingVersionId(agentId);
 
   for (const [field, label] of [
     ["toolInputSchema", "toolInputSchema"],
@@ -46,6 +50,7 @@ export async function POST(req: Request) {
     .insert(components)
     .values({
       agentId,
+      versionId,
       key: body.key,
       name: body.name,
       description: body.description ?? "",

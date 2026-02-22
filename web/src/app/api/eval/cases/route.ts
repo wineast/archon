@@ -4,6 +4,7 @@ import { evalCases } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -32,10 +33,13 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  const versionId = await resolveEditingVersionId(agentId);
+
   const [row] = await db
     .insert(evalCases)
     .values({
       agentId,
+      versionId,
       key: body.key,
       name: body.name,
       mode: body.mode ?? "single",

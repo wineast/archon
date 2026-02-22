@@ -11,7 +11,6 @@ export { seedChatConfig } from "./seed-chat-config";
 export { seedDatasets } from "./seed-datasets";
 export { seedFunctions } from "./seed-functions";
 export { seedEval } from "./seed-eval";
-export { seedVersion } from "./seed-version";
 export { seedMemory } from "./seed-memory";
 export { seedMcpServers } from "./seed-mcp-servers";
 export { seedEmbedToken } from "./seed-embed-token";
@@ -31,7 +30,6 @@ import { seedModelConfigs } from "./seed-model-configs";
 import { seedChatConfig } from "./seed-chat-config";
 import { seedFunctions } from "./seed-functions";
 import { seedEval } from "./seed-eval";
-import { seedVersion } from "./seed-version";
 import { seedMemory } from "./seed-memory";
 import { seedMcpServers } from "./seed-mcp-servers";
 import { seedEmbedToken } from "./seed-embed-token";
@@ -65,5 +63,4 @@ export const agentPipeline: AgentStep[] = [
   { seeder: seedMemory, requires: "memory.json" },
   { seeder: seedMcpServers, requires: "mcp-servers.json" },
   { seeder: seedEmbedToken },
-  { seeder: seedVersion },
 ];

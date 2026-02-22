@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { skills } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTool = Tool<any, any>;
@@ -53,9 +54,10 @@ export function buildSkillTools(agentId: string): Record<string, AnyTool> {
         order: z.number().optional().default(0),
       }),
       execute: async (params) => {
+        const versionId = await resolveEditingVersionId(agentId);
         const [row] = await db
           .insert(skills)
-          .values({ ...params, agentId })
+          .values({ ...params, agentId, versionId })
           .returning();
         return {
           skill: row,

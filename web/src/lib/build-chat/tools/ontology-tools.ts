@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { objectTypes, objectRelations } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTool = Tool<any, any>;
@@ -59,9 +60,10 @@ export function buildOntologyTools(agentId: string): Record<string, AnyTool> {
         order: z.number().optional().default(0),
       }),
       execute: async (params) => {
+        const versionId = await resolveEditingVersionId(agentId);
         const [row] = await db
           .insert(objectTypes)
-          .values({ ...params, agentId })
+          .values({ ...params, agentId, versionId })
           .returning();
         return { objectType: row, _mutateKeys: [typesMutateKey(agentId)] };
       },
@@ -145,9 +147,10 @@ export function buildOntologyTools(agentId: string): Record<string, AnyTool> {
         order: z.number().optional().default(0),
       }),
       execute: async (params) => {
+        const versionId = await resolveEditingVersionId(agentId);
         const [row] = await db
           .insert(objectRelations)
-          .values({ ...params, agentId })
+          .values({ ...params, agentId, versionId })
           .returning();
         return {
           objectRelation: row,

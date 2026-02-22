@@ -40,6 +40,7 @@ export async function ensureBuiltinPoolTools(db: DbLike): Promise<void> {
 export async function ensureBuiltinToolRefs(
   db: DbLike,
   buildChatAgentId: string,
+  versionId: string,
 ): Promise<void> {
   // First ensure pool tools exist
   await ensureBuiltinPoolTools(db);
@@ -56,6 +57,7 @@ export async function ensureBuiltinToolRefs(
       .insert(agentResourceRefs)
       .values({
         agentId: buildChatAgentId,
+        versionId,
         resourceType: "tool",
         resourceId: pt.id,
         enabled: true,

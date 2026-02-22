@@ -9,6 +9,7 @@ import { gatherResourceSummary } from "./resource-summary";
 import { buildSystemPrompt } from "./system-prompt";
 import { buildAllTools } from "./tools";
 import { resolveSlot } from "@/lib/slots";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { db } from "@/db";
 import { agents, tools as toolsTable, agentResourceRefs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
@@ -41,8 +42,9 @@ export async function executeBuildChatStream(
 ): Promise<Response> {
   const { messages, agentId, sessionId, userId } = opts;
 
+  const versionId = await resolveEditingVersionId(agentId);
   const [summary, [agentRow]] = await Promise.all([
-    gatherResourceSummary(agentId),
+    gatherResourceSummary(agentId, versionId),
     db.select({ skillsEnabled: agents.skillsEnabled, orgId: agents.orgId }).from(agents).where(eq(agents.id, agentId)).limit(1),
   ]);
   const skillsEnabled = agentRow?.skillsEnabled !== false;

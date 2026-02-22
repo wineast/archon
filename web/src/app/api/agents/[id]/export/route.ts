@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { agents, agentVersions } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
-import type { AgentExportData, AgentSnapshot } from "@/lib/versions/types";
+import { buildSnapshot } from "@/lib/versions/snapshot";
+import type { AgentExportData } from "@/lib/versions/types";
 
 /** GET — export agent as JSON (all versions + metadata) */
 export async function GET(
@@ -27,6 +28,17 @@ export async function GET(
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
+  // Build snapshots on-the-fly from actual resource rows (versionId-based)
+  const versions = await Promise.all(
+    versionRows.map(async (v) => ({
+      version: v.version,
+      changelog: v.changelog,
+      snapshot: await buildSnapshot(agentId, v.id),
+      isEditing: v.id === agent.editingVersionId,
+      isPublished: v.id === agent.publishedVersionId,
+    }))
+  );
+
   const exportData: AgentExportData = {
     exportVersion: 1,
     exportedAt: new Date().toISOString(),
@@ -40,13 +52,7 @@ export async function GET(
       memoryEnabled: agent.memoryEnabled,
       skillsEnabled: agent.skillsEnabled,
     },
-    versions: versionRows.map((v) => ({
-      version: v.version,
-      changelog: v.changelog,
-      snapshot: v.snapshot as AgentSnapshot,
-      isEditing: v.id === agent.editingVersionId,
-      isPublished: v.id === agent.publishedVersionId,
-    })),
+    versions,
   };
 
   return new NextResponse(JSON.stringify(exportData, null, 2), {

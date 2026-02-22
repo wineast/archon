@@ -1,5 +1,5 @@
 import { db as appDb } from "@/db";
-import { agents, modelConfigs, orgSlots } from "@/db/schema";
+import { agents, agentVersions, modelConfigs, orgSlots } from "@/db/schema";
 import { SLOT_KEYS } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { SLOT_DEFS } from "./constants";
@@ -52,9 +52,26 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
 
       agentId = agent.id;
 
+      // Create initial version
+      const [version] = await db
+        .insert(agentVersions)
+        .values({
+          agentId,
+          version: "0.1.0",
+          changelog: "Initial version",
+        })
+        .returning();
+
+      // Set editing/published version pointers
+      await db
+        .update(agents)
+        .set({ editingVersionId: version.id, publishedVersionId: version.id })
+        .where(eq(agents.id, agentId));
+
       // Create default active model config
       await db.insert(modelConfigs).values({
         agentId,
+        versionId: version.id,
         key: "default",
         name: "Default",
         modelId: def.defaultModel,
@@ -64,7 +81,7 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
 
       // Seed builtin tool refs for builder slot
       if (slotKey === "builder") {
-        await ensureBuiltinToolRefs(db, agentId);
+        await ensureBuiltinToolRefs(db, agentId, version.id);
       }
     }
 

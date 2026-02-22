@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
-import type { VersionDetail } from "@/lib/versions/types";
-import type { AgentSnapshot } from "@/lib/versions/types";
+import type { VersionDetail, AgentSnapshot } from "@/lib/versions/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -80,7 +79,7 @@ export function VersionDetailSheet({
     fetcher
   );
 
-  const snapshot = detail?.snapshot as AgentSnapshot | undefined;
+  const snapshot = detail?.snapshot;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

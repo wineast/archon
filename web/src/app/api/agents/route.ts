@@ -127,15 +127,12 @@ export async function POST(req: Request) {
   });
 
   // Auto-create initial version 0.1.0
-  const { buildSnapshot } = await import("@/lib/versions/snapshot");
-  const snapshot = await buildSnapshot(agent.id);
   const [initialVersion] = await db
     .insert(agentVersions)
     .values({
       agentId: agent.id,
       version: "0.1.0",
       changelog: "Initial version",
-      snapshot,
       createdBy: user.id,
     })
     .returning();

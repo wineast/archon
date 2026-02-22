@@ -18,6 +18,7 @@ vi.mock("@/db/schema", () => {
     tools: {
       id: col("id"),
       agentId: col("agent_id"),
+      versionId: col("version_id"),
       name: col("name"),
       enabled: col("enabled"),
       deletedAt: col("deleted_at"),
@@ -25,16 +26,19 @@ vi.mock("@/db/schema", () => {
     components: {
       id: col("id"),
       agentId: col("agent_id"),
+      versionId: col("version_id"),
       deletedAt: col("deleted_at"),
     },
     functions: {
       id: col("id"),
       agentId: col("agent_id"),
+      versionId: col("version_id"),
       deletedAt: col("deleted_at"),
     },
     datasets: {
       id: col("id"),
       agentId: col("agent_id"),
+      versionId: col("version_id"),
       key: col("key"),
       name: col("name"),
       data: col("data"),
@@ -43,6 +47,7 @@ vi.mock("@/db/schema", () => {
     wikiDocuments: {
       id: col("id"),
       agentId: col("agent_id"),
+      versionId: col("version_id"),
       parentId: col("parent_id"),
       name: col("name"),
       key: col("key"),
@@ -55,17 +60,20 @@ vi.mock("@/db/schema", () => {
     schemas: {
       id: col("id"),
       agentId: col("agent_id"),
+      versionId: col("version_id"),
       deletedAt: col("deleted_at"),
     },
     mcpServers: {
       id: col("id"),
       agentId: col("agent_id"),
+      versionId: col("version_id"),
       enabled: col("enabled"),
       deletedAt: col("deleted_at"),
     },
     agentResourceRefs: {
       id: col("ref_id"),
       agentId: col("ref_agent_id"),
+      versionId: col("ref_version_id"),
       resourceType: col("ref_resource_type"),
       resourceId: col("ref_resource_id"),
       enabled: col("ref_enabled"),
@@ -114,6 +122,7 @@ function setupTwoQueries(privateRows: unknown[], poolRows: unknown[]) {
 }
 
 const AGENT_ID = "agent-test-1";
+const VERSION_ID = "version-test-1";
 
 // ---------------------------------------------------------------------------
 // Tests — getAgentResources (generic)
@@ -129,7 +138,7 @@ describe("getAgentResources", () => {
     setupTwoQueries([privateTool], []);
 
     const { getAgentResources } = await import("../queries");
-    const result = await getAgentResources(AGENT_ID, "tool");
+    const result = await getAgentResources(AGENT_ID, "tool", VERSION_ID);
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -148,7 +157,7 @@ describe("getAgentResources", () => {
     ]);
 
     const { getAgentResources } = await import("../queries");
-    const result = await getAgentResources(AGENT_ID, "tool");
+    const result = await getAgentResources(AGENT_ID, "tool", VERSION_ID);
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -168,7 +177,7 @@ describe("getAgentResources", () => {
     ]);
 
     const { getAgentResources } = await import("../queries");
-    const result = await getAgentResources(AGENT_ID, "tool");
+    const result = await getAgentResources(AGENT_ID, "tool", VERSION_ID);
 
     expect(result).toHaveLength(2);
     expect(result[0]._source).toBe("private");
@@ -180,7 +189,7 @@ describe("getAgentResources", () => {
     setupTwoQueries([], []);
 
     const { getAgentResources } = await import("../queries");
-    const result = await getAgentResources(AGENT_ID, "component");
+    const result = await getAgentResources(AGENT_ID, "component", VERSION_ID);
 
     expect(result).toEqual([]);
   });
@@ -201,7 +210,7 @@ describe("getAgentEnabledTools", () => {
     setupTwoQueries([privateTool], [{ resource: poolTool }]);
 
     const { getAgentEnabledTools } = await import("../queries");
-    const result = await getAgentEnabledTools(AGENT_ID);
+    const result = await getAgentEnabledTools(AGENT_ID, VERSION_ID);
 
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({ id: "t1", name: "priv-tool" });
@@ -212,7 +221,7 @@ describe("getAgentEnabledTools", () => {
     setupTwoQueries([], []);
 
     const { getAgentEnabledTools } = await import("../queries");
-    const result = await getAgentEnabledTools(AGENT_ID);
+    const result = await getAgentEnabledTools(AGENT_ID, VERSION_ID);
 
     expect(result).toEqual([]);
   });
@@ -233,7 +242,7 @@ describe("getAgentEnabledMcpServers", () => {
     setupTwoQueries([privMcp], [{ resource: poolMcp }]);
 
     const { getAgentEnabledMcpServers } = await import("../queries");
-    const result = await getAgentEnabledMcpServers(AGENT_ID);
+    const result = await getAgentEnabledMcpServers(AGENT_ID, VERSION_ID);
 
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({ id: "mcp1" });
@@ -244,7 +253,7 @@ describe("getAgentEnabledMcpServers", () => {
     setupTwoQueries([], []);
 
     const { getAgentEnabledMcpServers } = await import("../queries");
-    const result = await getAgentEnabledMcpServers(AGENT_ID);
+    const result = await getAgentEnabledMcpServers(AGENT_ID, VERSION_ID);
 
     expect(result).toEqual([]);
   });
@@ -265,7 +274,7 @@ describe("getAgentDatasets", () => {
     setupTwoQueries([privDs], [poolDs]);
 
     const { getAgentDatasets } = await import("../queries");
-    const result = await getAgentDatasets(AGENT_ID);
+    const result = await getAgentDatasets(AGENT_ID, VERSION_ID);
 
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({ key: "company", data: "Acme" });
@@ -295,7 +304,7 @@ describe("getAgentWikiDocs", () => {
     setupTwoQueries([privDoc], [poolDoc]);
 
     const { getAgentWikiDocs } = await import("../queries");
-    const result = await getAgentWikiDocs(AGENT_ID);
+    const result = await getAgentWikiDocs(AGENT_ID, VERSION_ID);
 
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({ id: "w1", key: "faq" });
@@ -318,7 +327,7 @@ describe("getAgentSchemas", () => {
     setupTwoQueries([privSchema], [{ resource: poolSchema }]);
 
     const { getAgentSchemas } = await import("../queries");
-    const result = await getAgentSchemas(AGENT_ID);
+    const result = await getAgentSchemas(AGENT_ID, VERSION_ID);
 
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({ id: "s1", key: "user" });

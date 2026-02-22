@@ -10,6 +10,7 @@ import {
   index,
   unique,
   uniqueIndex,
+  check,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -239,6 +240,7 @@ export const functions = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
+    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -256,8 +258,10 @@ export const functions = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("functions_agent_id_key_idx").on(table.agentId, table.key),
+    unique("functions_version_id_key_idx").on(table.versionId, table.key),
     uniqueIndex("functions_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    index("functions_version_id_idx").on(table.versionId),
+    check("functions_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
 );
 
@@ -273,6 +277,7 @@ export const datasets = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
+    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -288,8 +293,10 @@ export const datasets = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("datasets_agent_id_key_idx").on(table.agentId, table.key),
+    unique("datasets_version_id_key_idx").on(table.versionId, table.key),
     uniqueIndex("datasets_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    index("datasets_version_id_idx").on(table.versionId),
+    check("datasets_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
 );
 
@@ -303,6 +310,7 @@ export const wikiDocuments = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
+    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
     parentId: uuid("parent_id").references((): AnyPgColumn => wikiDocuments.id, {
       onDelete: "set null",
     }),
@@ -321,8 +329,10 @@ export const wikiDocuments = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("wiki_documents_agent_id_key_idx").on(table.agentId, table.key),
+    unique("wiki_documents_version_id_key_idx").on(table.versionId, table.key),
     uniqueIndex("wiki_documents_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    index("wiki_documents_version_id_idx").on(table.versionId),
+    check("wiki_documents_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
 );
 
@@ -337,6 +347,7 @@ export const schemas = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id")
       .references(() => agents.id, { onDelete: "set null" }),
+    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -352,8 +363,10 @@ export const schemas = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("schemas_agent_id_key_idx").on(table.agentId, table.key),
+    unique("schemas_version_id_key_idx").on(table.versionId, table.key),
     uniqueIndex("schemas_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    index("schemas_version_id_idx").on(table.versionId),
+    check("schemas_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
 );
 
@@ -450,6 +463,7 @@ export const tools = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
+    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull(),
@@ -473,8 +487,10 @@ export const tools = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("tools_agent_id_key_idx").on(table.agentId, table.key),
+    unique("tools_version_id_key_idx").on(table.versionId, table.key),
     uniqueIndex("tools_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    index("tools_version_id_idx").on(table.versionId),
+    check("tools_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
 );
 
@@ -514,6 +530,7 @@ export const modelConfigs = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     modelId: text("model_id").notNull().default(""),
@@ -530,34 +547,42 @@ export const modelConfigs = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("model_configs_agent_id_key_idx").on(t.agentId, t.key),
+    unique("model_configs_version_id_key_idx").on(t.versionId, t.key),
+    index("model_configs_version_id_idx").on(t.versionId),
   ]
 );
 
 export type ModelConfigRow = typeof modelConfigs.$inferSelect;
 export type NewModelConfigRow = typeof modelConfigs.$inferInsert;
 
-export const chatConfigs = pgTable("chat_configs", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  agentId: uuid("agent_id")
-    .references(() => agents.id, { onDelete: "cascade" })
-    .unique(),
-  title: text("title").notNull().default(""),
-  welcomeTitle: text("welcome_title").notNull().default(""),
-  welcomeIcon: text("welcome_icon").notNull().default(""),
-  quickActions: jsonb("quick_actions").$type<string[]>().notNull().default([]),
-  placeholder: text("placeholder").notNull().default(""),
-  suggestions: jsonb("suggestions").$type<string[]>().notNull().default([]),
-  enableVoice: boolean("enable_voice").notNull().default(false),
-  enableAttachment: boolean("enable_attachment").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const chatConfigs = pgTable(
+  "chat_configs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .references(() => agents.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default(""),
+    welcomeTitle: text("welcome_title").notNull().default(""),
+    welcomeIcon: text("welcome_icon").notNull().default(""),
+    quickActions: jsonb("quick_actions").$type<string[]>().notNull().default([]),
+    placeholder: text("placeholder").notNull().default(""),
+    suggestions: jsonb("suggestions").$type<string[]>().notNull().default([]),
+    enableVoice: boolean("enable_voice").notNull().default(false),
+    enableAttachment: boolean("enable_attachment").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("chat_configs_version_id_idx").on(t.versionId),
+    index("chat_configs_agent_id_idx").on(t.agentId),
+  ]
+);
 
 export type ChatConfigRow = typeof chatConfigs.$inferSelect;
 export type NewChatConfigRow = typeof chatConfigs.$inferInsert;
@@ -569,6 +594,7 @@ export const evalCases = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     mode: text("mode").notNull().default("single").$type<EvalCaseMode>(),
@@ -586,7 +612,8 @@ export const evalCases = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("eval_cases_agent_id_key_idx").on(t.agentId, t.key),
+    unique("eval_cases_version_id_key_idx").on(t.versionId, t.key),
+    index("eval_cases_version_id_idx").on(t.versionId),
   ]
 );
 
@@ -600,6 +627,7 @@ export const evalJudgeConfigs = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     model: text("model").notNull(),
@@ -617,7 +645,8 @@ export const evalJudgeConfigs = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("eval_judge_configs_agent_id_key_idx").on(t.agentId, t.key),
+    unique("eval_judge_configs_version_id_key_idx").on(t.versionId, t.key),
+    index("eval_judge_configs_version_id_idx").on(t.versionId),
   ]
 );
 
@@ -838,6 +867,7 @@ export const components = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
+    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -856,8 +886,10 @@ export const components = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("components_agent_id_key_idx").on(table.agentId, table.key),
+    unique("components_version_id_key_idx").on(table.versionId, table.key),
     uniqueIndex("components_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    index("components_version_id_idx").on(table.versionId),
+    check("components_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
 );
 
@@ -957,7 +989,6 @@ export const agentVersions = pgTable(
       .references(() => agents.id, { onDelete: "cascade" }),
     version: text("version").notNull(),
     changelog: text("changelog").notNull().default(""),
-    snapshot: jsonb("snapshot").notNull(),
     createdBy: uuid("created_by").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -1062,6 +1093,7 @@ export const objectTypes = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -1084,7 +1116,8 @@ export const objectTypes = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("object_types_agent_id_key_idx").on(t.agentId, t.key),
+    unique("object_types_version_id_key_idx").on(t.versionId, t.key),
+    index("object_types_version_id_idx").on(t.versionId),
   ]
 );
 
@@ -1100,6 +1133,7 @@ export const objectRelations = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -1124,7 +1158,8 @@ export const objectRelations = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("object_relations_agent_id_key_idx").on(t.agentId, t.key),
+    unique("object_relations_version_id_key_idx").on(t.versionId, t.key),
+    index("object_relations_version_id_idx").on(t.versionId),
   ]
 );
 
@@ -1289,6 +1324,7 @@ export const skills = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -1305,7 +1341,8 @@ export const skills = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("skills_agent_id_key_idx").on(table.agentId, table.key),
+    unique("skills_version_id_key_idx").on(table.versionId, table.key),
+    index("skills_version_id_idx").on(table.versionId),
   ]
 );
 
@@ -1400,6 +1437,7 @@ export const mcpServers = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id")
       .references(() => agents.id, { onDelete: "set null" }),
+    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -1418,8 +1456,10 @@ export const mcpServers = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("mcp_servers_agent_id_key_idx").on(t.agentId, t.key),
+    unique("mcp_servers_version_id_key_idx").on(t.versionId, t.key),
     uniqueIndex("mcp_servers_pool_key_idx").on(t.key).where(sql`agent_id IS NULL`),
+    index("mcp_servers_version_id_idx").on(t.versionId),
+    check("mcp_servers_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
 );
 
@@ -1445,31 +1485,38 @@ export const MEMORY_TYPE_PRESETS: MemoryTypeDef[] = [
 
 /* ─────────── Memory Configs (1:1 per agent) ─────────── */
 
-export const memoryConfigs = pgTable("memory_configs", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  agentId: uuid("agent_id")
-    .references(() => agents.id, { onDelete: "cascade" })
-    .unique(),
-  autoExtract: boolean("auto_extract").notNull().default(false),
-  extractionPrompt: text("extraction_prompt").notNull().default(""),
-  maxMemoriesPerUser: integer("max_memories_per_user").notNull().default(100),
-  maxGlobalMemories: integer("max_global_memories").notNull().default(1000),
-  injectionMode: text("injection_mode")
-    .notNull()
-    .default("system_prompt")
-    .$type<"system_prompt" | "context" | "none">(),
-  maxInjectedMemories: integer("max_injected_memories").notNull().default(10),
-  decayEnabled: boolean("decay_enabled").notNull().default(false),
-  decayDays: integer("decay_days").notNull().default(90),
-  memoryTypeDefs: jsonb("memory_type_defs").$type<MemoryTypeDef[]>().notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const memoryConfigs = pgTable(
+  "memory_configs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .references(() => agents.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    autoExtract: boolean("auto_extract").notNull().default(false),
+    extractionPrompt: text("extraction_prompt").notNull().default(""),
+    maxMemoriesPerUser: integer("max_memories_per_user").notNull().default(100),
+    maxGlobalMemories: integer("max_global_memories").notNull().default(1000),
+    injectionMode: text("injection_mode")
+      .notNull()
+      .default("system_prompt")
+      .$type<"system_prompt" | "context" | "none">(),
+    maxInjectedMemories: integer("max_injected_memories").notNull().default(10),
+    decayEnabled: boolean("decay_enabled").notNull().default(false),
+    decayDays: integer("decay_days").notNull().default(90),
+    memoryTypeDefs: jsonb("memory_type_defs").$type<MemoryTypeDef[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("memory_configs_version_id_idx").on(t.versionId),
+    index("memory_configs_agent_id_idx").on(t.agentId),
+  ]
+);
 
 export type MemoryConfigRow = typeof memoryConfigs.$inferSelect;
 export type NewMemoryConfigRow = typeof memoryConfigs.$inferInsert;
@@ -1578,6 +1625,7 @@ export const agentResourceRefs = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
     resourceType: text("resource_type").notNull().$type<ResourceType>(),
     resourceId: uuid("resource_id").notNull(),
     enabled: boolean("enabled").notNull().default(true),
@@ -1586,8 +1634,9 @@ export const agentResourceRefs = pgTable(
       .notNull(),
   },
   (t) => [
-    unique("agent_resource_refs_uniq").on(t.agentId, t.resourceType, t.resourceId),
+    unique("agent_resource_refs_uniq").on(t.versionId, t.resourceType, t.resourceId),
     index("agent_resource_refs_resource_idx").on(t.resourceId),
+    index("agent_resource_refs_version_id_idx").on(t.versionId),
   ]
 );
 

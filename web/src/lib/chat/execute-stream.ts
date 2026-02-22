@@ -14,6 +14,7 @@ import { db } from "@/db";
 import { agents, modelConfigs, skills } from "@/db/schema";
 import { eq, and, isNull, asc } from "drizzle-orm";
 import { getAgentEnabledTools, getAgentEnabledMcpServers } from "@/lib/pool/queries";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { retrieveMemories } from "@/lib/memory/retrieve";
 import { formatMemoriesForInjection } from "@/lib/memory/format-for-injection";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
@@ -81,6 +82,8 @@ export async function executeChatStream(
     }
   }
 
+  const versionId = await resolveEditingVersionId(agentId);
+
   // Read active model config from DB (scoped to agent)
   const [activeConfig] = await db
     .select()
@@ -98,10 +101,10 @@ export async function executeChatStream(
   }
 
   // Read all enabled tools (private + pool refs)
-  const enabledRows = await getAgentEnabledTools(agentId);
+  const enabledRows = await getAgentEnabledTools(agentId, versionId);
 
   // Gather template data once (includes resolved schemas and defsMap)
-  const templateData = await gatherTemplateData(agentId);
+  const templateData = await gatherTemplateData(agentId, versionId);
 
   const toolPayloads: ToolDefinitionPayload[] = enabledRows
     .filter((row) => {
@@ -134,7 +137,7 @@ export async function executeChatStream(
   // Connect to enabled MCP servers and merge their tools (skip if agent.mcpEnabled is false)
   const mcpClients: Awaited<ReturnType<typeof createMCPClient>>[] = [];
   const enabledMcpServers = agentRow?.mcpEnabled !== false
-    ? await getAgentEnabledMcpServers(agentId)
+    ? await getAgentEnabledMcpServers(agentId, versionId)
     : [];
 
   if (enabledMcpServers.length > 0) {

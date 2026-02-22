@@ -60,6 +60,7 @@ vi.mock("react-markdown", () => ({
 const baseConfig: ModelConfigRow = {
   id: "cfg-1",
   agentId: "agent-1",
+  versionId: "version-1",
   key: "test_config",
   name: "Test Config",
   modelId: "claude-sonnet-4-5-20250929",

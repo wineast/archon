@@ -21,9 +21,9 @@ export const seedChatConfig: Seeder = {
 
     const [chatConfig] = await ctx.db
       .insert(chatConfigs)
-      .values({ ...chatConfigSeed, agentId: ctx.agentId })
+      .values({ ...chatConfigSeed, agentId: ctx.agentId, versionId: ctx.versionId })
       .onConflictDoUpdate({
-        target: chatConfigs.agentId,
+        target: chatConfigs.versionId,
         set: {
           title: chatConfigSeed.title,
           welcomeTitle: chatConfigSeed.welcomeTitle,

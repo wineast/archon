@@ -80,9 +80,9 @@ export const seedTools: Seeder = {
 
       const [schemaRow] = await ctx.db
         .insert(schemas)
-        .values({ agentId, key: schemaKey, name: schemaName, parameters })
+        .values({ agentId, versionId: ctx.versionId, key: schemaKey, name: schemaName, parameters })
         .onConflictDoUpdate({
-          target: [schemas.agentId, schemas.key],
+          target: [schemas.versionId, schemas.key],
           set: { name: schemaName, parameters },
         })
         .returning();
@@ -100,6 +100,7 @@ export const seedTools: Seeder = {
         .insert(tools)
         .values({
           agentId,
+          versionId: ctx.versionId,
           key,
           name: t.name,
           description: t.description,
@@ -109,7 +110,7 @@ export const seedTools: Seeder = {
           enabled: t.enabled,
         })
         .onConflictDoUpdate({
-          target: [tools.agentId, tools.key],
+          target: [tools.versionId, tools.key],
           set: {
             name: t.name,
             description: t.description,

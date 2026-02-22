@@ -77,7 +77,7 @@ export function VersionCreateDialog({
         <DialogHeader>
           <DialogTitle>Publish Version</DialogTitle>
           <DialogDescription>
-            Create a snapshot of the current agent configuration.
+            Create a new version from the current agent configuration.
           </DialogDescription>
         </DialogHeader>
 

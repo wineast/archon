@@ -6,7 +6,6 @@ import { ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireOrgRole } from "@/lib/auth/require-org-role";
 import { restoreSnapshot } from "@/lib/versions/snapshot";
 import { validateExportData } from "@/lib/versions/types";
-import type { AgentSnapshot } from "@/lib/versions/types";
 
 /** POST — import agent from exported JSON */
 export async function POST(req: Request) {
@@ -57,10 +56,9 @@ export async function POST(req: Request) {
       role: "owner",
     });
 
-    // 3. Insert all versions, track editing/published pointers
+    // 3. Insert all versions and restore snapshots into resource rows
     let editingVersionId: string | null = null;
     let publishedVersionId: string | null = null;
-    let editingSnapshot: AgentSnapshot | null = null;
 
     for (const v of body.versions) {
       const [inserted] = await tx
@@ -69,14 +67,17 @@ export async function POST(req: Request) {
           agentId: agent.id,
           version: v.version,
           changelog: v.changelog ?? "",
-          snapshot: v.snapshot,
           createdBy: orgCtx.user.id,
         })
         .returning();
 
+      // Restore snapshot into resource rows for this version
+      if (v.snapshot) {
+        await restoreSnapshot(agent.id, inserted.id, v.snapshot, tx);
+      }
+
       if (v.isEditing) {
         editingVersionId = inserted.id;
-        editingSnapshot = v.snapshot;
       }
       if (v.isPublished) {
         publishedVersionId = inserted.id;
@@ -86,7 +87,6 @@ export async function POST(req: Request) {
     // Fallback: if no version marked, use the last one
     if (!editingVersionId || !publishedVersionId) {
       const lastVersion = body.versions[body.versions.length - 1];
-      // Re-fetch the last inserted version's id
       const allVersions = await tx
         .select({ id: agentVersions.id, version: agentVersions.version })
         .from(agentVersions)
@@ -96,7 +96,6 @@ export async function POST(req: Request) {
       );
       if (!editingVersionId && lastInserted) {
         editingVersionId = lastInserted.id;
-        editingSnapshot = lastVersion.snapshot;
       }
       if (!publishedVersionId && lastInserted) {
         publishedVersionId = lastInserted.id;
@@ -108,11 +107,6 @@ export async function POST(req: Request) {
       .update(agents)
       .set({ editingVersionId, publishedVersionId })
       .where(eq(agents.id, agent.id));
-
-    // 5. Restore editing version's snapshot into live resource tables
-    if (editingSnapshot) {
-      await restoreSnapshot(agent.id, editingSnapshot, tx);
-    }
 
     return agent;
   });

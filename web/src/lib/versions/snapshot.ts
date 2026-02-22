@@ -48,7 +48,6 @@ import type {
   SkillSnapshotItem,
   ResourceRefSnapshotItem,
 } from "./types";
-import type { JsonSchema7 } from "@/lib/schemas/types";
 
 type Tx = PgTransaction<
   PostgresJsQueryResultHKT,
@@ -56,25 +55,11 @@ type Tx = PgTransaction<
   ExtractTablesWithRelations<typeof schema>
 >;
 
-/**
- * Previously used to remap x-enumDatasetId UUIDs in schema snapshots.
- * Now that x-enumDatasetId has been replaced by template strings (e.g. "{{dataset_key}}"),
- * no remapping is needed — schemas use human-readable keys directly.
- *
- * @deprecated Kept for API compatibility; returns the schema unchanged.
- */
-export function remapParameterRefs(
-  schema: JsonSchema7,
-  _datasetMap?: Map<string, string>
-): JsonSchema7 {
-  return schema;
-}
-
 /* ═══════════════════════════════════════════════
    Build Snapshot
    ═══════════════════════════════════════════════ */
 
-export async function buildSnapshot(agentId: string, externalDb?: typeof db): Promise<AgentSnapshot> {
+export async function buildSnapshot(agentId: string, versionId: string, externalDb?: typeof db): Promise<AgentSnapshot> {
   const _db = externalDb ?? db;
   const [
     [agent],
@@ -98,30 +83,30 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
     refRows,
   ] = await Promise.all([
     _db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
-    _db.select().from(tools).where(and(eq(tools.agentId, agentId), isNull(tools.deletedAt))),
-    _db.select().from(functions).where(and(eq(functions.agentId, agentId), isNull(functions.deletedAt))),
-    _db.select().from(components).where(and(eq(components.agentId, agentId), isNull(components.deletedAt))),
-    _db.select().from(schemas).where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt))),
-    _db.select().from(wikiDocuments).where(and(eq(wikiDocuments.agentId, agentId), isNull(wikiDocuments.deletedAt))),
-    _db.select().from(datasets).where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt))),
-    _db.select().from(modelConfigs).where(and(eq(modelConfigs.agentId, agentId), isNull(modelConfigs.deletedAt))),
-    _db.select().from(chatConfigs).where(eq(chatConfigs.agentId, agentId)),
-    _db.select().from(evalCases).where(and(eq(evalCases.agentId, agentId), isNull(evalCases.deletedAt))),
+    _db.select().from(tools).where(and(eq(tools.versionId, versionId), isNull(tools.deletedAt))),
+    _db.select().from(functions).where(and(eq(functions.versionId, versionId), isNull(functions.deletedAt))),
+    _db.select().from(components).where(and(eq(components.versionId, versionId), isNull(components.deletedAt))),
+    _db.select().from(schemas).where(and(eq(schemas.versionId, versionId), isNull(schemas.deletedAt))),
+    _db.select().from(wikiDocuments).where(and(eq(wikiDocuments.versionId, versionId), isNull(wikiDocuments.deletedAt))),
+    _db.select().from(datasets).where(and(eq(datasets.versionId, versionId), isNull(datasets.deletedAt))),
+    _db.select().from(modelConfigs).where(and(eq(modelConfigs.versionId, versionId), isNull(modelConfigs.deletedAt))),
+    _db.select().from(chatConfigs).where(eq(chatConfigs.versionId, versionId)),
+    _db.select().from(evalCases).where(and(eq(evalCases.versionId, versionId), isNull(evalCases.deletedAt))),
     _db
       .select()
       .from(evalJudgeConfigs)
-      .where(and(eq(evalJudgeConfigs.agentId, agentId), isNull(evalJudgeConfigs.deletedAt))),
+      .where(and(eq(evalJudgeConfigs.versionId, versionId), isNull(evalJudgeConfigs.deletedAt))),
     // Test cases: join through parent tables (only non-deleted parents)
     _db
       .select()
       .from(toolTestCases)
       .innerJoin(tools, eq(toolTestCases.toolId, tools.id))
-      .where(and(eq(tools.agentId, agentId), isNull(tools.deletedAt))),
+      .where(and(eq(tools.versionId, versionId), isNull(tools.deletedAt))),
     _db
       .select()
       .from(functionTestCases)
       .innerJoin(functions, eq(functionTestCases.functionId, functions.id))
-      .where(and(eq(functions.agentId, agentId), isNull(functions.deletedAt))),
+      .where(and(eq(functions.versionId, versionId), isNull(functions.deletedAt))),
     _db
       .select()
       .from(componentTestCases)
@@ -129,12 +114,12 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         components,
         eq(componentTestCases.componentId, components.id)
       )
-      .where(and(eq(components.agentId, agentId), isNull(components.deletedAt))),
-    _db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))),
-    _db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
-    _db.select().from(mcpServers).where(and(eq(mcpServers.agentId, agentId), isNull(mcpServers.deletedAt))),
-    _db.select().from(skills).where(and(eq(skills.agentId, agentId), isNull(skills.deletedAt))),
-    _db.select().from(agentResourceRefs).where(eq(agentResourceRefs.agentId, agentId)),
+      .where(and(eq(components.versionId, versionId), isNull(components.deletedAt))),
+    _db.select().from(objectTypes).where(and(eq(objectTypes.versionId, versionId), isNull(objectTypes.deletedAt))),
+    _db.select().from(objectRelations).where(and(eq(objectRelations.versionId, versionId), isNull(objectRelations.deletedAt))),
+    _db.select().from(mcpServers).where(and(eq(mcpServers.versionId, versionId), isNull(mcpServers.deletedAt))),
+    _db.select().from(skills).where(and(eq(skills.versionId, versionId), isNull(skills.deletedAt))),
+    _db.select().from(agentResourceRefs).where(eq(agentResourceRefs.versionId, versionId)),
   ]);
 
   if (!agent) throw new Error("Agent not found");
@@ -189,9 +174,6 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
 
   // Schema: convert id to key for snapshot references
   const schemaIdToKey = new Map(schemaRows.map((s) => [s.id, s.key]));
-
-  // Dataset: convert id to key for parameter refs
-  const datasetIdToKey = new Map(datasetRows.map((d) => [d.id, d.key]));
 
   // ObjectType: convert id to key for relation snapshot references
   const objTypeIdToKey = new Map(objectTypeRows.map((t) => [t.id, t.key]));
@@ -275,7 +257,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         key: s.key,
         name: s.name,
         description: s.description,
-        parameters: remapParameterRefs(s.parameters, datasetIdToKey),
+        parameters: s.parameters,
       })
     ),
     wikiDocuments: wikiRows.map(
@@ -394,58 +376,53 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
 
 export async function restoreSnapshot(
   agentId: string,
+  versionId: string,
   snapshot: AgentSnapshot,
   tx: Tx
 ) {
   // 1. Delete all existing config data (CASCADE takes care of test cases & test runs)
   // Delete objectRelations first (FK → objectTypes), then objectTypes
-  await tx.delete(objectRelations).where(eq(objectRelations.agentId, agentId));
+  await tx.delete(objectRelations).where(eq(objectRelations.versionId, versionId));
   await Promise.all([
-    tx.delete(objectTypes).where(eq(objectTypes.agentId, agentId)),
-    tx.delete(tools).where(eq(tools.agentId, agentId)),
-    tx.delete(functions).where(eq(functions.agentId, agentId)),
-    tx.delete(components).where(eq(components.agentId, agentId)),
-    tx.delete(schemas).where(eq(schemas.agentId, agentId)),
-    tx.delete(wikiDocuments).where(eq(wikiDocuments.agentId, agentId)),
-    tx.delete(datasets).where(eq(datasets.agentId, agentId)),
-    tx.delete(modelConfigs).where(eq(modelConfigs.agentId, agentId)),
-    tx.delete(chatConfigs).where(eq(chatConfigs.agentId, agentId)),
-    tx.delete(evalCases).where(eq(evalCases.agentId, agentId)),
-    tx.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.agentId, agentId)),
-    tx.delete(mcpServers).where(eq(mcpServers.agentId, agentId)),
-    tx.delete(skills).where(eq(skills.agentId, agentId)),
-    tx.delete(agentResourceRefs).where(eq(agentResourceRefs.agentId, agentId)),
+    tx.delete(objectTypes).where(eq(objectTypes.versionId, versionId)),
+    tx.delete(tools).where(eq(tools.versionId, versionId)),
+    tx.delete(functions).where(eq(functions.versionId, versionId)),
+    tx.delete(components).where(eq(components.versionId, versionId)),
+    tx.delete(schemas).where(eq(schemas.versionId, versionId)),
+    tx.delete(wikiDocuments).where(eq(wikiDocuments.versionId, versionId)),
+    tx.delete(datasets).where(eq(datasets.versionId, versionId)),
+    tx.delete(modelConfigs).where(eq(modelConfigs.versionId, versionId)),
+    tx.delete(chatConfigs).where(eq(chatConfigs.versionId, versionId)),
+    tx.delete(evalCases).where(eq(evalCases.versionId, versionId)),
+    tx.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.versionId, versionId)),
+    tx.delete(mcpServers).where(eq(mcpServers.versionId, versionId)),
+    tx.delete(skills).where(eq(skills.versionId, versionId)),
+    tx.delete(agentResourceRefs).where(eq(agentResourceRefs.versionId, versionId)),
   ]);
 
-  // 2a. Rebuild datasets first (schemas may reference them via enumDatasetId in parameters)
-  const datasetKeyToNewId = new Map<string, string>();
+  // 2a. Rebuild datasets
   if (snapshot.datasets.length > 0) {
-    const insertedDatasets = await tx
-      .insert(datasets)
-      .values(
-        snapshot.datasets.map((d) => ({
-          agentId,
-          key: d.key,
-          name: d.name,
-          description: d.description,
-          data: d.data,
-        }))
-      )
-      .returning({ id: datasets.id, key: datasets.key });
-    for (const d of insertedDatasets) {
-      datasetKeyToNewId.set(d.key, d.id);
-    }
+    await tx.insert(datasets).values(
+      snapshot.datasets.map((d) => ({
+        agentId,
+        versionId,
+        key: d.key,
+        name: d.name,
+        description: d.description,
+        data: d.data,
+      }))
+    );
   }
 
   // 2b. Rebuild schemas (tools/components reference them via FK)
   const schemaKeyToNewId = new Map<string, string>();
   if (snapshot.schemas.length > 0) {
-    // Insert schemas (parameters still contain dataset key references)
     const insertedSchemas = await tx
       .insert(schemas)
       .values(
         snapshot.schemas.map((s) => ({
           agentId,
+          versionId,
           key: s.key,
           name: s.name,
           description: s.description,
@@ -457,16 +434,8 @@ export async function restoreSnapshot(
       schemaKeyToNewId.set(s.key, s.id);
     }
 
-    // Remap dataset key→newUUID in parameters and update each schema
-    for (const s of snapshot.schemas) {
-      const schemaId = schemaKeyToNewId.get(s.key);
-      if (!schemaId) continue;
-      const remapped = remapParameterRefs(s.parameters, datasetKeyToNewId);
-      await tx
-        .update(schemas)
-        .set({ parameters: remapped })
-        .where(eq(schemas.id, schemaId));
-    }
+    // Note: parameters use Liquid template strings ("{{dataset_key}}") now,
+    // no UUID remapping needed.
   }
 
   // 2b. Rebuild objectTypes (after schemas, since they reference schemas via FK)
@@ -477,6 +446,7 @@ export async function restoreSnapshot(
       .values(
         snapshot.objectTypes.map((t) => ({
           agentId,
+          versionId,
           key: t.key,
           name: t.name,
           description: t.description,
@@ -500,6 +470,7 @@ export async function restoreSnapshot(
     await tx.insert(objectRelations).values(
       snapshot.objectRelations.map((r) => ({
         agentId,
+        versionId,
         key: r.key,
         name: r.name,
         description: r.description,
@@ -520,6 +491,7 @@ export async function restoreSnapshot(
       .values(
         snapshot.components.map((c) => ({
           agentId,
+          versionId,
           key: c.key,
           name: c.name,
           description: c.description,
@@ -556,6 +528,7 @@ export async function restoreSnapshot(
       .values(
         snapshot.tools.map((t) => ({
           agentId,
+          versionId,
           key: t.key,
           name: t.name,
           description: t.description,
@@ -592,6 +565,7 @@ export async function restoreSnapshot(
       .values(
         snapshot.functions.map((f) => ({
           agentId,
+          versionId,
           key: f.key,
           name: f.name,
           description: f.description,
@@ -624,6 +598,7 @@ export async function restoreSnapshot(
     // First pass: insert all with parentId = null
     const wikiValues = snapshot.wikiDocuments.map((w) => ({
       agentId,
+      versionId,
       key: w.key,
       name: w.name,
       content: w.content,
@@ -659,6 +634,7 @@ export async function restoreSnapshot(
     await tx.insert(modelConfigs).values(
       snapshot.modelConfigs.map((m) => ({
         agentId,
+        versionId,
         key: m.key,
         name: m.name,
         modelId: m.modelId,
@@ -673,6 +649,7 @@ export async function restoreSnapshot(
   if (snapshot.chatConfig) {
     await tx.insert(chatConfigs).values({
       agentId,
+      versionId,
       title: snapshot.chatConfig.title,
       welcomeTitle: snapshot.chatConfig.welcomeTitle,
       welcomeIcon: snapshot.chatConfig.welcomeIcon,
@@ -687,6 +664,7 @@ export async function restoreSnapshot(
     await tx.insert(evalCases).values(
       snapshot.evalCases.map((e) => ({
         agentId,
+        versionId,
         key: e.key,
         name: e.name,
         mode: e.mode,
@@ -703,6 +681,7 @@ export async function restoreSnapshot(
     await tx.insert(evalJudgeConfigs).values(
       snapshot.evalJudgeConfigs.map((j) => ({
         agentId,
+        versionId,
         key: j.key,
         name: j.name,
         model: j.model,
@@ -719,6 +698,7 @@ export async function restoreSnapshot(
     await tx.insert(mcpServers).values(
       snapshot.mcpServers.map((s) => ({
         agentId,
+        versionId,
         key: s.key,
         name: s.name,
         description: s.description,
@@ -735,6 +715,7 @@ export async function restoreSnapshot(
     await tx.insert(skills).values(
       snapshot.skills.map((s) => ({
         agentId,
+        versionId,
         key: s.key,
         name: s.name,
         description: s.description,
@@ -759,6 +740,7 @@ export async function restoreSnapshot(
           .insert(agentResourceRefs)
           .values({
             agentId,
+            versionId,
             resourceType: ref.resourceType,
             resourceId: (poolResource as { id: string }).id,
             enabled: ref.enabled,

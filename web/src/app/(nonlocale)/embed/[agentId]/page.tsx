@@ -339,6 +339,7 @@ function EmbedChat({
         ...t,
         id: "",
         agentId,
+        versionId: null,
         key: t.name,
         description: "",
         parametersSchema: null,

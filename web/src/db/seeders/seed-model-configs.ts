@@ -23,9 +23,9 @@ export const seedModelConfigs: Seeder = {
       const key = cfg.key ?? toKey(cfg.name);
       const [row] = await ctx.db
         .insert(modelConfigs)
-        .values({ ...cfg, key, agentId: ctx.agentId })
+        .values({ ...cfg, key, agentId: ctx.agentId, versionId: ctx.versionId })
         .onConflictDoUpdate({
-          target: [modelConfigs.agentId, modelConfigs.key],
+          target: [modelConfigs.versionId, modelConfigs.key],
           set: {
             name: cfg.name,
             modelId: cfg.modelId ?? "",

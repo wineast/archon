@@ -129,7 +129,7 @@ describe("ensureBuiltinToolRefs", () => {
     const poolToolRows = [{ id: "pt-aaa" }, { id: "pt-bbb" }];
     const db = createMockDb(poolToolRows);
 
-    await ensureBuiltinToolRefs(db as never, "agent-123");
+    await ensureBuiltinToolRefs(db as never, "agent-123", "version-123");
 
     // 1 insert for ensureBuiltinPoolTools + 2 inserts for refs = 3
     expect(db.insert).toHaveBeenCalledTimes(3);
@@ -156,7 +156,7 @@ describe("ensureBuiltinToolRefs", () => {
     mockBuildAllTools.mockReturnValue(makeSampleTools(1));
     const db = createMockDb([]); // select returns empty
 
-    await ensureBuiltinToolRefs(db as never, "agent-456");
+    await ensureBuiltinToolRefs(db as never, "agent-456", "version-456");
 
     // 1 insert for ensureBuiltinPoolTools, 0 for refs
     expect(db.insert).toHaveBeenCalledTimes(1);
@@ -167,7 +167,7 @@ describe("ensureBuiltinToolRefs", () => {
     mockBuildAllTools.mockReturnValue(makeSampleTools(1));
     const db = createMockDb([{ id: "pt-1" }]);
 
-    await ensureBuiltinToolRefs(db as never, "agent-789");
+    await ensureBuiltinToolRefs(db as never, "agent-789", "version-789");
 
     // insert is called before select (first call is pool tools insert)
     const insertOrder = db.insert.mock.invocationCallOrder[0];

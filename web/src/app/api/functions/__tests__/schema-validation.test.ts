@@ -51,6 +51,9 @@ vi.mock("@/lib/functions/compile", () => ({ clearFunctionCache: vi.fn() }));
 vi.mock("@/lib/pool/queries", () => ({
   getAgentResources: vi.fn().mockResolvedValue([]),
 }));
+vi.mock("@/lib/versions/resolve", () => ({
+  resolveEditingVersionId: vi.fn().mockResolvedValue("mock-version-id"),
+}));
 
 const { POST } = await import("../route");
 const { PATCH } = await import("../[id]/route");

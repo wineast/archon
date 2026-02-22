@@ -3,10 +3,11 @@ import { db } from "@/db";
 import { agents, agentVersions, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { buildSnapshot } from "@/lib/versions/snapshot";
 
 type Params = Promise<{ id: string; versionId: string }>;
 
-/** GET — version detail (with snapshot) */
+/** GET — version detail (with on-the-fly snapshot) */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Params }
@@ -21,7 +22,6 @@ export async function GET(
       agentId: agentVersions.agentId,
       version: agentVersions.version,
       changelog: agentVersions.changelog,
-      snapshot: agentVersions.snapshot,
       createdBy: agentVersions.createdBy,
       createdAt: agentVersions.createdAt,
       creatorNickname: users.nickname,
@@ -36,7 +36,10 @@ export async function GET(
     return NextResponse.json({ error: "Version not found" }, { status: 404 });
   }
 
-  return NextResponse.json(row);
+  // Build snapshot on-the-fly from resource rows
+  const snapshot = await buildSnapshot(agentId, versionId);
+
+  return NextResponse.json({ ...row, snapshot });
 }
 
 /** DELETE — delete a version */

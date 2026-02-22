@@ -7,6 +7,7 @@ import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { validateNoCycle } from "@/lib/datasets/queries";
 import { logAudit } from "@/lib/audit/log";
 import { getAgentResources } from "@/lib/pool/queries";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -17,7 +18,8 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await getAgentResources<DatasetRow>(agentId, "dataset");
+  const versionId = await resolveEditingVersionId(agentId);
+  const rows = await getAgentResources<DatasetRow>(agentId, "dataset", versionId);
   return NextResponse.json(rows);
 }
 
@@ -31,8 +33,11 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  const versionId = await resolveEditingVersionId(agentId);
+
   const newRow = {
     agentId: body.agentId ?? null,
+    versionId,
     key: body.key,
     name: body.name,
     description: body.description ?? "",

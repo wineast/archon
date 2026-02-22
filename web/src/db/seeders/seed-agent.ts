@@ -1,5 +1,5 @@
 import { join } from "path";
-import { agents, agentMembers, users } from "../schema";
+import { agents, agentMembers, agentVersions, users } from "../schema";
 import type { AgentScope } from "../schema";
 import { readJson, logSection, log } from "../seed-utils";
 import { eq, and } from "drizzle-orm";
@@ -25,7 +25,7 @@ export const seedAgent: Seeder = {
 
     // Check if agent already exists in this org
     const [existing] = await ctx.db
-      .select()
+      .select({ id: agents.id, editingVersionId: agents.editingVersionId })
       .from(agents)
       .where(
         and(eq(agents.orgId, ctx.orgId), eq(agents.slug, agentSeed.slug))
@@ -44,6 +44,9 @@ export const seedAgent: Seeder = {
         })
         .where(eq(agents.id, existing.id))
         .returning();
+
+      // Use existing editing version
+      ctx.versionId = existing.editingVersionId ?? "";
     } else {
       [agent] = await ctx.db
         .insert(agents)
@@ -57,10 +60,28 @@ export const seedAgent: Seeder = {
           isPublic: true,
         })
         .returning();
+
+      // Create initial version
+      const [version] = await ctx.db
+        .insert(agentVersions)
+        .values({
+          agentId: agent.id,
+          version: "0.1.0",
+          changelog: "Initial version",
+        })
+        .returning();
+
+      // Set pointers
+      await ctx.db
+        .update(agents)
+        .set({ editingVersionId: version.id, publishedVersionId: version.id })
+        .where(eq(agents.id, agent.id));
+
+      ctx.versionId = version.id;
     }
 
     ctx.agentId = agent.id;
-    log("ok", `${agent.name} (${agent.id})`);
+    log("ok", `${agent.name} (${agent.id}) version=${ctx.versionId}`);
 
     // Make all users owners of the agent
     logSection("Seeding agent members");

@@ -5,6 +5,7 @@ import type { ResourceType } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { RESOURCE_TABLE_MAP } from "@/lib/pool/constants";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 /**
  * GET /api/agents/[id]/refs — list all resource refs for an agent
@@ -70,10 +71,13 @@ export async function POST(
     );
   }
 
+  const versionId = await resolveEditingVersionId(agentId);
+
   const [created] = await db
     .insert(agentResourceRefs)
     .values({
       agentId,
+      versionId,
       resourceType: resourceType as ResourceType,
       resourceId,
     })

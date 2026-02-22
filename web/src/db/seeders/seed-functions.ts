@@ -42,9 +42,9 @@ export const seedFunctions: Seeder = {
           const schemaName = `${name} Parameters`;
           const [schemaRow] = await ctx.db
             .insert(schemas)
-            .values({ agentId, key: schemaKey, name: schemaName, parameters: paramsSchema })
+            .values({ agentId, versionId: ctx.versionId, key: schemaKey, name: schemaName, parameters: paramsSchema })
             .onConflictDoUpdate({
-              target: [schemas.agentId, schemas.key],
+              target: [schemas.versionId, schemas.key],
               set: { name: schemaName, parameters: paramsSchema },
             })
             .returning();
@@ -65,9 +65,9 @@ export const seedFunctions: Seeder = {
           const schemaName = `${name} Return Parameters`;
           const [schemaRow] = await ctx.db
             .insert(schemas)
-            .values({ agentId, key: schemaKey, name: schemaName, parameters: returnParamsSchema })
+            .values({ agentId, versionId: ctx.versionId, key: schemaKey, name: schemaName, parameters: returnParamsSchema })
             .onConflictDoUpdate({
-              target: [schemas.agentId, schemas.key],
+              target: [schemas.versionId, schemas.key],
               set: { name: schemaName, parameters: returnParamsSchema },
             })
             .returning();
@@ -95,6 +95,7 @@ export const seedFunctions: Seeder = {
         .insert(functions)
         .values({
           agentId,
+          versionId: ctx.versionId,
           key,
           name,
           description: "",
@@ -103,7 +104,7 @@ export const seedFunctions: Seeder = {
           returnParametersSchema: returnParamsSchema,
         })
         .onConflictDoUpdate({
-          target: [functions.agentId, functions.key],
+          target: [functions.versionId, functions.key],
           set: { name, code, parametersSchema: paramsSchema, returnParametersSchema: returnParamsSchema },
         })
         .returning();

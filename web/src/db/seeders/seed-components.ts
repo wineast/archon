@@ -34,6 +34,7 @@ export const seedComponents: Seeder = {
         .insert(components)
         .values({
           agentId: ctx.agentId,
+          versionId: ctx.versionId,
           key,
           name,
           description: "",
@@ -41,7 +42,7 @@ export const seedComponents: Seeder = {
           generatedCss,
         })
         .onConflictDoUpdate({
-          target: [components.agentId, components.key],
+          target: [components.versionId, components.key],
           set: { name, componentSource: source, generatedCss },
         });
       log("info", `${key} (css: ${generatedCss.length} bytes)`);
@@ -52,7 +53,7 @@ export const seedComponents: Seeder = {
     const allComponentRows = await ctx.db
       .select({ id: components.id, key: components.key })
       .from(components)
-      .where(eq(components.agentId, ctx.agentId));
+      .where(eq(components.versionId, ctx.versionId));
     for (const c of allComponentRows) {
       ctx.componentKeyToId[c.key] = c.id;
     }

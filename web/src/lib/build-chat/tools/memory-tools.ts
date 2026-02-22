@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { memoryConfigs, memories } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTool = Tool<any, any>;
@@ -65,9 +66,10 @@ export function buildMemoryTools(agentId: string): Record<string, AnyTool> {
             .where(eq(memoryConfigs.id, existing.id))
             .returning();
         } else {
+          const versionId = await resolveEditingVersionId(agentId);
           [row] = await db
             .insert(memoryConfigs)
-            .values({ ...params, agentId })
+            .values({ ...params, agentId, versionId })
             .returning();
         }
 

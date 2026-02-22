@@ -60,7 +60,8 @@ export interface ResourceSummary {
  * Only selects id, key, name, description — no large content fields.
  */
 export async function gatherResourceSummary(
-  agentId: string
+  agentId: string,
+  versionId: string,
 ): Promise<ResourceSummary> {
   // Check if skills feature is enabled for this agent
   const [agentRow] = await db
@@ -84,12 +85,12 @@ export async function gatherResourceSummary(
     allMcpServerRows,
     skillRows,
   ] = await Promise.all([
-    getAgentResources<ToolRow>(agentId, "tool"),
-    getAgentResources<SchemaRow>(agentId, "schema"),
-    getAgentResources<WikiDocumentRow>(agentId, "wiki"),
-    getAgentResources<DatasetRow>(agentId, "dataset"),
-    getAgentResources<FunctionRow>(agentId, "function"),
-    getAgentResources<ComponentRow>(agentId, "component"),
+    getAgentResources<ToolRow>(agentId, "tool", versionId),
+    getAgentResources<SchemaRow>(agentId, "schema", versionId),
+    getAgentResources<WikiDocumentRow>(agentId, "wiki", versionId),
+    getAgentResources<DatasetRow>(agentId, "dataset", versionId),
+    getAgentResources<FunctionRow>(agentId, "function", versionId),
+    getAgentResources<ComponentRow>(agentId, "component", versionId),
     db
       .select({
         id: modelConfigs.id,
@@ -131,7 +132,7 @@ export async function gatherResourceSummary(
       })
       .from(objectRelations)
       .where(eq(objectRelations.agentId, agentId)),
-    getAgentResources<McpServerRow>(agentId, "mcp-server"),
+    getAgentResources<McpServerRow>(agentId, "mcp-server", versionId),
     skillsFeatureEnabled
       ? db
           .select({

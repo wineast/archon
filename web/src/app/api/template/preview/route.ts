@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { renderSystemPrompt } from "@/lib/template/render";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { getDatasets, resolveDatasets, renderField, renderObjectField } from "@/lib/datasets/queries";
 
 export async function POST(req: Request) {
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ rendered });
   }
 
-  const rendered = await renderSystemPrompt(text, agentId);
+  const versionId = await resolveEditingVersionId(agentId);
+  const rendered = await renderSystemPrompt(text, agentId, undefined, versionId);
   return NextResponse.json({ rendered });
 }

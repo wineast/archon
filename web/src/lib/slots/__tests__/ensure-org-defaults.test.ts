@@ -4,6 +4,8 @@ let selectLimitResult: unknown[] = [];
 const mockInsert = vi.fn();
 const mockValues = vi.fn();
 
+const mockUpdate = vi.fn();
+
 vi.mock("@/db", () => ({
   db: {
     insert: (...args: unknown[]) => {
@@ -18,6 +20,14 @@ vi.mock("@/db", () => ({
         },
       };
     },
+    update: (...args: unknown[]) => {
+      mockUpdate(...args);
+      return {
+        set: () => ({
+          where: () => Promise.resolve(),
+        }),
+      };
+    },
     select: () => ({
       from: () => ({
         where: () => ({
@@ -29,7 +39,8 @@ vi.mock("@/db", () => ({
 }));
 
 vi.mock("@/db/schema", () => ({
-  agents: { id: "id", orgId: "orgId", slug: "slug" },
+  agents: { id: "id", orgId: "orgId", slug: "slug", editingVersionId: "editingVersionId", publishedVersionId: "publishedVersionId" },
+  agentVersions: { agentId: "agentId" },
   modelConfigs: { agentId: "agentId" },
   tools: { agentId: "agentId" },
   orgSlots: { orgId: "orgId", slotKey: "slotKey", agentId: "agentId" },
@@ -52,8 +63,8 @@ describe("ensureOrgDefaults", () => {
   it("creates 3 agents + modelConfigs + orgSlots when none exist", async () => {
     await ensureOrgDefaults("org-1");
 
-    // For each of 3 slots: agent insert + modelConfig insert + orgSlot insert = 9
-    expect(mockInsert).toHaveBeenCalledTimes(9);
+    // For each of 3 slots: agent insert + agentVersion insert + modelConfig insert + orgSlot insert = 12
+    expect(mockInsert).toHaveBeenCalledTimes(12);
   });
 
   it("seeds builtin tool refs only for builder slot", async () => {
@@ -61,9 +72,10 @@ describe("ensureOrgDefaults", () => {
 
     // ensureBuiltinToolRefs called once for builder slot
     expect(mockEnsureBuiltinToolRefs).toHaveBeenCalledTimes(1);
-    // Second argument is the builder agent ID
+    // Second argument is the builder agent ID, third is the version ID
     expect(mockEnsureBuiltinToolRefs).toHaveBeenCalledWith(
       expect.anything(),
+      "new-agent-id",
       "new-agent-id",
     );
   });

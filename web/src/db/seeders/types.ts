@@ -5,6 +5,7 @@ export interface SeedContext {
   db: SeedDb;
   orgId: string;
   agentId: string;
+  versionId: string;
   agentDir: string;
   /** component key → id */
   componentKeyToId: Record<string, string>;

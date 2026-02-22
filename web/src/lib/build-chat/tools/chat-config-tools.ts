@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { chatConfigs } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTool = Tool<any, any>;
@@ -51,9 +52,10 @@ export function buildChatConfigTools(agentId: string): Record<string, AnyTool> {
             .where(eq(chatConfigs.id, existing.id))
             .returning();
         } else {
+          const versionId = await resolveEditingVersionId(agentId);
           [row] = await db
             .insert(chatConfigs)
-            .values({ ...params, agentId })
+            .values({ ...params, agentId, versionId })
             .returning();
         }
 

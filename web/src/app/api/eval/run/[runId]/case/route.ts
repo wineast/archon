@@ -12,6 +12,7 @@ import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
 import { resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { recordUsage } from "@/lib/usage/record";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
@@ -67,7 +68,9 @@ export async function POST(
 
   const dimensions = judgeConfig.dimensions ?? [];
   const judgeSchema = buildJudgeSchema(dimensions);
-  const templateData = await gatherTemplateData(modelConfig.agentId ?? undefined);
+  const evalAgentId = modelConfig.agentId ?? undefined;
+  const evalVersionId = evalAgentId ? await resolveEditingVersionId(evalAgentId) : undefined;
+  const templateData = await gatherTemplateData(evalAgentId, evalVersionId);
 
   const start = Date.now();
   let result: EvalResult;

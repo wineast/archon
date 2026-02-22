@@ -25,13 +25,14 @@ export const seedDatasets: Seeder = {
         .insert(datasets)
         .values({
           agentId,
+          versionId: ctx.versionId,
           key: ds.key,
           name: ds.name,
           description: ds.description ?? "",
           data: ds.data,
         })
         .onConflictDoUpdate({
-          target: [datasets.agentId, datasets.key],
+          target: [datasets.versionId, datasets.key],
           set: { name: ds.name, description: ds.description ?? "", data: ds.data },
         })
         .returning();
@@ -50,9 +51,9 @@ export const seedDatasets: Seeder = {
 
       const [row] = await ctx.db
         .insert(datasets)
-        .values({ agentId, key, name, description: `Pricing configuration for ${name}`, data })
+        .values({ agentId, versionId: ctx.versionId, key, name, description: `Pricing configuration for ${name}`, data })
         .onConflictDoUpdate({
-          target: [datasets.agentId, datasets.key],
+          target: [datasets.versionId, datasets.key],
           set: { name, description: `Pricing configuration for ${name}`, data },
         })
         .returning();
@@ -66,7 +67,7 @@ export const seedDatasets: Seeder = {
     const allDatasetRows = await ctx.db
       .select({ id: datasets.id, key: datasets.key })
       .from(datasets)
-      .where(eq(datasets.agentId, agentId));
+      .where(eq(datasets.versionId, ctx.versionId));
     for (const d of allDatasetRows) {
       ctx.datasetKeyToId[d.key] = d.id;
     }

@@ -55,8 +55,8 @@ export interface TemplateData {
 // DB helpers
 // ---------------------------------------------------------------------------
 
-async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
-  const rows = await getAgentWikiDocs(agentId);
+async function getWikiDocs(agentId: string, versionId: string): Promise<WikiDocument[]> {
+  const rows = await getAgentWikiDocs(agentId, versionId);
 
   return rows.map((r) => ({
     ...r,
@@ -87,8 +87,8 @@ function getBuiltinVars(): Record<string, string> {
 // Tool namespace
 // ---------------------------------------------------------------------------
 
-async function getEnabledTools(agentId: string): Promise<ToolRow[]> {
-  return getAgentEnabledTools(agentId);
+async function getEnabledTools(agentId: string, versionId: string): Promise<ToolRow[]> {
+  return getAgentEnabledTools(agentId, versionId);
 }
 
 export function buildToolNamespace(
@@ -185,17 +185,18 @@ async function renderWithData(
  * same data (e.g. eval loop) to avoid redundant DB queries.
  */
 export async function gatherTemplateData(
-  agentId?: string
+  agentId?: string,
+  versionId?: string,
 ): Promise<TemplateData> {
-  if (!agentId) {
+  if (!agentId || !versionId) {
     return { resolvedVars: {}, docs: [], toolRows: [], defsMap: {}, datasetEntries: {}, ontologyTypes: [] };
   }
 
   const [datasetRows, docs, toolRows, allSchemaRows, objTypeRows, objRelRows] = await Promise.all([
-    getAgentDatasets(agentId),
-    getWikiDocs(agentId),
-    getEnabledTools(agentId),
-    getAgentSchemas(agentId),
+    getAgentDatasets(agentId, versionId),
+    getWikiDocs(agentId, versionId),
+    getEnabledTools(agentId, versionId),
+    getAgentSchemas(agentId, versionId),
     db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))).orderBy(objectTypes.order),
     db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
   ]);
@@ -288,12 +289,13 @@ export async function renderTemplate(
 export async function renderSystemPrompt(
   systemPrompt: string,
   agentId?: string,
-  extraVars?: Record<string, unknown>
+  extraVars?: Record<string, unknown>,
+  versionId?: string,
 ): Promise<string> {
   if (!systemPrompt) return systemPrompt;
 
   try {
-    const data = await gatherTemplateData(agentId);
+    const data = await gatherTemplateData(agentId, versionId);
     return await renderTemplate(systemPrompt, data, extraVars);
   } catch (e) {
     console.error("[renderSystemPrompt] template rendering failed:", e);
@@ -308,12 +310,13 @@ export async function renderSystemPrompt(
 export async function renderWikiContent(
   content: string,
   agentId: string,
-  currentDocId: string
+  currentDocId: string,
+  versionId?: string,
 ): Promise<string> {
   if (!content) return content;
 
   try {
-    const data = await gatherTemplateData(agentId);
+    const data = await gatherTemplateData(agentId, versionId);
     const strippedContent = stripFrontmatter(content);
 
     const currentDoc = data.docs.find((d) => d.id === currentDocId) ?? {

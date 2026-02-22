@@ -20,7 +20,7 @@
   - 始终在当前组织下创建**全新** Agent（不覆盖已有 Agent）
   - 如果 slug 冲突，自动追加后缀（如 `my-agent-2`）
   - 导入所有版本，恢复 editingVersionId 和 publishedVersionId 的指向
-  - 编辑版本的资源（tools、functions、components 等）会自动恢复到活表中
+  - 每个版本的资源通过 `restoreSnapshot` 恢复为带 versionId 的行
 
 ## JSON 格式
 
