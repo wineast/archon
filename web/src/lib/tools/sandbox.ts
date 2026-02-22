@@ -27,6 +27,7 @@ import {
   SandboxCompilationError,
   type SandboxOptions,
 } from "@/lib/functions/sandbox";
+import { compileExpression } from "filtrex";
 import { isModuleFormat } from "@/lib/modules/detect";
 import { transformToolHandlerImports } from "@/lib/modules/transform-tool-handler";
 import type { ToolContext } from "./tool-context";
@@ -286,6 +287,35 @@ function injectToolContext(
   ctxObj.dispose();
 }
 
+// ── Library injection ──
+
+/**
+ * Inject `__libs` global with archon:lib/* dependencies.
+ * Currently only exposes `compileExpression` from filtrex.
+ */
+function injectLibs(vm: QuickJSAsyncContext): void {
+  const libsObj = vm.newObject();
+
+  // filtrex: compileExpression
+  const ceHandle = vm.newFunction("compileExpression", (...qjsArgs) => {
+    const expression = vm.dump(qjsArgs[0]) as string;
+    const options = qjsArgs[1] ? (vm.dump(qjsArgs[1]) as Record<string, unknown>) : undefined;
+    const evaluator = compileExpression(expression, options);
+    // Return a QJS function that wraps the compiled evaluator
+    const evalHandle = vm.newFunction("evaluator", (...evalArgs) => {
+      const data = vm.dump(evalArgs[0]) as Record<string, unknown>;
+      const result = evaluator(data);
+      return marshalToQJS(vm, result);
+    });
+    return evalHandle;
+  });
+  vm.setProp(libsObj, "compileExpression", ceHandle);
+  ceHandle.dispose();
+
+  vm.setProp(vm.global, "__libs", libsObj);
+  libsObj.dispose();
+}
+
 // ── Public API ──
 
 /**
@@ -335,6 +365,9 @@ export async function executeToolInSandbox(
     const argsHandle = marshalToQJS(vm, args);
     vm.setProp(vm.global, "__args", argsHandle);
     argsHandle.dispose();
+
+    // Inject __libs (archon:lib/* dependencies)
+    injectLibs(vm);
 
     // Module format: transform imports into global references, then evaluate.
     // We can't use QuickJS ES module mode here because asyncified functions

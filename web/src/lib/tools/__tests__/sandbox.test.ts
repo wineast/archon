@@ -259,6 +259,41 @@ export default async function(args) {
     expect(ctx.dataset.get).toHaveBeenCalledWith("prices");
   });
 
+  it("executes a module-format handler importing archon:lib/filtrex", async () => {
+    const ctx = createMockContext();
+    const result = await executeToolInSandbox(
+      `import { compileExpression } from "archon:lib/filtrex";
+export default function(args) {
+  const expr = compileExpression("x + y * 2");
+  return { value: expr(args) };
+}`,
+      { x: 10, y: 5 },
+      ctx
+    );
+    expect(result).toEqual({ value: 20 });
+  });
+
+  it("executes a handler importing both archon:context and archon:lib/filtrex", async () => {
+    const ctx = createMockContext({
+      dataset: {
+        get: vi.fn().mockResolvedValue({ x: 3, y: 7 }),
+      },
+    });
+    const result = await executeToolInSandbox(
+      `import { dataset } from "archon:context";
+import { compileExpression } from "archon:lib/filtrex";
+export default async function(args) {
+  const data = await dataset.get(args.key);
+  const expr = compileExpression("x + y");
+  return { value: expr(data) };
+}`,
+      { key: "nums" },
+      ctx
+    );
+    expect(result).toEqual({ value: 10 });
+    expect(ctx.dataset.get).toHaveBeenCalledWith("nums");
+  });
+
   it("throws on module-format handler with non-function default export", async () => {
     const ctx = createMockContext();
     await expect(
