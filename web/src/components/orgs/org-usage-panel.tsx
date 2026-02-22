@@ -27,8 +27,6 @@ import {
   useOrgUsageDaily,
   useOrgUsageByAgent,
 } from "@/lib/orgs/usage-hooks";
-import { useOrgCredits } from "@/lib/orgs/credits-hooks";
-import { AlertTriangleIcon, XCircleIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatCost(cost: number) {
@@ -63,72 +61,10 @@ export function OrgUsagePanel({ orgId }: { orgId: string }) {
   const { data: daily, isLoading: dailyLoading } = useOrgUsageDaily(orgId, from, to);
   const { data: byAgent, isLoading: byAgentLoading } = useOrgUsageByAgent(orgId, from, to);
 
-  const { balance, isLoading: creditsLoading } = useOrgCredits(orgId);
-
-  // Compute consumed from summary data
-  const totalConsumed = summary?.total?.totalCost ?? 0;
-  const totalCredits = balance + totalConsumed;
-  const consumedPercent = totalCredits > 0 ? (totalConsumed / totalCredits) * 100 : 0;
 
   return (
     <ScrollArea className="h-full min-h-0">
       <div className="mx-auto max-w-4xl space-y-6 p-6">
-        {/* Credit Balance Card */}
-        {!creditsLoading && (
-          <Card
-            className={cn(
-              balance <= 0 && "border-red-500/50",
-              balance > 0 && balance <= 5 && "border-yellow-500/50"
-            )}
-          >
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                额度
-                {balance <= 0 && (
-                  <span className="flex items-center gap-1 text-xs text-red-500">
-                    <XCircleIcon className="size-3.5" />
-                    额度已用完
-                  </span>
-                )}
-                {balance > 0 && balance <= 5 && (
-                  <span className="flex items-center gap-1 text-xs text-yellow-600">
-                    <AlertTriangleIcon className="size-3.5" />
-                    额度即将用完
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-baseline gap-4">
-                <div>
-                  <div className="text-2xl font-bold">{formatCost(balance)}</div>
-                  <div className="text-xs text-muted-foreground">剩余额度</div>
-                </div>
-                <div>
-                  <div className="text-lg font-medium text-muted-foreground">{formatCost(totalConsumed)}</div>
-                  <div className="text-xs text-muted-foreground">已消耗</div>
-                </div>
-              </div>
-              {totalCredits > 0 && (
-                <div className="space-y-1">
-                  <div className="h-2 w-full rounded-full bg-muted">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all",
-                        consumedPercent >= 95 ? "bg-red-500" : consumedPercent >= 75 ? "bg-yellow-500" : "bg-primary"
-                      )}
-                      style={{ width: `${Math.min(consumedPercent, 100)}%` }}
-                    />
-                  </div>
-                  <div className="text-xs text-muted-foreground text-right">
-                    {consumedPercent.toFixed(1)}% 已使用
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         {/* Date Range Selector */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Period:</span>

@@ -21,9 +21,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useOrgCredits, purchaseCredits } from "@/lib/orgs/credits-hooks";
-import { AlertTriangleIcon, PlusIcon, XCircleIcon } from "lucide-react";
+import { PlusIcon, WalletIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 function formatCost(cost: number) {
   return new Intl.NumberFormat("en-US", {
@@ -119,40 +120,31 @@ export function OrgCreditsPanel({ orgId }: { orgId: string }) {
     <ScrollArea className="h-full min-h-0">
       <div className="mx-auto max-w-3xl space-y-6 p-6">
         {/* Balance Card */}
-        <Card
-          className={cn(
-            balance <= 0 && "border-red-500/50",
-            balance > 0 && balance <= 5 && "border-yellow-500/50"
-          )}
-        >
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              当前余额
-              {balance <= 0 && (
-                <span className="flex items-center gap-1 text-xs text-red-500">
-                  <XCircleIcon className="size-3.5" />
-                  额度已用完
-                </span>
-              )}
-              {balance > 0 && balance <= 5 && (
-                <span className="flex items-center gap-1 text-xs text-yellow-600">
-                  <AlertTriangleIcon className="size-3.5" />
-                  额度即将用完
-                </span>
-              )}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <WalletIcon className="size-4 text-muted-foreground" />
+                当前余额
+              </CardTitle>
               <Button
                 size="sm"
                 variant="outline"
-                className="ml-auto"
                 onClick={() => setPurchaseOpen(true)}
               >
-                <PlusIcon className="mr-1 size-3.5" />
+                <PlusIcon className="size-3.5" />
                 充值
               </Button>
-            </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{formatCost(balance)}</div>
+          <CardContent className="space-y-2">
+            <div className="text-3xl font-bold tracking-tight">{formatCost(balance)}</div>
+            {balance <= 0 && (
+              <Badge variant="destructive" className="text-xs">额度已用完</Badge>
+            )}
+            {balance > 0 && balance <= 5 && (
+              <Badge variant="outline" className="border-yellow-500/50 text-xs text-yellow-600">额度即将用完</Badge>
+            )}
           </CardContent>
         </Card>
 

@@ -64,21 +64,19 @@
 
 ```js
 import { wiki, dataset, fn, ontology } from "archon:context";
-import calc from "archon:fn/pricing_engine";
 
 export default async function(args) {
   const doc = await wiki.get("product-intro");           // Wiki 文档
   const config = await dataset.get("pricing_config");     // 数据集
-  const engine = await fn("loan_calculator");             // 函数
+  const engine = await fn("loan_calculator");             // 函数（运行时获取）
   const types = await ontology.types();                   // 本体
-  return calc({ ...args, config });                       // 导入的函数
+  return engine({ ...args, config });
 }
 ```
 
 | 命名空间 | 用途 | 语法 |
 |----------|------|------|
 | `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, dataset, fn, ontology } from "archon:context"` |
-| `archon:fn/<key>` | 导入其他函数 | `import calc from "archon:fn/pricing_engine"` |
 | `archon:lib/filtrex` | Filtrex 表达式引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
 
 ### 被其他资源引用
