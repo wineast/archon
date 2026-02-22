@@ -112,11 +112,10 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 共享池支持 7 种资源类型：tool、component、function、dataset、wiki、schema、mcp-server
 - **Builtin 资源的运行时与资源管理分离**：
   - 运行时注入（如 `BASE_DEPS`、`archon:ui` 模块）通过 **key** 与 DB 池资源匹配
-  - `agentResourceRefs.enabled` 控制启用/禁用，**影响实际运行时行为**——禁用的 builtin 资源不注入沙箱/编译器
-  - 用户代码引用了被禁用的 builtin 资源时，应得到明确的编译错误提示
+  - `agentResourceRefs.enabled` 仅对 **tool** 有意义（控制工具启用/禁用，影响运行时）；function、component 等其他资源类型的 `enabled` 字段为预留，不影响运行时
 - **池引用详情视图规则**：
   - 池引用（不论 origin）的资源定义字段全部**只读**，不可编辑——表单字段 disabled，隐藏 Save/Delete
-  - 用户只能操作引用层面的控制：enabled 开关、移除引用
+  - 引用层面的控制：移除引用按钮；enabled 开关仅对 tool 类型显示
   - Builtin 资源额外隐藏不适用的编辑区域（Tool 隐藏 handler/执行环境，Function 隐藏 code 编辑器，Component 隐藏 JSX/CSS 编辑器）
   - 顶部显示来源 badge（`系统内置` / `共享池`）说明为何不可编辑
 
