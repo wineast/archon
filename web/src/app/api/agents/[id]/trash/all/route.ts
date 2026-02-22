@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import {
   tools, functions, components, schemas, datasets,
-  wikiDocuments, modelConfigs, evalCases, evalJudgeConfigs,
+  wikiDocuments, modelConfigs, evalCases, judgeConfigs,
   objectTypes, objectRelations, skills,
 } from "@/db/schema";
 import { eq, and, isNotNull } from "drizzle-orm";
@@ -31,7 +31,7 @@ export async function DELETE(
     db.delete(wikiDocuments).where(and(eq(wikiDocuments.agentId, agentId), isNotNull(wikiDocuments.deletedAt))),
     db.delete(modelConfigs).where(and(eq(modelConfigs.agentId, agentId), isNotNull(modelConfigs.deletedAt))),
     db.delete(evalCases).where(and(eq(evalCases.agentId, agentId), isNotNull(evalCases.deletedAt))),
-    db.delete(evalJudgeConfigs).where(and(eq(evalJudgeConfigs.agentId, agentId), isNotNull(evalJudgeConfigs.deletedAt))),
+    db.delete(judgeConfigs).where(and(eq(judgeConfigs.agentId, agentId), isNotNull(judgeConfigs.deletedAt))),
     db.delete(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNotNull(objectTypes.deletedAt))),
     db.delete(skills).where(and(eq(skills.agentId, agentId), isNotNull(skills.deletedAt))),
   ]);

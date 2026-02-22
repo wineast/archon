@@ -40,22 +40,34 @@ vi.mock("@/lib/model-config/hooks", () => ({
   }),
 }));
 
-vi.mock("@/lib/eval/hooks", () => ({
-  useDefaultJudgeConfig: () => ({
-    defaultConfig: {
-      id: "jc-1",
-      name: "Default Judge",
-      model: "claude-sonnet-4-5-20250929",
-      systemPrompt: "Judge prompt",
-      temperature: 0,
-      dimensions: [{ key: "accuracy", label: "Accuracy", weight: 1 }],
-      isDefault: true,
+vi.mock("@/lib/eval/use-resolved-evaluator", () => ({
+  useResolvedEvaluator: () => ({
+    evaluator: {
+      judgeAgentId: "judge-agent-1",
+      judgeAgentName: "Evaluator",
+      judgeAgentSlug: "evaluator",
     },
-    configs: [],
     isLoading: false,
     error: undefined,
     mutate: vi.fn(),
   }),
+}));
+
+vi.mock("@/lib/judge-config/hooks", () => ({
+  useActiveJudgeConfig: () => ({
+    activeConfig: {
+      id: "jc-1",
+      name: "Default Judge",
+      dimensions: [{ key: "accuracy", label: "Accuracy", weight: 1 }],
+      isActive: true,
+    },
+    isLoading: false,
+    error: undefined,
+    mutate: vi.fn(),
+  }),
+}));
+
+vi.mock("@/lib/eval/hooks", () => ({
   useEvalRuns: () => ({
     runs: [],
     isLoading: false,
@@ -134,7 +146,7 @@ function renderDetail(overrides: Partial<EvalCaseRow> = {}) {
   const onDelete = vi.fn().mockResolvedValue(undefined);
   const user = userEvent.setup();
   render(
-    <CaseDetail evalCase={evalCase} onSave={onSave} onDelete={onDelete} />
+    <CaseDetail evalCase={evalCase} agentId="agent-1" onSave={onSave} onDelete={onDelete} />
   );
   return { user, onSave, onDelete, evalCase };
 }
@@ -230,7 +242,7 @@ describe("Run execution", () => {
     // Verify 3-step API was called
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
 
-    // Step 1: Create run
+    // Step 1: Create run — sends judgeAgentId, judgeModelConfigId, judgeConfigId
     expect(globalThis.fetch).toHaveBeenNthCalledWith(
       1,
       "/api/eval/run",
@@ -240,7 +252,7 @@ describe("Run execution", () => {
       })
     );
 
-    // Step 2: Execute case
+    // Step 2: Execute case — sends judgeModelConfigId, judgeConfigId
     expect(globalThis.fetch).toHaveBeenNthCalledWith(
       2,
       "/api/eval/run/run-1/case",

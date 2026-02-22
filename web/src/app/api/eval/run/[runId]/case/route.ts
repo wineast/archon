@@ -1,7 +1,7 @@
 import { generateText, Output, stepCountIs } from "ai";
 import { db } from "@/db";
-import { agents as agentsTable, evalRuns, evalRunResults, modelConfigs, tools, schemas } from "@/db/schema";
-import { eq, and, inArray, isNull } from "drizzle-orm";
+import { evalRuns, evalRunResults, modelConfigs, judgeConfigs, tools } from "@/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
 import { gatherTemplateData, renderTemplate } from "@/lib/template/render";
@@ -28,7 +28,8 @@ export async function POST(
   const body: RunCaseRequest = await req.json();
   const {
     case: evalCase,
-    judgeConfig,
+    judgeModelConfigId,
+    judgeConfigId,
     modelConfigId,
     templateVars = {},
     toolNames = [],
@@ -66,6 +67,35 @@ export async function POST(
   const chatSystemPrompt = modelConfig.systemPrompt;
   const chatTemperature = modelConfig.temperature;
 
+  // Load judge model config from DB
+  const [judgeModelConfig] = await db
+    .select()
+    .from(modelConfigs)
+    .where(and(eq(modelConfigs.id, judgeModelConfigId), isNull(modelConfigs.deletedAt)));
+
+  if (!judgeModelConfig || !judgeModelConfig.modelId) {
+    return Response.json(
+      { error: "Judge model config not found or modelId is empty" },
+      { status: 400 }
+    );
+  }
+
+  // Load judge config (dimensions) from DB
+  const [judgeConfig] = await db
+    .select()
+    .from(judgeConfigs)
+    .where(and(eq(judgeConfigs.id, judgeConfigId), isNull(judgeConfigs.deletedAt)));
+
+  if (!judgeConfig) {
+    return Response.json(
+      { error: "Judge config not found" },
+      { status: 400 }
+    );
+  }
+
+  const judgeModel = judgeModelConfig.modelId;
+  const judgeSystemPrompt = judgeModelConfig.systemPrompt;
+  const judgeTemperature = judgeModelConfig.temperature ?? 0.1;
   const dimensions = judgeConfig.dimensions ?? [];
   const judgeSchema = buildJudgeSchema(dimensions);
   const evalAgentId = modelConfig.agentId ?? undefined;
@@ -247,14 +277,14 @@ export async function POST(
               .join("\n\n");
 
             const judgeGenResult = await generateText({
-              model: await resolveModel(judgeConfig.model, orgId),
+              model: await resolveModel(judgeModel, orgId),
               system: await renderTemplate(
-                judgeConfig.systemPrompt,
+                judgeSystemPrompt,
                 templateData,
                 { ...templateVars, model: chatModel, caseName: evalCase.name, toolNames }
               ),
               prompt: judgePrompt,
-              temperature: judgeConfig.temperature ?? 0.1,
+              temperature: judgeTemperature,
               output: Output.object({ schema: judgeSchema }),
             });
             accumulateUsage(judgeUsage, judgeGenResult.usage);
@@ -303,14 +333,14 @@ export async function POST(
         .join("\n\n");
 
       const judgeGenResult = await generateText({
-        model: await resolveModel(judgeConfig.model, orgId),
+        model: await resolveModel(judgeModel, orgId),
         system: await renderTemplate(
-          judgeConfig.systemPrompt,
+          judgeSystemPrompt,
           templateData,
           { ...templateVars, model: chatModel, caseName: evalCase.name, toolNames }
         ),
         prompt: judgePrompt,
-        temperature: judgeConfig.temperature ?? 0.1,
+        temperature: judgeTemperature,
         output: Output.object({ schema: judgeSchema }),
       });
       accumulateUsage(judgeUsage, judgeGenResult.usage);
@@ -372,7 +402,7 @@ export async function POST(
       agentId: run.agentId,
       userId: ctx.user.id,
       sessionId: null,
-      modelId: judgeConfig.model,
+      modelId: judgeModel,
       usage: judgeUsage,
       source: "eval",
     });

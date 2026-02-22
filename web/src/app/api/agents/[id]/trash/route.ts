@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import {
   tools, functions, components, schemas, datasets,
-  wikiDocuments, modelConfigs, evalCases, evalJudgeConfigs,
+  wikiDocuments, modelConfigs, evalCases, judgeConfigs,
   objectTypes, objectRelations, skills,
 } from "@/db/schema";
 import { eq, and, isNotNull, isNull, inArray, or } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { requireAgentRole } from "@/lib/auth/require-agent-role";
 type ResourceType =
   | "tool" | "function" | "component" | "schema"
   | "dataset" | "wikiDocument" | "modelConfig" | "evalCase"
-  | "evalJudgeConfig" | "objectType" | "objectRelation" | "skill";
+  | "judgeConfig" | "objectType" | "objectRelation" | "skill";
 
 const tableMap = {
   tool: tools,
@@ -22,7 +22,7 @@ const tableMap = {
   wikiDocument: wikiDocuments,
   modelConfig: modelConfigs,
   evalCase: evalCases,
-  evalJudgeConfig: evalJudgeConfigs,
+  judgeConfig: judgeConfigs,
   objectType: objectTypes,
   objectRelation: objectRelations,
   skill: skills,
@@ -45,7 +45,7 @@ export async function GET(
   const [
     toolRows, functionRows, componentRows, schemaRows,
     datasetRows, wikiRows, modelConfigRows, evalCaseRows,
-    evalJudgeConfigRows, objectTypeRows, objectRelationRows,
+    judgeConfigRows, objectTypeRows, objectRelationRows,
     skillRows,
   ] = await Promise.all([
     db.select({ id: tools.id, key: tools.key, name: tools.name, deletedAt: tools.deletedAt })
@@ -64,8 +64,8 @@ export async function GET(
       .from(modelConfigs).where(and(eq(modelConfigs.agentId, agentId), isNotNull(modelConfigs.deletedAt))),
     db.select({ id: evalCases.id, key: evalCases.key, name: evalCases.name, deletedAt: evalCases.deletedAt })
       .from(evalCases).where(and(eq(evalCases.agentId, agentId), isNotNull(evalCases.deletedAt))),
-    db.select({ id: evalJudgeConfigs.id, key: evalJudgeConfigs.key, name: evalJudgeConfigs.name, deletedAt: evalJudgeConfigs.deletedAt })
-      .from(evalJudgeConfigs).where(and(eq(evalJudgeConfigs.agentId, agentId), isNotNull(evalJudgeConfigs.deletedAt))),
+    db.select({ id: judgeConfigs.id, key: judgeConfigs.key, name: judgeConfigs.name, deletedAt: judgeConfigs.deletedAt })
+      .from(judgeConfigs).where(and(eq(judgeConfigs.agentId, agentId), isNotNull(judgeConfigs.deletedAt))),
     db.select({ id: objectTypes.id, key: objectTypes.key, name: objectTypes.name, deletedAt: objectTypes.deletedAt })
       .from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNotNull(objectTypes.deletedAt))),
     db.select({ id: objectRelations.id, key: objectRelations.key, name: objectRelations.name, deletedAt: objectRelations.deletedAt })
@@ -83,7 +83,7 @@ export async function GET(
     wikiDocument: wikiRows,
     modelConfig: modelConfigRows,
     evalCase: evalCaseRows,
-    evalJudgeConfig: evalJudgeConfigRows,
+    judgeConfig: judgeConfigRows,
     objectType: objectTypeRows,
     objectRelation: objectRelationRows,
     skill: skillRows,

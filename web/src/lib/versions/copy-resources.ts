@@ -14,7 +14,7 @@ import {
   modelConfigs,
   chatConfigs,
   evalCases,
-  evalJudgeConfigs,
+  judgeConfigs,
   mcpServers,
   skills,
   memoryConfigs,
@@ -47,7 +47,7 @@ type Tx = PgTransaction<
  *   9. modelConfigs
  *  10. chatConfigs
  *  11. evalCases
- *  12. evalJudgeConfigs
+ *  12. judgeConfigs
  *  13. mcpServers
  *  14. skills
  *  15. memoryConfigs
@@ -489,24 +489,21 @@ export async function copyVersionResources(
     );
   }
 
-  // ── 12. Eval Judge Configs ──
-  const ejcRows = await tx
+  // ── 12. Judge Configs ──
+  const jcRows = await tx
     .select()
-    .from(evalJudgeConfigs)
-    .where(and(eq(evalJudgeConfigs.versionId, sourceVersionId), isNull(evalJudgeConfigs.deletedAt)));
+    .from(judgeConfigs)
+    .where(and(eq(judgeConfigs.versionId, sourceVersionId), isNull(judgeConfigs.deletedAt)));
 
-  if (ejcRows.length > 0) {
-    await tx.insert(evalJudgeConfigs).values(
-      ejcRows.map((j) => ({
+  if (jcRows.length > 0) {
+    await tx.insert(judgeConfigs).values(
+      jcRows.map((j) => ({
         agentId,
         versionId: targetVersionId,
         key: j.key,
         name: j.name,
-        model: j.model,
-        systemPrompt: j.systemPrompt,
-        temperature: j.temperature,
+        isActive: j.isActive,
         dimensions: j.dimensions,
-        isDefault: j.isDefault,
       }))
     );
   }

@@ -1,5 +1,5 @@
 import { db as appDb } from "@/db";
-import { agents, agentVersions, modelConfigs, orgSlots } from "@/db/schema";
+import { agents, agentVersions, modelConfigs, judgeConfigs, orgSlots } from "@/db/schema";
 import { SLOT_KEYS } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { SLOT_DEFS } from "./constants";
@@ -75,12 +75,16 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
         .where(eq(agents.id, agentId));
 
       // Create default active model config
+      const systemPrompt = slotKey === "evaluator"
+        ? "You are a judge evaluating AI assistant responses.\n\nYou will receive the user input, expected output (if any), and the actual response.\nEvaluate the response on each of the following dimensions, scoring from 1 to 10.\n\nFor each dimension, return a JSON object with the dimension key mapped to { \"score\": <1-10>, \"reason\": \"<brief explanation>\" }."
+        : "";
       await db.insert(modelConfigs).values({
         agentId,
         versionId: version.id,
         key: "default",
         name: "Default",
         modelId: def.defaultModel,
+        systemPrompt,
         temperature: def.defaultTemperature,
         isActive: true,
       });
@@ -88,6 +92,22 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
       // Seed builtin tool refs for builder slot
       if (slotKey === "builder") {
         await ensureBuiltinToolRefs(db, agentId, version.id);
+      }
+
+      // Seed default judge config for evaluator slot
+      if (slotKey === "evaluator") {
+        await db.insert(judgeConfigs).values({
+          agentId,
+          versionId: version.id,
+          key: "default",
+          name: "Default",
+          isActive: true,
+          dimensions: [
+            { key: "accuracy", label: "Accuracy", weight: 0.5 },
+            { key: "completeness", label: "Completeness", weight: 0.3 },
+            { key: "tone", label: "Tone", weight: 0.2 },
+          ],
+        });
       }
     }
 

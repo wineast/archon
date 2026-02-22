@@ -68,10 +68,17 @@ export interface Dimension {
   max?: number;
 }
 
-export interface JudgeConfig {
+/** Runtime judge config — assembled from modelConfig + judgeConfig at run time */
+export interface RuntimeJudgeConfig {
   systemPrompt: string;
   model: string;
   temperature: number;
+  dimensions: Dimension[];
+}
+
+/** Stored judge config data — only scoring dimensions */
+export interface JudgeConfigData {
+  name: string;
   dimensions: Dimension[];
 }
 
@@ -107,7 +114,7 @@ export interface EvalRunSummary {
 
 // ── DB row → runtime type converters ──
 
-import type { EvalCaseRow, EvalJudgeConfigRow, EvalRunRow, EvalRunResultRow } from "@/db/schema";
+import type { EvalCaseRow, EvalRunRow, EvalRunResultRow } from "@/db/schema";
 
 export function toEvalCase(row: EvalCaseRow): EvalCase {
   return {
@@ -122,22 +129,14 @@ export function toEvalCase(row: EvalCaseRow): EvalCase {
   };
 }
 
-export function toJudgeConfig(row: EvalJudgeConfigRow): JudgeConfig {
-  return {
-    systemPrompt: row.systemPrompt,
-    model: row.model,
-    temperature: row.temperature,
-    dimensions: row.dimensions,
-  };
-}
-
 export interface EvalRunRequest {
   cases: EvalCase[];
-  judgeConfig: JudgeConfig;
   modelConfigId: string;
+  judgeAgentId: string;
+  judgeModelConfigId: string;
+  judgeConfigId: string;
   templateVars?: Record<string, string>;
   toolNames?: string[];
-  judgeConfigId?: string;
   filterTags?: string[];
 }
 
@@ -151,8 +150,9 @@ export interface EvalRunResponse {
 /** POST /api/eval/run — create a run record only */
 export interface CreateEvalRunRequest {
   modelConfigId: string;
-  judgeConfigId?: string;
-  judgeConfigName: string;
+  judgeAgentId: string;
+  judgeModelConfigId: string;
+  judgeConfigId: string;
   filterTags?: string[];
   assertionFailConfig?: AssertionFailConfig;
   totalCases: number;
@@ -165,7 +165,8 @@ export interface CreateEvalRunResponse {
 /** POST /api/eval/run/[runId]/case — execute a single case */
 export interface RunCaseRequest {
   case: EvalCase;
-  judgeConfig: JudgeConfig;
+  judgeModelConfigId: string;
+  judgeConfigId: string;
   modelConfigId: string;
   templateVars?: Record<string, string>;
   toolNames?: string[];

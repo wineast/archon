@@ -42,6 +42,7 @@ vi.mock("@/db/schema", () => ({
   agents: { id: "id", orgId: "orgId", slug: "slug", editingVersionId: "editingVersionId", publishedVersionId: "publishedVersionId" },
   agentVersions: { agentId: "agentId" },
   modelConfigs: { agentId: "agentId" },
+  judgeConfigs: { agentId: "agentId" },
   tools: { agentId: "agentId" },
   components: Symbol("components"),
   orgSlots: { orgId: "orgId", slotKey: "slotKey", agentId: "agentId" },
@@ -74,7 +75,8 @@ describe("ensureOrgDefaults", () => {
     await ensureOrgDefaults("org-1");
 
     // For each of 3 slots: agent insert + agentVersion insert + modelConfig insert + orgSlot insert = 12
-    expect(mockInsert).toHaveBeenCalledTimes(12);
+    // Plus 1 judgeConfig insert for evaluator slot = 13
+    expect(mockInsert).toHaveBeenCalledTimes(13);
   });
 
   it("seeds builtin tool refs only for builder slot", async () => {

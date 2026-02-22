@@ -1,0 +1,10 @@
+{
+  "key": "default_judge",
+  "name": "Default Judge",
+  "dimensions": [
+    { "key": "accuracy", "label": "Accuracy", "weight": 0.5 },
+    { "key": "completeness", "label": "Completeness", "weight": 0.3 },
+    { "key": "tone", "label": "Tone", "weight": 0.2 }
+  ],
+  "isActive": true
+}

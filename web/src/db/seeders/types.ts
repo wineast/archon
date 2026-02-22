@@ -21,7 +21,7 @@ export interface SeedContext {
     chatConfigId: string;
     datasetIds: string[];
     functionIds: string[];
-    evalJudgeConfigId: string;
+    judgeConfigId: string;
     evalCaseIds: string[];
   };
 }
@@ -35,7 +35,7 @@ export interface SeedResult {
   chatConfigId: string;
   datasetIds: string[];
   functionIds: string[];
-  evalJudgeConfigId: string;
+  judgeConfigId: string;
   evalCaseIds: string[];
 }
 

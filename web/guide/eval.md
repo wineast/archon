@@ -7,17 +7,28 @@
 | 概念 | 说明 |
 |------|------|
 | **Eval Case** | 测试用例，定义输入 + 预期输出 + 断言规则 |
-| **Judge Config** | 评审配置，定义 LLM 评审的模型、提示词、评分维度 |
+| **Judge Agent** | 评审 Agent，通过 evaluator 功能槽位引用，提供模型配置和评分维度 |
+| **Judge Config** | 评分维度配置（仅 name + dimensions），属于 Judge Agent，在 Build > Judge Tab 中管理 |
 | **Eval Run** | 一次评测运行，包含多个用例的执行结果 |
 | **Assertion** | 断言规则（如包含关键词、正则匹配等），用于自动判定通过/失败 |
 | **Dimension** | 评审维度（如准确性、相关性），由 Judge LLM 打分 |
+
+## 架构
+
+评测系统采用 **Agent 分离架构**：
+
+- **被测 Agent**：当前 Agent，使用自身的 Model Config 作为对话模型
+- **Judge Agent**：通过 evaluator 功能槽位解析得到，提供评审模型配置（Model Config）和评分维度（Judge Config）
+
+这种设计让任何 Agent 都能成为 Judge Agent，只需在功能槽位中配置即可。
 
 ## 测试用例模式
 
 | 模式 | 说明 |
 |------|------|
 | **single** | 单轮对话：一问一答 |
-| **multi** | 多轮对话：多个 turn 按顺序执行 |
+| **injected** | 注入历史：所有 turn 构成消息历史，仅最后一条 user 消息触发 LLM |
+| **sequential** | 多轮对话：每个 user turn 独立调用 LLM，逐轮执行 |
 
 ## 数据库 Schema
 
@@ -29,22 +40,32 @@
 | agentId | uuid | 关联 Agent |
 | key | text | 用例唯一标识 |
 | name | text | 用例名称 |
-| mode | text | `single` / `multi` |
+| mode | text | `single` / `injected` / `sequential` |
 | turns | jsonb | 对话轮次 |
 | expectedOutput | text | 预期输出 |
 | assertions | jsonb | 断言规则列表 |
 | tags | text[] | 标签（用于筛选） |
 
-### evalJudgeConfigs 表
+### evalRuns 表
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | uuid | 主键 |
-| model | text | 评审模型 |
-| systemPrompt | text | 评审系统提示词 |
-| temperature | real | 温度 |
-| dimensions | jsonb | 评审维度列表 |
-| isDefault | boolean | 是否默认配置 |
+| agentId | uuid | 被测 Agent |
+| chatModel | text | 对话模型 ID |
+| chatSystemPrompt | text | 对话系统提示词 |
+| judgeAgentId | uuid | Judge Agent ID |
+| judgeModelConfigSnapshot | jsonb | Judge 模型配置快照 |
+| judgeConfigSnapshot | jsonb | Judge 评分维度快照 |
+| totalCases | integer | 总用例数 |
+| passedAssertions | integer | 通过断言数 |
+| averageScore | real | 平均评分 |
+
+> 运行记录通过快照保存 Judge 配置，确保历史记录不受后续修改影响。
+
+### judgeConfigs 表
+
+详见 [judge-config.md](./judge-config.md)
 
 ## API
 
@@ -54,14 +75,23 @@
 | POST | `/api/eval/cases` | 创建用例 |
 | PATCH | `/api/eval/cases/[id]` | 更新用例 |
 | DELETE | `/api/eval/cases/[id]` | 删除用例 |
-| POST | `/api/eval/run` | 启动评测运行 |
+| POST | `/api/eval/run` | 创建评测运行记录 |
+| POST | `/api/eval/run/[runId]/case` | 执行单个用例 |
+| PATCH | `/api/eval/run/[runId]` | 完成运行（汇总统计） |
 | GET | `/api/eval/runs?agentId=xxx` | 列出运行记录 |
+| GET | `/api/eval/resolve-judge?agentId=xxx` | 解析 evaluator 槽位得到 Judge Agent |
 
 ## UI
 
 在 Agent Build 页面侧栏中点击 **Evaluate**（烧瓶图标）进入：
 
 - **Cases**：管理测试用例，支持 tag 筛选
-- **Judge**：配置评审模型和评分维度
-- **Results**：查看评测运行结果，含断言通过率和维度评分
-- **Benchmark**：趋势追踪、运行对比、跨模型分析（详见 [benchmark.md](../../guide/benchmark.md)）
+- **Results**：运行评测并查看结果
+  - 区域 1：被测 Agent 的 Model Config 选择器
+  - 区域 2：Judge 配置（Judge Agent 信息 + Model Config 选择器 + Judge Config 选择器）
+  - 区域 3：运行设置（断言失败行为开关）
+  - 区域 4：Run All 按钮 + 进度条
+  - 如果 evaluator 槽位未配置，显示引导提示
+- **Benchmark**：趋势追踪、运行对比、跨模型分析（详见 [benchmark.md](./benchmark.md)）
+
+Judge 配置（评分维度）在 Judge Agent 的 Build 页面 **Judge Tab** 中管理，详见 [judge-config.md](./judge-config.md)。

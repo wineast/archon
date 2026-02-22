@@ -27,7 +27,7 @@ tools, components, functions, datasets, wikiDocuments, schemas, mcpServers
 - CHECK 约束：`agent_id IS NULL OR version_id IS NOT NULL`
 
 **Agent 专属表（9 个，versionId NOT NULL）**：
-modelConfigs, chatConfigs, evalCases, evalJudgeConfigs, skills, objectTypes, objectRelations, agentResourceRefs, memoryConfigs
+modelConfigs, chatConfigs, evalCases, judgeConfigs, skills, objectTypes, objectRelations, agentResourceRefs, memoryConfigs
 
 ### 运行时数据（不版本化）
 
@@ -65,7 +65,7 @@ modelConfigs, chatConfigs, evalCases, evalJudgeConfigs, skills, objectTypes, obj
 9. modelConfigs
 10. chatConfigs
 11. evalCases
-12. evalJudgeConfigs
+12. judgeConfigs
 13. mcpServers
 14. skills
 15. memoryConfigs

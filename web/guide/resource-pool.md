@@ -48,7 +48,7 @@
 3. 新增 `origin` 字段：`text("origin").notNull().default("user").$type<ResourceOrigin>()`
 4. 新增池内唯一索引：`uniqueIndex("xxx_pool_key_idx").on(table.key).where(sql\`agent_id IS NULL\`)`
 
-不受影响的表（保持 agent 私有）：`chatConfigs`、`modelConfigs`、`evalCases`、`evalJudgeConfigs`、`chatSessions`、`memories`、`skills`、`embedTokens` 等。
+不受影响的表（保持 agent 私有）：`chatConfigs`、`modelConfigs`、`evalCases`、`judgeConfigs`、`chatSessions`、`memories`、`skills`、`embedTokens` 等。
 
 ### agentResourceRefs 表
 

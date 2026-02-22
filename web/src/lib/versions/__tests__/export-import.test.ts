@@ -13,7 +13,7 @@ const MINIMAL_SNAPSHOT: AgentSnapshot = {
   modelConfigs: [],
   chatConfig: null,
   evalCases: [],
-  evalJudgeConfigs: [],
+  judgeConfigs: [],
   objectTypes: [],
   objectRelations: [],
   mcpServers: [],

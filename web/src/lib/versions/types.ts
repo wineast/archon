@@ -89,14 +89,11 @@ export interface EvalCaseSnapshotItem {
   tags: string[];
 }
 
-export interface EvalJudgeConfigSnapshotItem {
+export interface JudgeConfigSnapshotItem {
   key: string;
   name: string;
-  model: string;
-  systemPrompt: string;
-  temperature: number;
+  isActive: boolean;
   dimensions: Dimension[];
-  isDefault: boolean;
 }
 
 /* ─────────── Test Case Snapshot Items ─────────── */
@@ -198,7 +195,7 @@ export interface AgentSnapshot {
   modelConfigs: ModelConfigSnapshotItem[];
   chatConfig: ChatConfigSnapshotItem | null;
   evalCases: EvalCaseSnapshotItem[];
-  evalJudgeConfigs: EvalJudgeConfigSnapshotItem[];
+  judgeConfigs: JudgeConfigSnapshotItem[];
   objectTypes: ObjectTypeSnapshotItem[];
   objectRelations: ObjectRelationSnapshotItem[];
   mcpServers: McpServerSnapshotItem[];

@@ -7,45 +7,38 @@ import { Button } from "@/components/ui/button";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import evalGuide from "../../../guide/eval.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { EvalCaseRow, EvalJudgeConfigRow } from "@/db/schema";
+import type { EvalCaseRow } from "@/db/schema";
 import {
   BarChart3Icon,
   FlaskConicalIcon,
-  GavelIcon,
   PlusIcon,
   TrendingUpIcon,
 } from "lucide-react";
 
 export type ActiveView =
   | { type: "case"; id: string }
-  | { type: "judge"; id: string }
   | { type: "results" }
   | { type: "benchmark" }
   | null;
 
 interface EvalSidebarProps {
   cases: EvalCaseRow[];
-  configs: EvalJudgeConfigRow[];
   activeView: ActiveView;
   onSelect: (view: ActiveView) => void;
   onCreateCase: () => void;
-  onCreateConfig: () => void;
   selectedTags: string[];
   onToggleTag: (tag: string) => void;
 }
 
 export function EvalSidebar({
   cases,
-  configs,
   activeView,
   onSelect,
   onCreateCase,
-  onCreateConfig,
   selectedTags,
   onToggleTag,
 }: EvalSidebarProps) {
   const t = useTranslations("build");
-  const tc = useTranslations("common");
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     cases.forEach((c) => c.tags?.forEach((t) => tagSet.add(t)));
@@ -116,48 +109,6 @@ export function EvalSidebar({
                   <Badge variant="secondary" className="text-[10px]">
                     {c.assertions.length}
                   </Badge>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Judge Configs section */}
-        <div className="border-b">
-          <div className="flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-1.5">
-              <GavelIcon className="size-3.5 text-muted-foreground" />
-              <span className="text-sm font-semibold">{t("judge")}</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={onCreateConfig}
-              title={t("newJudgeConfig")}
-            >
-              <PlusIcon className="size-4" />
-            </Button>
-          </div>
-          <div className="p-1">
-            {configs.length === 0 ? (
-              <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                {t("noJudgeConfigs")}
-              </p>
-            ) : (
-              configs.map((cfg) => (
-                <button
-                  key={cfg.id}
-                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
-                    activeView?.type === "judge" && activeView.id === cfg.id
-                      ? "bg-accent"
-                      : ""
-                  }`}
-                  onClick={() => onSelect({ type: "judge", id: cfg.id })}
-                >
-                  <span className="flex-1 truncate">{cfg.name}</span>
-                  {cfg.isDefault && (
-                    <Badge className="text-[10px]">{tc("default")}</Badge>
-                  )}
                 </button>
               ))
             )}

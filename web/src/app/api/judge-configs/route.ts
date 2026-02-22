@@ -1,6 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
-import { evalJudgeConfigs } from "@/db/schema";
+import { judgeConfigs } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
@@ -17,9 +17,9 @@ export async function GET(req: Request) {
 
   const rows = await db
     .select()
-    .from(evalJudgeConfigs)
-    .where(and(eq(evalJudgeConfigs.agentId, agentId), isNull(evalJudgeConfigs.deletedAt)))
-    .orderBy(evalJudgeConfigs.createdAt);
+    .from(judgeConfigs)
+    .where(and(eq(judgeConfigs.agentId, agentId), isNull(judgeConfigs.deletedAt)))
+    .orderBy(judgeConfigs.createdAt);
   return NextResponse.json(rows);
 }
 
@@ -36,17 +36,14 @@ export async function POST(req: Request) {
   const versionId = await resolveEditingVersionId(agentId);
 
   const [row] = await db
-    .insert(evalJudgeConfigs)
+    .insert(judgeConfigs)
     .values({
       agentId,
       versionId,
       key: body.key,
       name: body.name,
-      model: body.model,
-      systemPrompt: body.systemPrompt,
-      temperature: body.temperature ?? 0.1,
+      isActive: false,
       dimensions: body.dimensions ?? [],
-      isDefault: body.isDefault ?? false,
     })
     .returning();
 
@@ -55,7 +52,7 @@ export async function POST(req: Request) {
       agentId,
       userId: ctx.user.id,
       action: "created",
-      resourceType: "eval_judge_config",
+      resourceType: "judge_config",
       resourceId: row.id,
       resourceKey: row.key,
       resourceName: row.name,

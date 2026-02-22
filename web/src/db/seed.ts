@@ -38,7 +38,7 @@ export async function seed(db?: SeedDb): Promise<SeedResult> {
         chatConfigId: "",
         datasetIds: [],
         functionIds: [],
-        evalJudgeConfigId: "",
+        judgeConfigId: "",
         evalCaseIds: [],
       },
     };
@@ -70,7 +70,7 @@ export async function seed(db?: SeedDb): Promise<SeedResult> {
           chatConfigId: "",
           datasetIds: [],
           functionIds: [],
-          evalJudgeConfigId: "",
+          judgeConfigId: "",
           evalCaseIds: [],
         },
       };

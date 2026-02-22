@@ -18,14 +18,35 @@ let selectModelResult: unknown[] = [
     agentId: null,
   },
 ];
+let selectJudgeModelResult: unknown[] = [
+  {
+    id: "jmc-1",
+    modelId: "gpt-4-judge",
+    systemPrompt: "Judge this",
+    temperature: 0.1,
+    agentId: null,
+  },
+];
+let selectJudgeConfigResult: unknown[] = [
+  {
+    id: "jc-1",
+    name: "Default",
+    dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
+  },
+];
 let selectToolsResult: unknown[] = [];
 
 // Track which table was queried
 let fromCallIndex = 0;
 const whereSelectMock = vi.fn(() => {
-  // First call => evalRuns, second call => modelConfigs, third call => tools
+  // 0: evalRuns, 1: modelConfigs, 2: judgeModelConfig, 3: judgeConfig, 4: tools
   const idx = fromCallIndex++;
-  const result = idx === 0 ? selectRunResult : idx === 1 ? selectModelResult : selectToolsResult;
+  const result =
+    idx === 0 ? selectRunResult :
+    idx === 1 ? selectModelResult :
+    idx === 2 ? selectJudgeModelResult :
+    idx === 3 ? selectJudgeConfigResult :
+    selectToolsResult;
   return {
     limit: vi.fn(() => result),
     then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(result)),
@@ -46,6 +67,7 @@ vi.mock("@/db/schema", () => ({
   evalRuns: { id: "id" },
   evalRunResults: { runId: "run_id" },
   modelConfigs: { id: "id" },
+  judgeConfigs: { id: "id" },
   tools: { enabled: "enabled", deletedAt: "deleted_at" },
   agents: { id: "id", orgId: "org_id" },
   schemas: { id: "id", agentId: "agent_id", parameters: "parameters", deletedAt: "deleted_at" },
@@ -139,12 +161,8 @@ const baseBody = {
     assertions: [{ id: "a1", type: "contains", value: "world" }],
     expectedOutput: "Hello world",
   },
-  judgeConfig: {
-    systemPrompt: "Judge this",
-    model: "gpt-4",
-    temperature: 0.1,
-    dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
-  },
+  judgeModelConfigId: "jmc-1",
+  judgeConfigId: "jc-1",
   modelConfigId: "mc-1",
 };
 
@@ -163,6 +181,22 @@ describe("POST /api/eval/run/[runId]/case", () => {
         agentId: null,
       },
     ];
+    selectJudgeModelResult = [
+      {
+        id: "jmc-1",
+        modelId: "gpt-4-judge",
+        systemPrompt: "Judge this",
+        temperature: 0.1,
+        agentId: null,
+      },
+    ];
+    selectJudgeConfigResult = [
+      {
+        id: "jc-1",
+        name: "Default",
+        dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
+      },
+    ];
     selectToolsResult = [];
   });
 
@@ -175,6 +209,20 @@ describe("POST /api/eval/run/[runId]/case", () => {
 
   it("returns 400 if model config not found", async () => {
     selectModelResult = [];
+
+    const res = await POST(makeRequest(baseBody), { params });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 if judge model config not found", async () => {
+    selectJudgeModelResult = [];
+
+    const res = await POST(makeRequest(baseBody), { params });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 if judge config not found", async () => {
+    selectJudgeConfigResult = [];
 
     const res = await POST(makeRequest(baseBody), { params });
     expect(res.status).toBe(400);

@@ -620,8 +620,8 @@ export const evalCases = pgTable(
 export type EvalCaseRow = typeof evalCases.$inferSelect;
 export type NewEvalCaseRow = typeof evalCases.$inferInsert;
 
-export const evalJudgeConfigs = pgTable(
-  "eval_judge_configs",
+export const judgeConfigs = pgTable(
+  "judge_configs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id").references(() => agents.id, {
@@ -630,11 +630,8 @@ export const evalJudgeConfigs = pgTable(
     versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
-    model: text("model").notNull(),
-    systemPrompt: text("system_prompt").notNull(),
-    temperature: real("temperature").notNull(),
+    isActive: boolean("is_active").notNull().default(false),
     dimensions: jsonb("dimensions").$type<Dimension[]>().notNull().default([]),
-    isDefault: boolean("is_default").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -645,13 +642,13 @@ export const evalJudgeConfigs = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("eval_judge_configs_version_id_key_idx").on(t.versionId, t.key),
-    index("eval_judge_configs_version_id_idx").on(t.versionId),
+    unique("judge_configs_version_id_key_idx").on(t.versionId, t.key),
+    index("judge_configs_version_id_idx").on(t.versionId),
   ]
 );
 
-export type EvalJudgeConfigRow = typeof evalJudgeConfigs.$inferSelect;
-export type NewEvalJudgeConfigRow = typeof evalJudgeConfigs.$inferInsert;
+export type JudgeConfigRow = typeof judgeConfigs.$inferSelect;
+export type NewJudgeConfigRow = typeof judgeConfigs.$inferInsert;
 
 export const evalRuns = pgTable("eval_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -660,8 +657,9 @@ export const evalRuns = pgTable("eval_runs", {
   }),
   chatModel: text("chat_model").notNull(),
   chatSystemPrompt: text("chat_system_prompt").notNull(),
-  judgeConfigId: uuid("judge_config_id"),
-  judgeConfigName: text("judge_config_name").notNull(),
+  judgeAgentId: uuid("judge_agent_id"),
+  judgeModelConfigSnapshot: jsonb("judge_model_config_snapshot"),
+  judgeConfigSnapshot: jsonb("judge_config_snapshot"),
   filterTags: text("filter_tags").array().notNull().default([]),
   assertionFailConfig: jsonb("assertion_fail_config").$type<AssertionFailConfig>(),
   totalCases: integer("total_cases").notNull(),
@@ -1351,7 +1349,7 @@ export type NewSkillRow = typeof skills.$inferInsert;
 
 export const auditLogResourceTypes = [
   "tool", "function", "component", "schema", "dataset", "wiki",
-  "model_config", "eval_case", "eval_judge_config",
+  "model_config", "eval_case", "eval_judge_config", "judge_config",
   "object_type", "object_relation", "chat_config",
   "memory_config", "memory", "mcp_server", "skill",
 ] as const;
