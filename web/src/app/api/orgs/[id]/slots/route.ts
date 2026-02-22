@@ -8,9 +8,9 @@ import { invalidateSlotCache } from "@/lib/slots";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ orgId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { orgId } = await params;
+  const { id: orgId } = await params;
 
   const ctx = await requireOrgRole(orgId, "member");
   if (ctx instanceof NextResponse) return ctx;
@@ -33,9 +33,9 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ orgId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { orgId } = await params;
+  const { id: orgId } = await params;
 
   const ctx = await requireOrgRole(orgId, "admin");
   if (ctx instanceof NextResponse) return ctx;

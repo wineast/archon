@@ -83,7 +83,7 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 | `web/src/lib/slots/resolve-slot.ts` | resolveSlot() 解析 + 缓存 |
 | `web/src/lib/slots/ensure-org-defaults.ts` | ensureOrgDefaults() 组织初始化 |
 | `web/src/lib/slots/hooks.ts` | 前端 SWR hooks |
-| `web/src/app/api/orgs/[orgId]/slots/route.ts` | Org 槽位 API |
+| `web/src/app/api/orgs/[id]/slots/route.ts` | Org 槽位 API |
 | `web/src/app/api/agents/[id]/slots/route.ts` | Agent 槽位覆盖 API |
 | `web/src/components/orgs/org-slots-panel.tsx` | Org 设置页槽位面板 |
 | `web/src/components/slots/agent-slots-panel.tsx` | Agent Build 页槽位面板 |

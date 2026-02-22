@@ -1705,7 +1705,7 @@ export const orgCreditTransactions = pgTable(
     amount: real("amount").notNull(),
     type: text("type").notNull().$type<OrgCreditTransactionType>(),
     description: text("description"),
-    createdBy: uuid("created_by").references(() => users.id),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     balanceAfter: real("balance_after").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

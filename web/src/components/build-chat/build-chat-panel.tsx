@@ -24,7 +24,7 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import { Suggestion } from "@/components/ai-elements/suggestion";
 import {
   Tool,
   ToolContent,
@@ -156,7 +156,7 @@ export function BuildChatPanel({ agentId }: BuildChatPanelProps) {
                   通过对话操作工具、Schema、Wiki 等所有资源
                 </p>
               </div>
-              <Suggestions className="mt-4 justify-center">
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {SUGGESTIONS.map((s) => (
                   <Suggestion
                     key={s}
@@ -164,7 +164,7 @@ export function BuildChatPanel({ agentId }: BuildChatPanelProps) {
                     onClick={handleSuggestion}
                   />
                 ))}
-              </Suggestions>
+              </div>
             </div>
           </ConversationEmptyState>
         ) : (
