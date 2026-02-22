@@ -70,25 +70,24 @@ ${currentJsx}
 
 ## 组件架构
 
-组件采用两层闭包结构：
-- 外层函数：接收依赖注入（React, hooks, UI 组件等）
-- 内层函数：接收运行时 props，返回 JSX
+组件使用 ES module 格式，通过 \`archon:*\` 虚拟模块导入依赖，\`export default function\` 导出渲染函数。
 
 \`\`\`jsx
-function Component({ React, useState, Badge }) {
-  return function ({ tool, state, isLoading, isComplete, isError }) {
-    return <div>...</div>;
-  };
+import { useState } from "archon:react";
+import { Badge } from "archon:ui";
+
+export default function ({ tool, state, isLoading, isComplete, isError }) {
+  return <div>...</div>;
 }
 \`\`\`
 
-### 外层可用依赖
-- React 核心：React, useState, useMemo, useCallback, useEffect, useRef, Fragment
-- UI 组件：Badge, Spinner, Table/TableBody/TableCell/TableHead/TableHeader/TableRow, Tooltip/TooltipContent/TooltipTrigger, CollapsibleSection, ResultHeader, ResultSection, RateSheetLinks, RateSheetPanel, SourceDocumentViewer
-- 图标：ChevronRight, FileText
-- 同 Agent 下其他组件（PascalCase 引用）
+### 可用模块
+- \`archon:react\`：React, useState, useMemo, useCallback, useEffect, useRef, Fragment
+- \`archon:ui\`：Badge, Spinner, Table/TableBody/TableCell/TableHead/TableHeader/TableRow, Tooltip/TooltipContent/TooltipTrigger, CollapsibleSection, ResultHeader, ResultSection, RateSheetLinks, RateSheetPanel, SourceDocumentViewer
+- \`archon:icons\`：ChevronRight, FileText
+- \`archon:component/<key>\`：同 Agent 下其他组件（default export）
 
-### 内层 Props
+### Props
 - tool: { name: string, input: object, output: any }
 - state: "partial-call" | "call" | "result" | "error"
 - isLoading: boolean（正在加载）
@@ -99,7 +98,7 @@ function Component({ React, useState, Badge }) {
 可直接使用 Tailwind CSS 类名。
 
 ### JSX 片段简写
-如果不需要外层依赖，可以直接写 JSX 片段，系统会自动包装为完整闭包。
+如果不需要导入依赖，可以直接写 JSX 片段，系统会自动包装为 ES module。
 
 ## 可用工具
 
@@ -113,7 +112,7 @@ function Component({ React, useState, Badge }) {
 1. 小范围修改优先使用 edit_jsx，避免不必要的整体替换
 2. 大范围重写或结构调整使用 update_jsx
 3. edit_jsx 的 old_text 必须与当前代码中的文本精确匹配（包括空格和换行）
-4. 生成的代码必须遵循两层闭包结构（除非是 JSX 片段简写）
+4. 生成的代码必须遵循 ES module 格式（除非是 JSX 片段简写）
 5. 用中文回复用户的问题和说明`;
 }
 

@@ -4,12 +4,6 @@
 
 ---
 
-## 与旧格式的关系
-
-系统通过代码中是否包含 `import`/`export` 语句自动检测格式，新旧格式可在同一 Agent 内共存。旧格式代码完全不受影响。
-
----
-
 ## 模块命名空间
 
 | 命名空间 | 用途 | 适用场景 |
@@ -90,19 +84,6 @@ export default async function(args) {
 
 ## 组件
 
-### 旧格式
-
-```jsx
-function Component({ React, useState, Badge, ProductCard }) {
-  return function({ tool, isLoading }) {
-    const [open, setOpen] = useState(false);
-    return <Badge>{tool.output.status}</Badge>;
-  }
-}
-```
-
-### 新格式
-
 ```jsx
 import { useState } from "archon:react";
 import { Badge } from "archon:ui";
@@ -113,8 +94,6 @@ export default function({ tool, isLoading }) {
   return <Badge>{tool.output.status}</Badge>;
 }
 ```
-
-新格式只需一层函数（`export default function`），无需两层闭包。
 
 ### archon:react 可用导出
 

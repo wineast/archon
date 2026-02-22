@@ -12,6 +12,5 @@ export {
   compileComponentGraph,
   inferComponentDeps,
   keyToPascal,
-  pascalToKey,
 } from "./_compose";
 export type { ComponentRecord } from "./_compose";
