@@ -42,6 +42,7 @@ interface FunctionFormProps {
   code: string;
   parametersSchema: JsonSchema7 | null;
   returnParametersSchema: JsonSchema7 | null;
+  readOnly?: boolean;
   onDraftRef: (ref: FunctionFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
@@ -54,6 +55,7 @@ export function FunctionForm({
   code: initialCode,
   parametersSchema: initialParametersSchema,
   returnParametersSchema: initialReturnParametersSchema,
+  readOnly,
   onDraftRef,
   onDirtyChange,
 }: FunctionFormProps) {
@@ -120,6 +122,7 @@ export function FunctionForm({
             className="mt-1 h-8 text-sm"
             {...form.register("name")}
             placeholder="Display name"
+            disabled={readOnly}
           />
         </div>
         <div>
@@ -130,6 +133,7 @@ export function FunctionForm({
             className="mt-1 min-h-[60px] resize-none text-sm"
             {...form.register("description")}
             placeholder="What this function does..."
+            disabled={readOnly}
           />
         </div>
 
@@ -140,7 +144,7 @@ export function FunctionForm({
             <InlineSchemaEditor
               label="Input (JSON Schema / Template)"
               value={field.value ?? null}
-              onChange={field.onChange}
+              onChange={readOnly ? () => {} : field.onChange}
               agentId={agentId}
               requireObjectRoot
             />
@@ -153,7 +157,7 @@ export function FunctionForm({
             <InlineSchemaEditor
               label="Output (JSON Schema / Template)"
               value={field.value ?? null}
-              onChange={field.onChange}
+              onChange={readOnly ? () => {} : field.onChange}
               agentId={agentId}
               requireObjectRoot
             />
@@ -166,25 +170,29 @@ export function FunctionForm({
               Code (JavaScript)
             </label>
             <GuideDialog title="函数代码编写指南" content={functionCodeGuide} />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-6 gap-1 px-1.5 text-xs"
-              onClick={() => setCodeAssistOpen(true)}
-            >
-              <SparklesIcon className="size-3" />
-              AI 编辑
-            </Button>
+            {!readOnly && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-1.5 text-xs"
+                onClick={() => setCodeAssistOpen(true)}
+              >
+                <SparklesIcon className="size-3" />
+                AI 编辑
+              </Button>
+            )}
           </div>
-          <FunctionCodeAssistDialog
-            open={codeAssistOpen}
-            onOpenChange={setCodeAssistOpen}
-            code={currentCode}
-            context={codeAssistContext}
-            onApply={(newCode) => form.setValue("code", newCode, { shouldDirty: true })}
-            agentId={agentId}
-          />
+          {!readOnly && (
+            <FunctionCodeAssistDialog
+              open={codeAssistOpen}
+              onOpenChange={setCodeAssistOpen}
+              code={currentCode}
+              context={codeAssistContext}
+              onApply={(newCode) => form.setValue("code", newCode, { shouldDirty: true })}
+              agentId={agentId}
+            />
+          )}
           <div className="mt-1">
             <Controller
               name="code"
@@ -192,7 +200,8 @@ export function FunctionForm({
               render={({ field }) => (
                 <JsEditor
                   value={field.value}
-                  onChange={field.onChange}
+                  onChange={readOnly ? () => {} : field.onChange}
+                  readOnly={readOnly}
                   height="400px"
                 />
               )}

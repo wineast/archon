@@ -30,6 +30,10 @@ vi.mock("drizzle-orm", () => ({
   ilike: vi.fn((a, b) => ({ op: "ilike", a, b })),
 }));
 
+vi.mock("@/lib/pool/queries", () => ({
+  getReferencedBuiltinFunctionKeys: vi.fn().mockResolvedValue(new Set()),
+}));
+
 vi.mock("@/lib/template/render", () => ({
   renderWikiContent: vi.fn(),
 }));

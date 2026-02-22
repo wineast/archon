@@ -21,7 +21,25 @@ export default function(input) {
 
 - `export default` 必须导出一个函数，接收 `input` 参数
 - 函数之间的依赖通过 `archon:fn/<key>` 导入
+- 内置库（如 `archon:lib/filtrex`）需要先从共享池添加对应的 builtin 函数引用，否则 import 会编译报错
 - 详见 [模块系统文档](module-system.md)
+
+---
+
+## 内置函数
+
+内置函数（如 `compileExpression`）以 `origin: "builtin"` 的池资源形式存储在共享池中，通过 `ensureBuiltinPoolFunctions` 在 org 初始化时自动创建。
+
+### 使用方式
+
+1. 在 Agent 的 Functions 标签页中，点击底部的 **从共享池添加** 按钮
+2. 选择需要的 builtin 函数（如 Compile Expression），点击添加
+3. 添加后的 builtin 函数以只读模式显示（Edit tab 字段不可编辑，无 Save/Delete 按钮）
+4. Playground 和 Test Cases tab 完全可用，可以运行和测试
+
+### 运行时依赖
+
+Agent 的用户函数中使用 `import { compileExpression } from "archon:lib/filtrex"` 时，系统会检查该 Agent 是否引用了对应的 builtin 函数。如果未引用，import 会产生编译错误。
 
 ---
 
