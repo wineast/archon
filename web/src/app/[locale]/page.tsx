@@ -15,7 +15,7 @@ import { OrgSwitcher } from "@/components/orgs/org-switcher";
 import { OrgFormDialog } from "@/components/orgs/org-form-dialog";
 import { useAgents, deleteAgent, exportAgent, importAgent } from "@/lib/agents/hooks";
 import type { AgentWithRole } from "@/lib/agents/hooks";
-import { useOrgs } from "@/lib/orgs/hooks";
+import { useOrgs, useOrgParam } from "@/lib/orgs/hooks";
 import type { AgentRow } from "@/db/schema";
 import { useCurrentUser, useOrgRole } from "@/lib/auth/hooks";
 import { useOrgStore } from "@/stores/org-store";
@@ -26,6 +26,7 @@ export default function AgentsPage() {
   const tn = useTranslations("nav");
   const { currentOrgId } = useOrgStore();
   const { orgs, mutate: mutateOrgs } = useOrgs();
+  useOrgParam(orgs);
   const { agents, isLoading, mutate } = useAgents(currentOrgId ?? undefined);
   const { isSuperAdmin } = useCurrentUser();
   const { canManage } = useOrgRole(currentOrgId ?? undefined);

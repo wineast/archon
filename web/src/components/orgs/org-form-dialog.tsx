@@ -17,6 +17,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { createOrg, updateOrg } from "@/lib/orgs/hooks";
 import type { OrgWithRole } from "@/lib/orgs/hooks";
 import type { KeyedMutator } from "swr";
+import { useOrgStore } from "@/stores/org-store";
 
 function nameToSlug(name: string): string {
   return name
@@ -44,6 +45,7 @@ export function OrgFormDialog({
   mutate,
 }: OrgFormDialogProps) {
   const isEdit = !!org;
+  const { setCurrentOrgId } = useOrgStore();
 
   const { register, handleSubmit: rhfHandleSubmit, reset, setValue, control } =
     useForm<OrgFormData>({
@@ -92,14 +94,15 @@ export function OrgFormDialog({
         if (isEdit && org) {
           await updateOrg(org.id, { name: data.name, slug: data.slug }, mutate);
         } else {
-          await createOrg({ name: data.name, slug: data.slug }, mutate);
+          const created = await createOrg({ name: data.name, slug: data.slug }, mutate);
+          if (created) setCurrentOrgId(created.id);
         }
         onOpenChange(false);
       } finally {
         setBusy(false);
       }
     },
-    [isEdit, org, mutate, onOpenChange]
+    [isEdit, org, mutate, onOpenChange, setCurrentOrgId]
   );
 
   return (

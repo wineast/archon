@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { BuildingIcon, CheckIcon, ChevronsUpDownIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,13 +22,19 @@ interface OrgSwitcherProps {
 export function OrgSwitcher({ onCreateOrg }: OrgSwitcherProps) {
   const { orgs } = useOrgs();
   const { currentOrgId, setCurrentOrgId } = useOrgStore();
+  const searchParams = useSearchParams();
 
   // Auto-select first org if none selected or stored org no longer exists
+  // Skip if URL ?org param points to a valid org (useOrgParam will handle it)
   useEffect(() => {
-    if (orgs.length > 0 && (!currentOrgId || !orgs.some((o) => o.id === currentOrgId))) {
-      setCurrentOrgId(orgs[0].id);
-    }
-  }, [currentOrgId, orgs, setCurrentOrgId]);
+    if (orgs.length === 0) return;
+    if (currentOrgId && orgs.some((o) => o.id === currentOrgId)) return;
+
+    const slugParam = searchParams.get("org");
+    if (slugParam && orgs.some((o) => o.slug === slugParam)) return;
+
+    setCurrentOrgId(orgs[0].id);
+  }, [currentOrgId, orgs, setCurrentOrgId, searchParams]);
 
   const currentOrg = orgs.find((o) => o.id === currentOrgId);
 

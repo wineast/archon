@@ -97,6 +97,28 @@
 - 组织设置页（成员管理、基本信息）
 - 组织级用量 Dashboard
 
+## 组织选择持久化
+
+组织选择通过 **URL 参数 + Zustand localStorage** 双重持久化：
+
+- URL `?org=<slug>` 作为权威来源，刷新页面或分享链接时能恢复到正确组织
+- `useOrgParam(orgs)` hook 实现双向同步：
+  - **URL → Zustand**：页面 mount 时读取 `?org` 参数，匹配 slug 后设置 `currentOrgId`
+  - **Zustand → URL**：`currentOrgId` 变化时自动 `router.replace` 更新 URL 参数
+- OrgSwitcher 的 auto-select 逻辑会跳过 URL 参数指定的有效组织，避免覆盖
+
+### 创建组织后自动切换
+
+`OrgFormDialog` 创建组织成功后自动调用 `setCurrentOrgId(created.id)`，无需用户手动切换。
+
+### 数据流
+
+```
+创建组织: createOrg → setCurrentOrgId(id) → useOrgParam → router.replace(?org=slug)
+切换组织: OrgSwitcher click → setCurrentOrgId(id) → useOrgParam → router.replace(?org=slug)
+刷新页面: URL ?org=slug → useOrgParam → setCurrentOrgId(id) → agents 加载
+```
+
 ## 内置 Agent
 
 Build 助手和 AI 辅助编辑已迁移为组织级内置 Agent，详见 [builtin-agents.md](./builtin-agents.md)。
