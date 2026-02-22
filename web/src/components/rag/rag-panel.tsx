@@ -27,8 +27,17 @@ interface RagPanelProps {
 export function RagPanel({ agentId, ragEnabled, onToggleFeature }: RagPanelProps) {
   const [enabling, setEnabling] = useState(false);
 
-  const { config, mutate: mutateConfig } = useRagConfig(agentId);
+  const { config, isLoading: configLoading, mutate: mutateConfig } = useRagConfig(agentId);
   const { documents, mutate: mutateDocuments } = useRagDocuments(agentId);
+
+  // Wrap toggle to also refresh ragConfig cache (config may be auto-created)
+  const handleToggle = useCallback(
+    async (enabled: boolean) => {
+      await onToggleFeature(enabled);
+      mutateConfig();
+    },
+    [onToggleFeature, mutateConfig]
+  );
 
   const handleSaveConfig = useCallback(
     async (id: string, data: Record<string, unknown>) => {
@@ -53,9 +62,9 @@ export function RagPanel({ agentId, ragEnabled, onToggleFeature }: RagPanelProps
 
   const handleEnable = useCallback(async () => {
     setEnabling(true);
-    await onToggleFeature(true);
+    await handleToggle(true);
     setEnabling(false);
-  }, [onToggleFeature]);
+  }, [handleToggle]);
 
   // First-time ceremony: only show when disabled AND no config data
   if (!ragEnabled && config === null) {
@@ -78,7 +87,7 @@ export function RagPanel({ agentId, ragEnabled, onToggleFeature }: RagPanelProps
           <span className="text-sm font-semibold">RAG</span>
           <Switch
             checked={ragEnabled}
-            onCheckedChange={onToggleFeature}
+            onCheckedChange={handleToggle}
             className="scale-75"
           />
           <GuideDialog title="RAG 模块" content={ragGuide} />
@@ -104,6 +113,7 @@ export function RagPanel({ agentId, ragEnabled, onToggleFeature }: RagPanelProps
         <TabsContent value="config" className="flex-1 min-h-0 mt-0">
           <RagConfigDetail
             config={config}
+            isLoading={configLoading}
             onSave={handleSaveConfig}
           />
         </TabsContent>

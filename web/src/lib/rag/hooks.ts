@@ -11,7 +11,8 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export async function toggleRagFeature(
   agentId: string,
   enabled: boolean,
-  mutateAgent: KeyedMutator<AgentRow>
+  mutateAgent: KeyedMutator<AgentRow>,
+  mutateRagConfig?: KeyedMutator<RagConfigRow | null>
 ) {
   try {
     const res = await fetch(`/api/agents/${agentId}`, {
@@ -21,6 +22,8 @@ export async function toggleRagFeature(
     });
     if (!res.ok) throw new Error(await res.text());
     mutateAgent();
+    // Refresh ragConfig cache after toggling (config may have been auto-created)
+    mutateRagConfig?.();
   } catch (e) {
     console.warn("toggleRagFeature failed:", e);
     toast.error("Failed to toggle RAG feature");
