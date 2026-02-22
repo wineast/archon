@@ -43,6 +43,7 @@ vi.mock("@/db/schema", () => ({
   agentVersions: { agentId: "agentId" },
   modelConfigs: { agentId: "agentId" },
   tools: { agentId: "agentId" },
+  components: Symbol("components"),
   orgSlots: { orgId: "orgId", slotKey: "slotKey", agentId: "agentId" },
   SLOT_KEYS: ["builder", "assist", "evaluator"],
 }));
@@ -54,6 +55,11 @@ vi.mock("@/lib/pool/seed-builtin-tools", () => ({
 
 vi.mock("@/lib/pool/seed-builtin-functions", () => ({
   ensureBuiltinPoolFunctions: vi.fn(),
+}));
+
+const mockEnsureBuiltinPoolComponents = vi.fn();
+vi.mock("@/lib/pool/seed-builtin-components", () => ({
+  ensureBuiltinPoolComponents: (...args: unknown[]) => mockEnsureBuiltinPoolComponents(...args),
 }));
 
 import { ensureOrgDefaults } from "../ensure-org-defaults";
