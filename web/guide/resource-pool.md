@@ -187,7 +187,8 @@ type WithPoolMeta<T> = T & {
 - `agentId = NULL`
 - `origin = "builtin"`
 - `isSystem = true`
-- 使用 `onConflictDoNothing` 保证幂等
+- `parametersSchema`：通过 `z.toJSONSchema()` 从 Zod inputSchema 转换
+- 使用 `onConflictDoUpdate` 保证幂等，冲突时更新 `description` 和 `parametersSchema`
 
 ### `ensureBuiltinToolRefs(db, buildChatAgentId)`
 
@@ -253,6 +254,39 @@ Agent Build 页面中，每种资源 Tab 提供"从共享池添加"入口：
 2. 已引用的资源标记为"已添加"
 3. 点击"添加"创建 `agentResourceRef`
 4. 添加后的池资源出现在该 agent 的资源列表中，带有 `_source: "pool"` 标识
+
+### 池引用详情视图（只读模式）
+
+Agent Build 页面中，点击池引用资源（`_source === "pool"`）时，详情视图切换为**只读模式**：
+
+#### 规则
+
+1. **表单只读**：所有字段 `disabled`/`readOnly`，不可编辑
+2. **隐藏 Save/Delete**：底部操作栏替换为 `PoolRefBottomBar`
+3. **来源 Badge**：顶部显示 `PoolRefBadge`（`系统内置` / `共享池`）
+4. **Builtin 额外隐藏**：`origin === "builtin"` 的资源隐藏不适用的编辑区域：
+   - Tool：隐藏 Handler 编辑器 + 执行环境选择器
+   - Function：隐藏 Code 编辑器
+   - Component：隐藏 JSX/CSS 编辑器
+5. **引用层控制**：
+   - "移除引用"按钮（带确认弹窗）
+   - Enabled 开关仅 `resourceType === "tool"` 时显示
+
+#### 关键组件
+
+| 组件 | 路径 | 用途 |
+|---|---|---|
+| `PoolRefBadge` | `web/src/components/pool/pool-ref-badge.tsx` | 显示来源标签 |
+| `PoolRefBottomBar` | `web/src/components/pool/pool-ref-bottom-bar.tsx` | 替代底部操作栏 |
+| `PoolMeta` | `web/src/components/pool/types.ts` | 池引用元数据类型 |
+| `toPoolMeta()` | `web/src/components/pool/types.ts` | 从 `WithPoolMeta` 提取 `PoolMeta` |
+
+#### 数据流
+
+1. Panel 组件中列表数据为 `WithPoolMeta<T>[]`，包含 `_source`/`_refId`/`_refEnabled`
+2. Panel 调用 `toPoolMeta(activeItem)` 提取 `PoolMeta`（私有资源返回 `undefined`）
+3. Detail 组件接收 `poolMeta?: PoolMeta`，存在时启用只读模式
+4. Form 组件接收 `readOnly` + `hideBuiltinSections` props
 
 ---
 

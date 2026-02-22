@@ -14,6 +14,9 @@ import { SchemaExamplesPanel } from "./schema-examples-panel";
 import { SchemaTestCasesPanel } from "./schema-test-cases-panel";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import type { SchemaRow } from "@/db/schema";
+import type { PoolMeta } from "@/components/pool/types";
+import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
+import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface SchemaDetailProps {
   schema: SchemaRow;
@@ -21,9 +24,11 @@ interface SchemaDetailProps {
   agentId?: string;
   onSave: (id: string, data: Omit<SchemaFormValues, "key">) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  poolMeta?: PoolMeta;
 }
 
-export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: SchemaDetailProps) {
+export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete, poolMeta }: SchemaDetailProps) {
+  const isPoolRef = !!poolMeta;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const draftRef = useRef<SchemaFormHandle | null>(null);
@@ -127,6 +132,11 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
         <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 min-w-0">
+            {isPoolRef && (
+              <div className="mb-3">
+                <PoolRefBadge origin={poolMeta.origin} />
+              </div>
+            )}
             <SchemaForm
               schema={{
                 key: schema.key,
@@ -141,6 +151,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
               templateVariableNames={templateVariableNames}
               templateVariableMap={datasetVars}
               agentId={agentId}
+              readOnly={isPoolRef}
             >
               <Tabs
                 value={innerTab}
@@ -174,6 +185,15 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
           </div>
         </ScrollArea>
 
+        {isPoolRef && agentId ? (
+          <PoolRefBottomBar
+            agentId={agentId}
+            refId={poolMeta.refId}
+            resourceType="schema"
+            onRemoved={() => onDelete(schema.id)}
+          />
+        ) : (
+        <>
         <div className="flex items-center gap-2 border-t px-4 py-2">
           <Button
             size="sm"
@@ -219,6 +239,8 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete }: 
           description={`Are you sure you want to delete "${schema.key}"? This action cannot be undone.`}
           onConfirm={handleDelete}
         />
+        </>
+        )}
       </TabsContent>
 
       <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">

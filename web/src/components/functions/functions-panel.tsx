@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
   useFunctions,
-  useFunction,
   createFunction,
   updateFunction,
   deleteFunction,
@@ -17,6 +16,7 @@ import { FunctionDetail } from "./function-detail";
 import { FunctionsEmptyState } from "./functions-empty-state";
 import { FunctionCreateDialog } from "./function-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toPoolMeta } from "@/components/pool/types";
 
 export function FunctionsPanel({ agentId }: { agentId: string }) {
   const { functions, mutate: mutateList } = useFunctions(agentId);
@@ -26,13 +26,10 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
-  const { fn: activeFunction, mutate: mutateDetail } =
-    useFunction(activeFunctionId);
-
-  // Resolve pool meta for active function
-  const activeFnMeta = functions.find((f) => f.id === activeFunctionId);
-  const isReadOnly =
-    activeFnMeta?._source === "pool" && activeFnMeta?.origin === "builtin";
+  const activeFunction = useMemo(
+    () => (activeFunctionId ? functions.find((f) => f.id === activeFunctionId) ?? null : null),
+    [activeFunctionId, functions]
+  );
 
   useEffect(() => {
     if (activeFunctionId) {
@@ -63,12 +60,9 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
       id: string,
       data: Record<string, unknown>
     ) => {
-      await updateFunction(id, data, () => {
-        mutateList();
-        mutateDetail();
-      });
+      await updateFunction(id, data, mutateList);
     },
-    [mutateList, mutateDetail]
+    [mutateList]
   );
 
   const handleDelete = useCallback(
@@ -103,9 +97,9 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
           key={activeFunction.id}
           agentId={agentId}
           fn={activeFunction}
-          readOnly={isReadOnly}
-          onSave={isReadOnly ? undefined : handleSave}
-          onDelete={isReadOnly ? undefined : handleDelete}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          poolMeta={toPoolMeta(activeFunction)}
         />
       );
     }

@@ -32,10 +32,13 @@ interface ComponentFormProps {
   allComponents?: ComponentRecord[];
   onDraftRef: (ref: ComponentFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /** When true, all fields are disabled/readOnly. */
   readOnly?: boolean;
+  /** When true, hide JSX/CSS editors (for builtin resources). */
+  hideBuiltinSections?: boolean;
 }
 
-export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange, readOnly }: ComponentFormProps) {
+export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange, readOnly, hideBuiltinSections }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
   const originalRef = useRef<ComponentDefinition>({ ...component });
   const currentSource = form.watch("componentSource");
@@ -96,82 +99,86 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             disabled={readOnly}
           />
         </div>
-        {!readOnly && (
-          <>
-            <Controller
-              name="toolInputSchema"
-              control={form.control}
-              render={({ field }) => (
-                <InlineSchemaEditor
-                  label="Tool Input Schema"
-                  value={field.value ?? null}
-                  onChange={field.onChange}
-                  agentId={agentId}
-                  requireObjectRoot
-                />
-              )}
+        <Controller
+          name="toolInputSchema"
+          control={form.control}
+          render={({ field }) => (
+            <InlineSchemaEditor
+              label="Tool Input Schema"
+              value={field.value ?? null}
+              onChange={field.onChange}
+              agentId={agentId}
+              requireObjectRoot
+              readOnly={readOnly}
             />
-            <Controller
-              name="componentInputSchema"
-              control={form.control}
-              render={({ field }) => (
-                <InlineSchemaEditor
-                  label="Component Input Schema"
-                  value={field.value ?? null}
-                  onChange={field.onChange}
-                  agentId={agentId}
-                  requireObjectRoot
-                />
-              )}
+          )}
+        />
+        <Controller
+          name="componentInputSchema"
+          control={form.control}
+          render={({ field }) => (
+            <InlineSchemaEditor
+              label="Component Input Schema"
+              value={field.value ?? null}
+              onChange={field.onChange}
+              agentId={agentId}
+              requireObjectRoot
+              readOnly={readOnly}
             />
-            <div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Component Source (JSX)
-                </label>
-                <ComponentHelpButton />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 gap-1 px-1.5 text-xs"
-                  onClick={() => setJsxAssistOpen(true)}
-                >
-                  <SparklesIcon className="size-3" />
-                  AI 编辑
-                </Button>
-              </div>
-              <JsxAssistDialog
-                open={jsxAssistOpen}
-                onOpenChange={setJsxAssistOpen}
-                jsxSource={currentSource}
-                onApply={(src) => form.setValue("componentSource", src, { shouldDirty: true })}
-                agentId={agentId}
-              />
-              <Controller
-                name="componentSource"
-                control={form.control}
-                render={({ field }) => (
-                  <JsEditor
-                    value={field.value}
-                    onChange={field.onChange}
-                    height="300px"
-                    className="mt-1"
-                  />
-                )}
-              />
-              {referencedComponents.length > 0 && (
-                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs text-muted-foreground">引用组件:</span>
-                  {referencedComponents.map((key) => (
-                    <Badge key={key} variant="secondary" className="text-xs font-mono">
-                      {keyToPascal(key)}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+          )}
+        />
+        {hideBuiltinSections ? (
+          <p className="text-xs text-muted-foreground italic">
+            系统内置组件的 JSX/CSS 由平台管理，不可编辑。
+          </p>
+        ) : (
+          <div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                Component Source (JSX)
+              </label>
+              <ComponentHelpButton />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-1.5 text-xs"
+                onClick={() => setJsxAssistOpen(true)}
+              >
+                <SparklesIcon className="size-3" />
+                AI 编辑
+              </Button>
             </div>
-          </>
+            <JsxAssistDialog
+              open={jsxAssistOpen}
+              onOpenChange={setJsxAssistOpen}
+              jsxSource={currentSource}
+              onApply={(src) => form.setValue("componentSource", src, { shouldDirty: true })}
+              agentId={agentId}
+            />
+            <Controller
+              name="componentSource"
+              control={form.control}
+              render={({ field }) => (
+                <JsEditor
+                  value={field.value}
+                  onChange={field.onChange}
+                  height="300px"
+                  className="mt-1"
+                />
+              )}
+            />
+            {referencedComponents.length > 0 && (
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-muted-foreground">引用组件:</span>
+                {referencedComponents.map((key) => (
+                  <Badge key={key} variant="secondary" className="text-xs font-mono">
+                    {keyToPascal(key)}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </FormProvider>

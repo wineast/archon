@@ -39,6 +39,10 @@ interface ToolFormProps {
   agentId?: string;
   onDraftRef: (ref: ToolFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /** When true, all fields are disabled/readOnly. */
+  readOnly?: boolean;
+  /** When true, hide handler editor and execution target selector (for builtin resources). */
+  hideBuiltinSections?: boolean;
 }
 
 const VALID_NAME_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -50,7 +54,7 @@ function detectHandlerTab(tool: ToolDefinition): HandlerTab {
   return "code";
 }
 
-export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormProps) {
+export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange, readOnly, hideBuiltinSections }: ToolFormProps) {
   const form = useForm<ToolDefinition>({ defaultValues: { ...tool } });
   const [handlerTab, setHandlerTab] = useState<HandlerTab>(() =>
     detectHandlerTab(tool)
@@ -112,6 +116,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
             className="mt-1 h-8 text-sm"
             {...form.register("name")}
             placeholder="e.g. searchProducts"
+            disabled={readOnly}
           />
           {nameError && (
             <p className="text-xs text-destructive mt-1">{nameError}</p>
@@ -125,6 +130,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
             className="mt-1 min-h-[60px] resize-none text-sm"
             {...form.register("description")}
             placeholder="Describe what this tool does and when the AI should use it..."
+            disabled={readOnly}
           />
         </div>
         <Controller
@@ -137,9 +143,15 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               onChange={field.onChange}
               agentId={agentId}
               requireObjectRoot
+              readOnly={readOnly}
             />
           )}
         />
+        {hideBuiltinSections ? (
+          <p className="text-xs text-muted-foreground italic">
+            系统内置工具的执行环境与 Handler 由平台管理，不可编辑。
+          </p>
+        ) : (<>
         <div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">
@@ -307,6 +319,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
             )}
           </div>
         )}
+        </>)}
         <Controller
           name="returnParametersSchema"
           control={form.control}
@@ -317,6 +330,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               onChange={field.onChange}
               agentId={agentId}
               requireObjectRoot
+              readOnly={readOnly}
             />
           )}
         />
@@ -331,6 +345,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange }: ToolFormP
               <Select
                 value={field.value || "__none__"}
                 onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                disabled={readOnly}
               >
                 <SelectTrigger className="mt-1 h-8 text-sm">
                   <SelectValue placeholder="Select a component..." />

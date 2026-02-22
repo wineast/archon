@@ -20,6 +20,11 @@ vi.mock("drizzle-orm", () => ({
   and: (...args: unknown[]) => ({ _tag: "and", args }),
   isNull: (col: unknown) => ({ _tag: "isNull", col }),
   eq: (a: unknown, b: unknown) => ({ _tag: "eq", a, b }),
+  sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({
+    _tag: "sql",
+    strings: [...strings],
+    values,
+  }),
 }));
 
 /* ── helpers ── */
@@ -41,7 +46,10 @@ function createMockDb(poolToolRows: { id: string }[] = []) {
     insert: vi.fn((table: unknown) => ({
       values: vi.fn((vals: unknown) => {
         insertCalls.push({ table, values: vals });
-        return { onConflictDoNothing: vi.fn() };
+        return {
+          onConflictDoNothing: vi.fn(),
+          onConflictDoUpdate: vi.fn(),
+        };
       }),
     })),
     select: vi.fn(() => ({
@@ -93,19 +101,20 @@ describe("ensureBuiltinPoolTools", () => {
       enabled: true,
       handler: null,
       executionTarget: "server",
+      parametersSchema: null,
     });
   });
 
-  it("calls onConflictDoNothing for idempotency", async () => {
+  it("calls onConflictDoUpdate for idempotent upsert", async () => {
     mockBuildAllTools.mockReturnValue(makeSampleTools(2));
     const db = createMockDb();
 
     await ensureBuiltinPoolTools(db as never);
 
-    // The values() call returns an object with onConflictDoNothing
+    // The values() call returns an object with onConflictDoUpdate
     const valuesResult = db.insert.mock.results[0].value.values.mock
       .results[0].value;
-    expect(valuesResult.onConflictDoNothing).toHaveBeenCalledTimes(1);
+    expect(valuesResult.onConflictDoUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("does not insert when buildAllTools returns empty object", async () => {

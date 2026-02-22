@@ -46,6 +46,8 @@ interface SchemaFormProps {
   templateVariableMap?: Record<string, unknown>;
   /** Agent ID for BYOK model resolution in AI assist. */
   agentId?: string;
+  /** When true, all fields are disabled/readOnly. */
+  readOnly?: boolean;
 }
 
 /**
@@ -70,6 +72,7 @@ export function SchemaForm({
   templateVariableNames,
   templateVariableMap,
   agentId,
+  readOnly,
 }: SchemaFormProps) {
   const form = useForm<SchemaFormValues>({ defaultValues: { ...schema } });
   const originalRef = useRef<SchemaFormValues>({ ...schema });
@@ -123,6 +126,7 @@ export function SchemaForm({
             className="mt-1 h-8 text-sm"
             {...form.register("name")}
             placeholder="e.g. Address Fields"
+            disabled={readOnly}
           />
         </div>
         <div>
@@ -133,6 +137,7 @@ export function SchemaForm({
             className="mt-1 min-h-[60px] resize-none text-sm"
             {...form.register("description")}
             placeholder="Describe what this schema represents..."
+            disabled={readOnly}
           />
         </div>
 
@@ -187,6 +192,7 @@ export function SchemaForm({
                 height="400px"
                 templateVariables={templateVariableNames}
                 templateVariableMap={templateVariableMap}
+                readOnly={readOnly}
               />
             )}
           />

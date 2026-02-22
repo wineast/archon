@@ -17,6 +17,7 @@ import { SchemaDetail } from "./schema-detail";
 import { SchemasEmptyState } from "./schemas-empty-state";
 import { SchemaCreateDialog } from "./schema-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toPoolMeta } from "@/components/pool/types";
 
 export function SchemasPanel({ agentId }: { agentId: string }) {
   const { schemas, mutate } = useSchemas(agentId);
@@ -120,6 +121,7 @@ export function SchemasPanel({ agentId }: { agentId: string }) {
               onSave={handleSave}
               agentId={agentId}
               onDelete={handleDelete}
+              poolMeta={toPoolMeta(activeSchema)}
             />
           ) : (
             <SchemasEmptyState onCreate={handleOpenCreateDialog} />
@@ -156,6 +158,7 @@ export function SchemasPanel({ agentId }: { agentId: string }) {
                 agentId={agentId}
                 onSave={handleSave}
                 onDelete={handleDelete}
+                poolMeta={toPoolMeta(activeSchema)}
               />
             </div>
           </>

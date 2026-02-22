@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
   useDatasets,
-  useDataset,
   createDataset,
   updateDataset,
   deleteDataset,
@@ -17,6 +16,7 @@ import { DatasetDetail } from "./dataset-detail";
 import { DatasetsEmptyState } from "./datasets-empty-state";
 import { DatasetCreateDialog } from "./dataset-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toPoolMeta } from "@/components/pool/types";
 
 export function DatasetsPanel({ agentId }: { agentId: string }) {
   const { datasets, mutate: mutateList } = useDatasets(agentId);
@@ -26,8 +26,10 @@ export function DatasetsPanel({ agentId }: { agentId: string }) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
-  const { dataset: activeDataset, mutate: mutateDetail } =
-    useDataset(activeDatasetId);
+  const activeDataset = useMemo(
+    () => datasets.find((d) => d.id === activeDatasetId) ?? null,
+    [datasets, activeDatasetId]
+  );
 
   useEffect(() => {
     if (activeDatasetId) {
@@ -58,12 +60,9 @@ export function DatasetsPanel({ agentId }: { agentId: string }) {
       id: string,
       data: { name: string; description: string; data: unknown }
     ) => {
-      await updateDataset(id, data, () => {
-        mutateList();
-        mutateDetail();
-      });
+      await updateDataset(id, data, mutateList);
     },
-    [mutateList, mutateDetail]
+    [mutateList]
   );
 
   const handleDelete = useCallback(
@@ -107,8 +106,10 @@ export function DatasetsPanel({ agentId }: { agentId: string }) {
             <DatasetDetail
               key={activeDataset.id}
               dataset={activeDataset}
+              agentId={agentId}
               onSave={handleSave}
               onDelete={handleDelete}
+              poolMeta={toPoolMeta(activeDataset)}
             />
           ) : (
             <DatasetsEmptyState onCreate={openCreateDialog} />
@@ -141,8 +142,10 @@ export function DatasetsPanel({ agentId }: { agentId: string }) {
               <DatasetDetail
                 key={activeDataset.id}
                 dataset={activeDataset}
+                agentId={agentId}
                 onSave={handleSave}
                 onDelete={handleDelete}
+                poolMeta={toPoolMeta(activeDataset)}
               />
             </div>
           </>

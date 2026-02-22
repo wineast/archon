@@ -24,6 +24,9 @@ import { useObjectTypes } from "@/lib/ontology/hooks";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
+import type { PoolMeta } from "@/components/pool/types";
+import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
+import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 import { WikiAssistDialog } from "@/components/wiki/wiki-assist-dialog";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import { KeyField } from "@/components/ui/key-field";
@@ -35,9 +38,13 @@ interface WikiEditorProps {
   agentId: string;
   onUpdate: (id: string, updates: { name: string; content: string }) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  /** When true, editor is read-only and Save/Delete are hidden. */
+  readOnly?: boolean;
+  poolMeta?: PoolMeta;
 }
 
-export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: WikiEditorProps) {
+export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOnly, poolMeta }: WikiEditorProps) {
+  const isPoolRef = !!poolMeta;
   const [name, setName] = useState(doc.name);
   const [content, setContent] = useState(doc.content);
   const [activeTab, setActiveTab] = useState<"preview" | "edit">("edit");
@@ -124,6 +131,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
       <div className="flex h-full flex-col">
         {/* Header */}
         <div className="shrink-0 space-y-2 px-6 py-4">
+          {isPoolRef && <PoolRefBadge origin={poolMeta.origin} />}
           <KeyField value={doc.key} />
           <div>
             <label className="text-xs font-medium text-muted-foreground">Name</label>
@@ -132,6 +140,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Document name"
+              disabled={readOnly}
             />
           </div>
         </div>
@@ -167,6 +176,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
               ontologyTypes={completionOntologyTypes}
               placeholder="Write your content in Markdown..."
               className="h-full"
+              readOnly={readOnly}
             />
           </TabsContent>
           <TabsContent value="preview" className="flex-1 min-h-0 overflow-auto px-6 py-4">
@@ -181,6 +191,14 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
         </Tabs>
 
         {/* Footer */}
+        {isPoolRef ? (
+          <PoolRefBottomBar
+            agentId={agentId}
+            refId={poolMeta.refId}
+            resourceType="wiki"
+            onRemoved={() => onDelete(doc.id)}
+          />
+        ) : !readOnly ? (
         <div className="flex items-center gap-2 shrink-0 border-t px-4 py-2">
           <Button size="sm" onClick={handleSave} disabled={busy || !dirty}>
             {saving ? <Spinner className="mr-1 size-3" /> : <SaveIcon className="mr-1 size-3" />}
@@ -203,6 +221,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete }: Wiki
             {deleting ? "Deleting..." : "Delete"}
           </Button>
         </div>
+        ) : null}
       </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

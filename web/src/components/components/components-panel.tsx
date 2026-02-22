@@ -21,6 +21,7 @@ import { ComponentDetail } from "./component-detail";
 import { ComponentsEmptyState } from "./components-empty-state";
 import { ComponentCreateDialog } from "./component-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toPoolMeta } from "@/components/pool/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -39,8 +40,6 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
     () => components.find((c) => c.id === activeComponentId) ?? null,
     [components, activeComponentId]
   );
-
-  const readOnly = activeComponent?.origin === "builtin";
 
   const allComponentRecords: ComponentRecord[] = useMemo(
     () =>
@@ -154,7 +153,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
               allComponents={allComponentRecords}
               onSave={handleSave}
               onDelete={handleDelete}
-              readOnly={readOnly}
+              poolMeta={toPoolMeta(activeComponent)}
             />
           ) : (
             <ComponentsEmptyState onCreate={handleOpenCreateDialog} />
@@ -187,10 +186,11 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
               <ComponentDetail
                 key={activeComponent.id}
                 component={activeComponent}
+                agentId={agentId}
                 allComponents={allComponentRecords}
                 onSave={handleSave}
                 onDelete={handleDelete}
-                readOnly={readOnly}
+                poolMeta={toPoolMeta(activeComponent)}
               />
             </div>
           </>

@@ -45,6 +45,10 @@ interface FunctionFormProps {
   readOnly?: boolean;
   onDraftRef: (ref: FunctionFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /** When true, all fields are disabled/readOnly. */
+  readOnly?: boolean;
+  /** When true, hide code editor (for builtin resources). */
+  hideBuiltinSections?: boolean;
 }
 
 export function FunctionForm({
@@ -58,6 +62,8 @@ export function FunctionForm({
   readOnly,
   onDraftRef,
   onDirtyChange,
+  readOnly,
+  hideBuiltinSections,
 }: FunctionFormProps) {
   const defaultValues: FunctionFormValues = {
     name: initialName,
@@ -147,6 +153,7 @@ export function FunctionForm({
               onChange={readOnly ? () => {} : field.onChange}
               agentId={agentId}
               requireObjectRoot
+              readOnly={readOnly}
             />
           )}
         />
@@ -160,10 +167,16 @@ export function FunctionForm({
               onChange={readOnly ? () => {} : field.onChange}
               agentId={agentId}
               requireObjectRoot
+              readOnly={readOnly}
             />
           )}
         />
 
+        {hideBuiltinSections ? (
+          <p className="text-xs text-muted-foreground italic">
+            系统内置函数的代码由平台管理，不可编辑。
+          </p>
+        ) : (
         <div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">
@@ -208,6 +221,7 @@ export function FunctionForm({
             />
           </div>
         </div>
+        )}
       </div>
     </FormProvider>
   );
