@@ -34,9 +34,9 @@
     "icon": "bot",
     "slug": "my-agent",
     "isPublic": false,
-    "mcpEnabled": true,
+    "mcpEnabled": false,
     "memoryEnabled": false,
-    "skillsEnabled": true
+    "skillsEnabled": false
   },
   "versions": [
     {

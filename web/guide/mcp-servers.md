@@ -133,7 +133,7 @@ MCP Server 详情页的独立 Tab（与 Edit Tab 并列，`variant="line"` 导�
 
 ## MCP 总开关
 
-每个 Agent 拥有独立的 MCP 总开关 `mcpEnabled`（`agents.mcp_enabled`，默认 `true`）。
+每个 Agent 拥有独立的 MCP 总开关 `mcpEnabled`（`agents.mcp_enabled`，默认 `false`，新建 Agent 默认关闭）。
 
 ### UI 位置
 

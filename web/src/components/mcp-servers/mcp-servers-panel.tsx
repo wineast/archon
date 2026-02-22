@@ -28,7 +28,7 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const mcpEnabled = agent?.mcpEnabled ?? true;
+  const mcpEnabled = agent?.mcpEnabled ?? false;
   const activeMcpServer = mcpServers.find((s) => s.id === activeId) ?? null;
 
   useEffect(() => {
