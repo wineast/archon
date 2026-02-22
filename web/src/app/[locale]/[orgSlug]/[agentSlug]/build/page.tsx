@@ -30,6 +30,7 @@ import {
   SlidersHorizontalIcon,
   Trash2Icon,
   UsersIcon,
+  VariableIcon,
   WrenchIcon,
   ZapIcon,
 } from "lucide-react";
@@ -78,6 +79,7 @@ import { useTrash } from "@/lib/trash/hooks";
 import { toggleSkillsFeature } from "@/lib/skills/hooks";
 import { AgentSlotsPanel } from "@/components/slots/agent-slots-panel";
 import { JudgeConfigPanel } from "@/components/judge-config/judge-config-panel";
+import { EnvVarsPanel } from "@/components/env-vars/env-vars-panel";
 import { SupportBubble } from "@/components/support-bubble/support-bubble";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -93,6 +95,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "config", label: "config", icon: SlidersHorizontalIcon },
   // ── L0: Foundation (no external deps) ──
   { value: "datasets", label: "datasets", icon: DatabaseIcon },
+  { value: "env-vars", label: "envVars", icon: VariableIcon },
   { value: "schemas", label: "schemas", icon: BracesIcon },
   // ── L1: Content & logic (depend on L0) ──
   { value: "wiki", label: "wiki", icon: BookOpenIcon },
@@ -288,6 +291,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return <WikiPanel agentId={agent.id} />;
       case "datasets":
         return <DatasetsPanel agentId={agent.id} />;
+      case "env-vars":
+        return <EnvVarsPanel agentId={agent.id} />;
       case "ontology":
         return <OntologyPanel agentId={agent.id} />;
       case "memory":

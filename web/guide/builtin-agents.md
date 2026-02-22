@@ -39,11 +39,13 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 
 创建组织时 `ensureOrgDefaults(orgId)` 幂等创建：
 - 4 个 agent（build-chat、assist、evaluator、support）
-- 每个 agent 的默认 modelConfig
+- 每个 agent 的默认 modelConfig（assist 带 fieldContext 分支的 LiquidJS 系统提示词模板）
 - 4 条 orgSlots 记录
-- builder agent 的系统工具
+- builder agent 的系统工具引用
+- assist agent 的内置 wiki 引用（guide 文档）
 - evaluator agent 的默认 judgeConfig
 - support agent 的默认 embed token
+- 已有组织升级：assist 的空系统提示词会被自动回填
 
 ## 删除保护
 

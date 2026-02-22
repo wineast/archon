@@ -193,4 +193,32 @@ describe("ensureOrgDefaults", () => {
     );
     expect(evaluatorConfig).toBeDefined();
   });
+
+  it("sets non-empty systemPrompt with fieldContext for assist slot model config", async () => {
+    await ensureOrgDefaults("org-1");
+
+    const modelConfigValues = mockValues.mock.calls.filter(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return val.key === "default" && val.name === "Default" && "systemPrompt" in val;
+      }
+    );
+
+    const assistConfig = modelConfigValues.find(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return typeof val.systemPrompt === "string" && (val.systemPrompt as string).includes("fieldContext");
+      }
+    );
+    expect(assistConfig).toBeDefined();
+    expect((assistConfig![0] as Record<string, unknown>).systemPrompt).not.toBe("");
+  });
+
+  it("backfills empty assist system prompt for existing agents", async () => {
+    selectLimitResult = [{ id: "existing-agent" }];
+    await ensureOrgDefaults("org-1");
+
+    // Should call update for the assist slot's empty system prompt
+    expect(mockUpdate).toHaveBeenCalled();
+  });
 });

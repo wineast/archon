@@ -37,6 +37,20 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
 
     if (existing) {
       agentId = existing.id;
+
+      // Upgrade: backfill empty system prompt for assist slot
+      if (slotKey === "assist" && def.defaultSystemPrompt) {
+        await db
+          .update(modelConfigs)
+          .set({ systemPrompt: def.defaultSystemPrompt })
+          .where(
+            and(
+              eq(modelConfigs.agentId, agentId),
+              eq(modelConfigs.isActive, true),
+              eq(modelConfigs.systemPrompt, ""),
+            ),
+          );
+      }
     } else {
       // Create agent
       const [agent] = await db
