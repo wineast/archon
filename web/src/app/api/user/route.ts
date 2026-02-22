@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { ensureUser } from "@/lib/auth/ensure-user";
+import { initiateAccountDeletion } from "@/lib/auth/account-deletion";
 
 export async function GET() {
   const { userId } = await auth();
@@ -33,5 +34,16 @@ export async function PUT(req: Request) {
     .where(eq(users.clerkId, userId))
     .returning();
 
+  return Response.json(updated);
+}
+
+export async function DELETE() {
+  const { userId } = await auth();
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await ensureUser(userId);
+  const updated = await initiateAccountDeletion(userId);
   return Response.json(updated);
 }

@@ -140,6 +140,7 @@ export const users = pgTable("users", {
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export type User = typeof users.$inferSelect;

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useUser, useClerk } from "@clerk/nextjs";
-import { LogOutIcon, SettingsIcon } from "lucide-react";
+import { LogOutIcon, SettingsIcon, UserXIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserSettingsModal } from "@/components/user/user-settings-modal";
+import { DeleteAccountDialog } from "@/components/user/delete-account-dialog";
 import { useCurrentUser } from "@/lib/auth/hooks";
 
 export function UserMenu() {
@@ -21,6 +22,7 @@ export function UserMenu() {
   const { signOut } = useClerk();
   const { user: currentUser } = useCurrentUser();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const imageUrl = user?.imageUrl;
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
@@ -30,6 +32,7 @@ export function UserMenu() {
   return (
     <>
       <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <DeleteAccountDialog open={deleteOpen} onOpenChange={setDeleteOpen} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -54,6 +57,10 @@ export function UserMenu() {
           <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
             <SettingsIcon className="size-4" />
             {t("settings")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
+            <UserXIcon className="size-4" />
+            {t("deleteAccount")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut({ redirectUrl: "/sign-in" })}>
