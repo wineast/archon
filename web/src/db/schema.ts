@@ -17,8 +17,13 @@ import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeR
 
 /* ─────────── Agent Scope Constants ─────────── */
 
-export const AGENT_SCOPES = ["platform", "org", "user"] as const;
+export const AGENT_SCOPES = ["platform", "org"] as const;
 export type AgentScope = (typeof AGENT_SCOPES)[number];
+
+/* ─────────── Slot Key Constants ─────────── */
+
+export const SLOT_KEYS = ["builder", "assist", "evaluator"] as const;
+export type SlotKey = (typeof SLOT_KEYS)[number];
 
 /* ─────────── Org Role Constants ─────────── */
 
@@ -115,7 +120,7 @@ export const agents = pgTable(
     memoryEnabled: boolean("memory_enabled").notNull().default(false),
     skillsEnabled: boolean("skills_enabled").notNull().default(false),
     contextCompressionEnabled: boolean("context_compression_enabled").notNull().default(false),
-    scope: text("scope").notNull().default("user").$type<AgentScope>(),
+    scope: text("scope").notNull().default("org").$type<AgentScope>(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
@@ -1480,7 +1485,63 @@ export const memories = pgTable(
 export type MemoryRow = typeof memories.$inferSelect;
 export type NewMemoryRow = typeof memories.$inferInsert;
 
-/* ─────────── Org Credit Transactions ─────────── */
+/* ─────────── Org Slots (org-level default slot bindings) ─────────── */
+
+export const orgSlots = pgTable(
+  "org_slots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    slotKey: text("slot_key").notNull().$type<SlotKey>(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("org_slots_org_id_slot_key_idx").on(t.orgId, t.slotKey),
+  ]
+);
+
+export type OrgSlotRow = typeof orgSlots.$inferSelect;
+export type NewOrgSlotRow = typeof orgSlots.$inferInsert;
+
+/* ─────────── Agent Slot Overrides (agent-level slot overrides) ─────────── */
+
+export const agentSlotOverrides = pgTable(
+  "agent_slot_overrides",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    slotKey: text("slot_key").notNull().$type<SlotKey>(),
+    targetAgentId: uuid("target_agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("agent_slot_overrides_agent_id_slot_key_idx").on(t.agentId, t.slotKey),
+  ]
+);
+
+export type AgentSlotOverrideRow = typeof agentSlotOverrides.$inferSelect;
+export type NewAgentSlotOverrideRow = typeof agentSlotOverrides.$inferInsert;
 
 /* ─────────── Invitation Codes ─────────── */
 

@@ -213,7 +213,12 @@
     "newJudgeConfig": "New Judge Config",
     "noJudgeConfigs": "No configs yet",
     "results": "Results",
-    "benchmark": "Benchmark"
+    "benchmark": "Benchmark",
+    "slots": "Slots",
+    "slotsDescription": "Configure slot bindings for this Agent. Override org defaults or inherit.",
+    "slotOverride": "Override",
+    "slotInherited": "Inherited",
+    "slotResetToOrg": "Reset to org default"
   },
   "admin": {
     "title": "Admin",
@@ -235,7 +240,9 @@
     "name": "Name",
     "slugLabel": "Slug",
     "slugHint": "URL path identifier, only lowercase letters, numbers and hyphens",
-    "buildChat": "Build Assistant"
+    "buildChat": "Build Assistant",
+    "slots": "Slots",
+    "slotsDescription": "Configure organization-level default slot bindings. All Agents inherit these by default."
   },
   "share": {
     "preview": "Share Preview",

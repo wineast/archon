@@ -90,26 +90,25 @@ web/src/components/build-chat/build-chat-panel.tsx — 聊天面板 UI
 
 ## 模型配置
 
-Build 助手和 AI 辅助编辑的模型配置已迁移为组织级内置 Agent，详见 [builtin-agents.md](./builtin-agents.md)。
+Build 助手和 AI 辅助编辑的模型通过功能槽位（Agent Slots）机制解析，详见 [builtin-agents.md](./builtin-agents.md)。
 
 ### Build Chat
 
-- 对应内置 Agent slug: `build-chat`，默认模型 `anthropic/claude-sonnet-4`，温度 0.3
-- 服务端通过 `getBuiltinAgentConfig(orgId, "build-chat")` 查询，带 60s 内存缓存
-- 用户在 agent 详情页的 Model Configs 标签中编辑模型和温度
+- 通过 `resolveSlot(agentId, "builder")` 获取模型和温度
+- 解析顺序：agent 覆盖 → org 默认 → 硬编码默认值（`anthropic/claude-sonnet-4`，温度 0.3）
+- 结果缓存 60s
+- 用户可在 Org 设置页的"功能槽位"Tab 切换 builder 绑定的 agent，或在 Agent Build 页的"Slots"Tab 覆盖
 
 ### AI 辅助编辑
 
 所有 AI 辅助编辑功能（Prompt Assist、JSX Assist、Function Code Assist、Schema Code Assist、Tool Code Assist、Dataset Assist、Wiki Assist）共用一个可配置的模型。
 
-- 对应内置 Agent slug: `assist`，默认模型 `anthropic/claude-sonnet-4`，温度 0.7
-- 服务端通过 `getBuiltinAgentConfig(orgId, "assist")` 获取 `.model`
-- 7 个 assist 路由均通过 `agentId → getOrgIdByAgentId → getBuiltinAgentConfig → resolveModel` 动态解析模型
-- 7 个 assist 路由共用 `createAssistHandler()`，已集成三项监控：用量记录、运行时事件、会话持久化。前端 dialog 组件在打开时重置 `sessionIdRef`，首次发消息时生成 sessionId
+- 通过 `resolveSlot(agentId, "assist")` 获取模型
+- 7 个 assist 路由共用 `createAssistHandler()`，已集成三项监控：用量记录、运行时事件、会话持久化
 
 ### 系统工具
 
-Build Chat 的工具以 `isSystem=true` 标记存储在 `tools` 表中，运行时结合 DB enabled 状态与代码 handler 过滤，详见 [builtin-agents.md](./builtin-agents.md#系统工具)。
+Build Chat 的工具以 `isSystem=true` 标记存储在 `tools` 表中，运行时结合 DB enabled 状态与代码 handler 过滤。
 
 ## 前端面板
 

@@ -213,7 +213,12 @@
     "newJudgeConfig": "New Judge Config",
     "noJudgeConfigs": "No configs yet",
     "results": "Results",
-    "benchmark": "Benchmark"
+    "benchmark": "Benchmark",
+    "slots": "Slots",
+    "slotsDescription": "配置此 Agent 的功能槽位，可覆盖组织默认或继承",
+    "slotOverride": "自定义",
+    "slotInherited": "继承",
+    "slotResetToOrg": "恢复继承"
   },
   "admin": {
     "title": "管理后台",
@@ -235,7 +240,9 @@
     "name": "名称",
     "slugLabel": "Slug",
     "slugHint": "URL 路径标识，仅支持小写字母、数字和连字符",
-    "buildChat": "Build 助手"
+    "buildChat": "Build 助手",
+    "slots": "功能槽位",
+    "slotsDescription": "配置组织级默认功能槽位绑定，所有 Agent 默认继承此配置"
   },
   "share": {
     "preview": "分享预览",

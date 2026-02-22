@@ -10,6 +10,7 @@ import {
   BarChart3Icon,
   BuildingIcon,
   KeyIcon,
+  PlugZapIcon,
   UsersIcon,
   WalletIcon,
 } from "lucide-react";
@@ -24,6 +25,7 @@ import { OrgUsagePanel } from "@/components/orgs/org-usage-panel";
 import { OrgApiKeysPanel } from "@/components/orgs/org-api-keys-panel";
 
 import { OrgCreditsPanel } from "@/components/orgs/org-credits-panel";
+import { OrgSlotsPanel } from "@/components/orgs/org-slots-panel";
 import { useOrgRole } from "@/lib/auth/hooks";
 import { updateOrg, useOrgs } from "@/lib/orgs/hooks";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,7 @@ interface SettingsTab {
 
 const TABS: SettingsTab[] = [
   { value: "info", label: "info", icon: BuildingIcon, minRole: "manage" },
+  { value: "slots", label: "slots", icon: PlugZapIcon, minRole: "manage" },
   { value: "members", label: "members", icon: UsersIcon, minRole: "manage" },
   { value: "api-keys", label: "apiKeys", icon: KeyIcon, minRole: "manage" },
   { value: "credits", label: "credits", icon: WalletIcon, minRole: "manage" },
@@ -138,6 +141,8 @@ function OrgSettingsContent({ org }: { org: OrgRow }) {
     switch (activeTab) {
       case "info":
         return <OrgInfoPanel org={org} />;
+      case "slots":
+        return <OrgSlotsPanel orgId={org.id} />;
       case "members":
         return <OrgMembersPanel orgId={org.id} />;
       case "api-keys":

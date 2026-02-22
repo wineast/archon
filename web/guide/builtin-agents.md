@@ -1,59 +1,89 @@
-# 内置 Agent（Builtin Agents）
+# 功能槽位（Agent Slots）
 
 ## 概述
 
-内置 Agent 是由系统自动创建的 Agent，按 `scope` 三级体系管理：
+功能槽位是通用的 AI 能力插槽机制，取代之前硬编码的 build-chat/assist 绑定。
 
-| scope | 含义 | 可见性 | 示例 |
-|-------|------|--------|------|
-| `platform` | 全局平台 Agent | 仅超管可见 | archon-support |
-| `org` | 组织自动创建 Agent | org 的 agent 列表 | build-chat, assist |
-| `user` | 用户自建 Agent | org 的 agent 列表 | 客服 Agent |
+每个槽位指向一个 agent，由该 agent 提供 AI 能力（model + temperature）。支持 org 级默认 + agent 级覆盖。
 
-## 自动创建
+## 槽位定义
 
-每个组织创建时，`ensureBuiltinAgents(orgId)` 幂等创建两个 `scope: "org"` 的 Agent：
+| slotKey | 用途 | 默认 agent slug | 默认模型 | 默认温度 |
+|---------|------|----------------|----------|----------|
+| `builder` | Build Chat 对话助手 | build-chat | anthropic/claude-sonnet-4 | 0.3 |
+| `assist` | AI 辅助编辑 | assist | anthropic/claude-sonnet-4 | 0.7 |
+| `evaluator` | Agent 评估 | evaluator | anthropic/claude-sonnet-4 | 0.3 |
 
-- **build-chat**：Agent 构建助手，默认模型 `anthropic/claude-sonnet-4`，温度 0.3
-- **assist**：AI 辅助编辑，默认模型 `anthropic/claude-sonnet-4`，温度 0.7
+## Scope 体系
 
-每个 Agent 自动创建一个 `isActive=true` 的 `modelConfig`。build-chat 还会 seed 系统工具。
+只保留两级 scope：
+- `platform`：全局平台 Agent（如 archon-support），仅超管可见
+- `org`：组织 Agent（系统创建和用户创建一视同仁）
 
-## 模型配置
+用户创建的 agent 默认 `scope: "org"`。
 
-模型配置存储在 `modelConfigs` 表中（与普通 Agent 相同），通过 `getBuiltinAgentConfig(orgId, slug)` 查询：
+## 数据模型
 
-- 查找 org 下指定 slug 的 Agent
-- 取其 `isActive=true` 的 modelConfig
-- 无配置时回退到内置默认值
-- 结果缓存 60s
+### orgSlots 表
 
-用户可在 agent 详情页的 Model Configs 标签中编辑模型和温度。
+组织级默认槽位配置，唯一约束 `(orgId, slotKey)`。
 
-## 系统工具
+### agentSlotOverrides 表
 
-build-chat Agent 的工具以 `isSystem=true` 标记存储在 `tools` 表中：
+Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 org 默认。
 
-- 运行时：查询 DB 获取 enabled 状态 → 调用 `buildAllTools()` 获取代码实现 → 交叉过滤
-- 用户可 enable/disable 系统工具，但不可编辑 handler/key/description 或删除
-- 系统工具的实际逻辑在 `web/src/lib/build-chat/tools/` 的代码中
+## 解析逻辑
 
-## 保护规则
+`resolveSlot(agentId, slotKey)`:
 
-- **保留 slug**：`build-chat`、`assist` 不允许用户创建同名 Agent
-- **禁止删除**：`scope: "org"` 的 Agent 不允许删除
-- **系统工具**：`isSystem=true` 的工具只能切换 enabled，不可编辑或删除
+1. 查 `agentSlotOverrides(agentId, slotKey)` → 有则返回 targetAgentId
+2. 查 agent.orgId → 查 `orgSlots(orgId, slotKey)` → 有则返回 agentId
+3. 都没有 → 返回硬编码默认值（SLOT_DEFS）
+
+结果缓存 60s，可通过 `invalidateSlotCache()` 清除。
+
+## 组织初始化
+
+创建组织时 `ensureOrgDefaults(orgId)` 幂等创建：
+- 3 个 agent（build-chat、assist、evaluator），`scope: "org"`
+- 每个 agent 的默认 modelConfig
+- 3 条 orgSlots 记录
+- builder agent 的系统工具
+
+## 删除保护
+
+不再按 scope 判断，改为引用检查：
+- 删除 agent 前检查 `orgSlots` 和 `agentSlotOverrides` 是否有引用
+- 有引用则返回 409 Conflict
+- 用户需先解除引用再删除
+
+## 消费端
+
+- **Build Chat**（`execute-stream.ts`）：使用 `resolveSlot(agentId, "builder")` 获取模型和温度
+- **AI 辅助编辑**（`assist-utils.ts`）：使用 `resolveSlot(agentId, "assist")` 获取模型
+
+## UI
+
+### Org 设置页
+
+"功能槽位"Tab，列出所有槽位及当前绑定的 agent，可切换。
+
+### Agent Build 页
+
+"Slots"Tab，显示当前 agent 的槽位配置：
+- 继承自 org 或自定义覆盖
+- 可切换覆盖 / 恢复继承
 
 ## 关键文件
 
 | 文件 | 作用 |
 |------|------|
-| `web/src/lib/builtin-agents/constants.ts` | 保留 slug 列表和默认配置 |
-| `web/src/lib/builtin-agents/ensure.ts` | 幂等创建内置 Agent + 系统工具 |
-| `web/src/lib/builtin-agents/get-config.ts` | 查询内置 Agent 的活跃模型配置 |
-| `web/src/lib/build-chat/tools/` | 系统工具代码实现 |
-
-## 消费端
-
-- **Build Chat**（`execute-stream.ts`）：使用 `getBuiltinAgentConfig(orgId, "build-chat")` 获取模型和温度
-- **AI 辅助编辑**（`assist-utils.ts`）：使用 `getBuiltinAgentConfig(orgId, "assist")` 获取模型
+| `web/src/db/schema.ts` | SLOT_KEYS、orgSlots、agentSlotOverrides 表定义 |
+| `web/src/lib/slots/constants.ts` | SLOT_DEFS 槽位定义 |
+| `web/src/lib/slots/resolve-slot.ts` | resolveSlot() 解析 + 缓存 |
+| `web/src/lib/slots/ensure-org-defaults.ts` | ensureOrgDefaults() 组织初始化 |
+| `web/src/lib/slots/hooks.ts` | 前端 SWR hooks |
+| `web/src/app/api/orgs/[orgId]/slots/route.ts` | Org 槽位 API |
+| `web/src/app/api/agents/[id]/slots/route.ts` | Agent 槽位覆盖 API |
+| `web/src/components/orgs/org-slots-panel.tsx` | Org 设置页槽位面板 |
+| `web/src/components/slots/agent-slots-panel.tsx` | Agent Build 页槽位面板 |

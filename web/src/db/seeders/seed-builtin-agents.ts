@@ -1,5 +1,5 @@
 import { logSection, log } from "../seed-utils";
-import { ensureBuiltinAgents } from "@/lib/builtin-agents/ensure";
+import { ensureOrgDefaults } from "@/lib/slots";
 import type { Seeder } from "./types";
 
 export const seedBuiltinAgents: Seeder = {
@@ -12,7 +12,7 @@ export const seedBuiltinAgents: Seeder = {
       return;
     }
 
-    await ensureBuiltinAgents(ctx.orgId, ctx.db);
-    log("ok", "Builtin agents ensured (build-chat, assist)");
+    await ensureOrgDefaults(ctx.orgId, ctx.db);
+    log("ok", "Org defaults ensured (builder, assist, evaluator)");
   },
 };

@@ -22,6 +22,7 @@ import {
   MessageSquareIcon,
   NetworkIcon,
   PlugIcon,
+  PlugZapIcon,
   PuzzleIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
@@ -71,6 +72,7 @@ import type { AgentRow } from "@/db/schema";
 import { TrashSheet } from "@/components/trash/trash-sheet";
 import { useTrash } from "@/lib/trash/hooks";
 import { toggleSkillsFeature } from "@/lib/skills/hooks";
+import { AgentSlotsPanel } from "@/components/slots/agent-slots-panel";
 import { SupportBubble } from "@/components/support-bubble/support-bubble";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -99,6 +101,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "model-config", label: "modelConfig", icon: SettingsIcon },
   { value: "memory", label: "memory", icon: BrainIcon },
   { value: "mcp", label: "mcp", icon: PlugIcon },
+  { value: "slots", label: "slots", icon: PlugZapIcon },
   // ── Runtime & operations ──
   { value: "files", label: "files", icon: FileIcon },
   { value: "sessions", label: "sessions", icon: MessageSquareIcon },
@@ -307,6 +310,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return canManageMembers ? <UsagePanel agentId={agent.id} /> : null;
       case "runtime":
         return canManageMembers ? <RuntimeEventsPanel agentId={agent.id} /> : null;
+      case "slots":
+        return <AgentSlotsPanel agentId={agent.id} orgId={agent.orgId} />;
       case "members":
         return canManageMembers ? (
           <MembersPanel agentId={agent.id} isPublic={agent.isPublic} />

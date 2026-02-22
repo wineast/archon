@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { orgs, orgMembers } from "@/db/schema";
 import type { User } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { ensureBuiltinAgents } from "@/lib/builtin-agents/ensure";
+import { ensureOrgDefaults } from "@/lib/slots";
 
 /**
  * Ensure the user has a personal organization.
@@ -19,7 +19,7 @@ export async function ensurePersonalOrg(user: User): Promise<string> {
     .limit(1);
 
   if (existing) {
-    await ensureBuiltinAgents(existing.orgId);
+    await ensureOrgDefaults(existing.orgId);
     return existing.orgId;
   }
 
@@ -43,7 +43,7 @@ export async function ensurePersonalOrg(user: User): Promise<string> {
     role: "owner",
   });
 
-  await ensureBuiltinAgents(org.id);
+  await ensureOrgDefaults(org.id);
 
   return org.id;
 }

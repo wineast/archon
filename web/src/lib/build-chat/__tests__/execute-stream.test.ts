@@ -48,8 +48,8 @@ vi.mock("@/db/schema", () => ({
   tools: { key: "key", enabled: "enabled", agentId: "agentId", isSystem: "isSystem" },
 }));
 
-vi.mock("@/lib/builtin-agents/get-config", () => ({
-  getBuiltinAgentConfig: vi.fn().mockResolvedValue({
+vi.mock("@/lib/slots", () => ({
+  resolveSlot: vi.fn().mockResolvedValue({
     agentId: "",
     model: "anthropic/claude-sonnet-4",
     temperature: 0.3,

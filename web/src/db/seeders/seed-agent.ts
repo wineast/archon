@@ -21,7 +21,7 @@ export const seedAgent: Seeder = {
     }>(join(ctx.agentDir, "agent.json"));
 
     // Resolve scope: prefer explicit scope, fallback from legacy isPlatform
-    const scope: AgentScope = agentSeed.scope ?? (agentSeed.isPlatform ? "platform" : "user");
+    const scope: AgentScope = agentSeed.scope ?? (agentSeed.isPlatform ? "platform" : "org");
 
     // Check if agent already exists in this org
     const [existing] = await ctx.db

@@ -37,8 +37,8 @@ vi.mock("@/lib/ai/get-org-id", () => ({
   getOrgIdByAgentId: vi.fn().mockResolvedValue("org-1"),
 }));
 
-vi.mock("@/lib/builtin-agents/get-config", () => ({
-  getBuiltinAgentConfig: vi.fn().mockResolvedValue({
+vi.mock("@/lib/slots", () => ({
+  resolveSlot: vi.fn().mockResolvedValue({
     agentId: "assist-agent-1",
     model: "anthropic/claude-sonnet-4",
     temperature: 0.7,

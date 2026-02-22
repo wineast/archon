@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { agents, orgs } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import { agents, orgs, orgSlots, agentSlotOverrides } from "@/db/schema";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
@@ -130,17 +130,27 @@ export async function DELETE(
   const ctx = await requireAgentRole(id, "owner");
   if (ctx instanceof NextResponse) return ctx;
 
-  // Prevent deleting org-level builtin agents
-  const [target] = await db
-    .select({ scope: agents.scope })
-    .from(agents)
-    .where(eq(agents.id, id))
+  // Check if agent is referenced by any slot binding
+  const refs = await db
+    .select({ id: orgSlots.id })
+    .from(orgSlots)
+    .where(eq(orgSlots.agentId, id))
     .limit(1);
 
-  if (target?.scope === "org") {
+  const overrideRefs = await db
+    .select({ id: agentSlotOverrides.id })
+    .from(agentSlotOverrides)
+    .where(
+      or(
+        eq(agentSlotOverrides.targetAgentId, id),
+      )
+    )
+    .limit(1);
+
+  if (refs.length > 0 || overrideRefs.length > 0) {
     return NextResponse.json(
-      { error: "Organization-level agents cannot be deleted" },
-      { status: 403 }
+      { error: "Agent is referenced by slot bindings. Remove the slot references first." },
+      { status: 409 }
     );
   }
 

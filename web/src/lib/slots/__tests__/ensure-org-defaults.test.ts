@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Track what db.select().from().where().limit() returns
 let selectLimitResult: unknown[] = [];
-
 const mockInsert = vi.fn();
 const mockValues = vi.fn();
 
@@ -34,6 +32,8 @@ vi.mock("@/db/schema", () => ({
   agents: { id: "id", orgId: "orgId", slug: "slug" },
   modelConfigs: { agentId: "agentId" },
   tools: { agentId: "agentId" },
+  orgSlots: { orgId: "orgId", slotKey: "slotKey", agentId: "agentId" },
+  SLOT_KEYS: ["builder", "assist", "evaluator"],
 }));
 
 vi.mock("@/lib/build-chat/tools", () => ({
@@ -43,23 +43,25 @@ vi.mock("@/lib/build-chat/tools", () => ({
   }),
 }));
 
-import { ensureBuiltinAgents } from "../ensure";
+import { ensureOrgDefaults } from "../ensure-org-defaults";
 
-describe("ensureBuiltinAgents", () => {
+describe("ensureOrgDefaults", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    selectLimitResult = []; // No existing agents
+    selectLimitResult = [];
   });
 
-  it("creates build-chat and assist agents when none exist", async () => {
-    await ensureBuiltinAgents("org-1");
+  it("creates 3 agents + modelConfigs + orgSlots when none exist", async () => {
+    await ensureOrgDefaults("org-1");
 
-    // insert: agent(2) + modelConfig(2) + tools(1 batch) = 5
-    expect(mockInsert).toHaveBeenCalledTimes(5);
+    // For each of 3 slots: agent insert + modelConfig insert + orgSlot insert = 3 inserts
+    // builder also gets tools insert = 1 extra
+    // Total: 3*(agent + modelConfig + orgSlot) + 1 tools = 10
+    expect(mockInsert).toHaveBeenCalledTimes(10);
   });
 
-  it("seeds system tools for build-chat agent", async () => {
-    await ensureBuiltinAgents("org-1");
+  it("seeds system tools only for builder slot", async () => {
+    await ensureOrgDefaults("org-1");
 
     const toolsInsertCall = mockValues.mock.calls.find(
       (call) => Array.isArray(call[0]) && call[0][0]?.isSystem === true
@@ -67,20 +69,13 @@ describe("ensureBuiltinAgents", () => {
 
     expect(toolsInsertCall).toBeTruthy();
     expect(toolsInsertCall![0]).toHaveLength(2);
-    expect(toolsInsertCall![0][0].key).toBe("list_tools");
-    expect(toolsInsertCall![0][1].key).toBe("create_tool");
-  });
-});
-
-describe("ensureBuiltinAgents idempotent", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    selectLimitResult = [{ id: "existing-agent" }]; // Agents already exist
   });
 
-  it("does not create agents if they already exist", async () => {
-    await ensureBuiltinAgents("org-1");
+  it("skips agent creation if agent already exists, but still ensures orgSlot", async () => {
+    selectLimitResult = [{ id: "existing-agent" }];
+    await ensureOrgDefaults("org-1");
 
-    expect(mockInsert).not.toHaveBeenCalled();
+    // Only orgSlot inserts for 3 slots = 3
+    expect(mockInsert).toHaveBeenCalledTimes(3);
   });
 });

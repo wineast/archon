@@ -8,7 +8,7 @@ import { after } from "next/server";
 import { gatherResourceSummary } from "./resource-summary";
 import { buildSystemPrompt } from "./system-prompt";
 import { buildAllTools } from "./tools";
-import { getBuiltinAgentConfig } from "@/lib/builtin-agents/get-config";
+import { resolveSlot } from "@/lib/slots";
 import { db } from "@/db";
 import { agents, tools as toolsTable } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -23,9 +23,6 @@ import {
   extractTextContent,
   responseMessagesToUIParts,
 } from "@/db/chat-persistence";
-
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4";
-const DEFAULT_TEMPERATURE = 0.3;
 
 export interface ExecuteBuildChatStreamOptions {
   messages: UIMessage[];
@@ -51,10 +48,8 @@ export async function executeBuildChatStream(
   const skillsEnabled = agentRow?.skillsEnabled !== false;
   const orgId = agentRow?.orgId ?? null;
 
-  // Get model config from builtin agent
-  const config = orgId
-    ? await getBuiltinAgentConfig(orgId, "build-chat")
-    : { agentId: "", model: DEFAULT_MODEL, temperature: DEFAULT_TEMPERATURE };
+  // Get model config via slot resolution
+  const config = await resolveSlot(agentId, "builder");
 
   const systemPrompt = buildSystemPrompt(summary);
   const codeTools = buildAllTools(agentId, { skillsEnabled });

@@ -5,7 +5,6 @@ import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireAuth } from "@/lib/auth/require-agent-role";
 import { requireOrgRole } from "@/lib/auth/require-org-role";
-import { RESERVED_SLUGS } from "@/lib/builtin-agents/constants";
 
 export async function GET(req: Request) {
   const result = await requireAuth();
@@ -107,14 +106,6 @@ export async function POST(req: Request) {
   if (orgCtx instanceof NextResponse) return orgCtx;
 
   const baseSlug = body.slug?.trim() || toSlug(name);
-
-  if ((RESERVED_SLUGS as readonly string[]).includes(baseSlug)) {
-    return NextResponse.json(
-      { error: `Slug "${baseSlug}" is reserved` },
-      { status: 400 }
-    );
-  }
-
   const slug = await ensureUniqueSlug(baseSlug, orgId);
 
   const [agent] = await db
