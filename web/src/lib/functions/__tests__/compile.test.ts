@@ -7,7 +7,7 @@ describe("resolveAndCompileFunctions", () => {
     const rows: FunctionRecord[] = [
       {
         key: "add",
-        code: `function fn() { return function(input) { return input.a + input.b; } }`,
+        code: `export default function(input) { return input.a + input.b; }`,
         parameters: {
           type: "object",
           properties: {
@@ -44,11 +44,10 @@ describe("resolveAndCompileFunctions", () => {
     const rows: FunctionRecord[] = [
       {
         key: "get_x",
-        code: `function fn() { return function(input) { return input.x; } }`,
+        code: `export default function(input) { return input.x; }`,
         parameters: {
           type: "object",
           properties: {
-            // Use $ref to reference the "point" schema — the property itself is a $ref
             x: { type: "number" },
             y: { type: "number" },
           },
@@ -72,7 +71,7 @@ describe("resolveAndCompileFunctions", () => {
     const rows: FunctionRecord[] = [
       {
         key: "strict_fn",
-        code: `function fn() { return function(input) { return input.name; } }`,
+        code: `export default function(input) { return input.name; }`,
         parameters: {
           type: "object",
           properties: {
@@ -108,7 +107,7 @@ describe("resolveAndCompileFunctions", () => {
     const rows: FunctionRecord[] = [
       {
         key: "location_fn",
-        code: `function fn() { return function(input) { return input.coords.lat + input.coords.lng; } }`,
+        code: `export default function(input) { return input.coords.lat + input.coords.lng; }`,
         parameters: {
           type: "object",
           properties: {
@@ -132,7 +131,7 @@ describe("resolveAndCompileFunctions", () => {
     const rows: FunctionRecord[] = [
       {
         key: "ref_fn",
-        code: `function fn() { return function(input) { return input.data; } }`,
+        code: `export default function(input) { return input.data; }`,
         parameters: {
           type: "object",
           properties: {
