@@ -244,7 +244,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
           <div className="text-center text-sm">
             {t("signIn.noAccount")}{" "}
             <Link href="/sign-up" className="underline underline-offset-4">
-              {t("signUp.link")}
+              {t("signIn.link")}
             </Link>
           </div>
         </div>

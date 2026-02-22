@@ -18,6 +18,11 @@ const isPublicRoute = createRouteMatcher([
   "/api/invitation-codes/verify",
 ]);
 
+const isAuthRoute = createRouteMatcher([
+  "/:locale/sign-in(.*)",
+  "/:locale/sign-up(.*)",
+]);
+
 export default clerkMiddleware(async (auth, request) => {
   const { pathname } = request.nextUrl;
 
@@ -30,17 +35,25 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // Locale routes: manually check auth with locale-aware redirect
-  if (!isPublicRoute(request)) {
-    const { userId } = await auth();
-    if (!userId) {
-      const pathLocale = pathname.split("/")[1];
-      const locale = (routing.locales as readonly string[]).includes(pathLocale)
-        ? pathLocale
-        : routing.defaultLocale;
-      const signInUrl = new URL(`/${locale}/sign-in`, request.url);
-      signInUrl.searchParams.set("redirect_url", request.url);
-      return NextResponse.redirect(signInUrl);
-    }
+  const { userId } = await auth();
+
+  // Redirect signed-in users away from auth pages
+  if (userId && isAuthRoute(request)) {
+    const pathLocale = pathname.split("/")[1];
+    const locale = (routing.locales as readonly string[]).includes(pathLocale)
+      ? pathLocale
+      : routing.defaultLocale;
+    return NextResponse.redirect(new URL(`/${locale}`, request.url));
+  }
+
+  if (!isPublicRoute(request) && !userId) {
+    const pathLocale = pathname.split("/")[1];
+    const locale = (routing.locales as readonly string[]).includes(pathLocale)
+      ? pathLocale
+      : routing.defaultLocale;
+    const signInUrl = new URL(`/${locale}/sign-in`, request.url);
+    signInUrl.searchParams.set("redirect_url", request.url);
+    return NextResponse.redirect(signInUrl);
   }
 
   return intlMiddleware(request);
