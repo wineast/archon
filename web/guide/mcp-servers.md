@@ -45,7 +45,7 @@ MCP (Model Context Protocol) Server 模块允许子 Agent 在 chat 运行时连�
 - `createMcpServer(data, mutate)` — 创建
 - `updateMcpServer(id, data, mutate)` — 更新
 - `deleteMcpServer(id, mutate)` — 删除
-- `testMcpServer(id)` — 测试连接，返回 `TestMcpServerResult`（含 `McpToolDef[]`）
+- `testMcpServer(id)` — 测试连接，返回 `TestMcpServerResult`（含 `McpToolDef[]`，工具包含 `annotations`）
 - `executeMcpTool(serverId, toolName, args)` — 执行单个 MCP 工具
 
 ## Build Chat 工具
@@ -114,6 +114,7 @@ MCP Server 详情页的独立 Tab（与 Edit Tab 并列，`variant="line"` 导�
 
 1. **选择工具**：从左侧列表点击选择工具
 2. **查看描述**：展示工具的 description
+   - 描述下方展示 MCP 工具注解 badge（`annotations`）：只读、破坏性（destructive variant）、幂等、开放世界。仅渲染值为 `true` 的注解
 3. **填写参数**：根据 `inputSchema.properties` 动态生成表单
    - `string` → 文本输入
    - `number` / `integer` → 数字输入
@@ -129,7 +130,7 @@ MCP Server 详情页的独立 Tab（与 Edit Tab 并列，`variant="line"` 导�
 |------|------|
 | `web/src/components/mcp-servers/mcp-tool-playground.tsx` | Playground 组件 |
 | `web/src/app/api/mcp-servers/[id]/execute/route.ts` | Execute API |
-| `web/src/lib/mcp-servers/hooks.ts` | `executeMcpTool` 函数 + `McpToolDef` 类型 |
+| `web/src/lib/mcp-servers/hooks.ts` | `executeMcpTool` 函数 + `McpToolDef` / `McpToolAnnotations` 类型 |
 
 ## MCP 总开关
 
