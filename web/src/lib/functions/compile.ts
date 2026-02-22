@@ -1,11 +1,9 @@
 /**
  * Function compilation & caching layer.
  *
- * Compiles JS source code stored in the `functions` table into callable functions.
- * Dependencies are inferred from the `function fn({ ... })` destructured parameter names:
- *   - Known base dep names (e.g. compileExpression) → injected from npm packages
- *   - Other param names matching a function key → injected from compiled functions
- * All deps are passed as a single object: `fn({ compileExpression, otherDep })`.
+ * Compiles ES module source code stored in the `functions` table into callable functions.
+ * Dependencies are inferred from `import ... from "archon:fn/<key>"` statements.
+ * Base dependencies (e.g. compileExpression) are injected as globals.
  * Compilation order is determined by topological sort of the inferred dependency graph.
  *
  * Execution uses QuickJS WASM sandbox for isolation — user code cannot access
@@ -19,41 +17,19 @@ import {
   createFunctionsSandbox,
   type FunctionsSandbox,
 } from "./sandbox";
-import { isModuleFormat, inferDepsFromImports } from "@/lib/modules/detect";
+import { inferDepsFromImports } from "@/lib/modules/detect";
 
 // Base dependencies available to all functions (npm packages)
 const BASE_DEPS: Record<string, unknown> = {
   compileExpression,
 };
 
-const BASE_DEP_NAMES = new Set(Object.keys(BASE_DEPS));
-
 /**
- * Parse parameter names from `function fn({ param1, param2, ... })` in source code.
- */
-export function parseFnParams(code: string): string[] {
-  const match = code.match(/function\s+fn\s*\(\s*\{([^}]*)\}\s*\)/);
-  if (!match) return [];
-  return match[1]
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean);
-}
-
-/**
- * Extract function-level dependencies from code.
- * Supports both legacy closure format and ES module format.
- *
- * - Legacy: extracts from `function fn({ dep1, dep2 })` params (minus base deps)
- * - Module: extracts from `import ... from "archon:fn/<key>"` statements
+ * Extract function-level dependencies from ES module import statements.
+ * Extracts from `import ... from "archon:fn/<key>"` statements.
  */
 export function inferDeps(code: string, knownKeys: Set<string>): string[] {
-  if (isModuleFormat(code)) {
-    return inferDepsFromImports(code, knownKeys);
-  }
-  return parseFnParams(code).filter(
-    (p) => !BASE_DEP_NAMES.has(p) && knownKeys.has(p)
-  );
+  return inferDepsFromImports(code, knownKeys);
 }
 
 export interface FunctionRecord {
@@ -129,16 +105,10 @@ export async function resolveAndCompileFunctions(
   const sorted = topoSort(rows);
   const knownKeys = new Set(rows.map((r) => r.key));
 
-  const records = sorted.map((row) => {
-    // All deps for this function: base deps + function deps
-    const fnDeps = inferDeps(row.code, knownKeys);
-    const allDeps = [...Object.keys(BASE_DEPS), ...fnDeps];
-    return {
-      key: row.key,
-      code: row.code,
-      depNames: allDeps,
-    };
-  });
+  const records = sorted.map((row) => ({
+    key: row.key,
+    code: row.code,
+  }));
 
   const sandbox = await createFunctionsSandbox(records, BASE_DEPS);
 

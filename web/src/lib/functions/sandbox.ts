@@ -13,7 +13,6 @@ import {
   type QuickJSHandle,
   type QuickJSRuntime,
 } from "quickjs-emscripten";
-import { isModuleFormat } from "@/lib/modules/detect";
 
 // ── Error types ──
 
@@ -226,11 +225,11 @@ function resolveIfPromise(
 // ── Public API: one-shot compile + execute ──
 
 /**
- * Compile and execute a single user function in an isolated sandbox.
+ * Compile and execute a single user function (ES module format) in an isolated sandbox.
  * Creates a fresh Runtime + Context, executes, then disposes.
  *
- * @param code - User code containing `function fn(...) { ... }`
- * @param input - Input to pass to the compiled function
+ * @param code - ES module code with `export default function(input) { ... }`
+ * @param input - Input to pass to the default export function
  * @param deps - Host dependencies to inject as globals (e.g. compileExpression)
  * @param opts - Sandbox resource limits
  */
@@ -255,13 +254,20 @@ export async function compileAndExecFn(
       }
     }
 
-    // Build dep names list for the factory call
-    const depNames = deps ? Object.keys(deps) : [];
+    // Set up module loader for archon:lib/* imports
+    runtime.setModuleLoader((moduleName) => {
+      if (moduleName.startsWith("archon:lib/")) {
+        const libName = moduleName.slice("archon:lib/".length);
+        if (libName === "filtrex") {
+          return `export const compileExpression = globalThis.compileExpression;`;
+        }
+        return `export default globalThis.${libName};`;
+      }
+      return { error: new Error(`Unknown module: ${moduleName}`) };
+    });
 
-    // Compile: evaluate user code + call fn() factory with deps object
-    const depsObj = depNames.length > 0 ? `{ ${depNames.join(", ")} }` : "";
-    const evalCode = `${code}\nif (typeof fn !== 'function') throw new Error('code must define function fn()');\nfn(${depsObj});`;
-    const compileResult = vm.evalCode(evalCode);
+    // Compile as ES module
+    const compileResult = vm.evalCode(code, "archon:fn:main", { type: "module" });
     if (compileResult.error) {
       const errDump = vm.dump(compileResult.error);
       compileResult.error.dispose();
@@ -272,19 +278,22 @@ export async function compileAndExecFn(
       );
     }
 
-    const handler = compileResult.value;
-    if (vm.typeof(handler) !== "function") {
-      handler.dispose();
+    // Extract default export from module namespace
+    const defaultExport = vm.getProp(compileResult.value, "default");
+    compileResult.value.dispose();
+
+    if (vm.typeof(defaultExport) !== "function") {
+      defaultExport.dispose();
       throw new SandboxCompilationError(
-        "fn() must return a function"
+        "Module must have a default export that is a function"
       );
     }
 
     // Marshal input and call
     const inputHandle = marshalToQJS(vm, input);
-    const callResult = vm.callFunction(handler, vm.undefined, [inputHandle]);
+    const callResult = vm.callFunction(defaultExport, vm.undefined, [inputHandle]);
     inputHandle.dispose();
-    handler.dispose();
+    defaultExport.dispose();
 
     if (callResult.error) {
       const errDump = vm.dump(callResult.error);
@@ -310,20 +319,18 @@ export interface FunctionsSandbox {
 }
 
 /**
- * Create a long-lived sandbox with multiple pre-compiled functions.
+ * Create a long-lived sandbox with multiple pre-compiled ES module functions.
  * Functions are compiled in the provided order (caller should topo-sort).
  * Each function result is stored as `globalThis.<key>` so later functions can reference it.
  *
- * Supports two code formats:
- * - **Legacy (closure)**: `function fn({ dep }) { return function(input) { ... } }`
- * - **Module (ES6)**: `import dep from "archon:fn/dep"; export default function(input) { ... }`
+ * Code format: `import dep from "archon:fn/dep"; export default function(input) { ... }`
  *
  * @param records - Functions in dependency order
  * @param deps - Host dependencies (e.g. compileExpression)
  * @param opts - Sandbox resource limits
  */
 export async function createFunctionsSandbox(
-  records: Array<{ key: string; code: string; depNames: string[] }>,
+  records: Array<{ key: string; code: string }>,
   deps?: Record<string, unknown>,
   opts?: SandboxOptions
 ): Promise<FunctionsSandbox> {
@@ -341,22 +348,19 @@ export async function createFunctionsSandbox(
     }
   }
 
-  // Track which functions use module format (their source is stored for the loader)
+  // Store module source for the loader so dependent modules can import them
   const moduleSourceMap = new Map<string, string>();
 
   // Set up module loader for `archon:fn/<key>` and `archon:lib/<name>` imports
   runtime.setModuleLoader((moduleName) => {
     if (moduleName.startsWith("archon:fn/")) {
       const key = moduleName.slice("archon:fn/".length);
-      // If the dependency was compiled as a module, return its source directly
       const modSrc = moduleSourceMap.get(key);
       if (modSrc) return modSrc;
-      // Otherwise it was compiled as legacy → already on globalThis as a callable
-      return `export default globalThis.${key};`;
+      return { error: new Error(`Unknown function module: archon:fn/${key}`) };
     }
     if (moduleName.startsWith("archon:lib/")) {
       const libName = moduleName.slice("archon:lib/".length);
-      // Map known libs to re-export shims
       if (libName === "filtrex") {
         return `export const compileExpression = globalThis.compileExpression;`;
       }
@@ -367,59 +371,36 @@ export async function createFunctionsSandbox(
 
   const compiledKeys: string[] = [];
 
-  // Compile each function in order
+  // Compile each function as ES module
   for (const rec of records) {
-    const useModule = isModuleFormat(rec.code);
-
-    if (useModule) {
-      // Module format: evaluate as ES module, extract default export
-      moduleSourceMap.set(rec.key, rec.code);
-      const result = vm.evalCode(rec.code, `archon:fn:${rec.key}`, { type: "module" });
-      if (result.error) {
-        const errDump = vm.dump(result.error);
-        result.error.dispose();
-        vm.dispose();
-        runtime.dispose();
-        throw new SandboxCompilationError(
-          `Failed to compile function "${rec.key}": ${typeof errDump === "object" && errDump?.message ? errDump.message : String(errDump)}`
-        );
-      }
-
-      // Module evalCode returns the module namespace object; extract "default"
-      const defaultExport = vm.getProp(result.value, "default");
-      result.value.dispose();
-
-      if (vm.typeof(defaultExport) !== "function") {
-        defaultExport.dispose();
-        vm.dispose();
-        runtime.dispose();
-        throw new SandboxCompilationError(
-          `Function "${rec.key}": module must have a default export that is a function`
-        );
-      }
-
-      vm.setProp(vm.global, `__fn_${rec.key}`, defaultExport);
-      vm.setProp(vm.global, rec.key, defaultExport);
-      defaultExport.dispose();
-    } else {
-      // Legacy closure format
-      const depsObj = rec.depNames.length > 0 ? `{ ${rec.depNames.join(", ")} }` : "";
-      const evalSrc = `${rec.code}\nif (typeof fn !== 'function') throw new Error('code must define function fn()');\nfn(${depsObj});`;
-      const result = vm.evalCode(evalSrc);
-      if (result.error) {
-        const errDump = vm.dump(result.error);
-        result.error.dispose();
-        vm.dispose();
-        runtime.dispose();
-        throw new SandboxCompilationError(
-          `Failed to compile function "${rec.key}": ${typeof errDump === "object" && errDump?.message ? errDump.message : String(errDump)}`
-        );
-      }
-
-      vm.setProp(vm.global, `__fn_${rec.key}`, result.value);
-      vm.setProp(vm.global, rec.key, result.value);
-      result.value.dispose();
+    moduleSourceMap.set(rec.key, rec.code);
+    const result = vm.evalCode(rec.code, `archon:fn:${rec.key}`, { type: "module" });
+    if (result.error) {
+      const errDump = vm.dump(result.error);
+      result.error.dispose();
+      vm.dispose();
+      runtime.dispose();
+      throw new SandboxCompilationError(
+        `Failed to compile function "${rec.key}": ${typeof errDump === "object" && errDump?.message ? errDump.message : String(errDump)}`
+      );
     }
+
+    // Module evalCode returns the module namespace object; extract "default"
+    const defaultExport = vm.getProp(result.value, "default");
+    result.value.dispose();
+
+    if (vm.typeof(defaultExport) !== "function") {
+      defaultExport.dispose();
+      vm.dispose();
+      runtime.dispose();
+      throw new SandboxCompilationError(
+        `Function "${rec.key}": module must have a default export that is a function`
+      );
+    }
+
+    vm.setProp(vm.global, `__fn_${rec.key}`, defaultExport);
+    vm.setProp(vm.global, rec.key, defaultExport);
+    defaultExport.dispose();
 
     compiledKeys.push(rec.key);
   }

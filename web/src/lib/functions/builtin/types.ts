@@ -11,7 +11,7 @@ export interface BuiltinTestCase {
 }
 
 export interface BuiltinFunction {
-  /** Unique key matching the parameter name used in function fn(...) signatures */
+  /** Unique key identifying this builtin dependency */
   key: string;
   /** Display name */
   name: string;

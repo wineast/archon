@@ -8,19 +8,7 @@
 
 ## 代码格式
 
-函数支持两种代码格式，系统自动检测：
-
-**旧格式（闭包注入）**：
-
-```js
-function fn({ compileExpression, other_fn }) {
-  return function(input) {
-    return other_fn({ value: compileExpression("x * 2")(input) });
-  }
-}
-```
-
-**新格式（ES6 模块）**：
+函数使用 ES module 格式，通过 `archon:*` 虚拟模块导入依赖：
 
 ```js
 import { compileExpression } from "archon:lib/filtrex";
@@ -31,7 +19,9 @@ export default function(input) {
 }
 ```
 
-新格式使用 `archon:*` 虚拟模块导入依赖，详见 [模块系统文档](module-system.md)。两种格式可在同一 Agent 内混用。
+- `export default` 必须导出一个函数，接收 `input` 参数
+- 函数之间的依赖通过 `archon:fn/<key>` 导入
+- 详见 [模块系统文档](module-system.md)
 
 ---
 

@@ -34,10 +34,10 @@ const builtinCompileExpression: BuiltinFunction = {
 // Compiles a string expression into a callable function.
 //
 // Usage in your function:
-//   function fn(compileExpression) {
-//     const expr = compileExpression("x + y * 2");
-//     const result = expr({ x: 10, y: 5 }); // => 20
-//     return result;
+//   import { compileExpression } from "archon:lib/filtrex";
+//   const expr = compileExpression("x + y * 2");
+//   export default function(input) {
+//     return expr(input); // => 20 when input = { x: 10, y: 5 }
 //   }
 //
 // Supported operators: +, -, *, /, ^, ==, !=, <, >, <=, >=
