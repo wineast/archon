@@ -33,6 +33,8 @@ interface DatasetFormProps {
   agentId: string | null;
   onDraftRef: (ref: DatasetFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /** When true, all fields are disabled/readOnly. */
+  readOnly?: boolean;
 }
 
 export function DatasetForm({
@@ -43,6 +45,7 @@ export function DatasetForm({
   agentId,
   onDraftRef,
   onDirtyChange,
+  readOnly,
 }: DatasetFormProps) {
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
@@ -201,6 +204,7 @@ export function DatasetForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Display name"
+            disabled={readOnly}
           />
         </div>
         <div>
@@ -212,6 +216,7 @@ export function DatasetForm({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What this dataset contains..."
+            disabled={readOnly}
           />
         </div>
         <div>
@@ -243,6 +248,7 @@ export function DatasetForm({
                 height="500px"
                 templateVariables={templateVariables}
                 templateVariableMap={datasetVars}
+                readOnly={readOnly}
               />
               {jsonError && (
                 <p className="mt-1 text-xs text-destructive">{jsonError}</p>

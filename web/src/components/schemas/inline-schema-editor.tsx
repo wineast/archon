@@ -28,6 +28,8 @@ interface InlineSchemaEditorProps {
   agentId?: string;
   /** When true, root schema must be an object type (has type:"object", properties, allOf, $ref, etc.). */
   requireObjectRoot?: boolean;
+  /** When true, show read-only JSON preview instead of editable editor. */
+  readOnly?: boolean;
 }
 
 export function InlineSchemaEditor({
@@ -36,6 +38,7 @@ export function InlineSchemaEditor({
   label,
   agentId,
   requireObjectRoot,
+  readOnly,
 }: InlineSchemaEditorProps) {
   const schema = value ?? DEFAULT_SCHEMA;
 
@@ -141,6 +144,23 @@ export function InlineSchemaEditor({
     },
     [onChange]
   );
+
+  if (readOnly) {
+    return (
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">
+          {label}
+        </label>
+        <div className="mt-1">
+          <JsonEditor
+            value={JSON.stringify(schema, null, 2)}
+            height="300px"
+            readOnly
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

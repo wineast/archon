@@ -23,6 +23,7 @@ import { ComponentDetail } from "./component-detail";
 import { ComponentsEmptyState } from "./components-empty-state";
 import { ComponentCreateDialog } from "./component-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toPoolMeta } from "@/components/pool/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -165,6 +166,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
               allComponents={allComponentRecords}
               onSave={handleSave}
               onDelete={handleDelete}
+              poolMeta={toPoolMeta(activeComponent)}
             />
           ) : (
             <ComponentsEmptyState onCreate={handleOpenCreateDialog} />
@@ -203,9 +205,11 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
                 <ComponentDetail
                   key={activeComponent.id}
                   component={activeComponent}
+                  agentId={agentId}
                   allComponents={allComponentRecords}
                   onSave={handleSave}
                   onDelete={handleDelete}
+                  poolMeta={toPoolMeta(activeComponent)}
                 />
               ) : null}
             </div>

@@ -44,6 +44,10 @@ interface FunctionFormProps {
   returnParametersSchema: JsonSchema7 | null;
   onDraftRef: (ref: FunctionFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /** When true, all fields are disabled/readOnly. */
+  readOnly?: boolean;
+  /** When true, hide code editor (for builtin resources). */
+  hideBuiltinSections?: boolean;
 }
 
 export function FunctionForm({
@@ -56,6 +60,8 @@ export function FunctionForm({
   returnParametersSchema: initialReturnParametersSchema,
   onDraftRef,
   onDirtyChange,
+  readOnly,
+  hideBuiltinSections,
 }: FunctionFormProps) {
   const defaultValues: FunctionFormValues = {
     name: initialName,
@@ -120,6 +126,7 @@ export function FunctionForm({
             className="mt-1 h-8 text-sm"
             {...form.register("name")}
             placeholder="Display name"
+            disabled={readOnly}
           />
         </div>
         <div>
@@ -130,6 +137,7 @@ export function FunctionForm({
             className="mt-1 min-h-[60px] resize-none text-sm"
             {...form.register("description")}
             placeholder="What this function does..."
+            disabled={readOnly}
           />
         </div>
 
@@ -143,6 +151,7 @@ export function FunctionForm({
               onChange={field.onChange}
               agentId={agentId}
               requireObjectRoot
+              readOnly={readOnly}
             />
           )}
         />
@@ -156,10 +165,16 @@ export function FunctionForm({
               onChange={field.onChange}
               agentId={agentId}
               requireObjectRoot
+              readOnly={readOnly}
             />
           )}
         />
 
+        {hideBuiltinSections ? (
+          <p className="text-xs text-muted-foreground italic">
+            系统内置函数的代码由平台管理，不可编辑。
+          </p>
+        ) : (
         <div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">
@@ -199,6 +214,7 @@ export function FunctionForm({
             />
           </div>
         </div>
+        )}
       </div>
     </FormProvider>
   );

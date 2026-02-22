@@ -32,9 +32,13 @@ interface ComponentFormProps {
   allComponents?: ComponentRecord[];
   onDraftRef: (ref: ComponentFormHandle) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /** When true, all fields are disabled/readOnly. */
+  readOnly?: boolean;
+  /** When true, hide JSX/CSS editors (for builtin resources). */
+  hideBuiltinSections?: boolean;
 }
 
-export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange }: ComponentFormProps) {
+export function ComponentForm({ component, agentId, allComponents, onDraftRef, onDirtyChange, readOnly, hideBuiltinSections }: ComponentFormProps) {
   const form = useForm<ComponentDefinition>({ defaultValues: { ...component } });
   const originalRef = useRef<ComponentDefinition>({ ...component });
   const currentSource = form.watch("componentSource");
@@ -81,6 +85,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             className="mt-1 h-8 text-sm"
             {...form.register("name")}
             placeholder="e.g. Product Card"
+            disabled={readOnly}
           />
         </div>
         <div>
@@ -91,6 +96,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             className="mt-1 min-h-[60px] resize-none text-sm"
             {...form.register("description")}
             placeholder="Describe what this component renders..."
+            disabled={readOnly}
           />
         </div>
         <Controller
@@ -103,6 +109,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
               onChange={field.onChange}
               agentId={agentId}
               requireObjectRoot
+              readOnly={readOnly}
             />
           )}
         />
@@ -116,9 +123,15 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
               onChange={field.onChange}
               agentId={agentId}
               requireObjectRoot
+              readOnly={readOnly}
             />
           )}
         />
+        {hideBuiltinSections ? (
+          <p className="text-xs text-muted-foreground italic">
+            系统内置组件的 JSX/CSS 由平台管理，不可编辑。
+          </p>
+        ) : (
         <div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-muted-foreground">
@@ -166,6 +179,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
             </div>
           )}
         </div>
+        )}
       </div>
     </FormProvider>
   );

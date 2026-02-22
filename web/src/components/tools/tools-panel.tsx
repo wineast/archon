@@ -15,6 +15,7 @@ import { useSkills } from "@/lib/skills/hooks";
 import { removeAgentRef, useAgentRefs } from "@/lib/pool/ref-hooks";
 import type { ToolRow } from "@/db/schema";
 import type { WithPoolMeta } from "@/lib/pool/queries";
+import { toPoolMeta } from "@/components/pool/types";
 import type { ToolDefinition } from "@/lib/tools/types";
 import { ToolsSidebar } from "./tools-sidebar";
 import { ToolDetail } from "./tool-detail";
@@ -180,6 +181,7 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
               onSave={handleSave}
               onDelete={handleDelete}
               onToggle={handleToggle}
+              poolMeta={toPoolMeta(activeTool)}
             />
           ) : (
             <ToolsEmptyState onCreate={handleOpenCreateDialog} />
@@ -220,9 +222,11 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
                 <ToolDetail
                   key={activeTool.id}
                   tool={activeTool}
+                  agentId={agentId}
                   onSave={handleSave}
                   onDelete={handleDelete}
                   onToggle={handleToggle}
+                  poolMeta={toPoolMeta(activeTool)}
                 />
               ) : null}
             </div>

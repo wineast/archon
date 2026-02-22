@@ -11,21 +11,29 @@ import {
   type DatasetFormHandle,
 } from "./dataset-form";
 import type { DatasetRow } from "@/db/schema";
+import type { PoolMeta } from "@/components/pool/types";
+import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
+import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface DatasetDetailProps {
   dataset: DatasetRow;
+  agentId?: string;
   onSave: (
     id: string,
     data: { name: string; description: string; data: unknown }
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  poolMeta?: PoolMeta;
 }
 
 export function DatasetDetail({
   dataset,
+  agentId,
   onSave,
   onDelete,
+  poolMeta,
 }: DatasetDetailProps) {
+  const isPoolRef = !!poolMeta;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [draftRef, setDraftRef] = useState<DatasetFormHandle | null>(null);
@@ -66,6 +74,11 @@ export function DatasetDetail({
     <div className="flex h-full flex-col">
       <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="p-4">
+          {isPoolRef && (
+            <div className="mb-3">
+              <PoolRefBadge origin={poolMeta.origin} />
+            </div>
+          )}
           <DatasetForm
             key={dataset.id}
             datasetKey={dataset.key}
@@ -75,10 +88,20 @@ export function DatasetDetail({
             agentId={dataset.agentId}
             onDraftRef={setDraftRef}
             onDirtyChange={setDirty}
+            readOnly={isPoolRef}
           />
         </div>
       </ScrollArea>
 
+      {isPoolRef && agentId ? (
+        <PoolRefBottomBar
+          agentId={agentId}
+          refId={poolMeta.refId}
+          resourceType="dataset"
+          onRemoved={() => onDelete(dataset.id)}
+        />
+      ) : (
+      <>
       <div className="flex items-center gap-2 border-t px-4 py-2">
         <Button
           size="sm"
@@ -124,6 +147,8 @@ export function DatasetDetail({
         description={`Are you sure you want to delete "${dataset.name}"? This action cannot be undone.`}
         onConfirm={handleDelete}
       />
+      </>
+      )}
     </div>
   );
 }

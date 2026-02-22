@@ -14,6 +14,9 @@ import { ComponentTestCasesPanel } from "./component-test-cases-panel";
 import type { ComponentRow } from "@/db/schema";
 import type { ComponentDefinition } from "@/lib/components/types";
 import type { ComponentRecord } from "@/tool-ui";
+import type { PoolMeta } from "@/components/pool/types";
+import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
+import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface ComponentDetailProps {
   component: ComponentRow;
@@ -21,9 +24,11 @@ interface ComponentDetailProps {
   allComponents?: ComponentRecord[];
   onSave: (updated: ComponentDefinition) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  poolMeta?: PoolMeta;
 }
 
-export function ComponentDetail({ component, agentId, allComponents, onSave, onDelete }: ComponentDetailProps) {
+export function ComponentDetail({ component, agentId, allComponents, onSave, onDelete, poolMeta }: ComponentDetailProps) {
+  const isPoolRef = !!poolMeta;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const draftRef = useRef<ComponentFormHandle | null>(null);
@@ -67,6 +72,11 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
         {/* Form body */}
         <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 min-w-0 overflow-hidden">
+            {isPoolRef && (
+              <div className="mb-3">
+                <PoolRefBadge origin={poolMeta.origin} />
+              </div>
+            )}
             <ComponentForm
               component={{
                 id: component.id,
@@ -81,6 +91,8 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
               allComponents={allComponents}
               onDraftRef={handleDraftRef}
               onDirtyChange={setDirty}
+              readOnly={isPoolRef}
+              hideBuiltinSections={isPoolRef && poolMeta.origin === "builtin"}
             />
             {component.generatedCss && (
               <div className="mt-4">
@@ -96,6 +108,15 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
         </ScrollArea>
 
         {/* Bottom bar */}
+        {isPoolRef && agentId ? (
+          <PoolRefBottomBar
+            agentId={agentId}
+            refId={poolMeta.refId}
+            resourceType="component"
+            onRemoved={() => onDelete(component.id)}
+          />
+        ) : (
+        <>
         <div className="flex items-center gap-2 border-t px-4 py-2">
           <Button
             size="sm"
@@ -141,6 +162,8 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
           description={`Are you sure you want to delete "${component.name}"? This action cannot be undone.`}
           onConfirm={handleDelete}
         />
+        </>
+        )}
       </TabsContent>
 
       <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">

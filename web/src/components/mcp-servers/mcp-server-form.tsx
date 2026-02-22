@@ -43,6 +43,8 @@ interface McpServerFormProps {
   headers: Record<string, string>;
   onDraftRef: (handle: McpServerFormHandle | null) => void;
   onDirtyChange: (dirty: boolean) => void;
+  /** When true, all fields are disabled/readOnly. */
+  readOnly?: boolean;
 }
 
 function headersToArray(headers: Record<string, string>): { key: string; value: string }[] {
@@ -67,6 +69,7 @@ export function McpServerForm({
   headers,
   onDraftRef,
   onDirtyChange,
+  readOnly,
 }: McpServerFormProps) {
   const originalRef = useRef({
     name,
@@ -127,12 +130,12 @@ export function McpServerForm({
 
       <div>
         <label className="text-xs font-medium text-muted-foreground">Name</label>
-        <Input className="mt-1 h-8 text-sm" {...form.register("name")} />
+        <Input className="mt-1 h-8 text-sm" {...form.register("name")} disabled={readOnly} />
       </div>
 
       <div>
         <label className="text-xs font-medium text-muted-foreground">Description</label>
-        <Textarea className="mt-1 text-sm" rows={2} {...form.register("description")} />
+        <Textarea className="mt-1 text-sm" rows={2} {...form.register("description")} disabled={readOnly} />
       </div>
 
       <div>
@@ -141,6 +144,7 @@ export function McpServerForm({
           className="mt-1 h-8 text-sm font-mono"
           placeholder="https://example.com/mcp"
           {...form.register("url")}
+          disabled={readOnly}
         />
       </div>
 
@@ -150,7 +154,7 @@ export function McpServerForm({
           control={form.control}
           name="transportType"
           render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
+            <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
               <SelectTrigger className="mt-1 h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -172,12 +176,15 @@ export function McpServerForm({
                 className="h-7 text-xs font-mono flex-1"
                 placeholder="Header name"
                 {...form.register(`headers.${index}.key`)}
+                disabled={readOnly}
               />
               <Input
                 className="h-7 text-xs font-mono flex-1"
                 placeholder="Header value"
                 {...form.register(`headers.${index}.value`)}
+                disabled={readOnly}
               />
+              {!readOnly && (
               <Button
                 type="button"
                 variant="ghost"
@@ -186,8 +193,10 @@ export function McpServerForm({
               >
                 <XIcon className="size-3" />
               </Button>
+              )}
             </div>
           ))}
+          {!readOnly && (
           <Button
             type="button"
             variant="outline"
@@ -198,6 +207,7 @@ export function McpServerForm({
             <PlusIcon className="mr-1 size-3" />
             Add Header
           </Button>
+          )}
         </div>
       </div>
 

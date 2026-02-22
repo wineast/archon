@@ -16,6 +16,9 @@ import { FunctionPlayground } from "./function-playground";
 import { FunctionTestCasesPanel } from "./function-test-cases-panel";
 import type { FunctionRow } from "@/db/schema";
 import type { JsonSchema7 } from "@/lib/schemas/types";
+import type { PoolMeta } from "@/components/pool/types";
+import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
+import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface FunctionDetailProps {
   agentId: string;
@@ -25,6 +28,7 @@ interface FunctionDetailProps {
     data: { name: string; description: string; code: string; parametersSchema: JsonSchema7 | null; returnParametersSchema: JsonSchema7 | null }
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  poolMeta?: PoolMeta;
 }
 
 export function FunctionDetail({
@@ -32,7 +36,9 @@ export function FunctionDetail({
   fn,
   onSave,
   onDelete,
+  poolMeta,
 }: FunctionDetailProps) {
+  const isPoolRef = !!poolMeta;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [draftRef, setDraftRef] = useState<FunctionFormHandle | null>(null);
@@ -82,6 +88,9 @@ export function FunctionDetail({
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
         <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 space-y-3">
+            {isPoolRef && (
+              <PoolRefBadge origin={poolMeta.origin} />
+            )}
             <FunctionForm
               key={fn.id}
               agentId={agentId}
@@ -93,10 +102,21 @@ export function FunctionDetail({
               returnParametersSchema={fn.returnParametersSchema ?? null}
               onDraftRef={setDraftRef}
               onDirtyChange={setDirty}
+              readOnly={isPoolRef}
+              hideBuiltinSections={isPoolRef && poolMeta.origin === "builtin"}
             />
           </div>
         </ScrollArea>
 
+        {isPoolRef ? (
+          <PoolRefBottomBar
+            agentId={agentId}
+            refId={poolMeta.refId}
+            resourceType="function"
+            onRemoved={() => onDelete(fn.id)}
+          />
+        ) : (
+        <>
         <div className="flex items-center gap-2 border-t px-4 py-2">
           <Button
             size="sm"
@@ -142,6 +162,8 @@ export function FunctionDetail({
           description={`Are you sure you want to delete "${fn.name}"? This action cannot be undone.`}
           onConfirm={handleDelete}
         />
+        </>
+        )}
       </TabsContent>
 
       <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">

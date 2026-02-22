@@ -12,9 +12,13 @@ import { McpServerForm, type McpServerFormHandle } from "./mcp-server-form";
 import { testMcpServer, type McpToolDef } from "@/lib/mcp-servers/hooks";
 import { McpToolPlayground } from "./mcp-tool-playground";
 import type { McpServerRow } from "@/db/schema";
+import type { PoolMeta } from "@/components/pool/types";
+import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
+import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface McpServerDetailProps {
   mcpServer: McpServerRow;
+  agentId?: string;
   onSave: (
     id: string,
     data: {
@@ -27,14 +31,18 @@ interface McpServerDetailProps {
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onToggle: (id: string, enabled: boolean) => Promise<void>;
+  poolMeta?: PoolMeta;
 }
 
 export function McpServerDetail({
   mcpServer,
+  agentId,
   onSave,
   onDelete,
   onToggle,
+  poolMeta,
 }: McpServerDetailProps) {
+  const isPoolRef = !!poolMeta;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -115,6 +123,9 @@ export function McpServerDetail({
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
         <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 space-y-4">
+            {isPoolRef && (
+              <PoolRefBadge origin={poolMeta.origin} />
+            )}
             <McpServerForm
               key={mcpServer.id}
               serverKey={mcpServer.key}
@@ -125,10 +136,19 @@ export function McpServerDetail({
               headers={mcpServer.headers}
               onDraftRef={setDraftRef}
               onDirtyChange={setDirty}
+              readOnly={isPoolRef}
             />
           </div>
         </ScrollArea>
 
+        {isPoolRef && agentId ? (
+          <PoolRefBottomBar
+            agentId={agentId}
+            refId={poolMeta.refId}
+            resourceType="mcp-server"
+            onRemoved={() => onDelete(mcpServer.id)}
+          />
+        ) : (
         <div className="flex items-center gap-2 border-t px-4 py-2">
           <Button
             variant={mcpServer.enabled ? "outline" : "ghost"}
@@ -194,6 +214,7 @@ export function McpServerDetail({
             {deleting ? "Deleting..." : "Delete"}
           </Button>
         </div>
+        )}
       </TabsContent>
 
       <TabsContent value="playground" className="flex min-h-0 flex-1 flex-col">

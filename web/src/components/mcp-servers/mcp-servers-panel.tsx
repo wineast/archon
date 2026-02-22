@@ -17,6 +17,7 @@ import { McpServerDetail } from "./mcp-server-detail";
 import { McpServersEmptyState } from "./mcp-servers-empty-state";
 import { McpServerCreateDialog } from "./mcp-server-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toPoolMeta } from "@/components/pool/types";
 import type { AgentRow } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -138,9 +139,11 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
             <McpServerDetail
               key={activeMcpServer.id}
               mcpServer={activeMcpServer}
+              agentId={agentId}
               onSave={handleSave}
               onDelete={handleDelete}
               onToggle={handleToggle}
+              poolMeta={toPoolMeta(activeMcpServer)}
             />
           ) : (
             <McpServersEmptyState onCreate={openCreateDialog} />
@@ -175,9 +178,11 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
               <McpServerDetail
                 key={activeMcpServer.id}
                 mcpServer={activeMcpServer}
+                agentId={agentId}
                 onSave={handleSave}
                 onDelete={handleDelete}
                 onToggle={handleToggle}
+                poolMeta={toPoolMeta(activeMcpServer)}
               />
             </div>
           </>

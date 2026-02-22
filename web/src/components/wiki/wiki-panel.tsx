@@ -21,6 +21,7 @@ import { WikiEmptyState } from "./wiki-empty-state";
 import { WikiSidebar } from "./wiki-sidebar";
 import { WikiCreateDialog } from "./wiki-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toPoolMeta } from "@/components/pool/types";
 
 export function WikiPanel({ agentId }: { agentId: string }) {
   const { data: documents = [], mutate } = useSWR<WikiDocumentWithPool[]>(
@@ -141,6 +142,8 @@ export function WikiPanel({ agentId }: { agentId: string }) {
               agentId={agentId}
               onUpdate={handleUpdate}
               onDelete={handleDelete}
+              readOnly={!!toPoolMeta(activeDoc)}
+              poolMeta={toPoolMeta(activeDoc)}
             />
           ) : (
             <WikiEmptyState onCreate={() => handleOpenCreateDialog()} />
@@ -179,6 +182,8 @@ export function WikiPanel({ agentId }: { agentId: string }) {
                 agentId={agentId}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
+                readOnly={!!toPoolMeta(activeDoc)}
+                poolMeta={toPoolMeta(activeDoc)}
               />
             </div>
           </>

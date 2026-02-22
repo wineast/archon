@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
   useFunctions,
-  useFunction,
   createFunction,
   updateFunction,
   deleteFunction,
@@ -20,6 +19,7 @@ import { FunctionBuiltinDetail } from "./function-builtin-detail";
 import { FunctionsEmptyState } from "./functions-empty-state";
 import { FunctionCreateDialog } from "./function-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toPoolMeta } from "@/components/pool/types";
 
 /** Map builtin key → BuiltinFunction for quick lookup */
 const builtinByKey = new Map<string, BuiltinFunction>(
@@ -50,10 +50,11 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
     [activeFunctionId]
   );
 
-  // Only fetch dynamic function from API when it's a dynamic type
-  const dynamicFetchId = activeType === "dynamic" ? activeKey : null;
-  const { fn: activeFunction, mutate: mutateDetail } =
-    useFunction(dynamicFetchId);
+  // Find dynamic function from the list (preserves pool meta)
+  const activeFunction = useMemo(
+    () => (activeType === "dynamic" && activeKey ? functions.find((f) => f.id === activeKey) ?? null : null),
+    [activeType, activeKey, functions]
+  );
 
   // Resolve the selected builtin function
   const activeBuiltin =
@@ -88,12 +89,9 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
       id: string,
       data: Record<string, unknown>
     ) => {
-      await updateFunction(id, data, () => {
-        mutateList();
-        mutateDetail();
-      });
+      await updateFunction(id, data, mutateList);
     },
-    [mutateList, mutateDetail]
+    [mutateList]
   );
 
   const handleDelete = useCallback(
@@ -133,6 +131,7 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
           fn={activeFunction}
           onSave={handleSave}
           onDelete={handleDelete}
+          poolMeta={toPoolMeta(activeFunction)}
         />
       );
     }

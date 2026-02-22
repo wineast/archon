@@ -13,6 +13,9 @@ import { ToolPlayground } from "./tool-playground";
 import { ToolTestCasesPanel } from "./tool-test-cases-panel";
 import type { ToolRow } from "@/db/schema";
 import type { ToolDefinition } from "@/lib/tools/types";
+import type { PoolMeta } from "@/components/pool/types";
+import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
+import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface ToolDetailProps {
   tool: ToolRow;
@@ -20,9 +23,11 @@ interface ToolDetailProps {
   onSave: (updated: ToolDefinition) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onToggle: (id: string, enabled: boolean) => Promise<void>;
+  poolMeta?: PoolMeta;
 }
 
-export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDetailProps) {
+export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle, poolMeta }: ToolDetailProps) {
+  const isPoolRef = !!poolMeta;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -79,6 +84,11 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
         {/* Form body */}
         <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 min-w-0 overflow-hidden">
+            {isPoolRef && (
+              <div className="mb-3">
+                <PoolRefBadge origin={poolMeta.origin} />
+              </div>
+            )}
             <ToolForm
               tool={{
                 id: tool.id,
@@ -97,11 +107,24 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
               agentId={agentId}
               onDraftRef={handleDraftRef}
               onDirtyChange={setDirty}
+              readOnly={isPoolRef}
+              hideBuiltinSections={isPoolRef && poolMeta.origin === "builtin"}
             />
           </div>
         </ScrollArea>
 
         {/* Bottom bar */}
+        {isPoolRef && agentId ? (
+          <PoolRefBottomBar
+            agentId={agentId}
+            refId={poolMeta.refId}
+            resourceType="tool"
+            enabled={poolMeta.refEnabled}
+            onRemoved={() => onDelete(tool.id)}
+            onToggled={(enabled) => onToggle(tool.id, enabled)}
+          />
+        ) : (
+        <>
         <div className="flex items-center gap-2 border-t px-4 py-2">
           <Button
             variant={tool.enabled ? "outline" : "ghost"}
@@ -162,6 +185,8 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle }: ToolDe
           description={`Are you sure you want to delete "${tool.name}"? This action cannot be undone.`}
           onConfirm={handleDelete}
         />
+        </>
+        )}
       </TabsContent>
 
       <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">
