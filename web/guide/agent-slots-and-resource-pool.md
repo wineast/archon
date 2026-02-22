@@ -164,7 +164,7 @@ runEval(agentId):
 - schema: 资源表 agentId nullable + origin 字段 + agentResourceRefs 表
 - 池资源 CRUD API
 - Agent 引用管理 API
-- 迁移 isSystem 工具到池资源
+- 工具统一用 origin='builtin' 标识（已移除 isSystem 字段）
 - 资源查询改造（UNION 私有 + 引用）
 - 资源浏览器 UI（"从共享池添加"）
 - 池管理 UI

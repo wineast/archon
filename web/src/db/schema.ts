@@ -491,7 +491,6 @@ export const tools = pgTable(
     description: text("description").notNull(),
     parametersSchema: jsonb("parameters_schema").$type<JsonSchema7>(),
     returnParametersSchema: jsonb("return_parameters_schema").$type<JsonSchema7>(),
-    isSystem: boolean("is_system").notNull().default(false),
     handler: text("handler"),
     url: text("url"),
     componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),

@@ -45,7 +45,7 @@ vi.mock("@/db", () => ({
 
 vi.mock("@/db/schema", () => ({
   agents: { id: "id", skillsEnabled: "skillsEnabled", orgId: "orgId" },
-  tools: { key: "key", enabled: "enabled", agentId: "agentId", isSystem: "isSystem" },
+  tools: { key: "key", enabled: "enabled", agentId: "agentId" },
 }));
 
 vi.mock("@/lib/slots", () => ({

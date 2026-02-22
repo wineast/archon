@@ -97,7 +97,6 @@ describe("ensureBuiltinPoolTools", () => {
       name: "tool_1",
       description: "Tool 1 description",
       origin: "builtin",
-      isSystem: true,
       enabled: true,
       handler: null,
       executionTarget: "server",

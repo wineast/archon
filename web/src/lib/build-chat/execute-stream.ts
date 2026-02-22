@@ -73,20 +73,7 @@ export async function executeBuildChatStream(
         )
       );
 
-    // Fallback: also check legacy direct system tools on the agent
-    if (dbTools.length === 0) {
-      const legacyTools = await db
-        .select({ key: toolsTable.key, enabled: toolsTable.enabled })
-        .from(toolsTable)
-        .where(and(eq(toolsTable.agentId, config.agentId), eq(toolsTable.isSystem, true)));
-
-      if (legacyTools.length > 0) {
-        const enabledKeys = new Set(legacyTools.filter((t) => t.enabled).map((t) => t.key));
-        filteredTools = Object.fromEntries(
-          Object.entries(codeTools).filter(([key]) => enabledKeys.has(key))
-        );
-      }
-    } else {
+    if (dbTools.length > 0) {
       const enabledKeys = new Set(dbTools.filter((t) => t.enabled).map((t) => t.key));
       filteredTools = Object.fromEntries(
         Object.entries(codeTools).filter(([key]) => enabledKeys.has(key))

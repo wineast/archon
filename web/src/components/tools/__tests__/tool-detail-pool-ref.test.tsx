@@ -61,7 +61,6 @@ const baseTool: ToolRow = {
   url: null,
   componentId: null,
   enabled: true,
-  isSystem: false,
   executionTarget: "server",
   sandboxMode: "light",
   origin: "user",

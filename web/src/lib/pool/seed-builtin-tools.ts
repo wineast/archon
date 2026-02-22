@@ -33,7 +33,6 @@ export async function ensureBuiltinPoolTools(db: DbLike): Promise<void> {
       name: key,
       description: tool.description ?? "",
       origin: "builtin" as const,
-      isSystem: true,
       enabled: true,
       handler: null,
       executionTarget: "server" as const,

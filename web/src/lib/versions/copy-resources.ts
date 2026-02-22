@@ -280,7 +280,6 @@ export async function copyVersionResources(
           description: t.description,
           parametersSchema: t.parametersSchema,
           returnParametersSchema: t.returnParametersSchema,
-          isSystem: t.isSystem,
           handler: t.handler,
           url: t.url,
           componentId: t.componentId ? compIdMap.get(t.componentId) ?? t.componentId : null,

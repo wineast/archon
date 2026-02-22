@@ -108,7 +108,7 @@ Build 助手和 AI 辅助编辑的模型通过功能槽位（Agent Slots）机�
 
 ### 系统工具
 
-Build Chat 的工具以 `isSystem=true` 标记存储在 `tools` 表中，运行时结合 DB enabled 状态与代码 handler 过滤。
+Build Chat 的工具以 `origin='builtin'` 存储在 `tools` 表中（池资源，`agentId=NULL`），运行时通过 `agentResourceRefs` 引用与 DB enabled 状态过滤。
 
 ## 前端面板
 

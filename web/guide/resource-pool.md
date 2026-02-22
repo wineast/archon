@@ -186,7 +186,6 @@ type WithPoolMeta<T> = T & {
 
 - `agentId = NULL`
 - `origin = "builtin"`
-- `isSystem = true`
 - `parametersSchema`：通过 `z.toJSONSchema()` 从 Zod inputSchema 转换
 - 使用 `onConflictDoUpdate` 保证幂等，冲突时更新 `description` 和 `parametersSchema`
 

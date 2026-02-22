@@ -29,8 +29,8 @@ export async function PATCH(
     : await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  // System tools: only allow toggling enabled
-  if (existing.isSystem) {
+  // Builtin tools: only allow toggling enabled
+  if (existing.origin === "builtin") {
     if (typeof body.enabled !== "boolean" || Object.keys(body).length !== 1) {
       return NextResponse.json(
         { error: "System tools can only be enabled/disabled" },
@@ -108,9 +108,9 @@ export async function DELETE(
     : await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  if (existing.isSystem) {
+  if (existing.origin === "builtin") {
     return NextResponse.json(
-      { error: "System tools cannot be deleted" },
+      { error: "Builtin tools cannot be deleted" },
       { status: 403 }
     );
   }
