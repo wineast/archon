@@ -38,11 +38,12 @@ export default async function(args) {
 }
 ```
 
-工具 Handler 只支持 `archon:context` 一个虚拟模块：
+工具 Handler 支持以下虚拟模块：
 
 | 命名空间 | 用途 | 示例 |
 |----------|------|------|
 | `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, fn } from "archon:context"` |
+| `archon:lib/filtrex` | 表达式过滤引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
 
 **旧闭包格式**：
 
@@ -186,5 +187,19 @@ async (args, context) => {
     rate: args.rate,
     months: args.term,
   });
+}
+```
+
+### 使用 filtrex 过滤数据
+
+```js
+import { dataset } from "archon:context";
+import { compileExpression } from "archon:lib/filtrex";
+
+export default async function(args) {
+  const items = await dataset.get(args.datasetKey);
+  const entries = Object.values(items || {});
+  const filter = compileExpression(args.filter);
+  return entries.filter(entry => filter(entry));
 }
 ```

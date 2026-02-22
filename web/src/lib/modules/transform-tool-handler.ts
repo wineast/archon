@@ -6,8 +6,8 @@
  * module-format handler code at the host level before evaluation.
  *
  * Transforms:
- * - `import { wiki, dataset } from "archon:context"` → `var { wiki, dataset } = __context;`
- * - `import { fn } from "archon:context"` → `var fn = __context.fn;`
+ * - `import { wiki, dataset } from "archon:context"` → `var wiki = __context.wiki;`
+ * - `import { compileExpression } from "archon:lib/filtrex"` → `var compileExpression = __libs.compileExpression;`
  * - `export default function(args) { ... }` → extracts function for IIFE wrapping
  * - `export default async function(args) { ... }` → same
  */
@@ -16,7 +16,7 @@
  * Transform module-format tool handler into an IIFE-wrapped expression
  * that can be evaluated with `evalCodeAsync` in global scope.
  *
- * Returns code like: `(function(){ var wiki = __context.wiki; ... var __fn = function(args) { ... }; return __fn(__args, __context); })()`
+ * Returns code like: `(function(){ var wiki = __context.wiki; var compileExpression = __libs.compileExpression; ... var __fn = function(args) { ... }; return __fn(__args, __context); })()`
  */
 export function transformToolHandlerImports(code: string): string {
   const preamble: string[] = [];
@@ -38,14 +38,26 @@ export function transformToolHandlerImports(code: string): string {
       continue;
     }
 
-    // Match: unsupported import (any import not from archon:context)
+    // Match: import { ... } from "archon:lib/filtrex"
+    const libImport = trimmed.match(
+      /^import\s+\{([^}]+)\}\s+from\s+["']archon:lib\/filtrex["']\s*;?\s*$/
+    );
+    if (libImport) {
+      const names = libImport[1].split(",").map((s) => s.trim()).filter(Boolean);
+      for (const name of names) {
+        preamble.push(`var ${name} = __libs.${name};`);
+      }
+      continue;
+    }
+
+    // Match: unsupported import (any import not from archon:context or archon:lib/filtrex)
     const unsupportedImport = trimmed.match(
       /^import\s+.+\s+from\s+["']([^"']+)["']\s*;?\s*$/
     );
     if (unsupportedImport) {
       const mod = unsupportedImport[1];
       throw new Error(
-        `工具 Handler 不支持模块 "${mod}"，只能使用 import { ... } from "archon:context"`
+        `工具 Handler 不支持模块 "${mod}"，只能使用 import { ... } from "archon:context" 或 "archon:lib/filtrex"`
       );
     }
 
