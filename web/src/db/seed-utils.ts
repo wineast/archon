@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync } from "fs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
@@ -9,25 +9,11 @@ export function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf-8"));
 }
 
-/** Read directory entries, returning [] if the directory doesn't exist. */
-export function readDirSafe(dir: string): string[] {
-  try {
-    return readdirSync(dir);
-  } catch {
-    return [];
-  }
-}
-
 // ── Key / name helpers ──
 
 /** Derive a snake_case key from an arbitrary name. */
 export function toKey(name: string): string {
   return name.replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
-}
-
-/** Derive a snake_case key from a filename (strip extension, replace `-` with `_`). */
-export function fileNameToKey(filename: string): string {
-  return filename.replace(/\.[^.]+$/, "").replace(/-/g, "_");
 }
 
 /** Convert a snake_case key to a Title Case name. */

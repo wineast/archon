@@ -1,95 +1,18 @@
-import { join } from "path";
-import { readdirSync, existsSync } from "fs";
 import { withClient, logSection, type SeedDb } from "./seed-utils";
-import { globalPipeline, agentPipeline } from "./seeders";
-import type { SeedContext, SeedResult } from "./seeders/types";
-
-// Re-export for consumers (e.g. tests)
-export type { SeedResult } from "./seeders/types";
-
-// ── Discover agent directories ──
-
-function discoverAgentDirs(seedDataDir: string): string[] {
-  return readdirSync(seedDataDir, { withFileTypes: true })
-    .filter(
-      (d) => d.isDirectory() && existsSync(join(seedDataDir, d.name, "agent.json"))
-    )
-    .map((d) => join(seedDataDir, d.name));
-}
+import { pipeline } from "./seeders";
+import type { SeedContext } from "./seeders/types";
 
 // ── seed ──
 
-export async function seed(db?: SeedDb): Promise<SeedResult> {
+export async function seed(db?: SeedDb): Promise<void> {
   const run = async (database: SeedDb) => {
-    // ── Phase 1: Global seeders (run once) ──
-    const globalCtx: SeedContext = {
-      db: database,
-      orgId: "",
-      agentId: "",
-      versionId: "",
-      agentDir: "",
-      componentKeyToId: {},
-      toolNameToId: {},
-      datasetKeyToId: {},
-      ids: {
-        toolIds: [],
-        schemaIds: [],
-        modelConfigIds: [],
-        chatConfigId: "",
-        datasetIds: [],
-        functionIds: [],
-        judgeConfigId: "",
-        evalCaseIds: [],
-      },
-    };
+    const ctx: SeedContext = { db: database };
 
-    for (const seeder of globalPipeline) {
-      await seeder.run(globalCtx);
-    }
-
-    // ── Phase 2: Per-agent seeders ──
-    const seedDataDir = join(__dirname, "seed-data");
-    const agentDirs = discoverAgentDirs(seedDataDir);
-
-    let firstResult: SeedResult | null = null;
-
-    for (const agentDir of agentDirs) {
-      const ctx: SeedContext = {
-        db: database,
-        orgId: globalCtx.orgId,
-        agentId: "",
-        versionId: "",
-        agentDir,
-        componentKeyToId: {},
-        toolNameToId: {},
-        datasetKeyToId: {},
-        ids: {
-          toolIds: [],
-          schemaIds: [],
-          modelConfigIds: [],
-          chatConfigId: "",
-          datasetIds: [],
-          functionIds: [],
-          judgeConfigId: "",
-          evalCaseIds: [],
-        },
-      };
-
-      for (const step of agentPipeline) {
-        if (step.requires && !existsSync(join(agentDir, step.requires))) {
-          continue;
-        }
-        await step.seeder.run(ctx);
-      }
-
-      if (!firstResult) {
-        firstResult = { agentId: ctx.agentId, ...ctx.ids };
-      }
+    for (const seeder of pipeline) {
+      await seeder.run(ctx);
     }
 
     logSection("Seed complete");
-
-    return firstResult!;
   };
 
   if (db) return run(db);

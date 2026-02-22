@@ -1,15 +1,22 @@
-import { db } from "@/db";
+import { db as appDb } from "@/db";
 import { orgs, orgMembers } from "@/db/schema";
 import type { User } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { ensureOrgDefaults } from "@/lib/slots";
+
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type * as schema from "@/db/schema";
+
+type DbLike = PostgresJsDatabase<typeof schema>;
 
 /**
  * Ensure the user has a personal organization.
  * If not found, creates one and makes the user its owner.
  * Returns the org id.
  */
-export async function ensurePersonalOrg(user: User): Promise<string> {
+export async function ensurePersonalOrg(user: User, database?: DbLike): Promise<string> {
+  const db = database ?? appDb;
+
   // Look for existing personal org
   const [existing] = await db
     .select({ orgId: orgMembers.orgId })
@@ -19,7 +26,7 @@ export async function ensurePersonalOrg(user: User): Promise<string> {
     .limit(1);
 
   if (existing) {
-    await ensureOrgDefaults(existing.orgId);
+    await ensureOrgDefaults(existing.orgId, db);
     return existing.orgId;
   }
 
@@ -44,7 +51,7 @@ export async function ensurePersonalOrg(user: User): Promise<string> {
     role: "owner",
   });
 
-  await ensureOrgDefaults(org.id);
+  await ensureOrgDefaults(org.id, db);
 
   return org.id;
 }

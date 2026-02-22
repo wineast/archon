@@ -1,6 +1,7 @@
 import { join } from "path";
 import { users } from "../schema";
 import { readJson, logSection, log } from "../seed-utils";
+import { ensurePersonalOrg } from "@/lib/orgs/ensure-personal-org";
 import type { Seeder } from "./types";
 
 export const seedUsers: Seeder = {
@@ -20,7 +21,7 @@ export const seedUsers: Seeder = {
       }>
     >(join(__dirname, "../seed-data/users.json"));
 
-    await Promise.all(
+    const userRows = await Promise.all(
       seedUserList.map((u) =>
         ctx.db
           .insert(users)
@@ -36,9 +37,16 @@ export const seedUsers: Seeder = {
           .onConflictDoUpdate({
             target: users.clerkId,
             set: { email: u.email, avatarUrl: u.avatar_url, platformRole: u.platform_role },
-          }),
+          })
+          .returning(),
       ),
     );
     log("ok", `${seedUserList.length} users`);
+
+    // Ensure each user has a personal org (with slot agents)
+    for (const [user] of userRows) {
+      const orgId = await ensurePersonalOrg(user, ctx.db);
+      log("ok", `Personal org for ${user.email}: ${orgId}`);
+    }
   },
 };
