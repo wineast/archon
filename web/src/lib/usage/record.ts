@@ -8,7 +8,7 @@ import { getOrgApiKey } from "@/lib/ai/org-api-keys";
 import { parseModelId } from "@/lib/ai/resolve-model";
 import { invalidateOrgCreditCache } from "@/lib/credits/queries";
 
-export type UsageSource = "chat" | "embed" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "schema-code-assist" | "tool-code-assist" | "wiki-assist" | "dataset-assist" | "eval";
+export type UsageSource = "chat" | "embed" | "build-chat" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "schema-code-assist" | "tool-code-assist" | "wiki-assist" | "dataset-assist" | "eval";
 
 interface RecordUsageParams {
   orgId?: string | null;

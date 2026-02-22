@@ -31,9 +31,13 @@ Build 页面左侧的聊天窗，让 FDA/编辑者通过对话操作 Agent 的�
 | Object Types | `objectTypesApiKey` | `/api/object-types?agentId={id}` |
 | Object Relations | `objectRelationsApiKey` | `/api/object-relations?agentId={id}` |
 
-### 不持久化会话
+### 监控
 
-Build Chat 是配置操作工具，操作结果已持久化到资源表。页面刷新后 AI 通过 `gatherResourceSummary()` 重新获取当前状态即可。
+Build Chat 同样拥有完整的三项监控：
+
+- **用量记录**：`recordUsage({ source: "build-chat" })`
+- **运行时事件**：`recordRuntimeEvents()` 记录 `llm_call` 事件
+- **会话持久化**：前端生成 `sessionId`，首次消息创建 `chatSessions` 记录，每轮对话保存 user/assistant `messages`
 
 ## 布局
 
@@ -110,10 +114,11 @@ Build 助手的模型（model）和温度（temperature）配置存储在**组�
 - `getOrgAssistModel(orgId)` — 快捷获取 assist model ID
 - 7 个 assist 路由均通过 `agentId → getOrgIdByAgentId → getOrgAssistModel → resolveModel` 动态解析模型
 - 之前 3 个使用 `gateway()` 的路由（tool-code-assist、dataset-assist、wiki-assist）已改为 `resolveModel`，支持 BYOK
+- 7 个 assist 路由共用 `createAssistHandler()`，已集成三项监控：用量记录、运行时事件、会话持久化。前端 dialog 组件在打开时重置 `sessionIdRef`，首次发消息时生成 sessionId
 
 ## 前端面板
 
 - 复用 `ai-elements/` 组件：Conversation、Message、PromptInput、Suggestion
-- `useChat()` 连接 `/api/build-chat`，body 携带 `agentId`
+- `useChat()` 连接 `/api/build-chat`，body 携带 `agentId` 和 `sessionId`
 - `onToolCall` 提取 `_mutateKeys` 调用 `globalMutate()`
 - 空状态展示欢迎文案 + 常用操作建议按钮

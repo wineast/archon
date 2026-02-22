@@ -41,6 +41,14 @@
 
 查询参数：`eventType`、`severity`、`from`、`to`、`cursor`、`limit`
 
+## 埋点位置
+
+所有 LLM 调用场景均在 `onFinish` 的 `after()` 中记录 `llm_call` 事件：
+
+1. **execute-stream.ts** — 主对话 + embed 对话（含 tool_call / stream_error / mcp_connect_error 等事件）
+2. **build-chat/execute-stream.ts** — Build Chat 配置助手
+3. **assist-utils.ts** — 7 个 AI Assist 路由共用（prompt/tool-code/wiki/function-code/dataset/schema-code/jsx）
+
 ## UI
 
 在 Agent Build 页面侧栏中点击 **Runtime**（活动图标）进入：

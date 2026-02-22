@@ -7,15 +7,17 @@ export const maxDuration = 30;
 export const POST = createAssistHandler({
   source: "prompt-assist",
   buildParams: (body) => {
-    const { messages, currentPrompt, agentId } = body as {
+    const { messages, currentPrompt, agentId, sessionId } = body as {
       messages: UIMessage[];
       currentPrompt: string;
       agentId?: string;
+      sessionId?: string;
     };
 
     return {
       messages,
       agentId,
+      sessionId,
       system: `你是一位专业的提示词工程师（Prompt Engineer）。你的任务是帮助用户优化和编辑 AI 系统提示词（System Prompt）。
 
 当前编辑器中的提示词内容如下：

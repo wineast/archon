@@ -7,16 +7,18 @@ export const maxDuration = 30;
 export const POST = createAssistHandler({
   source: "function-code-assist",
   buildParams: (body) => {
-    const { messages, currentCode, context, agentId } = body as {
+    const { messages, currentCode, context, agentId, sessionId } = body as {
       messages: UIMessage[];
       currentCode: string;
       context?: string;
       agentId?: string;
+      sessionId?: string;
     };
 
     return {
       messages,
       agentId,
+      sessionId,
       system: `你是一位专业的 JavaScript 函数开发工程师。你的任务是帮助用户编写和优化函数代码。
 
 当前编辑器中的函数代码如下：

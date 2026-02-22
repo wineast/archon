@@ -176,6 +176,7 @@ export function FunctionCodeAssistDialog({
   draftCodeRef.current = draftCode;
 
   const hasDiff = draftCode !== originalCode;
+  const sessionIdRef = useRef<string | null>(null);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -183,6 +184,7 @@ export function FunctionCodeAssistDialog({
         setDraftCode(code);
         setOriginalCode(code);
         draftCodeRef.current = code;
+        sessionIdRef.current = null;
       }
       onOpenChange(nextOpen);
     },
@@ -193,11 +195,15 @@ export function FunctionCodeAssistDialog({
     () =>
       new DefaultChatTransport({
         api: "/api/function-code-assist",
-        body: () => ({
-          currentCode: draftCodeRef.current,
-          context,
-          agentId,
-        }),
+        body: () => {
+          if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+          return {
+            currentCode: draftCodeRef.current,
+            context,
+            agentId,
+            sessionId: sessionIdRef.current,
+          };
+        },
       }),
     [context, agentId]
   );

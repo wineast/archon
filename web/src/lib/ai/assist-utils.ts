@@ -8,6 +8,14 @@ import { z } from "zod";
 import { after, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-agent-role";
 import { recordUsage, type UsageSource } from "@/lib/usage/record";
+import { recordRuntimeEvents } from "@/lib/runtime-events/record";
+import type { RuntimeEventInput } from "@/lib/runtime-events/record";
+import {
+  createSession,
+  saveMessage,
+  extractTextContent,
+  responseMessagesToUIParts,
+} from "@/db/chat-persistence";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
 import { getOrgAssistModel } from "@/lib/orgs/build-chat-settings";
@@ -40,10 +48,11 @@ type StreamTextTools = NonNullable<Parameters<typeof streamText>[0]["tools"]>;
 
 export interface AssistConfig {
   source: UsageSource;
-  /** Parse the request body and return messages, optional agentId, and system prompt. */
+  /** Parse the request body and return messages, optional agentId, sessionId, and system prompt. */
   buildParams: (body: Record<string, unknown>) => {
     messages: UIMessage[];
     agentId?: string;
+    sessionId?: string;
     system: string;
   };
   tools: StreamTextTools;
@@ -64,7 +73,7 @@ export function createAssistHandler(config: AssistConfig) {
     if (authResult instanceof NextResponse) return authResult;
 
     const body = await req.json();
-    const { messages, agentId, system } = config.buildParams(body);
+    const { messages, agentId, sessionId, system } = config.buildParams(body);
 
     const currentUserId = authResult.id;
     const orgId = await getOrgIdByAgentId(agentId);
@@ -83,16 +92,20 @@ export function createAssistHandler(config: AssistConfig) {
       throw e;
     }
 
+    const streamStartTime = performance.now();
+    const userMessage = messages[messages.length - 1];
+
     const result = streamText({
       model,
       messages: await convertToModelMessages(messages),
-      onFinish: ({ totalUsage }) => {
+      onFinish: ({ totalUsage, response, steps }) => {
+        // Usage recording
         after(async () => {
           await recordUsage({
             orgId,
             agentId: agentId ?? null,
             userId: currentUserId,
-            sessionId: null,
+            sessionId: sessionId ?? null,
             modelId,
             usage: {
               inputTokens: totalUsage.inputTokens,
@@ -102,6 +115,69 @@ export function createAssistHandler(config: AssistConfig) {
             },
             source: config.source,
           });
+        });
+
+        // Runtime events
+        const toolCallCount = steps.reduce(
+          (sum, step) => sum + (step.toolCalls?.length ?? 0),
+          0
+        );
+        const events: RuntimeEventInput[] = [
+          {
+            agentId: agentId ?? "unknown",
+            sessionId: sessionId ?? null,
+            eventType: "llm_call",
+            severity: "info",
+            durationMs: Math.round(performance.now() - streamStartTime),
+            metadata: {
+              modelId,
+              inputTokens: totalUsage.inputTokens,
+              outputTokens: totalUsage.outputTokens,
+              toolCallCount,
+              stepCount: steps.length,
+              source: config.source,
+            },
+          },
+        ];
+        after(async () => {
+          await recordRuntimeEvents(events);
+        });
+
+        // Session persistence
+        if (!sessionId || !userMessage) return;
+        after(async () => {
+          try {
+            if (messages.length === 1) {
+              const title =
+                extractTextContent(userMessage.parts as unknown[]).slice(0, 100) ||
+                config.source;
+              await createSession({
+                id: sessionId,
+                title,
+                model: modelId,
+                systemPrompt: system,
+                agentId,
+                userId: currentUserId,
+              });
+            }
+            await saveMessage({
+              id: crypto.randomUUID(),
+              sessionId,
+              role: userMessage.role as "user" | "assistant" | "system",
+              parts: userMessage.parts as unknown[],
+            });
+            const uiParts = responseMessagesToUIParts(response.messages);
+            if (uiParts.length > 0) {
+              await saveMessage({
+                id: crypto.randomUUID(),
+                sessionId,
+                role: "assistant",
+                parts: uiParts,
+              });
+            }
+          } catch (e) {
+            console.error(`[${config.source}] failed to save messages:`, e);
+          }
         });
       },
       system,

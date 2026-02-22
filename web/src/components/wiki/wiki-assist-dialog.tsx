@@ -167,6 +167,7 @@ export function WikiAssistDialog({
   draftContentRef.current = draftContent;
 
   const hasDiff = draftContent !== originalContent;
+  const sessionIdRef = useRef<string | null>(null);
 
   // Reset state when dialog opens
   const handleOpenChange = useCallback(
@@ -175,6 +176,7 @@ export function WikiAssistDialog({
         setDraftContent(content);
         setOriginalContent(content);
         draftContentRef.current = content;
+        sessionIdRef.current = null;
       }
       onOpenChange(nextOpen);
     },
@@ -185,11 +187,15 @@ export function WikiAssistDialog({
     () =>
       new DefaultChatTransport({
         api: "/api/wiki-assist",
-        body: () => ({
-          currentContent: draftContentRef.current,
-          documentName,
-          agentId,
-        }),
+        body: () => {
+          if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+          return {
+            currentContent: draftContentRef.current,
+            documentName,
+            agentId,
+            sessionId: sessionIdRef.current,
+          };
+        },
       }),
     [documentName, agentId]
   );

@@ -7,15 +7,17 @@ export const maxDuration = 30;
 export const POST = createAssistHandler({
   source: "jsx-assist",
   buildParams: (body) => {
-    const { messages, currentJsx, agentId } = body as {
+    const { messages, currentJsx, agentId, sessionId } = body as {
       messages: UIMessage[];
       currentJsx: string;
       agentId?: string;
+      sessionId?: string;
     };
 
     return {
       messages,
       agentId,
+      sessionId,
       system: `你是一位专业的 React 组件开发工程师。你的任务是帮助用户编写和优化 JSX 组件代码。
 
 当前编辑器中的组件代码如下：

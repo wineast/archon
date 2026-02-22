@@ -9,9 +9,11 @@ export async function POST(req: Request) {
   const {
     messages,
     agentId,
+    sessionId,
   }: {
     messages: UIMessage[];
     agentId?: string;
+    sessionId?: string;
   } = await req.json();
 
   if (!agentId) {
@@ -25,5 +27,5 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  return executeBuildChatStream({ messages, agentId });
+  return executeBuildChatStream({ messages, agentId, sessionId, userId: ctx.user.id });
 }

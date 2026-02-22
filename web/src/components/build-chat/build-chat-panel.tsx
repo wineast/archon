@@ -89,12 +89,16 @@ function BuildMessageParts({ message }: { message: UIMessage }) {
 
 export function BuildChatPanel({ agentId }: BuildChatPanelProps) {
   const { mutate: globalMutate } = useSWRConfig();
+  const sessionIdRef = useRef<string | null>(null);
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: "/api/build-chat",
-        body: () => ({ agentId }),
+        body: () => {
+          if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+          return { agentId, sessionId: sessionIdRef.current };
+        },
       }),
     [agentId]
   );

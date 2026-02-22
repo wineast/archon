@@ -186,6 +186,7 @@ export function JsxAssistDialog({
   draftJsxRef.current = draftJsx;
 
   const hasDiff = draftJsx !== originalJsx;
+  const sessionIdRef = useRef<string | null>(null);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -193,6 +194,7 @@ export function JsxAssistDialog({
         setDraftJsx(jsxSource);
         setOriginalJsx(jsxSource);
         draftJsxRef.current = jsxSource;
+        sessionIdRef.current = null;
       }
       onOpenChange(nextOpen);
     },
@@ -203,10 +205,14 @@ export function JsxAssistDialog({
     () =>
       new DefaultChatTransport({
         api: "/api/jsx-assist",
-        body: () => ({
-          currentJsx: draftJsxRef.current,
-          agentId,
-        }),
+        body: () => {
+          if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+          return {
+            currentJsx: draftJsxRef.current,
+            agentId,
+            sessionId: sessionIdRef.current,
+          };
+        },
       }),
     [agentId]
   );

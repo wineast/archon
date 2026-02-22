@@ -1,0 +1,250 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// Mock dependencies before importing the module under test
+const mockRecordUsage = vi.fn().mockResolvedValue(undefined);
+const mockRecordRuntimeEvents = vi.fn().mockResolvedValue(undefined);
+const mockCreateSession = vi.fn().mockResolvedValue(undefined);
+const mockSaveMessage = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("@/lib/usage/record", () => ({
+  recordUsage: (...args: unknown[]) => mockRecordUsage(...args),
+}));
+
+vi.mock("@/lib/runtime-events/record", () => ({
+  recordRuntimeEvents: (...args: unknown[]) => mockRecordRuntimeEvents(...args),
+}));
+
+vi.mock("@/db/chat-persistence", () => ({
+  createSession: (...args: unknown[]) => mockCreateSession(...args),
+  saveMessage: (...args: unknown[]) => mockSaveMessage(...args),
+  extractTextContent: (parts: unknown[]) => {
+    return parts
+      .filter(
+        (p): p is { type: string; text: string } =>
+          typeof p === "object" && p !== null && "type" in p && "text" in p
+      )
+      .map((p) => p.text)
+      .join("\n");
+  },
+  responseMessagesToUIParts: () => [{ type: "text", text: "response" }],
+}));
+
+vi.mock("@/lib/auth/require-agent-role", () => ({
+  requireAuth: vi.fn().mockResolvedValue({ id: "user-123" }),
+}));
+
+vi.mock("@/lib/ai/get-org-id", () => ({
+  getOrgIdByAgentId: vi.fn().mockResolvedValue("org-1"),
+}));
+
+vi.mock("@/lib/orgs/build-chat-settings", () => ({
+  getOrgAssistModel: vi.fn().mockResolvedValue("anthropic/claude-sonnet-4"),
+}));
+
+vi.mock("@/lib/ai/resolve-model", () => ({
+  resolveModel: vi.fn().mockResolvedValue({ modelId: "anthropic/claude-sonnet-4" }),
+}));
+
+vi.mock("@/lib/credits/errors", () => ({
+  QuotaExceededError: class QuotaExceededError extends Error {},
+}));
+
+// Capture the onFinish callback from streamText
+let capturedOnFinish: ((...args: unknown[]) => void) | null = null;
+
+vi.mock("ai", () => ({
+  streamText: vi.fn((opts: Record<string, unknown>) => {
+    capturedOnFinish = opts.onFinish as typeof capturedOnFinish;
+    return {
+      toUIMessageStreamResponse: () => new Response("ok"),
+    };
+  }),
+  tool: vi.fn((opts: unknown) => opts),
+  convertToModelMessages: vi.fn().mockResolvedValue([]),
+}));
+
+// Mock next/server after()
+const afterCallbacks: (() => Promise<void>)[] = [];
+vi.mock("next/server", () => ({
+  after: (fn: () => Promise<void>) => { afterCallbacks.push(fn); },
+  NextResponse: class NextResponse extends Response {
+    static json(data: unknown, init?: ResponseInit) { return new Response(JSON.stringify(data), init); }
+  },
+}));
+
+import { createAssistHandler, buildAssistTools } from "../assist-utils";
+import type { UIMessage } from "ai";
+
+describe("buildAssistTools", () => {
+  it("creates update and edit tool pair", () => {
+    const tools = buildAssistTools("prompt");
+    expect(tools).toHaveProperty("update_prompt");
+    expect(tools).toHaveProperty("edit_prompt");
+  });
+
+  it("names tools after the entity", () => {
+    const tools = buildAssistTools("code");
+    expect(Object.keys(tools)).toEqual(["update_code", "edit_code"]);
+  });
+});
+
+describe("createAssistHandler", () => {
+  beforeEach(() => {
+    capturedOnFinish = null;
+    afterCallbacks.length = 0;
+    mockRecordUsage.mockClear();
+    mockRecordRuntimeEvents.mockClear();
+    mockCreateSession.mockClear();
+    mockSaveMessage.mockClear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const makeMessages = (count: number): UIMessage[] =>
+    Array.from({ length: count }, (_, i) => ({
+      id: `msg-${i}`,
+      role: i % 2 === 0 ? "user" : "assistant",
+      parts: [{ type: "text", text: `message ${i}` }],
+    })) as UIMessage[];
+
+  const config = {
+    source: "prompt-assist" as const,
+    buildParams: (body: Record<string, unknown>) => ({
+      messages: body.messages as UIMessage[],
+      agentId: body.agentId as string | undefined,
+      sessionId: body.sessionId as string | undefined,
+      system: "test system prompt",
+    }),
+    tools: buildAssistTools("prompt"),
+  };
+
+  function makeRequest(body: Record<string, unknown>) {
+    return new Request("http://localhost/api/prompt-assist", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("records usage on finish", async () => {
+    const handler = createAssistHandler(config);
+    const messages = makeMessages(1);
+    await handler(makeRequest({ messages, agentId: "agent-1", sessionId: "sess-1" }));
+
+    expect(capturedOnFinish).toBeTruthy();
+    capturedOnFinish!({
+      totalUsage: { inputTokens: 100, outputTokens: 50, cachedInputTokens: 10, reasoningTokens: 0 },
+      response: { messages: [] },
+      steps: [],
+    });
+
+    // Flush after callbacks
+    for (const cb of afterCallbacks) await cb();
+
+    expect(mockRecordUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orgId: "org-1",
+        agentId: "agent-1",
+        userId: "user-123",
+        sessionId: "sess-1",
+        modelId: "anthropic/claude-sonnet-4",
+        source: "prompt-assist",
+        usage: expect.objectContaining({ inputTokens: 100, outputTokens: 50 }),
+      })
+    );
+  });
+
+  it("records runtime events on finish", async () => {
+    const handler = createAssistHandler(config);
+    const messages = makeMessages(1);
+    await handler(makeRequest({ messages, agentId: "agent-1", sessionId: "sess-1" }));
+
+    capturedOnFinish!({
+      totalUsage: { inputTokens: 100, outputTokens: 50 },
+      response: { messages: [] },
+      steps: [{ toolCalls: [{}] }],
+    });
+
+    for (const cb of afterCallbacks) await cb();
+
+    expect(mockRecordRuntimeEvents).toHaveBeenCalledWith([
+      expect.objectContaining({
+        agentId: "agent-1",
+        sessionId: "sess-1",
+        eventType: "llm_call",
+        severity: "info",
+        metadata: expect.objectContaining({
+          modelId: "anthropic/claude-sonnet-4",
+          toolCallCount: 1,
+          stepCount: 1,
+          source: "prompt-assist",
+        }),
+      }),
+    ]);
+  });
+
+  it("creates session and saves messages on first message", async () => {
+    const handler = createAssistHandler(config);
+    const messages = makeMessages(1);
+    await handler(makeRequest({ messages, agentId: "agent-1", sessionId: "sess-1" }));
+
+    capturedOnFinish!({
+      totalUsage: { inputTokens: 100, outputTokens: 50 },
+      response: { messages: [] },
+      steps: [],
+    });
+
+    for (const cb of afterCallbacks) await cb();
+
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "sess-1",
+        model: "anthropic/claude-sonnet-4",
+        agentId: "agent-1",
+        userId: "user-123",
+      })
+    );
+    // User message + assistant response = 2 calls
+    expect(mockSaveMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips session persistence when no sessionId", async () => {
+    const handler = createAssistHandler(config);
+    const messages = makeMessages(1);
+    await handler(makeRequest({ messages, agentId: "agent-1" }));
+
+    capturedOnFinish!({
+      totalUsage: { inputTokens: 100, outputTokens: 50 },
+      response: { messages: [] },
+      steps: [],
+    });
+
+    for (const cb of afterCallbacks) await cb();
+
+    // Usage and events should still be recorded
+    expect(mockRecordUsage).toHaveBeenCalled();
+    expect(mockRecordRuntimeEvents).toHaveBeenCalled();
+    // But no session/message persistence
+    expect(mockCreateSession).not.toHaveBeenCalled();
+    expect(mockSaveMessage).not.toHaveBeenCalled();
+  });
+
+  it("does not create session on subsequent messages", async () => {
+    const handler = createAssistHandler(config);
+    const messages = makeMessages(3); // 3 messages = not first
+    await handler(makeRequest({ messages, agentId: "agent-1", sessionId: "sess-1" }));
+
+    capturedOnFinish!({
+      totalUsage: { inputTokens: 100, outputTokens: 50 },
+      response: { messages: [] },
+      steps: [],
+    });
+
+    for (const cb of afterCallbacks) await cb();
+
+    expect(mockCreateSession).not.toHaveBeenCalled();
+    // Still saves messages
+    expect(mockSaveMessage).toHaveBeenCalledTimes(2);
+  });
+});

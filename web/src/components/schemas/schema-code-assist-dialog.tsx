@@ -178,6 +178,7 @@ export function SchemaCodeAssistDialog({
   draftSchemaRef.current = draftSchema;
 
   const hasDiff = draftSchema !== originalSchema;
+  const sessionIdRef = useRef<string | null>(null);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -185,6 +186,7 @@ export function SchemaCodeAssistDialog({
         setDraftSchema(schema);
         setOriginalSchema(schema);
         draftSchemaRef.current = schema;
+        sessionIdRef.current = null;
       }
       onOpenChange(nextOpen);
     },
@@ -195,11 +197,15 @@ export function SchemaCodeAssistDialog({
     () =>
       new DefaultChatTransport({
         api: "/api/schema-code-assist",
-        body: () => ({
-          currentSchema: draftSchemaRef.current,
-          context,
-          agentId,
-        }),
+        body: () => {
+          if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+          return {
+            currentSchema: draftSchemaRef.current,
+            context,
+            agentId,
+            sessionId: sessionIdRef.current,
+          };
+        },
       }),
     [context, agentId]
   );
