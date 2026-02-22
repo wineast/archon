@@ -14,11 +14,13 @@ import remarkGfm from "remark-gfm";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { GuideDialog } from "@/components/ui/guide-dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MdEditor } from "@/components/editors/md-editor";
+import promptEditingGuide from "../../../guide/prompt-editing.md";
 import type { ModelConfigRow } from "@/db/schema";
 import { useDatasetVarsMap, useDatasets } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
@@ -188,6 +190,7 @@ export function ModelConfigDetail({
           <div>
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-muted-foreground">System Prompt</label>
+              <GuideDialog title="系统提示词编辑参考" content={promptEditingGuide} />
               <Button
                 variant="ghost"
                 size="sm"

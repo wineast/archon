@@ -2,7 +2,7 @@
 
 ## 基本结构
 
-使用 `archon:*` 虚拟模块导入依赖，`export default` 导出函数：
+**ES module 格式是唯一支持的代码格式。** 使用 `archon:*` 虚拟模块导入依赖，`export default` 导出函数：
 
 ```js
 import other_fn from "archon:fn/other_fn";
@@ -15,6 +15,17 @@ export default function(input) {
 
 ---
 
+## 运行环境
+
+函数在 **QuickJS WASM 沙盒**中执行，完全隔离：
+
+- 无法访问 Node.js API（`fs`、`path`、`http` 等）
+- 无法访问文件系统、网络、环境变量
+- 可使用标准 JavaScript 内置对象（`Math`、`Date`、`JSON`、`RegExp` 等）
+- **只支持** `archon:*` 虚拟模块，其他 import 路径会报错
+
+---
+
 ## archon:* 虚拟模块
 
 | 模块 | 说明 |
@@ -22,7 +33,23 @@ export default function(input) {
 | `archon:fn/<key>` | 导入同 Agent 下的其他函数 |
 | `archon:lib/filtrex` | 导入 filtrex 表达式编译器（`compileExpression`） |
 
-示例——使用 filtrex：
+### archon:fn/<key>
+
+导入的函数是**同步调用**的（不需要 `await`）：
+
+```js
+import other_fn from "archon:fn/other_fn";
+
+export default function(input) {
+  // 直接调用，不用 await
+  const result = other_fn({ value: input.x * 2 });
+  return { ...result, processed: true };
+}
+```
+
+### archon:lib/filtrex
+
+`compileExpression(expression, options?)` — 编译一个表达式字符串，返回一个求值函数 `(data: object) => unknown`。
 
 ```js
 import { compileExpression } from "archon:lib/filtrex";
@@ -32,6 +59,8 @@ export default function(input) {
   return { total: evaluate(input) };
 }
 ```
+
+支持算术运算、比较、逻辑运算和属性访问。
 
 ---
 

@@ -67,6 +67,16 @@ Schema 使用标准 JSON Schema 7 格式：
 | `{{ obj \| values \| json }}` | 取对象的 value | `["California","New York"]` |
 | `{{ arr \| map: "field" \| json }}` | 取数组对象的某字段 | `["Alice","Bob"]` |
 
+### 自定义 Filter
+
+enum 模板中可使用的自定义 Filter：
+
+| Filter | 说明 |
+|--------|------|
+| `json` | 将值序列化为 JSON 字符串（`JSON.stringify`） |
+| `keys` | 获取对象的所有 key（`Object.keys()`） |
+| `values` | 获取对象的所有 value（`Object.values()`） |
+
 ### 展开规则
 
 - 渲染结果是 JSON 数组（`[` 开头）→ 解析后展开为多个枚举值
@@ -115,7 +125,7 @@ Schema 使用标准 JSON Schema 7 格式：
 { "type": "string", "enum": ["CA", "NY", "TX"] }
 ```
 
-## 联合类型
+## 联合类型与 Archon 扩展字段
 
 ```json
 {
@@ -126,6 +136,17 @@ Schema 使用标准 JSON Schema 7 格式：
   "x-discriminator": "kind",
   "x-discriminatorValues": ["text", "image"]
 }
+```
+
+### Archon 扩展字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `x-discriminator` | string | 联合类型的判别字段名，指定用哪个属性区分不同变体 |
+| `x-discriminatorValues` | string[] | 每个变体对应的判别值，数组顺序与 `oneOf`/`anyOf` 中的变体顺序一一对应 |
+| `x-unionMode` | `"oneOf"` \| `"anyOf"` | 联合类型模式，默认 `"oneOf"`（互斥选择），`"anyOf"` 表示可匹配多个 |
+
+联合类型示例（带判别字段）：
 ```
 
 ## Nullable

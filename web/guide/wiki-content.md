@@ -27,18 +27,52 @@
 
 对象类型用点号访问子字段，数组类型用于循环遍历。
 
-### 内置变量
+### Wiki 专属变量
 
-以下变量自动可用，无需配置：
+以下变量仅在 Wiki 文档中可用：
 
 | 变量 | 示例值 | 说明 |
 |------|--------|------|
-| `{{date}}` | `2026-02-17` | 日期 |
+| `{{documentTitle}}` | `贷款指南` | 当前文档的标题 |
+| `{{currentDate}}` | `2/17/2026` | 本地日期格式（en-US） |
+| `{{currentTime}}` | `2:30:00 PM` | 本地时间格式（en-US） |
+
+### 内置时间变量
+
+| 变量 | 示例值 | 说明 |
+|------|--------|------|
+| `{{date}}` | `2026-02-17` | ISO 日期 |
 | `{{time}}` | `14:30:00` | 时间 |
-| `{{datetime}}` | `2026-02-17T14:30:00.000Z` | 完整时间 |
+| `{{datetime}}` | `2026-02-17T14:30:00.000Z` | ISO 完整时间 |
+| `{{timestamp}}` | `1739800200000` | Unix 毫秒时间戳 |
 | `{{year}}` | `2026` | 年 |
 | `{{month}}` | `02` | 月（补零） |
 | `{{day}}` | `17` | 日（补零） |
+
+### 工具命名空间变量
+
+```liquid
+{{tool.calculate_dti.name}}
+{% for t in tool_entries %}
+- {{t.name}}：{{t.description}}
+{% endfor %}
+```
+
+### 本体类型变量
+
+```liquid
+{% for type in ontology_types %}
+- {{type.key}}：{{type.name}}
+{% endfor %}
+
+{{ontology.customer.name}}
+```
+
+### 宿主变量（embed 模式）
+
+```liquid
+{{host.userName}}
+```
 
 ---
 
@@ -134,7 +168,7 @@
 → 这是一段很长的描述文字，会被截断到五十个字符...
 ```
 
-常用 filter：
+### 内置 Filter
 
 | Filter | 说明 | 示例 |
 |--------|------|------|
@@ -142,6 +176,24 @@
 | `downcase` | 转小写 | `{{name \| downcase}}` |
 | `join` | 数组拼接为字符串 | `{{list \| join: ", "}}` |
 | `truncate` | 截断到指定长度 | `{{text \| truncate: 100}}` |
+| `map` | 取数组每项的指定字段 | `{{tool_entries \| map: "name"}}` |
+| `split` | 字符串分割为数组 | `{{csv \| split: ","}}` |
+| `size` | 返回长度 | `{{items \| size}}` |
+
+> Wiki 文档使用标准 LiquidJS 引擎，不包含自定义 Filter（`json`/`keys`/`values` 仅在数据集和 Schema 中可用）。
+
+---
+
+## `{% include %}` 语法细节
+
+```liquid
+{% include 'document_key' %}
+```
+
+- 按文档 **key**（非标题）精确匹配
+- key 必须用引号包裹（单引号或双引号均可）
+- 被引用文档的内容也会经过模板渲染（变量插值、条件判断等都会生效）
+- 支持嵌套引用（A include B，B include C），系统自动检测循环引用
 
 ---
 
@@ -149,3 +201,4 @@
 
 - **未定义变量**：引用不存在的变量会渲染为空，不会报错
 - **语法错误**：模板语法有误时返回原始文本，不影响正常使用
+- **保留字**：`tool`、`tool_entries` 不能用作数据集 key
