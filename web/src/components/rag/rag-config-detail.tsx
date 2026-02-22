@@ -20,6 +20,7 @@ import type { RagConfigRow } from "@/db/schema";
 
 interface RagConfigDetailProps {
   config: RagConfigRow | null;
+  isLoading?: boolean;
   onSave: (id: string, data: Record<string, unknown>) => Promise<void>;
 }
 
@@ -30,7 +31,7 @@ interface FormValues {
   topK: number;
 }
 
-export function RagConfigDetail({ config, onSave }: RagConfigDetailProps) {
+export function RagConfigDetail({ config, isLoading, onSave }: RagConfigDetailProps) {
   const { models } = useModels();
   const embeddingModels = models.filter((m) => m.type === "embedding");
 
@@ -69,10 +70,18 @@ export function RagConfigDetail({ config, onSave }: RagConfigDetailProps) {
     [config, onSave]
   );
 
-  if (!config) {
+  if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <Spinner className="size-6" />
+      </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        No config found
       </div>
     );
   }

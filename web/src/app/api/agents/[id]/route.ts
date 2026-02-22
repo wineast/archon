@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { agents, orgs, orgSlots, agentSlotOverrides } from "@/db/schema";
+import { agents, orgs, orgSlots, agentSlotOverrides, ragConfigs } from "@/db/schema";
 import { and, eq, isNull, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
@@ -104,6 +104,18 @@ export async function PUT(
   if (typeof isPublic === "boolean") updates.isPublic = isPublic;
   if (typeof memoryEnabled === "boolean") updates.memoryEnabled = memoryEnabled;
   if (typeof ragEnabled === "boolean") updates.ragEnabled = ragEnabled;
+
+  // Auto-create ragConfig when enabling RAG
+  if (ragEnabled === true) {
+    const [existing] = await db
+      .select({ id: ragConfigs.id })
+      .from(ragConfigs)
+      .where(eq(ragConfigs.agentId, id))
+      .limit(1);
+    if (!existing) {
+      await db.insert(ragConfigs).values({ agentId: id });
+    }
+  }
   if (typeof mcpEnabled === "boolean") updates.mcpEnabled = mcpEnabled;
   if (typeof skillsEnabled === "boolean") updates.skillsEnabled = skillsEnabled;
 
