@@ -67,7 +67,12 @@ make wt-list
    然后 `chmod +x` 使其可执行。
 5. **提示用户**：
    - worktree 路径：`.worktrees/<name>`
-   - 启动方式：`cd .worktrees/<name> && ./start.sh`
+   - 手动启动：`cd .worktrees/<name> && ./start.sh`
+6. **在当前会话内执行工作区**（可选）：用户要求时，通过 Bash 工具（`run_in_background`）在父会话内直接启动子 Claude。需先 `cd` 进工作区再 `unset CLAUDECODE` 绕过嵌套检测：
+   ```bash
+   cd .worktrees/<name> && unset CLAUDECODE && ./start.sh
+   ```
+   多个工作区可并行启动（多个 Bash 调用同时发出）。
 
 ### 同步上游（`sync`）
 
