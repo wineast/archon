@@ -30,11 +30,12 @@ import { AssertionRow } from "./assertion-row";
 import { TurnsList } from "./turns-list";
 import { ResultCard } from "./result-card";
 import { useActiveModelConfig } from "@/lib/model-config/hooks";
-import { useDefaultJudgeConfig, useEvalRuns } from "@/lib/eval/hooks";
+import { useActiveJudgeConfig } from "@/lib/judge-config/hooks";
+import { useEvalRuns } from "@/lib/eval/hooks";
+import { useResolvedEvaluator } from "@/lib/eval/use-resolved-evaluator";
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { useEvalRun } from "@/lib/eval/eval-run-context";
-import { toJudgeConfig } from "@/lib/eval/types";
 import type { EvalCaseRow } from "@/db/schema";
 import type {
   Assertion,
@@ -78,7 +79,10 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
 
   // Hooks for running
   const { activeConfig: activeModelConfig } = useActiveModelConfig(agentId);
-  const { defaultConfig: defaultJudge } = useDefaultJudgeConfig(agentId);
+  const { evaluator } = useResolvedEvaluator(agentId);
+  const judgeAgentId = evaluator?.judgeAgentId ?? undefined;
+  const { activeConfig: activeJudgeModelConfig } = useActiveModelConfig(judgeAgentId);
+  const { activeConfig: activeJudgeConfig } = useActiveJudgeConfig(judgeAgentId);
   const { templateVars } = useTemplateVars(agentId);
   const { tools: allDbTools } = useTools(agentId);
   const { isRunning: isGlobalRunning } = useEvalRun();
@@ -215,13 +219,14 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     error,
   });
 
+  const canRun = !!(activeModelConfig && judgeAgentId && activeJudgeModelConfig && activeJudgeConfig);
+
   const handleRun = useCallback(async () => {
-    if (!activeModelConfig || !defaultJudge) {
-      toast.error("Missing model config or judge config");
+    if (!activeModelConfig || !judgeAgentId || !activeJudgeModelConfig || !activeJudgeConfig) {
+      toast.error("Missing model config, judge agent, or judge config");
       return;
     }
 
-    const judgeConfig = toJudgeConfig(defaultJudge);
     const currentCase: EvalCase = {
       id: evalCase.id,
       key: evalCase.key,
@@ -246,9 +251,11 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          agentId,
           modelConfigId: activeModelConfig.id,
-          judgeConfigId: defaultJudge.id,
-          judgeConfigName: judgeConfig.model,
+          judgeAgentId,
+          judgeModelConfigId: activeJudgeModelConfig.id,
+          judgeConfigId: activeJudgeConfig.id,
           totalCases: 1,
         }),
       });
@@ -279,7 +286,8 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           case: currentCase,
-          judgeConfig,
+          judgeModelConfigId: activeJudgeModelConfig.id,
+          judgeConfigId: activeJudgeConfig.id,
           modelConfigId: activeModelConfig.id,
           templateVars,
           toolNames: enabledToolNames,
@@ -310,6 +318,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   }, [
     evalCase.id,
     evalCase.key,
+    agentId,
     name,
     mode,
     turns,
@@ -317,7 +326,9 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     expectedOutput,
     tags,
     activeModelConfig,
-    defaultJudge,
+    judgeAgentId,
+    activeJudgeModelConfig,
+    activeJudgeConfig,
     templateVars,
     allDbTools,
     mutateRuns,
@@ -478,9 +489,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           size="sm"
           variant="outline"
           onClick={handleRun}
-          disabled={
-            busy || isGlobalRunning || !activeModelConfig || !defaultJudge
-          }
+          disabled={busy || isGlobalRunning || !canRun}
         >
           {running ? (
             <Spinner className="mr-1 size-3" />

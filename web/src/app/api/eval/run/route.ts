@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { evalRuns, modelConfigs } from "@/db/schema";
+import { evalRuns, modelConfigs, judgeConfigs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type { CreateEvalRunRequest, CreateEvalRunResponse } from "@/lib/eval/types";
@@ -12,8 +12,9 @@ export async function POST(req: Request) {
   const {
     agentId,
     modelConfigId,
+    judgeAgentId,
+    judgeModelConfigId,
     judgeConfigId,
-    judgeConfigName,
     filterTags,
     assertionFailConfig,
     totalCases,
@@ -39,15 +40,49 @@ export async function POST(req: Request) {
     );
   }
 
-  // Create the run record (stats will be filled in by PATCH /api/eval/run/[runId])
+  // Load judge model config snapshot
+  const [judgeModelConfig] = await db
+    .select()
+    .from(modelConfigs)
+    .where(and(eq(modelConfigs.id, judgeModelConfigId), isNull(modelConfigs.deletedAt)));
+
+  if (!judgeModelConfig) {
+    return Response.json(
+      { error: "Judge model config not found" },
+      { status: 400 }
+    );
+  }
+
+  // Load judge config snapshot
+  const [judgeConfig] = await db
+    .select()
+    .from(judgeConfigs)
+    .where(and(eq(judgeConfigs.id, judgeConfigId), isNull(judgeConfigs.deletedAt)));
+
+  if (!judgeConfig) {
+    return Response.json(
+      { error: "Judge config not found" },
+      { status: 400 }
+    );
+  }
+
+  // Create the run record with snapshots
   const [run] = await db
     .insert(evalRuns)
     .values({
       agentId,
       chatModel: modelConfig.modelId,
       chatSystemPrompt: modelConfig.systemPrompt,
-      judgeConfigId: judgeConfigId ?? null,
-      judgeConfigName,
+      judgeAgentId,
+      judgeModelConfigSnapshot: {
+        modelId: judgeModelConfig.modelId,
+        systemPrompt: judgeModelConfig.systemPrompt,
+        temperature: judgeModelConfig.temperature,
+      },
+      judgeConfigSnapshot: {
+        name: judgeConfig.name,
+        dimensions: judgeConfig.dimensions,
+      },
       filterTags: filterTags ?? [],
       assertionFailConfig: assertionFailConfig ?? null,
       totalCases,

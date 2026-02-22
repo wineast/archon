@@ -10,7 +10,7 @@ import * as schema from "../schema";
 import {
   chatConfigs,
   datasets,
-  evalJudgeConfigs,
+  judgeConfigs,
   evalCases,
 } from "../schema";
 
@@ -39,7 +39,7 @@ describe("seed idempotency", () => {
     expect(result2.modelConfigIds).toEqual(result1.modelConfigIds);
     expect(result2.chatConfigId).toBe(result1.chatConfigId);
     expect(result2.datasetIds).toEqual(result1.datasetIds);
-    expect(result2.evalJudgeConfigId).toBe(result1.evalJudgeConfigId);
+    expect(result2.judgeConfigId).toBe(result1.judgeConfigId);
     expect(result2.evalCaseIds).toEqual(result1.evalCaseIds);
   }, 60_000);
 
@@ -63,7 +63,7 @@ describe("seed idempotency", () => {
     }
 
     const namedTables = [
-      { table: evalJudgeConfigs, label: "evalJudgeConfigs" },
+      { table: judgeConfigs, label: "judgeConfigs" },
       { table: evalCases, label: "evalCases" },
     ] as const;
 

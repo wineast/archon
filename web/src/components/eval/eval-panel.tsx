@@ -5,36 +5,26 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useEvalCases,
-  useEvalJudgeConfigs,
   createEvalCase,
   updateEvalCase,
   deleteEvalCase,
-  createJudgeConfig,
-  updateJudgeConfig,
-  deleteJudgeConfig,
-  setDefaultJudgeConfig,
 } from "@/lib/eval/hooks";
-import DEFAULT_JUDGE_CONFIG from "@/db/seed-data/gmcc-advisor/eval-judge-config.json";
 import { EvalRunProvider } from "@/lib/eval/eval-run-context";
 import { EvalSidebar, type ActiveView } from "./eval-sidebar";
 import { CaseDetail } from "./case-detail";
-import { JudgeConfigDetail } from "./judge-config-detail";
 import { ResultsPanel } from "./results-panel";
 import { BenchmarkPanel } from "./benchmark-panel";
 import { EvalEmptyState } from "./eval-empty-state";
 import { EvalCaseCreateDialog } from "./eval-case-create-dialog";
-import { JudgeConfigCreateDialog } from "./judge-config-create-dialog";
 
 export function EvalPanel({ agentId }: { agentId: string }) {
   const { cases, mutate: mutateCases } = useEvalCases(agentId, true);
-  const { configs, mutate: mutateConfigs } = useEvalJudgeConfigs(agentId, true);
   const [activeView, setActiveView] = useState<ActiveView>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">(
     "sidebar"
   );
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
-  const [judgeDialogOpen, setJudgeDialogOpen] = useState(false);
 
   const handleToggleTag = useCallback((tag: string) => {
     setSelectedTags((prev) =>
@@ -48,14 +38,6 @@ export function EvalPanel({ agentId }: { agentId: string }) {
         ? cases.find((c) => c.id === activeView.id) ?? null
         : null,
     [cases, activeView]
-  );
-
-  const activeConfig = useMemo(
-    () =>
-      activeView?.type === "judge"
-        ? configs.find((c) => c.id === activeView.id) ?? null
-        : null,
-    [configs, activeView]
   );
 
   useEffect(() => {
@@ -105,53 +87,6 @@ export function EvalPanel({ agentId }: { agentId: string }) {
     [mutateCases, activeView]
   );
 
-  // ── Judge config handlers ──
-
-  const handleCreateConfig = useCallback(
-    async (key: string, name: string) => {
-      const result = await createJudgeConfig(
-        {
-          agentId,
-          key,
-          name,
-          model: DEFAULT_JUDGE_CONFIG.model,
-          systemPrompt: DEFAULT_JUDGE_CONFIG.systemPrompt,
-          temperature: DEFAULT_JUDGE_CONFIG.temperature,
-        },
-        mutateConfigs
-      );
-      if (result?.id) {
-        setActiveView({ type: "judge", id: result.id });
-        setJudgeDialogOpen(false);
-      }
-    },
-    [agentId, mutateConfigs]
-  );
-
-  const handleSaveConfig = useCallback(
-    async (id: string, data: Record<string, unknown>) => {
-      await updateJudgeConfig(id, data, mutateConfigs);
-    },
-    [mutateConfigs]
-  );
-
-  const handleDeleteConfig = useCallback(
-    async (id: string) => {
-      await deleteJudgeConfig(id, mutateConfigs);
-      if (activeView?.type === "judge" && activeView.id === id) {
-        setActiveView(null);
-      }
-    },
-    [mutateConfigs, activeView]
-  );
-
-  const handleSetDefaultConfig = useCallback(
-    async (id: string) => {
-      await setDefaultJudgeConfig(id, mutateConfigs);
-    },
-    [mutateConfigs]
-  );
-
   // ── Detail panel content ──
 
   function renderDetail() {
@@ -163,18 +98,6 @@ export function EvalPanel({ agentId }: { agentId: string }) {
           agentId={agentId}
           onSave={handleSaveCase}
           onDelete={handleDeleteCase}
-        />
-      );
-    }
-    if (activeView?.type === "judge" && activeConfig) {
-      return (
-        <JudgeConfigDetail
-          key={activeConfig.id}
-          config={activeConfig}
-          agentId={agentId}
-          onSave={handleSaveConfig}
-          onDelete={handleDeleteConfig}
-          onSetDefault={handleSetDefaultConfig}
         />
       );
     }
@@ -193,7 +116,6 @@ export function EvalPanel({ agentId }: { agentId: string }) {
   }
 
   const openCaseDialog = useCallback(() => setCaseDialogOpen(true), []);
-  const openJudgeDialog = useCallback(() => setJudgeDialogOpen(true), []);
 
   return (
     <div className="flex h-full flex-col">
@@ -202,11 +124,9 @@ export function EvalPanel({ agentId }: { agentId: string }) {
         <div className="hidden h-full sm:flex">
           <EvalSidebar
             cases={cases}
-            configs={configs}
             activeView={activeView}
             onSelect={setActiveView}
             onCreateCase={openCaseDialog}
-            onCreateConfig={openJudgeDialog}
             selectedTags={selectedTags}
             onToggleTag={handleToggleTag}
           />
@@ -218,11 +138,9 @@ export function EvalPanel({ agentId }: { agentId: string }) {
           {mobileView === "sidebar" || !activeView ? (
             <EvalSidebar
               cases={cases}
-              configs={configs}
               activeView={activeView}
               onSelect={setActiveView}
               onCreateCase={openCaseDialog}
-              onCreateConfig={openJudgeDialog}
               selectedTags={selectedTags}
               onToggleTag={handleToggleTag}
             />
@@ -248,11 +166,6 @@ export function EvalPanel({ agentId }: { agentId: string }) {
         open={caseDialogOpen}
         onOpenChange={setCaseDialogOpen}
         onCreate={handleCreateCase}
-      />
-      <JudgeConfigCreateDialog
-        open={judgeDialogOpen}
-        onOpenChange={setJudgeDialogOpen}
-        onCreate={handleCreateConfig}
       />
     </div>
   );

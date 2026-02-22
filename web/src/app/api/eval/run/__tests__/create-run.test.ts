@@ -10,10 +10,14 @@ const valuesMock = vi.fn((v: Record<string, unknown>) => {
 });
 const insertMock = vi.fn(() => ({ values: valuesMock }));
 
-let selectResult: unknown[] = [
-  { id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null },
+// Track sequential select calls: modelConfig, judgeModelConfig, judgeConfig
+let selectCallIndex = 0;
+const selectResults: unknown[][] = [
+  [{ id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null }],
+  [{ id: "jmc-1", modelId: "gpt-4-judge", systemPrompt: "Judge this", temperature: 0.1, agentId: null }],
+  [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }] }],
 ];
-const whereSelectMock = vi.fn(() => selectResult);
+const whereSelectMock = vi.fn(() => selectResults[selectCallIndex++]);
 const fromMock = vi.fn(() => ({ where: whereSelectMock }));
 const selectMock = vi.fn(() => ({ from: fromMock }));
 
@@ -27,6 +31,7 @@ vi.mock("@/db", () => ({
 vi.mock("@/db/schema", () => ({
   evalRuns: { id: "id" },
   modelConfigs: { id: "id" },
+  judgeConfigs: { id: "id" },
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -49,26 +54,27 @@ function makeRequest(body: Record<string, unknown>) {
   });
 }
 
+const baseBody = {
+  agentId: "agent-1",
+  modelConfigId: "mc-1",
+  judgeAgentId: "judge-agent-1",
+  judgeModelConfigId: "jmc-1",
+  judgeConfigId: "jc-1",
+  totalCases: 5,
+};
+
 describe("POST /api/eval/run (create run)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertedValues.length = 0;
-    selectResult = [
-      { id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null },
-    ];
+    selectCallIndex = 0;
+    selectResults[0] = [{ id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null }];
+    selectResults[1] = [{ id: "jmc-1", modelId: "gpt-4-judge", systemPrompt: "Judge this", temperature: 0.1, agentId: null }];
+    selectResults[2] = [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }] }];
   });
 
   it("creates a run record and returns runId", async () => {
-    const res = await POST(
-      makeRequest({
-        agentId: "agent-1",
-        modelConfigId: "mc-1",
-        judgeConfigId: "jc-1",
-        judgeConfigName: "gpt-4-judge",
-        filterTags: ["tag-a"],
-        totalCases: 5,
-      })
-    );
+    const res = await POST(makeRequest(baseBody));
 
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -76,14 +82,7 @@ describe("POST /api/eval/run (create run)", () => {
   });
 
   it("initializes passedAssertions=0 and averageScore=null", async () => {
-    await POST(
-      makeRequest({
-        agentId: "agent-1",
-        modelConfigId: "mc-1",
-        judgeConfigName: "gpt-4-judge",
-        totalCases: 3,
-      })
-    );
+    await POST(makeRequest({ ...baseBody, totalCases: 3 }));
 
     expect(insertedValues[0]).toMatchObject({
       passedAssertions: 0,
@@ -93,28 +92,28 @@ describe("POST /api/eval/run (create run)", () => {
   });
 
   it("returns 400 if model config not found", async () => {
-    selectResult = [];
-    const res = await POST(
-      makeRequest({
-        agentId: "agent-1",
-        modelConfigId: "nonexistent",
-        judgeConfigName: "judge",
-        totalCases: 1,
-      })
-    );
+    selectResults[0] = [];
+    const res = await POST(makeRequest(baseBody));
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 if judge model config not found", async () => {
+    selectResults[1] = [];
+    const res = await POST(makeRequest(baseBody));
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 if judge config not found", async () => {
+    selectResults[2] = [];
+    const res = await POST(makeRequest(baseBody));
 
     expect(res.status).toBe(400);
   });
 
   it("stores chatModel and chatSystemPrompt from model config", async () => {
-    await POST(
-      makeRequest({
-        agentId: "agent-1",
-        modelConfigId: "mc-1",
-        judgeConfigName: "gpt-4-judge",
-        totalCases: 2,
-      })
-    );
+    await POST(makeRequest(baseBody));
 
     expect(insertedValues[0]).toMatchObject({
       chatModel: "gpt-4",
@@ -122,15 +121,25 @@ describe("POST /api/eval/run (create run)", () => {
     });
   });
 
+  it("stores judgeAgentId and snapshots", async () => {
+    await POST(makeRequest(baseBody));
+
+    expect(insertedValues[0]).toMatchObject({
+      judgeAgentId: "judge-agent-1",
+      judgeModelConfigSnapshot: {
+        modelId: "gpt-4-judge",
+        systemPrompt: "Judge this",
+        temperature: 0.1,
+      },
+      judgeConfigSnapshot: {
+        name: "Default",
+        dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
+      },
+    });
+  });
+
   it("defaults filterTags to empty array when not provided", async () => {
-    await POST(
-      makeRequest({
-        agentId: "agent-1",
-        modelConfigId: "mc-1",
-        judgeConfigName: "judge",
-        totalCases: 1,
-      })
-    );
+    await POST(makeRequest(baseBody));
 
     expect(insertedValues[0]).toMatchObject({
       filterTags: [],
@@ -140,10 +149,7 @@ describe("POST /api/eval/run (create run)", () => {
   it("stores assertionFailConfig when provided", async () => {
     await POST(
       makeRequest({
-        agentId: "agent-1",
-        modelConfigId: "mc-1",
-        judgeConfigName: "judge",
-        totalCases: 1,
+        ...baseBody,
         assertionFailConfig: { judgeOnFail: true, stopOnTurnFail: true },
       })
     );
@@ -154,14 +160,7 @@ describe("POST /api/eval/run (create run)", () => {
   });
 
   it("defaults assertionFailConfig to null when not provided", async () => {
-    await POST(
-      makeRequest({
-        agentId: "agent-1",
-        modelConfigId: "mc-1",
-        judgeConfigName: "judge",
-        totalCases: 1,
-      })
-    );
+    await POST(makeRequest(baseBody));
 
     expect(insertedValues[0]).toMatchObject({
       assertionFailConfig: null,

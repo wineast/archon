@@ -10,7 +10,7 @@ import {
   modelConfigs,
   chatConfigs,
   evalCases,
-  evalJudgeConfigs,
+  judgeConfigs,
   toolTestCases,
   functionTestCases,
   componentTestCases,
@@ -38,7 +38,7 @@ import type {
   ModelConfigSnapshotItem,
   ChatConfigSnapshotItem,
   EvalCaseSnapshotItem,
-  EvalJudgeConfigSnapshotItem,
+  JudgeConfigSnapshotItem,
   ToolTestCaseSnapshotItem,
   FunctionTestCaseSnapshotItem,
   ComponentTestCaseSnapshotItem,
@@ -72,7 +72,7 @@ export async function buildSnapshot(agentId: string, versionId: string, external
     modelConfigRows,
     chatConfigRows,
     evalCaseRows,
-    evalJudgeConfigRows,
+    judgeConfigRows,
     toolTestCaseRows,
     functionTestCaseRows,
     componentTestCaseRows,
@@ -94,8 +94,8 @@ export async function buildSnapshot(agentId: string, versionId: string, external
     _db.select().from(evalCases).where(and(eq(evalCases.versionId, versionId), isNull(evalCases.deletedAt))),
     _db
       .select()
-      .from(evalJudgeConfigs)
-      .where(and(eq(evalJudgeConfigs.versionId, versionId), isNull(evalJudgeConfigs.deletedAt))),
+      .from(judgeConfigs)
+      .where(and(eq(judgeConfigs.versionId, versionId), isNull(judgeConfigs.deletedAt))),
     // Test cases: join through parent tables (only non-deleted parents)
     _db
       .select()
@@ -308,15 +308,12 @@ export async function buildSnapshot(agentId: string, versionId: string, external
         tags: e.tags,
       })
     ),
-    evalJudgeConfigs: evalJudgeConfigRows.map(
-      (j): EvalJudgeConfigSnapshotItem => ({
+    judgeConfigs: judgeConfigRows.map(
+      (j): JudgeConfigSnapshotItem => ({
         key: j.key,
         name: j.name,
-        model: j.model,
-        systemPrompt: j.systemPrompt,
-        temperature: j.temperature,
+        isActive: j.isActive,
         dimensions: j.dimensions,
-        isDefault: j.isDefault,
       })
     ),
     objectTypes: objectTypeRows.map(
@@ -394,7 +391,7 @@ export async function restoreSnapshot(
     tx.delete(modelConfigs).where(eq(modelConfigs.versionId, versionId)),
     tx.delete(chatConfigs).where(eq(chatConfigs.versionId, versionId)),
     tx.delete(evalCases).where(eq(evalCases.versionId, versionId)),
-    tx.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.versionId, versionId)),
+    tx.delete(judgeConfigs).where(eq(judgeConfigs.versionId, versionId)),
     tx.delete(mcpServers).where(eq(mcpServers.versionId, versionId)),
     tx.delete(skills).where(eq(skills.versionId, versionId)),
     tx.delete(agentResourceRefs).where(eq(agentResourceRefs.versionId, versionId)),
@@ -676,19 +673,16 @@ export async function restoreSnapshot(
     );
   }
 
-  // 11. Rebuild eval judge configs
-  if (snapshot.evalJudgeConfigs.length > 0) {
-    await tx.insert(evalJudgeConfigs).values(
-      snapshot.evalJudgeConfigs.map((j) => ({
+  // 11. Rebuild judge configs
+  if (snapshot.judgeConfigs?.length) {
+    await tx.insert(judgeConfigs).values(
+      snapshot.judgeConfigs.map((j) => ({
         agentId,
         versionId,
         key: j.key,
         name: j.name,
-        model: j.model,
-        systemPrompt: j.systemPrompt,
-        temperature: j.temperature,
+        isActive: j.isActive,
         dimensions: j.dimensions,
-        isDefault: j.isDefault,
       }))
     );
   }

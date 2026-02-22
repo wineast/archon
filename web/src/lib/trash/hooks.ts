@@ -12,7 +12,7 @@ export type ResourceType =
   | "wikiDocument"
   | "modelConfig"
   | "evalCase"
-  | "evalJudgeConfig"
+  | "judgeConfig"
   | "objectType"
   | "objectRelation"
   | "skill";

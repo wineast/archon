@@ -1,6 +1,6 @@
 import { join } from "path";
 import { nanoid } from "nanoid";
-import { evalCases, evalJudgeConfigs, evalRunResults, evalRuns } from "../schema";
+import { evalCases, judgeConfigs, evalRunResults, evalRuns } from "../schema";
 import { readJson, toKey, logSection, log } from "../seed-utils";
 import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
 import type { Seeder } from "./types";
@@ -11,35 +11,29 @@ export const seedEval: Seeder = {
     const { agentId } = ctx;
 
     // ── Judge configs ──
-    logSection("Seeding eval judge configs");
+    logSection("Seeding judge configs");
 
     const judgeConfigSeed = readJson<{
       key?: string;
       name: string;
-      model: string;
-      systemPrompt: string;
-      temperature: number;
       dimensions?: Dimension[];
-      isDefault: boolean;
-    }>(join(ctx.agentDir, "eval-judge-config.json"));
+      isActive: boolean;
+    }>(join(ctx.agentDir, "judge-config.json"));
 
     const judgeKey = judgeConfigSeed.key ?? toKey(judgeConfigSeed.name);
     const [judgeConfig] = await ctx.db
-      .insert(evalJudgeConfigs)
-      .values({ ...judgeConfigSeed, key: judgeKey, dimensions: judgeConfigSeed.dimensions ?? [], agentId, versionId: ctx.versionId })
+      .insert(judgeConfigs)
+      .values({ key: judgeKey, name: judgeConfigSeed.name, dimensions: judgeConfigSeed.dimensions ?? [], isActive: judgeConfigSeed.isActive, agentId, versionId: ctx.versionId })
       .onConflictDoUpdate({
-        target: [evalJudgeConfigs.versionId, evalJudgeConfigs.key],
+        target: [judgeConfigs.versionId, judgeConfigs.key],
         set: {
           name: judgeConfigSeed.name,
-          model: judgeConfigSeed.model,
-          systemPrompt: judgeConfigSeed.systemPrompt,
-          temperature: judgeConfigSeed.temperature,
           dimensions: judgeConfigSeed.dimensions ?? [],
-          isDefault: judgeConfigSeed.isDefault,
+          isActive: judgeConfigSeed.isActive,
         },
       })
       .returning();
-    ctx.ids.evalJudgeConfigId = judgeConfig.id;
+    ctx.ids.judgeConfigId = judgeConfig.id;
     log("ok", `${judgeConfig.key} (${judgeConfig.id})`);
 
     // ── Clear eval runs ──

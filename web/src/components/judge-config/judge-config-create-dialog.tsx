@@ -96,7 +96,7 @@ export function JudgeConfigCreateDialog({
         <DialogHeader>
           <DialogTitle>New Judge Config</DialogTitle>
           <DialogDescription>
-            Create a new judge configuration for evaluation.
+            Create a new judge scoring configuration.
           </DialogDescription>
         </DialogHeader>
 

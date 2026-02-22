@@ -18,6 +18,7 @@ import {
   FileIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
+  GavelIcon,
   HistoryIcon,
   MessageSquareIcon,
   NetworkIcon,
@@ -73,6 +74,7 @@ import { TrashSheet } from "@/components/trash/trash-sheet";
 import { useTrash } from "@/lib/trash/hooks";
 import { toggleSkillsFeature } from "@/lib/skills/hooks";
 import { AgentSlotsPanel } from "@/components/slots/agent-slots-panel";
+import { JudgeConfigPanel } from "@/components/judge-config/judge-config-panel";
 import { SupportBubble } from "@/components/support-bubble/support-bubble";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -99,6 +101,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "skills", label: "skills", icon: ZapIcon },
   // ── L3: Assembly (reference everything above) ──
   { value: "model-config", label: "modelConfig", icon: SettingsIcon },
+  { value: "judge", label: "judge", icon: GavelIcon },
   { value: "memory", label: "memory", icon: BrainIcon },
   { value: "mcp", label: "mcp", icon: PlugIcon },
   { value: "slots", label: "slots", icon: PlugZapIcon },
@@ -304,6 +307,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return <EvalPanel agentId={agent.id} />;
       case "model-config":
         return <ModelConfigPanel agentId={agent.id} />;
+      case "judge":
+        return <JudgeConfigPanel agentId={agent.id} />;
       case "embed":
         return <EmbedTokensPanel agentId={agent.id} />;
       case "usage":

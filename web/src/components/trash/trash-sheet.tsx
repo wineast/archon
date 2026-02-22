@@ -46,7 +46,7 @@ const TYPE_CONFIG: Record<ResourceType, { icon: LucideIcon; label: string }> = {
   wikiDocument: { icon: BookOpenIcon, label: "Wiki" },
   modelConfig: { icon: SettingsIcon, label: "模型配置" },
   evalCase: { icon: FlaskConicalIcon, label: "评测用例" },
-  evalJudgeConfig: { icon: FlaskConicalIcon, label: "评测裁判" },
+  judgeConfig: { icon: FlaskConicalIcon, label: "评测裁判" },
   objectType: { icon: NetworkIcon, label: "对象类型" },
   objectRelation: { icon: NetworkIcon, label: "对象关系" },
   skill: { icon: ZapIcon, label: "技能" },

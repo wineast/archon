@@ -14,7 +14,6 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import {
   useEvalCases,
-  useEvalJudgeConfigs,
   useEvalRuns,
   fetchEvalRunDetail,
   deleteEvalRun,
@@ -23,7 +22,9 @@ import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useEvalRun } from "@/lib/eval/eval-run-context";
 import { useTools } from "@/lib/tools/hooks";
 import { useModelConfigs, useActiveModelConfig } from "@/lib/model-config/hooks";
-import { toEvalCase, toJudgeConfig, toEvalResult } from "@/lib/eval/types";
+import { useJudgeConfigs, useActiveJudgeConfig } from "@/lib/judge-config/hooks";
+import { useResolvedEvaluator } from "@/lib/eval/use-resolved-evaluator";
+import { toEvalCase, toEvalResult } from "@/lib/eval/types";
 import type {
   EvalResult,
   CreateEvalRunResponse,
@@ -42,6 +43,8 @@ import {
   ChevronRightIcon,
   ClockIcon,
   BookmarkIcon,
+  ExternalLinkIcon,
+  AlertTriangleIcon,
 } from "lucide-react";
 import {
   setBaseline,
@@ -51,6 +54,7 @@ import {
 } from "@/lib/eval/benchmark-hooks";
 import { useSWRConfig } from "swr";
 import type { AssertionFailConfig } from "@/lib/eval/types";
+import { Link } from "@/i18n/navigation";
 
 interface ResultsPanelProps {
   agentId?: string;
@@ -62,13 +66,22 @@ export function ResultsPanel({
   selectedTags,
 }: ResultsPanelProps) {
   const { cases: caseRows } = useEvalCases(agentId);
-  const { configs } = useEvalJudgeConfigs(agentId);
   const { templateVars } = useTemplateVars(agentId);
   const { tools: allDbTools } = useTools(agentId);
   const { configs: modelConfigs } = useModelConfigs(agentId);
   const { activeConfig: activeModelConfig } = useActiveModelConfig(agentId);
   const getEnabledToolNames = () =>
     allDbTools.filter((t) => t.enabled).map((t) => t.name);
+
+  // Resolve evaluator slot
+  const { evaluator } = useResolvedEvaluator(agentId);
+  const judgeAgentId = evaluator?.judgeAgentId ?? undefined;
+
+  // Judge Agent's model configs and judge configs
+  const { configs: judgeModelConfigs } = useModelConfigs(judgeAgentId);
+  const { configs: judgeJudgeConfigs } = useJudgeConfigs(judgeAgentId);
+  const { activeConfig: activeJudgeModelConfig } = useActiveModelConfig(judgeAgentId);
+  const { activeConfig: activeJudgeConfig } = useActiveJudgeConfig(judgeAgentId);
 
   const { runs, mutate: mutateRuns } = useEvalRuns(agentId);
   const {
@@ -81,13 +94,9 @@ export function ResultsPanel({
   } = useEvalRun();
 
   const [currentResults, setCurrentResults] = useState<EvalResult[]>([]);
-  const [selectedConfigId, setSelectedConfigId] = useState<string>(() => {
-    return activeModelConfig?.id ?? "";
-  });
-  const [selectedJudgeId, setSelectedJudgeId] = useState<string>(() => {
-    const def = configs.find((c) => c.isDefault);
-    return def?.id ?? "";
-  });
+  const [selectedConfigId, setSelectedConfigId] = useState<string>("");
+  const [selectedJudgeModelConfigId, setSelectedJudgeModelConfigId] = useState<string>("");
+  const [selectedJudgeConfigId, setSelectedJudgeConfigId] = useState<string>("");
   const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>({});
 
   // Run detail expansion
@@ -98,11 +107,10 @@ export function ResultsPanel({
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
 
-  // Resolve selected judge config
-  const selectedJudge = configs.find((c) => c.id === selectedJudgeId) ?? configs.find((c) => c.isDefault) ?? null;
-
-  // Resolve selected model config (fallback to active)
+  // Resolve selected IDs (fallback to active)
   const resolvedConfigId = selectedConfigId || activeModelConfig?.id || "";
+  const resolvedJudgeModelConfigId = selectedJudgeModelConfigId || activeJudgeModelConfig?.id || "";
+  const resolvedJudgeConfigId = selectedJudgeConfigId || activeJudgeConfig?.id || "";
 
   const allCases = caseRows.map(toEvalCase);
   const cases =
@@ -110,9 +118,10 @@ export function ResultsPanel({
       ? allCases.filter((c) => selectedTags.some((t) => c.tags?.includes(t)))
       : allCases;
 
+  const canRun = !!judgeAgentId && !!resolvedConfigId && !!resolvedJudgeModelConfigId && !!resolvedJudgeConfigId && cases.length > 0;
+
   const handleRunAll = useCallback(async () => {
-    if (cases.length === 0 || !selectedJudge || !resolvedConfigId) return;
-    const judgeConfig = toJudgeConfig(selectedJudge);
+    if (!canRun || !judgeAgentId) return;
 
     setRunning(true);
     setProgress(0);
@@ -127,8 +136,9 @@ export function ResultsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           modelConfigId: resolvedConfigId,
-          judgeConfigId: selectedJudge.id,
-          judgeConfigName: judgeConfig.model,
+          judgeAgentId,
+          judgeModelConfigId: resolvedJudgeModelConfigId,
+          judgeConfigId: resolvedJudgeConfigId,
           filterTags: selectedTags.length > 0 ? selectedTags : undefined,
           assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
           totalCases: cases.length,
@@ -143,7 +153,6 @@ export function ResultsPanel({
     } catch (err) {
       setRunning(false);
       setProgress(0);
-      // Show error for every case
       setCurrentResults(
         cases.map((c) => ({
           caseId: c.id,
@@ -176,7 +185,8 @@ export function ResultsPanel({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             case: c,
-            judgeConfig,
+            judgeModelConfigId: resolvedJudgeModelConfigId,
+            judgeConfigId: resolvedJudgeConfigId,
             modelConfigId: resolvedConfigId,
             templateVars,
             toolNames: getEnabledToolNames(),
@@ -237,11 +247,15 @@ export function ResultsPanel({
     setRunning(false);
     mutateRuns();
   }, [
+    canRun,
+    judgeAgentId,
     cases,
-    selectedJudge,
     resolvedConfigId,
+    resolvedJudgeModelConfigId,
+    resolvedJudgeConfigId,
     templateVars,
     selectedTags,
+    assertionFailConfig,
     setRunning,
     setProgress,
     setRunningCaseId,
@@ -300,49 +314,95 @@ export function ResultsPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-3 border-b px-4 py-3">
-        {/* Model Config + Judge selectors */}
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] font-medium text-muted-foreground">
-              Model Config
-            </label>
-            <Select value={resolvedConfigId} onValueChange={setSelectedConfigId}>
-              <SelectTrigger className="mt-0.5 h-8 text-xs">
-                <SelectValue placeholder="Select config..." />
-              </SelectTrigger>
-              <SelectContent>
-                {modelConfigs.map((mc) => (
-                  <SelectItem key={mc.id} value={mc.id} className="text-xs">
-                    {mc.name}
-                    {mc.isActive ? " (Active)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-[10px] font-medium text-muted-foreground">
-              Judge
-            </label>
-            <Select
-              value={selectedJudge?.id ?? ""}
-              onValueChange={setSelectedJudgeId}
-            >
-              <SelectTrigger className="mt-0.5 h-8 text-xs">
-                <SelectValue placeholder="Select judge..." />
-              </SelectTrigger>
-              <SelectContent>
-                {configs.map((c) => (
-                  <SelectItem key={c.id} value={c.id} className="text-xs">
-                    {c.name}
-                    {c.isDefault ? " (Default)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Area 1: Agent Model Config */}
+        <div>
+          <label className="text-[10px] font-medium text-muted-foreground">
+            Agent Model Config
+          </label>
+          <Select value={resolvedConfigId} onValueChange={setSelectedConfigId}>
+            <SelectTrigger className="mt-0.5 h-8 text-xs">
+              <SelectValue placeholder="Select config..." />
+            </SelectTrigger>
+            <SelectContent>
+              {modelConfigs.map((mc) => (
+                <SelectItem key={mc.id} value={mc.id} className="text-xs">
+                  {mc.name}
+                  {mc.isActive ? " (Active)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
+        {/* Area 2: Judge Configuration */}
+        <div className="rounded-md border p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+              Judge Agent
+            </span>
+            {evaluator?.judgeAgentSlug && (
+              <Link
+                href={`/../${evaluator.judgeAgentSlug}/build?tab=judge`}
+                className="flex items-center gap-1 text-[10px] text-primary hover:underline"
+              >
+                {evaluator.judgeAgentName}
+                <ExternalLinkIcon className="size-2.5" />
+              </Link>
+            )}
+          </div>
+
+          {!judgeAgentId && (
+            <div className="flex items-start gap-2 rounded-md bg-amber-50 p-2 dark:bg-amber-950/20">
+              <AlertTriangleIcon className="mt-0.5 size-3 shrink-0 text-amber-500" />
+              <p className="text-[10px] text-amber-700 dark:text-amber-400">
+                Evaluator slot not configured. Go to Slots tab to assign a Judge Agent.
+              </p>
+            </div>
+          )}
+
+          {judgeAgentId && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-medium text-muted-foreground">
+                  Judge Model
+                </label>
+                <Select value={resolvedJudgeModelConfigId} onValueChange={setSelectedJudgeModelConfigId}>
+                  <SelectTrigger className="mt-0.5 h-8 text-xs">
+                    <SelectValue placeholder="Select model..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {judgeModelConfigs.map((mc) => (
+                      <SelectItem key={mc.id} value={mc.id} className="text-xs">
+                        {mc.name}
+                        {mc.isActive ? " (Active)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-muted-foreground">
+                  Judge Config
+                </label>
+                <Select value={resolvedJudgeConfigId} onValueChange={setSelectedJudgeConfigId}>
+                  <SelectTrigger className="mt-0.5 h-8 text-xs">
+                    <SelectValue placeholder="Select config..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {judgeJudgeConfigs.map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs">
+                        {c.name}
+                        {c.isActive ? " (Active)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Area 3: Run settings */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Switch
@@ -382,11 +442,12 @@ export function ResultsPanel({
           </div>
         </div>
 
+        {/* Area 4: Run action */}
         <div className="flex items-center gap-2">
           <Button
             size="sm"
             onClick={handleRunAll}
-            disabled={isRunning || cases.length === 0 || !selectedJudge || !resolvedConfigId}
+            disabled={isRunning || !canRun}
           >
             <PlayIcon className="mr-1 size-3" />
             {isRunning ? "Running..." : `Run All (${cases.length})`}
@@ -397,13 +458,6 @@ export function ResultsPanel({
             </span>
           )}
         </div>
-
-        {!selectedJudge && (
-          <p className="text-xs text-muted-foreground">
-            No judge config selected. Create and set one as default to run
-            evaluations.
-          </p>
-        )}
 
         {isRunning && (
           <div className="space-y-1">
@@ -608,12 +662,6 @@ function RunHistoryItem({
           )}
           {detail && (
             <div className="space-y-3">
-              <div className="flex gap-3 text-[10px] text-muted-foreground">
-                <span>Judge: {run.judgeConfigName}</span>
-                {run.filterTags.length > 0 && (
-                  <span>Tags: {run.filterTags.join(", ")}</span>
-                )}
-              </div>
               {detail.results.map((r) => (
                 <ResultCard key={r.id} result={toEvalResult(r)} />
               ))}
