@@ -1,9 +1,10 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
-import { memories } from "@/db/schema";
+import { memories, agents } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
+import { generateEmbedding } from "@/lib/memory/embedding";
 
 export async function PATCH(
   req: Request,
@@ -24,6 +25,21 @@ export async function PATCH(
   const ctx = await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
+  // Re-generate embedding when content changes
+  let embeddingUpdate: { embedding: number[] | null } | Record<string, never> = {};
+  if (body.content !== undefined) {
+    try {
+      const [agentRow] = await db
+        .select({ orgId: agents.orgId })
+        .from(agents)
+        .where(eq(agents.id, existing.agentId))
+        .limit(1);
+      embeddingUpdate = { embedding: await generateEmbedding(body.content, agentRow?.orgId) };
+    } catch {
+      embeddingUpdate = { embedding: null };
+    }
+  }
+
   const [updated] = await db
     .update(memories)
     .set({
@@ -35,6 +51,7 @@ export async function PATCH(
         expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
       }),
       ...(body.metadata !== undefined && { metadata: body.metadata }),
+      ...embeddingUpdate,
     })
     .where(eq(memories.id, id))
     .returning();

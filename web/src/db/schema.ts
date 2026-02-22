@@ -12,9 +12,28 @@ import {
   unique,
   uniqueIndex,
   check,
+  customType,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+
+/* ─────────── pgvector Custom Type ─────────── */
+
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return "vector(1536)";
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(",")}]`;
+  },
+  fromDriver(value: string): number[] {
+    // Postgres returns vector as "[0.1,0.2,...]"
+    return value
+      .slice(1, -1)
+      .split(",")
+      .map(Number);
+  },
+});
 
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
@@ -1538,6 +1557,7 @@ export const memories = pgTable(
     lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    embedding: vector("embedding"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

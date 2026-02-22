@@ -48,9 +48,10 @@
 | lastAccessedAt | timestamp | 最近访问时间 |
 | expiresAt | timestamp | 过期时间 |
 | metadata | jsonb | 扩展元数据 |
+| embedding | vector(1536) | 内容的向量表示（nullable，用于语义检索） |
 | deletedAt | timestamp | 软删除标记 |
 
-索引：`(agentId, userId)`, `(agentId, type)`
+索引：`(agentId, userId)`, `(agentId, type)`, `memories_embedding_idx`（HNSW, vector_cosine_ops）
 
 ## API
 
@@ -113,15 +114,31 @@ import {
 1. `agents.memoryEnabled = false` → 完全跳过，不查询任何记忆相关数据
 2. `memoryConfigs.injectionMode = 'none'` → 跳过注入
 
-### 检索策略
+### 检索策略（语义检索）
 
 代码位于 `web/src/lib/memory/retrieve.ts`：
 
-- 输入：agentId、userId（nullable）、sessionId（可选）
+- 输入：agentId、userId（nullable）、sessionId（可选）、userMessage（可选）、orgId（可选）
 - 查询条件：未删除、未过期、匹配用户级 + 全局记忆
-- 排序：importance DESC, lastAccessedAt DESC
 - 数量受 `maxInjectedMemories` 限制（默认 10）
 - 检索后非阻塞更新 `lastAccessedAt`
+
+**语义检索模式**（当提供 userMessage 且 embedding 生成成功时）：
+
+使用 pgvector 余弦相似度，结合重要度和时间衰减加权排序：
+
+```
+score = similarity * 0.5 + importance * 0.3 + recency * 0.2
+```
+
+其中：
+- `similarity = 1 - cosine_distance(memory.embedding, query.embedding)`
+- `recency = 1 / (1 + days_since_last_access)`
+- 仅搜索 `embedding IS NOT NULL` 的记忆
+
+**回退模式**（无 userMessage 或 embedding 失败时）：
+
+按 `importance DESC, lastAccessedAt DESC` 排序，与之前行为一致。
 
 ### 格式化
 
@@ -172,7 +189,8 @@ The following are relevant memories about the user and prior interactions:
 1. **序列化对话**：将 UI 消息中 user/assistant 的文本内容拼成 `用户: ... / 助手: ...` 格式
 2. **调用 LLM**：使用 `generateObject` + Zod schema，输出结构化的 `[{type, content, importance}]`
 3. **去重**：与该 agent+user 已有记忆做字符串级比对（精确匹配 + 子串包含），过滤重复
-4. **写入**：批量 insert 到 memories 表，metadata 标记 `{source: "auto_extract"}`
+4. **生成 Embedding**：为每条提取的记忆调用 `text-embedding-3-small` 生成向量（失败不阻塞，embedding 设为 null）
+5. **写入**：批量 insert 到 memories 表，metadata 标记 `{source: "auto_extract"}`，embedding 列存储向量
 
 ### 代码位置
 
@@ -242,7 +260,40 @@ Vercel Cron 配置位于 `web/vercel.json`。
 |------|------|
 | `CRON_SECRET` | Cron 路由鉴权密钥，需在 Vercel 项目设置中配置 |
 
+## 语义检索
+
+### 概述
+
+记忆系统使用 pgvector 实现向量化存储和语义检索，使注入的记忆与当前对话上下文语义相关，而非仅按重要度排序。
+
+### Embedding 模型
+
+- 模型：OpenAI `text-embedding-3-small`（1536 维）
+- BYOK 支持：优先使用组织的 OpenAI API Key，无则走平台 gateway
+- 代码：`web/src/lib/memory/embedding.ts`
+
+### 写入时生成 Embedding
+
+| 写入场景 | 代码位置 | 说明 |
+|----------|----------|------|
+| 自动提取 | `extract.ts` | 批量 `Promise.all`，单条失败不影响其他 |
+| 手动创建 | `POST /api/memories` | try/catch，失败 embedding 为 null |
+| 内容更新 | `PATCH /api/memories/[id]` | 仅 content 变更时重新生成 |
+| Seed 数据 | `seed-memory.ts` | 不生成 embedding（null） |
+
+### Docker 配置
+
+本地开发需使用 pgvector 镜像：
+
+```yaml
+# docker-compose.yml
+services:
+  postgres:
+    image: pgvector/pgvector:pg17  # 替代 postgres:17-alpine
+```
+
+`db:push` 和 `db:reset` 脚本会自动运行 `ensure-extensions.ts` 创建 `vector` 扩展和 HNSW 索引。
+
 ## 未来规划
 
-- 记忆向量化 + 语义检索（替代当前字符串去重）
 - 提取模型可配置

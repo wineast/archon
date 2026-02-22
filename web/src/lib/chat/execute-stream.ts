@@ -195,7 +195,14 @@ export async function executeChatStream(
   let memoryInjectionMode: "system_prompt" | "context" | "none" = "none";
 
   if (agentRow?.memoryEnabled) {
-    const retrieved = await retrieveMemories({ agentId, userId, sessionId });
+    const userText = extractTextContent(userMessage.parts as unknown[]);
+    const retrieved = await retrieveMemories({
+      agentId,
+      userId,
+      sessionId,
+      userMessage: userText || undefined,
+      orgId,
+    });
     if (retrieved && retrieved.items.length > 0) {
       memoryInjectionMode = retrieved.config.injectionMode;
       memoryBlock = formatMemoriesForInjection(retrieved.items);
