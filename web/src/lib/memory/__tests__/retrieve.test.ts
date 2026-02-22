@@ -74,8 +74,8 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 const generateEmbeddingMock = vi.fn();
-vi.mock("../embedding", () => ({
-  generateEmbedding: (a: unknown, b: unknown) => generateEmbeddingMock(a, b),
+vi.mock("@/lib/ai/embedding", () => ({
+  generateEmbedding: (...args: unknown[]) => generateEmbeddingMock(...args),
 }));
 
 const { retrieveMemories } = await import("../retrieve");
@@ -136,7 +136,7 @@ describe("retrieveMemories", () => {
       orgId: "org-1",
     });
 
-    expect(generateEmbeddingMock).toHaveBeenCalledWith("hello world", "org-1");
+    expect(generateEmbeddingMock).toHaveBeenCalledWith("hello world", "org-1", undefined);
     expect(result).not.toBeNull();
     expect(result!.items).toHaveLength(1);
   });

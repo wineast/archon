@@ -28,6 +28,7 @@ export async function GET(
           slug: agents.slug,
           isPublic: agents.isPublic,
           memoryEnabled: agents.memoryEnabled,
+          ragEnabled: agents.ragEnabled,
           editingVersionId: agents.editingVersionId,
           publishedVersionId: agents.publishedVersionId,
           createdAt: agents.createdAt,
@@ -84,13 +85,14 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, description, icon, slug, isPublic, memoryEnabled, mcpEnabled, skillsEnabled } = body as {
+  const { name, description, icon, slug, isPublic, memoryEnabled, ragEnabled, mcpEnabled, skillsEnabled } = body as {
     name?: string;
     description?: string;
     icon?: string;
     slug?: string;
     isPublic?: boolean;
     memoryEnabled?: boolean;
+    ragEnabled?: boolean;
     mcpEnabled?: boolean;
     skillsEnabled?: boolean;
   };
@@ -101,6 +103,7 @@ export async function PUT(
   if (icon !== undefined) updates.icon = icon;
   if (typeof isPublic === "boolean") updates.isPublic = isPublic;
   if (typeof memoryEnabled === "boolean") updates.memoryEnabled = memoryEnabled;
+  if (typeof ragEnabled === "boolean") updates.ragEnabled = ragEnabled;
   if (typeof mcpEnabled === "boolean") updates.mcpEnabled = mcpEnabled;
   if (typeof skillsEnabled === "boolean") updates.skillsEnabled = skillsEnabled;
 

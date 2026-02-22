@@ -258,6 +258,7 @@ export interface AgentExportData {
     isPublic: boolean;
     mcpEnabled: boolean;
     memoryEnabled: boolean;
+    ragEnabled?: boolean;
     skillsEnabled: boolean;
     contextCompressionEnabled: boolean;
     scope: AgentScope;

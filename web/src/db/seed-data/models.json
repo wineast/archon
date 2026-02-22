@@ -111,5 +111,11 @@
   { "modelId": "minimax/minimax-m2", "name": "MiniMax M2", "provider": "minimax", "contextWindow": 1048576 },
 
   { "modelId": "bytedance/seed-1.8", "name": "Seed 1.8", "provider": "bytedance", "contextWindow": 128000 },
-  { "modelId": "bytedance/seed-1.6", "name": "Seed 1.6", "provider": "bytedance", "contextWindow": 128000 }
+  { "modelId": "bytedance/seed-1.6", "name": "Seed 1.6", "provider": "bytedance", "contextWindow": 128000 },
+
+  { "modelId": "openai/text-embedding-3-small", "name": "Text Embedding 3 Small", "provider": "openai", "type": "embedding" },
+  { "modelId": "openai/text-embedding-3-large", "name": "Text Embedding 3 Large", "provider": "openai", "type": "embedding" },
+  { "modelId": "google/text-embedding-004", "name": "Text Embedding 004", "provider": "google", "type": "embedding" },
+  { "modelId": "mistral/mistral-embed", "name": "Mistral Embed", "provider": "mistral", "type": "embedding" },
+  { "modelId": "cohere/embed-multilingual-v3.0", "name": "Embed Multilingual v3.0", "provider": "cohere", "type": "embedding" }
 ]

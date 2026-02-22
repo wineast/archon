@@ -25,6 +25,7 @@ import {
   PlugIcon,
   PlugZapIcon,
   PuzzleIcon,
+  SearchIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
   Trash2Icon,
@@ -48,6 +49,8 @@ import { MembersPanel } from "@/components/members/members-panel";
 import { OntologyPanel } from "@/components/ontology/ontology-panel";
 import { MemoryPanel } from "@/components/memory/memory-panel";
 import { toggleMemoryFeature } from "@/lib/memory/hooks";
+import { RagPanel } from "@/components/rag/rag-panel";
+import { toggleRagFeature } from "@/lib/rag/hooks";
 import { McpServersPanel } from "@/components/mcp-servers/mcp-servers-panel";
 import { SkillsPanel } from "@/components/skills/skills-panel";
 import { UsagePanel } from "@/components/usage/usage-panel";
@@ -103,6 +106,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "model-config", label: "modelConfig", icon: SettingsIcon },
   { value: "judge", label: "judge", icon: GavelIcon },
   { value: "memory", label: "memory", icon: BrainIcon },
+  { value: "rag", label: "rag", icon: SearchIcon },
   { value: "mcp", label: "mcp", icon: PlugIcon },
   { value: "slots", label: "slots", icon: PlugZapIcon },
   // ── Runtime & operations ──
@@ -251,6 +255,13 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
     [agent.id, mutateAgent]
   );
 
+  const handleToggleRag = useCallback(
+    async (enabled: boolean) => {
+      await toggleRagFeature(agent.id, enabled, mutateAgent);
+    },
+    [agent.id, mutateAgent]
+  );
+
   if (roleLoading) {
     return (
       <div className="flex h-svh items-center justify-center">
@@ -285,6 +296,14 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
             agentId={agent.id}
             memoryEnabled={currentAgent.memoryEnabled}
             onToggleFeature={handleToggleMemory}
+          />
+        );
+      case "rag":
+        return (
+          <RagPanel
+            agentId={agent.id}
+            ragEnabled={currentAgent.ragEnabled}
+            onToggleFeature={handleToggleRag}
           />
         );
       case "mcp":
@@ -383,7 +402,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         <nav className="hidden w-48 shrink-0 flex-col border-r p-2 sm:flex">
           {visibleTabs.map((tab) => {
             const isActive = tab.value === activeTab;
-            const showOff = (tab.value === "mcp" && currentAgent.mcpEnabled === false) || (tab.value === "memory" && !currentAgent.memoryEnabled) || (tab.value === "skills" && !currentAgent.skillsEnabled);
+            const showOff = (tab.value === "mcp" && currentAgent.mcpEnabled === false) || (tab.value === "memory" && !currentAgent.memoryEnabled) || (tab.value === "rag" && !currentAgent.ragEnabled) || (tab.value === "skills" && !currentAgent.skillsEnabled);
             return (
               <button
                 key={tab.value}
@@ -427,7 +446,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         <div className="flex shrink-0 overflow-x-auto border-b sm:hidden">
           {visibleTabs.map((tab) => {
             const isActive = tab.value === activeTab;
-            const showOff = (tab.value === "mcp" && currentAgent.mcpEnabled === false) || (tab.value === "memory" && !currentAgent.memoryEnabled) || (tab.value === "skills" && !currentAgent.skillsEnabled);
+            const showOff = (tab.value === "mcp" && currentAgent.mcpEnabled === false) || (tab.value === "memory" && !currentAgent.memoryEnabled) || (tab.value === "rag" && !currentAgent.ragEnabled) || (tab.value === "skills" && !currentAgent.skillsEnabled);
             return (
               <button
                 key={tab.value}

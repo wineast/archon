@@ -50,6 +50,7 @@ export async function GET(
       isPublic: agent.isPublic,
       mcpEnabled: agent.mcpEnabled,
       memoryEnabled: agent.memoryEnabled,
+      ragEnabled: agent.ragEnabled,
       skillsEnabled: agent.skillsEnabled,
       contextCompressionEnabled: agent.contextCompressionEnabled,
       scope: agent.scope,

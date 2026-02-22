@@ -16,6 +16,8 @@ import { eq, and, isNull, asc } from "drizzle-orm";
 import { getAgentEnabledTools, getAgentEnabledMcpServers } from "@/lib/pool/queries";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { retrieveMemories } from "@/lib/memory/retrieve";
+import { ragSearch } from "@/lib/rag/search";
+import { ragConfigs } from "@/db/schema";
 import { formatMemoriesForInjection } from "@/lib/memory/format-for-injection";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import {
@@ -66,7 +68,7 @@ export async function executeChatStream(
 
   // Get agent's orgId, mcpEnabled, skillsEnabled, and memoryEnabled
   const [agentRow] = await db
-    .select({ orgId: agents.orgId, mcpEnabled: agents.mcpEnabled, skillsEnabled: agents.skillsEnabled, memoryEnabled: agents.memoryEnabled, contextCompressionEnabled: agents.contextCompressionEnabled })
+    .select({ orgId: agents.orgId, mcpEnabled: agents.mcpEnabled, skillsEnabled: agents.skillsEnabled, memoryEnabled: agents.memoryEnabled, ragEnabled: agents.ragEnabled, contextCompressionEnabled: agents.contextCompressionEnabled })
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
@@ -263,6 +265,38 @@ export async function executeChatStream(
         return { name: matched.name, content: renderedContent };
       },
     });
+  }
+
+  // ── RAG search tool injection ──
+  if (agentRow?.ragEnabled) {
+    const [ragConfig] = await db
+      .select()
+      .from(ragConfigs)
+      .where(eq(ragConfigs.agentId, agentId))
+      .limit(1);
+
+    if (ragConfig) {
+      allTools.rag_search = tool({
+        description: "搜索知识库文档，返回与查询最相关的文档片段。当用户问题可能涉及已上传的文档内容时，应调用此工具进行检索。",
+        inputSchema: z.object({
+          query: z.string().describe("搜索查询文本"),
+          topK: z.number().optional().describe("返回结果数量，默认使用配置值"),
+        }),
+        execute: async ({ query, topK }: { query: string; topK?: number }) => {
+          const results = await ragSearch(
+            agentId,
+            query,
+            orgId,
+            ragConfig.embeddingModel,
+            topK ?? ragConfig.topK
+          );
+          if (results.length === 0) {
+            return { results: [], message: "未找到相关文档内容" };
+          }
+          return { results };
+        },
+      });
+    }
   }
 
   try {

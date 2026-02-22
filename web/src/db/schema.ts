@@ -156,6 +156,7 @@ export const agents = pgTable(
       .$onUpdate(() => new Date()),
     memoryEnabled: boolean("memory_enabled").notNull().default(false),
     skillsEnabled: boolean("skills_enabled").notNull().default(false),
+    ragEnabled: boolean("rag_enabled").notNull().default(false),
     contextCompressionEnabled: boolean("context_compression_enabled").notNull().default(false),
     scope: text("scope").notNull().default("org").$type<AgentScope>(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -1086,11 +1087,15 @@ export type NewAgentFileRow = typeof agentFiles.$inferInsert;
 
 /* ─────────── Models (global model registry) ─────────── */
 
+export const MODEL_TYPES = ["chat", "embedding"] as const;
+export type ModelType = (typeof MODEL_TYPES)[number];
+
 export const models = pgTable("models", {
   id: uuid("id").defaultRandom().primaryKey(),
   modelId: text("model_id").notNull().unique(),
   name: text("name").notNull(),
   provider: text("provider").notNull(),
+  type: text("type").notNull().default("chat").$type<ModelType>(),
   contextWindow: integer("context_window"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -1512,6 +1517,7 @@ export const memoryConfigs = pgTable(
     agentId: uuid("agent_id")
       .references(() => agents.id, { onDelete: "cascade" }),
     versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    embeddingModel: text("embedding_model").notNull().default("openai/text-embedding-3-small"),
     autoExtract: boolean("auto_extract").notNull().default(false),
     extractionPrompt: text("extraction_prompt").notNull().default(""),
     maxMemoriesPerUser: integer("max_memories_per_user").notNull().default(100),
@@ -1740,4 +1746,115 @@ export const orgCreditTransactions = pgTable(
 
 export type OrgCreditTransactionRow = typeof orgCreditTransactions.$inferSelect;
 export type NewOrgCreditTransactionRow = typeof orgCreditTransactions.$inferInsert;
+
+/* ─────────── RAG Document Status ─────────── */
+
+export const RAG_DOCUMENT_STATUSES = ["processing", "ready", "error"] as const;
+export type RagDocumentStatus = (typeof RAG_DOCUMENT_STATUSES)[number];
+
+/* ─────────── RAG Configs (1:1 per agent) ─────────── */
+
+export const ragConfigs = pgTable(
+  "rag_configs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    embeddingModel: text("embedding_model").notNull().default("openai/text-embedding-3-small"),
+    chunkSize: integer("chunk_size").notNull().default(500),
+    chunkOverlap: integer("chunk_overlap").notNull().default(50),
+    topK: integer("top_k").notNull().default(5),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("rag_configs_agent_id_idx").on(t.agentId),
+  ]
+);
+
+export type RagConfigRow = typeof ragConfigs.$inferSelect;
+export type NewRagConfigRow = typeof ragConfigs.$inferInsert;
+
+/* ─────────── RAG Documents ─────────── */
+
+export const ragDocuments = pgTable(
+  "rag_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    size: integer("size").notNull(),
+    contentType: text("content_type").notNull(),
+    status: text("status").notNull().default("processing").$type<RagDocumentStatus>(),
+    chunkCount: integer("chunk_count").notNull().default(0),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("rag_documents_agent_id_idx").on(t.agentId),
+  ]
+);
+
+export type RagDocumentRow = typeof ragDocuments.$inferSelect;
+export type NewRagDocumentRow = typeof ragDocuments.$inferInsert;
+
+/* ─────────── RAG Chunks ─────────── */
+
+/** Dynamic-dimension vector for RAG embeddings (dimension varies by model). */
+const ragVector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return "vector";
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(",")}]`;
+  },
+  fromDriver(value: string): number[] {
+    return value
+      .slice(1, -1)
+      .split(",")
+      .map(Number);
+  },
+});
+
+export const ragChunks = pgTable(
+  "rag_chunks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => ragDocuments.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    chunkIndex: integer("chunk_index").notNull(),
+    embedding: ragVector("embedding"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("rag_chunks_document_id_idx").on(t.documentId),
+    index("rag_chunks_agent_id_idx").on(t.agentId),
+  ]
+);
+
+export type RagChunkRow = typeof ragChunks.$inferSelect;
+export type NewRagChunkRow = typeof ragChunks.$inferInsert;
 
