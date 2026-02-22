@@ -1,7 +1,8 @@
 import { db as appDb } from "@/db";
-import { agents, agentVersions, modelConfigs, judgeConfigs, orgSlots } from "@/db/schema";
+import { agents, agentVersions, modelConfigs, judgeConfigs, orgSlots, embedTokens } from "@/db/schema";
 import { SLOT_KEYS } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { SLOT_DEFS } from "./constants";
 import { ensureBuiltinToolRefs } from "@/lib/pool/seed-builtin-tools";
 import { ensureBuiltinPoolFunctions } from "@/lib/pool/seed-builtin-functions";
@@ -52,7 +53,6 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
           slug: def.defaultAgentSlug,
           description: def.description,
           icon: def.defaultAgentIcon,
-          scope: "org",
         })
         .returning();
 
@@ -107,6 +107,17 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
             { key: "completeness", label: "Completeness", weight: 0.3 },
             { key: "tone", label: "Tone", weight: 0.2 },
           ],
+        });
+      }
+
+      // Seed default embed token for support slot
+      if (slotKey === "support") {
+        await db.insert(embedTokens).values({
+          agentId,
+          name: "Support Widget",
+          token: `et_${nanoid(32)}`,
+          allowedOrigins: [],
+          isActive: true,
         });
       }
     }

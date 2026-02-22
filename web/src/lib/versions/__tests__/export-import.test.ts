@@ -41,7 +41,6 @@ function makeValidExport(overrides?: Partial<AgentExportData>): AgentExportData 
       memoryEnabled: false,
       skillsEnabled: false,
       contextCompressionEnabled: false,
-      scope: "org",
     },
     versions: [
       {
@@ -122,17 +121,9 @@ describe("validateExportData", () => {
 });
 
 describe("AgentExportData — agent metadata fields", () => {
-  it("includes contextCompressionEnabled and scope", () => {
+  it("includes contextCompressionEnabled", () => {
     const data = makeValidExport();
     expect(data.agent.contextCompressionEnabled).toBe(false);
-    expect(data.agent.scope).toBe("org");
-  });
-
-  it("supports platform scope", () => {
-    const data = makeValidExport();
-    data.agent.scope = "platform";
-    expect(data.agent.scope).toBe("platform");
-    expect(validateExportData(data)).toBe(true);
   });
 });
 

@@ -38,14 +38,9 @@ const vector = customType<{ data: number[]; driverData: string }>({
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
 
-/* ─────────── Agent Scope Constants ─────────── */
-
-export const AGENT_SCOPES = ["platform", "org"] as const;
-export type AgentScope = (typeof AGENT_SCOPES)[number];
-
 /* ─────────── Slot Key Constants ─────────── */
 
-export const SLOT_KEYS = ["builder", "assist", "evaluator"] as const;
+export const SLOT_KEYS = ["builder", "assist", "evaluator", "support"] as const;
 export type SlotKey = (typeof SLOT_KEYS)[number];
 
 /* ─────────── Resource Origin Constants ─────────── */
@@ -158,7 +153,6 @@ export const agents = pgTable(
     skillsEnabled: boolean("skills_enabled").notNull().default(false),
     ragEnabled: boolean("rag_enabled").notNull().default(false),
     contextCompressionEnabled: boolean("context_compression_enabled").notNull().default(false),
-    scope: text("scope").notNull().default("org").$type<AgentScope>(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [

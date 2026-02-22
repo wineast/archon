@@ -53,7 +53,6 @@ export async function GET(
       ragEnabled: agent.ragEnabled,
       skillsEnabled: agent.skillsEnabled,
       contextCompressionEnabled: agent.contextCompressionEnabled,
-      scope: agent.scope,
     },
     versions,
   };

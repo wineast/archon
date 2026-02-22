@@ -10,9 +10,13 @@ interface SupportBubbleConfig {
   token: string;
 }
 
-export function SupportBubble() {
+interface SupportBubbleProps {
+  orgId: string;
+}
+
+export function SupportBubble({ orgId }: SupportBubbleProps) {
   const { data } = useSWR<SupportBubbleConfig | null>(
-    "/api/platform/support-bubble",
+    `/api/orgs/${orgId}/support-bubble`,
     fetcher
   );
 

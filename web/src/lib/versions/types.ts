@@ -1,6 +1,6 @@
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
-import type { AgentScope, MemoryTypeDef, ResourceType } from "@/db/schema";
+import type { MemoryTypeDef, ResourceType } from "@/db/schema";
 
 /* ─────────── Snapshot Item Types (no id/agentId/createdAt/updatedAt) ─────────── */
 
@@ -261,7 +261,6 @@ export interface AgentExportData {
     ragEnabled?: boolean;
     skillsEnabled: boolean;
     contextCompressionEnabled: boolean;
-    scope: AgentScope;
   };
   versions: AgentExportVersion[];
 }
