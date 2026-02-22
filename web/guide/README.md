@@ -17,3 +17,4 @@
 - [用量计费](usage-metering.md) — Token 用量统计、费用计算、存储统计、Dashboard 可视化
 - [分润模式](profit-sharing.md) — FDA 收益分成：角色制分润池、组织结构、比例设计、合规要点
 - [Git Worktree](worktree.md) — 多任务并行开发：创建、同步、合并、删除工作区
+- [注销账号](account-deletion.md) — 账号注销：7 天恢复期、永久删除、Cron 清理

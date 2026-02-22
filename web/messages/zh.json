@@ -80,7 +80,24 @@
   },
   "user": {
     "settings": "个人设置",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "deleteAccount": "注销账号",
+    "deleteAccountTitle": "注销账号",
+    "deleteAccountDescription": "注销后你的账号将进入 {days} 天恢复期。恢复期结束后，你的账号和所有个人数据将被永久删除。",
+    "deleteAccountConfirmHint": "请输入「注销」以确认",
+    "deleteAccountConfirmWord": "注销",
+    "deleteAccountButton": "确认注销",
+    "deleteAccountDeleting": "注销中...",
+    "deleteAccountFailed": "注销失败",
+    "forceDeleteAccount": "立即注销（开发）",
+    "forceDeleteDeleting": "删除中...",
+    "forceDeleteFailed": "立即注销失败",
+    "recoveryTitle": "你的账号已申请注销",
+    "recoveryDescription": "账号将于 {date} 被永久删除（剩余 {days} 天）。如需保留账号，请点击下方按钮撤销注销。",
+    "recoverButton": "撤销注销",
+    "recovering": "撤销中...",
+    "recoverFailed": "撤销注销失败",
+    "continueSignOut": "继续退出"
   },
   "agent": {
     "createNew": "新建 Agent",

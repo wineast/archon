@@ -69,12 +69,17 @@ export function useAgentRole(agentId?: string) {
 // ── Current User ──
 
 export function useCurrentUser() {
-  const { data, error, isLoading } = useSWR<User>("/api/user", fetcher);
+  const { data, error, isLoading, mutate } = useSWR<User>("/api/user", fetcher);
+
+  const isPendingDeletion = !!data?.deletedAt;
 
   return {
     user: data ?? null,
     isLoading,
     error,
+    mutate,
     isSuperAdmin: data?.platformRole === "super_admin",
+    isPendingDeletion,
+    deletedAt: data?.deletedAt ?? null,
   };
 }

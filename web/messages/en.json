@@ -80,7 +80,24 @@
   },
   "user": {
     "settings": "Settings",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "deleteAccount": "Delete account",
+    "deleteAccountTitle": "Delete account",
+    "deleteAccountDescription": "Your account will enter a {days}-day recovery period. After the recovery period, your account and all personal data will be permanently deleted.",
+    "deleteAccountConfirmHint": "Type \"DELETE\" to confirm",
+    "deleteAccountConfirmWord": "DELETE",
+    "deleteAccountButton": "Confirm deletion",
+    "deleteAccountDeleting": "Deleting...",
+    "deleteAccountFailed": "Failed to delete account",
+    "forceDeleteAccount": "Delete now (dev)",
+    "forceDeleteDeleting": "Deleting...",
+    "forceDeleteFailed": "Failed to force delete",
+    "recoveryTitle": "Your account is scheduled for deletion",
+    "recoveryDescription": "Your account will be permanently deleted on {date} ({days} days remaining). Click the button below to cancel deletion and keep your account.",
+    "recoverButton": "Cancel deletion",
+    "recovering": "Cancelling...",
+    "recoverFailed": "Failed to cancel deletion",
+    "continueSignOut": "Sign out"
   },
   "agent": {
     "createNew": "New Agent",

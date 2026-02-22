@@ -7,6 +7,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { Providers } from "@/components/providers";
 import { PendingInvitationConsumer } from "@/components/auth/pending-invitation-consumer";
+import { AccountRecoveryBanner } from "@/components/user/account-recovery-banner";
 import { routing } from "@/i18n/routing";
 
 const geistSans = Geist({
@@ -45,7 +46,10 @@ export default async function LocaleLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
           <NextIntlClientProvider>
-            <Providers>{children}</Providers>
+            <Providers>
+              <AccountRecoveryBanner />
+              {children}
+            </Providers>
           </NextIntlClientProvider>
           <PendingInvitationConsumer />
           <Toaster />
