@@ -1,4 +1,5 @@
 import { join } from "path";
+import { sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { evalCases, judgeConfigs, evalRunResults, evalRuns } from "../schema";
 import { readJson, toKey, logSection, log } from "../seed-utils";
@@ -26,6 +27,7 @@ export const seedEval: Seeder = {
       .values({ key: judgeKey, name: judgeConfigSeed.name, dimensions: judgeConfigSeed.dimensions ?? [], isActive: judgeConfigSeed.isActive, agentId, versionId: ctx.versionId })
       .onConflictDoUpdate({
         target: [judgeConfigs.versionId, judgeConfigs.key],
+        targetWhere: sql`deleted_at IS NULL`,
         set: {
           name: judgeConfigSeed.name,
           dimensions: judgeConfigSeed.dimensions ?? [],
@@ -81,6 +83,7 @@ export const seedEval: Seeder = {
         })
         .onConflictDoUpdate({
           target: [evalCases.versionId, evalCases.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: {
             name: c.name,
             mode: c.mode,

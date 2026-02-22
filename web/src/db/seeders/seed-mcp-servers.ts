@@ -1,4 +1,5 @@
 import { join } from "path";
+import { sql } from "drizzle-orm";
 import { mcpServers } from "../schema";
 import { logSection, log, readJson } from "../seed-utils";
 import type { Seeder } from "./types";
@@ -38,6 +39,7 @@ export const seedMcpServers: Seeder = {
         })
         .onConflictDoUpdate({
           target: [mcpServers.versionId, mcpServers.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: {
             name: s.name,
             description: s.description,

@@ -46,7 +46,7 @@
 1. `agentId` 改为 **nullable**（`NULL` 表示池资源）
 2. 外键删除策略改为 `onDelete: "set null"`（池资源不跟 agent 删除）
 3. 新增 `origin` 字段：`text("origin").notNull().default("user").$type<ResourceOrigin>()`
-4. 新增池内唯一索引：`uniqueIndex("xxx_pool_key_idx").on(table.key).where(sql\`agent_id IS NULL\`)`
+4. 新增池内唯一索引：`uniqueIndex("xxx_pool_key_idx").on(table.key).where(sql\`agent_id IS NULL AND deleted_at IS NULL\`)`（partial unique index，软删除记录不参与唯一性检查）
 
 不受影响的表（保持 agent 私有）：`chatConfigs`、`modelConfigs`、`evalCases`、`judgeConfigs`、`chatSessions`、`memories`、`skills`、`embedTokens` 等。
 

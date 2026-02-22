@@ -1,6 +1,6 @@
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { components, componentTestCases } from "../schema";
 import { readDirSafe, logSection, log } from "../seed-utils";
 import { compileCssForComponent } from "@/lib/components/compile-css";
@@ -43,6 +43,7 @@ export const seedComponents: Seeder = {
         })
         .onConflictDoUpdate({
           target: [components.versionId, components.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: { name, componentSource: source, generatedCss },
         });
       log("info", `${key} (css: ${generatedCss.length} bytes)`);
