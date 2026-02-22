@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,9 +22,10 @@ interface ComponentDetailProps {
   allComponents?: ComponentRecord[];
   onSave: (updated: ComponentDefinition) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
-export function ComponentDetail({ component, agentId, allComponents, onSave, onDelete }: ComponentDetailProps) {
+export function ComponentDetail({ component, agentId, allComponents, onSave, onDelete, readOnly }: ComponentDetailProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const draftRef = useRef<ComponentFormHandle | null>(null);
@@ -64,6 +66,13 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
       </TabsList>
 
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
+        {/* Source badge for builtin */}
+        {readOnly && (
+          <div className="px-4 pt-3">
+            <Badge variant="secondary">系统内置</Badge>
+          </div>
+        )}
+
         {/* Form body */}
         <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 min-w-0 overflow-hidden">
@@ -81,6 +90,7 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
               allComponents={allComponents}
               onDraftRef={handleDraftRef}
               onDirtyChange={setDirty}
+              readOnly={readOnly}
             />
             {component.generatedCss && (
               <div className="mt-4">
@@ -95,52 +105,56 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
           </div>
         </ScrollArea>
 
-        {/* Bottom bar */}
-        <div className="flex items-center gap-2 border-t px-4 py-2">
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={busy || !dirty}
-          >
-            {saving ? (
-              <Spinner className="mr-1 size-3" />
-            ) : (
-              <SaveIcon className="mr-1 size-3" />
-            )}
-            {saving ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => draftRef.current?.reset()}
-            disabled={busy || !dirty}
-          >
-            <RotateCcwIcon className="mr-1 size-3" />
-            Reset
-          </Button>
-          <div className="flex-1" />
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setConfirmOpen(true)}
-            disabled={busy}
-          >
-            {deleting ? (
-              <Spinner className="mr-1 size-3" />
-            ) : (
-              <Trash2Icon className="mr-1 size-3" />
-            )}
-            {deleting ? "Deleting..." : "Delete"}
-          </Button>
-        </div>
+        {/* Bottom bar — hidden for readOnly */}
+        {!readOnly && (
+          <>
+            <div className="flex items-center gap-2 border-t px-4 py-2">
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={busy || !dirty}
+              >
+                {saving ? (
+                  <Spinner className="mr-1 size-3" />
+                ) : (
+                  <SaveIcon className="mr-1 size-3" />
+                )}
+                {saving ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => draftRef.current?.reset()}
+                disabled={busy || !dirty}
+              >
+                <RotateCcwIcon className="mr-1 size-3" />
+                Reset
+              </Button>
+              <div className="flex-1" />
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmOpen(true)}
+                disabled={busy}
+              >
+                {deleting ? (
+                  <Spinner className="mr-1 size-3" />
+                ) : (
+                  <Trash2Icon className="mr-1 size-3" />
+                )}
+                {deleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
 
-        <ConfirmDialog
-          open={confirmOpen}
-          onOpenChange={setConfirmOpen}
-          title="Delete Component"
-          description={`Are you sure you want to delete "${component.name}"? This action cannot be undone.`}
-          onConfirm={handleDelete}
-        />
+            <ConfirmDialog
+              open={confirmOpen}
+              onOpenChange={setConfirmOpen}
+              title="Delete Component"
+              description={`Are you sure you want to delete "${component.name}"? This action cannot be undone.`}
+              onConfirm={handleDelete}
+            />
+          </>
+        )}
       </TabsContent>
 
       <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">

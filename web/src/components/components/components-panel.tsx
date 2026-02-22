@@ -16,8 +16,6 @@ import type { ComponentRow } from "@/db/schema";
 import type { WithPoolMeta } from "@/lib/pool/queries";
 import type { ComponentDefinition } from "@/lib/components/types";
 import type { ComponentRecord } from "@/tool-ui";
-import { BUILTIN_COMPONENTS } from "./builtin-components";
-import { BuiltinComponentDetail } from "./builtin-component-detail";
 import { ComponentsSidebar } from "./components-sidebar";
 import { ComponentDetail } from "./component-detail";
 import { ComponentsEmptyState } from "./components-empty-state";
@@ -37,16 +35,12 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
-  const activeBuiltinDef = useMemo(() => {
-    if (!activeComponentId?.startsWith("builtin:")) return null;
-    const key = activeComponentId.slice("builtin:".length);
-    return BUILTIN_COMPONENTS.find((d) => d.key === key) ?? null;
-  }, [activeComponentId]);
-
   const activeComponent = useMemo(
     () => components.find((c) => c.id === activeComponentId) ?? null,
     [components, activeComponentId]
   );
+
+  const readOnly = activeComponent?.origin === "builtin";
 
   const allComponentRecords: ComponentRecord[] = useMemo(
     () =>
@@ -152,12 +146,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
           onRemoveRef={handleRemoveRef}
         />
         <div className="flex-1 min-w-0 overflow-hidden">
-          {activeBuiltinDef ? (
-            <BuiltinComponentDetail
-              key={activeBuiltinDef.key}
-              definition={activeBuiltinDef}
-            />
-          ) : activeComponent ? (
+          {activeComponent ? (
             <ComponentDetail
               key={activeComponent.id}
               component={activeComponent}
@@ -165,6 +154,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
               allComponents={allComponentRecords}
               onSave={handleSave}
               onDelete={handleDelete}
+              readOnly={readOnly}
             />
           ) : (
             <ComponentsEmptyState onCreate={handleOpenCreateDialog} />
@@ -174,7 +164,7 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
 
       {/* Mobile layout */}
       <div className="flex h-full flex-col sm:hidden">
-        {mobileView === "sidebar" || (!activeComponent && !activeBuiltinDef) ? (
+        {mobileView === "sidebar" || !activeComponent ? (
           <ComponentsSidebar
             components={components}
             activeComponentId={activeComponentId}
@@ -194,20 +184,14 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
               <span className="text-sm font-medium">Back</span>
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
-              {activeBuiltinDef ? (
-                <BuiltinComponentDetail
-                  key={activeBuiltinDef.key}
-                  definition={activeBuiltinDef}
-                />
-              ) : activeComponent ? (
-                <ComponentDetail
-                  key={activeComponent.id}
-                  component={activeComponent}
-                  allComponents={allComponentRecords}
-                  onSave={handleSave}
-                  onDelete={handleDelete}
-                />
-              ) : null}
+              <ComponentDetail
+                key={activeComponent.id}
+                component={activeComponent}
+                allComponents={allComponentRecords}
+                onSave={handleSave}
+                onDelete={handleDelete}
+                readOnly={readOnly}
+              />
             </div>
           </>
         )}

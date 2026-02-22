@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { inferComponentDeps } from "@/tool-ui";
 import type { ComponentRow } from "@/db/schema";
 import type { WithPoolMeta } from "@/lib/pool/queries";
-import { BUILTIN_COMPONENTS } from "./builtin-components";
 import { ComponentListItem } from "./component-list-item";
 
 interface ComponentsSidebarProps {
@@ -69,34 +68,8 @@ export function ComponentsSidebar({
       </div>
       <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="p-1">
-          {/* Built-in group */}
-          <p className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {tc("builtIn")}
-          </p>
-          {BUILTIN_COMPONENTS.map((def) => {
-            const id = `builtin:${def.key}`;
-            return (
-              <button
-                key={id}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent text-left",
-                  activeComponentId === id && "bg-muted font-medium"
-                )}
-                onClick={() => onSelect(id)}
-              >
-                <span className="min-w-0 flex-1 truncate">{def.name}</span>
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 text-[10px] px-1.5 py-0"
-                >
-                  {tc("builtIn")}
-                </Badge>
-              </button>
-            );
-          })}
-
           {/* Custom group */}
-          <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {tc("custom")}
           </p>
           {privateComponents.length === 0 ? (
@@ -135,6 +108,14 @@ export function ComponentsSidebar({
                   >
                     <GlobeIcon className="size-3 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1 truncate text-left">{component.name}</span>
+                    {component.origin === "builtin" && (
+                      <Badge
+                        variant="secondary"
+                        className="shrink-0 text-[10px] px-1.5 py-0"
+                      >
+                        {tc("builtIn")}
+                      </Badge>
+                    )}
                   </button>
                   {component._refId && onRemoveRef && (
                     <Button
