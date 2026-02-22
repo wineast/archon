@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSignIn } from "@clerk/nextjs";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
@@ -20,6 +20,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
   const t = useTranslations("auth");
   const tc = useTranslations("common");
   const { signIn, setActive, isLoaded } = useSignIn();
+  const locale = useLocale();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -112,7 +113,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
     try {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
+        redirectUrl: `/${locale}/sso-callback`,
         redirectUrlComplete: redirectUrl,
       });
     } catch (err: unknown) {
