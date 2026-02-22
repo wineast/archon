@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { BrainIcon } from "lucide-react";
+import { BrainIcon, PowerIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -81,22 +81,21 @@ export function MemoryPanel({ agentId, memoryEnabled, onToggleFeature }: MemoryP
     }
   }, [deleteTarget, mutateMemories]);
 
-  if (!memoryEnabled) {
+  const handleEnable = useCallback(async () => {
+    setEnabling(true);
+    await onToggleFeature(true);
+    setEnabling(false);
+  }, [onToggleFeature]);
+
+  // First-time ceremony: only show when disabled AND no config data
+  if (!memoryEnabled && config === null) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-        <BrainIcon className="size-10 opacity-20" />
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <BrainIcon className="size-12 opacity-30" />
         <p className="text-sm">记忆功能未启用</p>
-        <Button
-          size="sm"
-          disabled={enabling}
-          onClick={async () => {
-            setEnabling(true);
-            await onToggleFeature(true);
-            setEnabling(false);
-          }}
-        >
-          {enabling && <Spinner className="mr-1 size-3" />}
-          启用记忆
+        <Button variant="outline" size="sm" onClick={handleEnable} disabled={enabling}>
+          {enabling ? <Spinner className="mr-1.5 size-4" /> : <PowerIcon className="mr-1.5 size-4" />}
+          启用
         </Button>
       </div>
     );

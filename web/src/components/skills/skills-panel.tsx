@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowLeftIcon, PowerIcon, ZapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useSkills,
   useSkill,
@@ -29,7 +28,6 @@ export function SkillsPanel({ agentId, skillsEnabled, onToggleFeature }: SkillsP
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [confirmDisableOpen, setConfirmDisableOpen] = useState(false);
   const [toggling, setToggling] = useState(false);
 
   const { skill: activeSkill, mutate: mutateDetail } =
@@ -96,12 +94,8 @@ export function SkillsPanel({ agentId, skillsEnabled, onToggleFeature }: SkillsP
     setToggling(false);
   }, [onToggleFeature]);
 
-  const handleDisable = useCallback(async () => {
-    await onToggleFeature(false);
-  }, [onToggleFeature]);
-
-  // Feature disabled state
-  if (!skillsEnabled) {
+  // First-time ceremony: only show when disabled AND no data
+  if (!skillsEnabled && skills.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
         <ZapIcon className="size-12 opacity-30" />
@@ -124,13 +118,7 @@ export function SkillsPanel({ agentId, skillsEnabled, onToggleFeature }: SkillsP
           skillsEnabled={skillsEnabled}
           onSelect={setActiveSkillId}
           onCreate={openCreateDialog}
-          onToggleFeature={(enabled) => {
-            if (!enabled) {
-              setConfirmDisableOpen(true);
-            } else {
-              handleEnable();
-            }
-          }}
+          onToggleFeature={onToggleFeature}
         />
         <div className="flex-1 overflow-hidden">
           {activeSkill ? (
@@ -157,13 +145,7 @@ export function SkillsPanel({ agentId, skillsEnabled, onToggleFeature }: SkillsP
             skillsEnabled={skillsEnabled}
             onSelect={setActiveSkillId}
             onCreate={openCreateDialog}
-            onToggleFeature={(enabled) => {
-              if (!enabled) {
-                setConfirmDisableOpen(true);
-              } else {
-                handleEnable();
-              }
-            }}
+            onToggleFeature={onToggleFeature}
           />
         ) : (
           <>
@@ -195,17 +177,6 @@ export function SkillsPanel({ agentId, skillsEnabled, onToggleFeature }: SkillsP
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreate={handleCreateWithKey}
-      />
-
-      <ConfirmDialog
-        open={confirmDisableOpen}
-        onOpenChange={setConfirmDisableOpen}
-        title="关闭 Skills 功能"
-        description="关闭后，聊天运行时将不再注入技能摘要和 get_skill_detail 工具。已有技能数据不会删除，重新启用即可恢复。"
-        cancelLabel="取消"
-        confirmLabel="确认关闭"
-        confirmVariant="default"
-        onConfirm={handleDisable}
       />
     </div>
   );

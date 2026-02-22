@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, PowerIcon, ServerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import useSWR from "swr";
 import {
@@ -33,6 +34,7 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
+  const [toggling, setToggling] = useState(false);
   const mcpEnabled = agent?.mcpEnabled ?? false;
   const activeMcpServer = mcpServers.find((s) => s.id === activeId) ?? null;
 
@@ -118,6 +120,26 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
     },
     [agentId, mutateAgent]
   );
+
+  const handleEnable = useCallback(async () => {
+    setToggling(true);
+    await handleToggleMcp(true);
+    setToggling(false);
+  }, [handleToggleMcp]);
+
+  // First-time ceremony: only show when disabled AND no data
+  if (!mcpEnabled && mcpServers.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <ServerIcon className="size-12 opacity-30" />
+        <p className="text-sm">MCP Servers 功能未启用</p>
+        <Button variant="outline" size="sm" onClick={handleEnable} disabled={toggling}>
+          {toggling ? <Spinner className="mr-1.5 size-4" /> : <PowerIcon className="mr-1.5 size-4" />}
+          启用
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">

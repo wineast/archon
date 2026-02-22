@@ -198,7 +198,7 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
                   <div className="flex items-center gap-2">
                     <Input
                       className="h-7 text-xs font-mono flex-1"
-                      value={td.key}
+                      value={td.key ?? ""}
                       onChange={(e) =>
                         handleUpdateType(
                           i,
@@ -221,7 +221,7 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
                   </div>
                   <Input
                     className="h-7 text-xs"
-                    value={td.description}
+                    value={td.description ?? ""}
                     onChange={(e) =>
                       handleUpdateType(i, "description", e.target.value)
                     }
@@ -256,7 +256,7 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
           <div className="space-y-2">
             <label className="text-sm font-medium">Extraction Prompt</label>
             <Textarea
-              value={extractionPrompt}
+              value={extractionPrompt ?? ""}
               onChange={(e) => setExtractionPrompt(e.target.value)}
               placeholder="Custom prompt for memory extraction..."
               rows={3}
@@ -289,7 +289,7 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
             <label className="text-sm font-medium">Max Injected Memories</label>
             <Input
               type="number"
-              value={maxInjectedMemories}
+              value={maxInjectedMemories ?? 10}
               onChange={(e) => setMaxInjectedMemories(Number(e.target.value))}
               min={0}
             />
@@ -301,7 +301,7 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
               <label className="text-sm font-medium">Max Per User</label>
               <Input
                 type="number"
-                value={maxMemoriesPerUser}
+                value={maxMemoriesPerUser ?? 100}
                 onChange={(e) => setMaxMemoriesPerUser(Number(e.target.value))}
                 min={0}
               />
@@ -310,7 +310,7 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
               <label className="text-sm font-medium">Max Global</label>
               <Input
                 type="number"
-                value={maxGlobalMemories}
+                value={maxGlobalMemories ?? 1000}
                 onChange={(e) => setMaxGlobalMemories(Number(e.target.value))}
                 min={0}
               />
@@ -333,7 +333,7 @@ export function MemoryConfigDetail({ config, onSave }: MemoryConfigDetailProps) 
               <label className="text-sm font-medium">Decay Days</label>
               <Input
                 type="number"
-                value={decayDays}
+                value={decayDays ?? 90}
                 onChange={(e) => setDecayDays(Number(e.target.value))}
                 min={1}
               />
