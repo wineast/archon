@@ -87,6 +87,7 @@ vi.mock("@/lib/rag/search", () => ({
 vi.mock("@/lib/template/render", () => ({
   renderTemplate: vi.fn().mockResolvedValue("rendered prompt"),
   gatherTemplateData: vi.fn().mockResolvedValue({ defsMap: new Map() }),
+  disposeTemplateData: vi.fn(),
 }));
 
 vi.mock("@/lib/schemas/resolve-inline", () => ({

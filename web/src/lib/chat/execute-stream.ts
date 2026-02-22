@@ -26,7 +26,7 @@ import {
   extractTextContent,
   responseMessagesToUIParts,
 } from "@/db/chat-persistence";
-import { renderTemplate, gatherTemplateData } from "@/lib/template/render";
+import { renderTemplate, gatherTemplateData, disposeTemplateData } from "@/lib/template/render";
 import { resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 import { recordUsage } from "@/lib/usage/record";
 import type { RuntimeEventInput } from "@/lib/runtime-events/record";
@@ -494,6 +494,9 @@ export async function executeChatStream(
             }
           });
         }
+
+        // Dispose function sandbox after stream completes
+        after(() => { disposeTemplateData(templateData); });
       },
     });
 

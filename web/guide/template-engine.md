@@ -306,7 +306,56 @@ const routes = await context.dataset.get("product_routes");
 
 ---
 
-## 九、变量优先级
+## 九、函数调用
+
+Agent 的 Function（私有 + 池引用）可以在系统提示词和 Wiki 文档中直接调用。函数在 QuickJS WASM 沙箱中执行，支持两种语法：
+
+### Filter 语法
+
+将变量值作为输入传给函数，结果替换到模板中：
+
+```liquid
+{{ my_data | calculate_dti }}
+```
+
+支持链式调用：
+
+```liquid
+{{ raw_data | normalize | format_currency }}
+```
+
+结合 `assign` 赋值：
+
+```liquid
+{% assign result = my_data | calculate_dti %}
+DTI 比率：{{result}}%
+```
+
+### Tag 语法
+
+使用 `{% fn %}` 标签调用函数：
+
+```liquid
+{% fn calculate_dti my_data %}
+```
+
+- 有参数：`{% fn calculate_dti my_data %}` — `my_data` 为 Liquid 上下文中的变量
+- 无参数：`{% fn get_config %}` — 输入为 undefined
+
+### 错误处理
+
+- **编译失败**：如果函数编译失败（语法错误等），模板渲染会静默降级——函数 filter/tag 不可用，但其他模板语法正常工作
+- **运行时错误**：函数执行出错时，filter 返回空字符串，tag 输出空字符串，不影响模板其他部分
+- **返回值处理**：对象类型结果自动 `JSON.stringify()`，其他类型转为字符串
+
+### 编辑器补全
+
+- `{{ }}` 中输入时，会提示可用的函数 filter：`{{ value | fn_key }}`
+- `{% %}` 中输入时，会提示 `{% fn fn_key input %}` snippet
+
+---
+
+## 十、变量优先级
 
 当同名变量存在多个来源时，按以下优先级（高覆盖低）：
 
@@ -318,9 +367,9 @@ const routes = await context.dataset.get("product_routes");
 
 ---
 
-## 十、注意事项
+## 十一、注意事项
 
-- **命名空间保留字**：`tool`、`tool_entries` 不能用作数据集的 key
+- **命名空间保留字**：`tool`、`tool_entries`、`fn` 不能用作数据集的 key
 - **未定义变量**：引用不存在的变量会渲染为空字符串，不会报错
 - **语法错误**：模板语法错误时返回原始文本，不影响系统正常运行
 - **编辑器补全 ↔ 预览一致性**：每种模板编辑场景的补全提示和预览渲染必须注入相同的变量集。数据集 data 编辑器只提供前序数据集的补全和渲染，不包含内置变量（`date`/`time` 等）和 `tool.*`；系统提示词编辑器则提供全部变量

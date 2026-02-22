@@ -18,6 +18,7 @@ import {
 import { MdEditor } from "@/components/editors/md-editor";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { useTools } from "@/lib/tools/hooks";
+import { useFunctions } from "@/lib/functions/hooks";
 import { TIME_VAR_NAMES } from "@/lib/template";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
 import { useObjectTypes } from "@/lib/ontology/hooks";
@@ -54,6 +55,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
   const [assistOpen, setAssistOpen] = useState(false);
 
   const { tools: allTools } = useTools(agentId);
+  const { functions: allFunctions } = useFunctions(agentId);
   const { datasetVars } = useDatasetVarsMap(agentId);
   const { data: wikiDocs = [] } = useSWR(wikiApiKey(agentId), wikiFetcher);
   const { objectTypes } = useObjectTypes(agentId);
@@ -79,6 +81,11 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
   const completionOntologyTypes = useMemo(
     () => objectTypes.map((t) => ({ key: t.key, name: t.name })),
     [objectTypes]
+  );
+
+  const completionFunctions = useMemo(
+    () => allFunctions.map((f) => ({ key: f.key, name: f.name, description: f.description })),
+    [allFunctions]
   );
 
   const snapshotRef = useRef({ name: doc.name, content: doc.content });
@@ -180,6 +187,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
               documents={completionDocs}
               tools={completionTools}
               ontologyTypes={completionOntologyTypes}
+              functions={completionFunctions}
               placeholder="Write your content in Markdown..."
               className="h-full"
               readOnly={readOnly || isPoolRef}

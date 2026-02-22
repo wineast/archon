@@ -110,6 +110,7 @@ vi.mock("@/lib/template/render", () => ({
   renderTemplate: vi.fn().mockImplementation((text: string) =>
     Promise.resolve(text)
   ),
+  disposeTemplateData: vi.fn(),
 }));
 
 const mockBuildDynamicTools = vi.fn().mockReturnValue({});

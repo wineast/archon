@@ -20,7 +20,7 @@ import { resolveModel } from "@/lib/ai/resolve-model";
 import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
 import { resolveSlot } from "@/lib/slots";
 import { QuotaExceededError } from "@/lib/credits/errors";
-import { gatherTemplateData, renderTemplate } from "@/lib/template/render";
+import { gatherTemplateData, renderTemplate, disposeTemplateData } from "@/lib/template/render";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { db } from "@/db";
 import { modelConfigs } from "@/db/schema";
@@ -122,11 +122,15 @@ export function createAssistHandler(config: AssistConfig) {
       if (rawPrompt) {
         const versionId = await resolveEditingVersionId(assistAgentId);
         const templateData = await gatherTemplateData(assistAgentId, versionId);
-        system = await renderTemplate(rawPrompt, templateData, {
-          fieldContext,
-          currentContent,
-          entity,
-        });
+        try {
+          system = await renderTemplate(rawPrompt, templateData, {
+            fieldContext,
+            currentContent,
+            entity,
+          });
+        } finally {
+          disposeTemplateData(templateData);
+        }
       }
     }
 

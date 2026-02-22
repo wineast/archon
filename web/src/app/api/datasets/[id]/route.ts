@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { datasets } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { requireAgentRole, requireSuperAdmin } from "@/lib/auth/require-agent-role";
-import { validateNoCycle } from "@/lib/datasets/queries";
+import { validateNoCycle, RESERVED_DATASET_KEYS } from "@/lib/datasets/queries";
 import { logAudit } from "@/lib/audit/log";
 
 export async function GET(
@@ -58,6 +58,14 @@ export async function PATCH(
   if (ctx instanceof NextResponse) return ctx;
 
   const body = await req.json();
+
+  // Validate reserved keys
+  if (body.key !== undefined && RESERVED_DATASET_KEYS.has(body.key)) {
+    return NextResponse.json(
+      { error: `"${body.key}" is a reserved key and cannot be used as a dataset key` },
+      { status: 400 }
+    );
+  }
 
   // Validate no circular dependency when data or key changes
   if (body.data !== undefined || body.key !== undefined) {

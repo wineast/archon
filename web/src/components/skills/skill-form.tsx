@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MdEditor } from "@/components/editors/md-editor";
 import { PromptAssistDialog } from "@/components/model-config/prompt-assist-dialog";
 import { useTools } from "@/lib/tools/hooks";
+import { useFunctions } from "@/lib/functions/hooks";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
 import { BUILTIN_VAR_NAMES } from "@/lib/template";
@@ -69,6 +70,7 @@ export function SkillForm({
 
   // Autocomplete data
   const { tools: allTools } = useTools(agentId);
+  const { functions: allFunctions } = useFunctions(agentId);
   const { datasetVars } = useDatasetVarsMap(agentId);
   const { data: wikiDocs = [] } = useSWR(wikiApiKey(agentId), wikiFetcher);
 
@@ -88,6 +90,11 @@ export function SkillForm({
   const completionDocs = useMemo(
     () => wikiDocs.map((d) => ({ key: d.key, title: d.name })),
     [wikiDocs]
+  );
+
+  const completionFunctions = useMemo(
+    () => allFunctions.map((f) => ({ key: f.key, name: f.name, description: f.description })),
+    [allFunctions]
   );
 
   const checkDirty = useCallback(() => {
@@ -213,6 +220,7 @@ export function SkillForm({
               variableMap={datasetVars}
               documents={completionDocs}
               tools={completionTools}
+              functions={completionFunctions}
               placeholder="Enter skill content... (supports {{variables}}, {{lookup &quot;key&quot;}}, {{include &quot;doc&quot;}})"
             />
           </TabsContent>

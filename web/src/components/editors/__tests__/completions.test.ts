@@ -168,6 +168,74 @@ describe("generateCompletions", () => {
     });
   });
 
+  describe("function completions", () => {
+    const functions = [
+      { key: "calculate_dti", name: "Calculate DTI", description: "Calculate debt-to-income ratio" },
+      { key: "format_currency", name: "Format Currency" },
+    ];
+
+    it("includes function filter completions in {{ context", () => {
+      const result = generateCompletions("{{", variables, documents, [], undefined, undefined, functions);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels).toContain("{{ value | calculate_dti }}");
+      expect(labels).toContain("{{ value | format_currency }}");
+    });
+
+    it("function filter completions have type 'function'", () => {
+      const result = generateCompletions("{{", variables, documents, [], undefined, undefined, functions);
+      const item = result!.items.find((o) => o.label === "{{ value | calculate_dti }}");
+      expect(item).toBeDefined();
+      expect(item!.type).toBe("function");
+      expect(item!.detail).toBe("Calculate debt-to-income ratio");
+    });
+
+    it("includes function tag completions in {% context", () => {
+      const result = generateCompletions("{%", variables, documents, [], undefined, undefined, functions);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels).toContain("{% fn calculate_dti %}");
+      expect(labels).toContain("{% fn format_currency %}");
+    });
+
+    it("function tag completions are snippets", () => {
+      const result = generateCompletions("{%", variables, documents, [], undefined, undefined, functions);
+      const item = result!.items.find((o) => o.label === "{% fn calculate_dti %}");
+      expect(item).toBeDefined();
+      expect(item!.insertTextRules).toBe(4); // InsertAsSnippet
+      expect(item!.apply).toContain("{% fn calculate_dti");
+    });
+
+    it("does not include function filters in {% context", () => {
+      const result = generateCompletions("{%", variables, documents, [], undefined, undefined, functions);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels.some((l: string) => l.includes("| calculate_dti"))).toBe(false);
+    });
+
+    it("does not include function tags in {{ context", () => {
+      const result = generateCompletions("{{", variables, documents, [], undefined, undefined, functions);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels.some((l: string) => l.startsWith("{% fn"))).toBe(false);
+    });
+
+    it("does not generate function completions when functions is undefined", () => {
+      const result = generateCompletions("{{", variables, documents);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels.some((l: string) => l.includes("calculate_dti"))).toBe(false);
+    });
+
+    it("does not generate function completions when functions is empty", () => {
+      const result = generateCompletions("{{", variables, documents, [], undefined, undefined, []);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels.some((l: string) => l.includes("| "))).toBe(false);
+    });
+
+    it("filters function completions by typed text", () => {
+      const result = generateCompletions("{{calculate", variables, documents, [], undefined, undefined, functions);
+      const labels = result!.items.map((o) => o.label);
+      expect(labels).toContain("{{ value | calculate_dti }}");
+      expect(labels.some((l: string) => l.includes("format_currency"))).toBe(false);
+    });
+  });
+
   describe("edge cases", () => {
     it("works with no tools parameter (defaults to empty)", () => {
       const result = generateCompletions("{{", variables, documents);
