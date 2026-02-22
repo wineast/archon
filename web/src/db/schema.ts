@@ -1205,7 +1205,11 @@ export type NewUsageRecordRow = typeof usageRecords.$inferInsert;
 
 /* ─────────── Org API Keys (BYOK) ─────────── */
 
-export const BYOK_PROVIDERS = ["anthropic", "openai", "google", "xai", "deepseek"] as const;
+export const BYOK_PROVIDERS = [
+  "anthropic", "openai", "google", "xai", "deepseek",
+  "mistral", "cohere", "perplexity",
+  "alibaba", "moonshot", "zhipu", "minimax", "bytedance",
+] as const;
 export type ByokProvider = (typeof BYOK_PROVIDERS)[number];
 
 export const orgApiKeys = pgTable(

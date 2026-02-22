@@ -6,6 +6,8 @@
 
 ## 支持的 Provider
 
+### 官方 SDK 直连
+
 | Provider | SDK 包 |
 |----------|--------|
 | Anthropic | `@ai-sdk/anthropic` |
@@ -13,6 +15,30 @@
 | Google | `@ai-sdk/google` |
 | xAI | `@ai-sdk/xai` |
 | DeepSeek | `@ai-sdk/deepseek` |
+| Mistral | `@ai-sdk/mistral` |
+| Cohere | `@ai-sdk/cohere` |
+| Perplexity | `@ai-sdk/perplexity` |
+
+### OpenAI 兼容协议接入
+
+以下 Provider 通过 `@ai-sdk/openai` 的 `createOpenAI({ baseURL, apiKey })` 方式接入：
+
+| Provider | 显示名 | baseURL |
+|----------|--------|---------|
+| alibaba | 阿里云百炼 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| moonshot | Moonshot (Kimi) | `https://api.moonshot.cn/v1` |
+| zhipu | 智谱 AI | `https://open.bigmodel.cn/api/paas/v4` |
+| minimax | MiniMax | `https://api.minimax.chat/v1` |
+| bytedance | 火山引擎 | `https://ark.cn-beijing.volces.com/api/v3` |
+
+### 不支持 BYOK 的 Provider
+
+| Provider | 原因 |
+|----------|------|
+| Meta (Llama) | 无直接 API，模型托管在第三方推理平台 |
+| Amazon (Nova) | 需要 AWS Access Key + Secret，非标准 API Key |
+
+这些 Provider 的模型始终走平台网关。
 
 ## 架构
 
