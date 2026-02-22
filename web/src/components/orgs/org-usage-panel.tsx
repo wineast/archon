@@ -61,6 +61,17 @@ export function OrgUsagePanel({ orgId }: { orgId: string }) {
   const { data: daily, isLoading: dailyLoading } = useOrgUsageDaily(orgId, from, to);
   const { data: byAgent, isLoading: byAgentLoading } = useOrgUsageByAgent(orgId, from, to);
 
+  // 初始加载：三个请求都在 loading 且无任何数据 → 显示单个全局 Spinner
+  const initialLoading =
+    summaryLoading && dailyLoading && byAgentLoading && !summary && !daily && !byAgent;
+
+  if (initialLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Spinner className="size-6" />
+      </div>
+    );
+  }
 
   return (
     <ScrollArea className="h-full min-h-0">
