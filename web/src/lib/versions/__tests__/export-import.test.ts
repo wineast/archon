@@ -30,9 +30,9 @@ function makeValidExport(overrides?: Partial<AgentExportData>): AgentExportData 
       icon: "bot",
       slug: "test-agent",
       isPublic: false,
-      mcpEnabled: true,
+      mcpEnabled: false,
       memoryEnabled: false,
-      skillsEnabled: true,
+      skillsEnabled: false,
     },
     versions: [
       {

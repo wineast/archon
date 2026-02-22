@@ -94,7 +94,7 @@ export const agents = pgTable(
     icon: text("icon").notNull().default("bot"),
     slug: text("slug").notNull(),
     isPublic: boolean("is_public").notNull().default(false),
-    mcpEnabled: boolean("mcp_enabled").notNull().default(true),
+    mcpEnabled: boolean("mcp_enabled").notNull().default(false),
     editingVersionId: uuid("editing_version_id").references(
       (): AnyPgColumn => agentVersions.id,
       { onDelete: "set null" }
@@ -111,7 +111,7 @@ export const agents = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
     memoryEnabled: boolean("memory_enabled").notNull().default(false),
-    skillsEnabled: boolean("skills_enabled").notNull().default(true),
+    skillsEnabled: boolean("skills_enabled").notNull().default(false),
     contextCompressionEnabled: boolean("context_compression_enabled").notNull().default(false),
     isPlatform: boolean("is_platform").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

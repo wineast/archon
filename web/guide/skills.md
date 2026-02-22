@@ -22,7 +22,7 @@ Skills 是 Agent 的能力提示词资源，采用两步注入机制：
 
 ## 模块开关
 
-Skills 功能支持 Agent 级别的开关，通过 `agents.skillsEnabled` 字段控制（默认 `true`）。
+Skills 功能支持 Agent 级别的开关，通过 `agents.skillsEnabled` 字段控制（默认 `false`，新建 Agent 默认关闭）。
 
 ### 关闭效果
 

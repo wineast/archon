@@ -44,9 +44,9 @@ export async function POST(req: Request) {
         icon: body.agent.icon ?? "bot",
         slug,
         isPublic: body.agent.isPublic ?? false,
-        mcpEnabled: body.agent.mcpEnabled ?? true,
+        mcpEnabled: body.agent.mcpEnabled ?? false,
         memoryEnabled: body.agent.memoryEnabled ?? false,
-        skillsEnabled: body.agent.skillsEnabled ?? true,
+        skillsEnabled: body.agent.skillsEnabled ?? false,
       })
       .returning();
 
