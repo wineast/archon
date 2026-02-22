@@ -7,6 +7,7 @@ export interface SlotDef {
   defaultAgentName: string;
   defaultAgentIcon: string;
   defaultModel: string;
+  defaultSystemPrompt: string;
   defaultTemperature: number;
 }
 
@@ -17,7 +18,8 @@ export const SLOT_DEFS: Record<SlotKey, SlotDef> = {
     defaultAgentSlug: "build-chat",
     defaultAgentName: "Build Chat",
     defaultAgentIcon: "hammer",
-    defaultModel: "anthropic/claude-sonnet-4",
+    defaultModel: "",
+    defaultSystemPrompt: "",
     defaultTemperature: 0.3,
   },
   assist: {
@@ -26,7 +28,8 @@ export const SLOT_DEFS: Record<SlotKey, SlotDef> = {
     defaultAgentSlug: "assist",
     defaultAgentName: "AI 辅助编辑",
     defaultAgentIcon: "sparkles",
-    defaultModel: "anthropic/claude-sonnet-4",
+    defaultModel: "",
+    defaultSystemPrompt: "",
     defaultTemperature: 0.7,
   },
   evaluator: {
@@ -35,7 +38,9 @@ export const SLOT_DEFS: Record<SlotKey, SlotDef> = {
     defaultAgentSlug: "evaluator",
     defaultAgentName: "Evaluator",
     defaultAgentIcon: "flask-conical",
-    defaultModel: "anthropic/claude-sonnet-4",
+    defaultModel: "",
+    defaultSystemPrompt:
+      "You are a judge evaluating AI assistant responses.\n\nYou will receive the user input, expected output (if any), and the actual response.\nEvaluate the response on each of the following dimensions, scoring from 1 to 10.\n\nFor each dimension, return a JSON object with the dimension key mapped to { \"score\": <1-10>, \"reason\": \"<brief explanation>\" }.",
     defaultTemperature: 0.3,
   },
   support: {
@@ -44,7 +49,9 @@ export const SLOT_DEFS: Record<SlotKey, SlotDef> = {
     defaultAgentSlug: "support",
     defaultAgentName: "Support",
     defaultAgentIcon: "headset",
-    defaultModel: "anthropic/claude-sonnet-4",
+    defaultModel: "",
+    defaultSystemPrompt:
+      "You are a friendly support assistant embedded in the application. Help users understand features, answer questions, and guide them through common tasks. Be concise, helpful, and proactive in suggesting relevant actions.",
     defaultTemperature: 0.7,
   },
 };

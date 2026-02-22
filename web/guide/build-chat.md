@@ -95,7 +95,7 @@ Build 助手和 AI 辅助编辑的模型通过功能槽位（Agent Slots）机�
 ### Build Chat
 
 - 通过 `resolveSlot(agentId, "builder")` 获取模型和温度
-- 解析顺序：agent 覆盖 → org 默认 → 硬编码默认值（`anthropic/claude-sonnet-4`，温度 0.3）
+- 解析顺序：agent 覆盖 → org 默认 → 硬编码默认值（空 modelId，温度 0.3）
 - 结果缓存 60s
 - 用户可在 Org 设置页的"功能槽位"Tab 切换 builder 绑定的 agent，或在 Agent Build 页的"Slots"Tab 覆盖
 

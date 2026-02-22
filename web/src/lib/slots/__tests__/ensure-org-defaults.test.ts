@@ -127,4 +127,66 @@ describe("ensureOrgDefaults", () => {
     // Only orgSlot inserts for 4 slots = 4
     expect(mockInsert).toHaveBeenCalledTimes(4);
   });
+
+  it("sets modelId to empty string for all slots", async () => {
+    await ensureOrgDefaults("org-1");
+
+    const modelConfigsSymbol = (await import("@/db/schema")).modelConfigs;
+    const modelConfigInserts = mockInsert.mock.calls.filter(
+      (call: unknown[]) => call[0] === modelConfigsSymbol
+    );
+    expect(modelConfigInserts).toHaveLength(4);
+
+    const modelConfigValues = mockValues.mock.calls.filter(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return val.key === "default" && val.name === "Default" && "modelId" in val;
+      }
+    );
+    for (const call of modelConfigValues) {
+      const val = call[0] as Record<string, unknown>;
+      expect(val.modelId).toBe("");
+    }
+  });
+
+  it("sets non-empty systemPrompt for support slot model config", async () => {
+    await ensureOrgDefaults("org-1");
+
+    const modelConfigValues = mockValues.mock.calls.filter(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return val.key === "default" && val.name === "Default" && "systemPrompt" in val;
+      }
+    );
+
+    // Find support slot's model config (4th slot, so 4th model config value call)
+    // We verify by checking that at least one has a support-related prompt
+    const supportConfig = modelConfigValues.find(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return typeof val.systemPrompt === "string" && (val.systemPrompt as string).includes("support assistant");
+      }
+    );
+    expect(supportConfig).toBeDefined();
+    expect((supportConfig![0] as Record<string, unknown>).systemPrompt).not.toBe("");
+  });
+
+  it("sets non-empty systemPrompt for evaluator slot model config", async () => {
+    await ensureOrgDefaults("org-1");
+
+    const modelConfigValues = mockValues.mock.calls.filter(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return val.key === "default" && val.name === "Default" && "systemPrompt" in val;
+      }
+    );
+
+    const evaluatorConfig = modelConfigValues.find(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return typeof val.systemPrompt === "string" && (val.systemPrompt as string).includes("judge evaluating");
+      }
+    );
+    expect(evaluatorConfig).toBeDefined();
+  });
 });
