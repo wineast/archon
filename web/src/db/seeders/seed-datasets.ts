@@ -1,5 +1,5 @@
 import { join } from "path";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { datasets } from "../schema";
 import { readJson, readDirSafe, logSection, log } from "../seed-utils";
 import type { Seeder } from "./types";
@@ -33,6 +33,7 @@ export const seedDatasets: Seeder = {
         })
         .onConflictDoUpdate({
           target: [datasets.versionId, datasets.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: { name: ds.name, description: ds.description ?? "", data: ds.data },
         })
         .returning();
@@ -54,6 +55,7 @@ export const seedDatasets: Seeder = {
         .values({ agentId, versionId: ctx.versionId, key, name, description: `Pricing configuration for ${name}`, data })
         .onConflictDoUpdate({
           target: [datasets.versionId, datasets.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: { name, description: `Pricing configuration for ${name}`, data },
         })
         .returning();

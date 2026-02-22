@@ -1,4 +1,5 @@
 import { join } from "path";
+import { sql } from "drizzle-orm";
 import { modelConfigs } from "../schema";
 import { readJson, toKey, logSection, log } from "../seed-utils";
 import type { Seeder } from "./types";
@@ -26,6 +27,7 @@ export const seedModelConfigs: Seeder = {
         .values({ ...cfg, key, agentId: ctx.agentId, versionId: ctx.versionId })
         .onConflictDoUpdate({
           target: [modelConfigs.versionId, modelConfigs.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: {
             name: cfg.name,
             modelId: cfg.modelId ?? "",

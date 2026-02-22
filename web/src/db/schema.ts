@@ -139,7 +139,7 @@ export const agents = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("agents_org_id_slug_idx").on(t.orgId, t.slug),
+    uniqueIndex("agents_org_id_slug_idx").on(t.orgId, t.slug).where(sql`deleted_at IS NULL`),
   ]
 );
 
@@ -258,8 +258,8 @@ export const functions = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("functions_version_id_key_idx").on(table.versionId, table.key),
-    uniqueIndex("functions_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    uniqueIndex("functions_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("functions_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("functions_version_id_idx").on(table.versionId),
     check("functions_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
@@ -293,8 +293,8 @@ export const datasets = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("datasets_version_id_key_idx").on(table.versionId, table.key),
-    uniqueIndex("datasets_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    uniqueIndex("datasets_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("datasets_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("datasets_version_id_idx").on(table.versionId),
     check("datasets_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
@@ -329,8 +329,8 @@ export const wikiDocuments = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("wiki_documents_version_id_key_idx").on(table.versionId, table.key),
-    uniqueIndex("wiki_documents_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    uniqueIndex("wiki_documents_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("wiki_documents_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("wiki_documents_version_id_idx").on(table.versionId),
     check("wiki_documents_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
@@ -363,8 +363,8 @@ export const schemas = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("schemas_version_id_key_idx").on(table.versionId, table.key),
-    uniqueIndex("schemas_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    uniqueIndex("schemas_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("schemas_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("schemas_version_id_idx").on(table.versionId),
     check("schemas_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
@@ -487,8 +487,8 @@ export const tools = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("tools_version_id_key_idx").on(table.versionId, table.key),
-    uniqueIndex("tools_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    uniqueIndex("tools_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("tools_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("tools_version_id_idx").on(table.versionId),
     check("tools_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
@@ -547,7 +547,7 @@ export const modelConfigs = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("model_configs_version_id_key_idx").on(t.versionId, t.key),
+    uniqueIndex("model_configs_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
     index("model_configs_version_id_idx").on(t.versionId),
   ]
 );
@@ -612,7 +612,7 @@ export const evalCases = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("eval_cases_version_id_key_idx").on(t.versionId, t.key),
+    uniqueIndex("eval_cases_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
     index("eval_cases_version_id_idx").on(t.versionId),
   ]
 );
@@ -645,7 +645,7 @@ export const evalJudgeConfigs = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("eval_judge_configs_version_id_key_idx").on(t.versionId, t.key),
+    uniqueIndex("eval_judge_configs_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
     index("eval_judge_configs_version_id_idx").on(t.versionId),
   ]
 );
@@ -886,8 +886,8 @@ export const components = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("components_version_id_key_idx").on(table.versionId, table.key),
-    uniqueIndex("components_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
+    uniqueIndex("components_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("components_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("components_version_id_idx").on(table.versionId),
     check("components_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
@@ -1116,7 +1116,7 @@ export const objectTypes = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("object_types_version_id_key_idx").on(t.versionId, t.key),
+    uniqueIndex("object_types_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
     index("object_types_version_id_idx").on(t.versionId),
   ]
 );
@@ -1158,7 +1158,7 @@ export const objectRelations = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("object_relations_version_id_key_idx").on(t.versionId, t.key),
+    uniqueIndex("object_relations_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
     index("object_relations_version_id_idx").on(t.versionId),
   ]
 );
@@ -1341,7 +1341,7 @@ export const skills = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    unique("skills_version_id_key_idx").on(table.versionId, table.key),
+    uniqueIndex("skills_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
     index("skills_version_id_idx").on(table.versionId),
   ]
 );
@@ -1456,8 +1456,8 @@ export const mcpServers = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    unique("mcp_servers_version_id_key_idx").on(t.versionId, t.key),
-    uniqueIndex("mcp_servers_pool_key_idx").on(t.key).where(sql`agent_id IS NULL`),
+    uniqueIndex("mcp_servers_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("mcp_servers_pool_key_idx").on(t.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("mcp_servers_version_id_idx").on(t.versionId),
     check("mcp_servers_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]

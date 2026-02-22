@@ -1,5 +1,6 @@
 import { join } from "path";
 import { readFileSync, readdirSync, statSync } from "fs";
+import { sql } from "drizzle-orm";
 import { wikiDocuments } from "../schema";
 import { logSection, log } from "../seed-utils";
 import type { Seeder } from "./types";
@@ -42,6 +43,7 @@ export const seedWiki: Seeder = {
           .values({ ...e, agentId: ctx.agentId, versionId: ctx.versionId })
           .onConflictDoUpdate({
             target: [wikiDocuments.versionId, wikiDocuments.key],
+            targetWhere: sql`deleted_at IS NULL`,
             set: { name: e.name, content: e.content, order: e.order },
           }),
       ),

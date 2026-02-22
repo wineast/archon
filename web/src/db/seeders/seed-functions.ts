@@ -1,6 +1,6 @@
 import { join } from "path";
 import { readFileSync } from "fs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { functions, schemas, functionTestCases } from "../schema";
 import { readJson, readDirSafe, fileNameToKey, keyToName, logSection, log } from "../seed-utils";
 import type { JsonSchema7, SchemaProperty } from "@/lib/schemas/types";
@@ -45,6 +45,7 @@ export const seedFunctions: Seeder = {
             .values({ agentId, versionId: ctx.versionId, key: schemaKey, name: schemaName, parameters: paramsSchema })
             .onConflictDoUpdate({
               target: [schemas.versionId, schemas.key],
+              targetWhere: sql`deleted_at IS NULL`,
               set: { name: schemaName, parameters: paramsSchema },
             })
             .returning();
@@ -68,6 +69,7 @@ export const seedFunctions: Seeder = {
             .values({ agentId, versionId: ctx.versionId, key: schemaKey, name: schemaName, parameters: returnParamsSchema })
             .onConflictDoUpdate({
               target: [schemas.versionId, schemas.key],
+              targetWhere: sql`deleted_at IS NULL`,
               set: { name: schemaName, parameters: returnParamsSchema },
             })
             .returning();
@@ -105,6 +107,7 @@ export const seedFunctions: Seeder = {
         })
         .onConflictDoUpdate({
           target: [functions.versionId, functions.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: { name, code, parametersSchema: paramsSchema, returnParametersSchema: returnParamsSchema },
         })
         .returning();

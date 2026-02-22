@@ -1,5 +1,5 @@
 import { join } from "path";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { tools, schemas, toolTestCases } from "../schema";
 import { readJson, toKey, logSection, log } from "../seed-utils";
 import type { JsonSchema7, SchemaProperty } from "@/lib/schemas/types";
@@ -83,6 +83,7 @@ export const seedTools: Seeder = {
         .values({ agentId, versionId: ctx.versionId, key: schemaKey, name: schemaName, parameters })
         .onConflictDoUpdate({
           target: [schemas.versionId, schemas.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: { name: schemaName, parameters },
         })
         .returning();
@@ -111,6 +112,7 @@ export const seedTools: Seeder = {
         })
         .onConflictDoUpdate({
           target: [tools.versionId, tools.key],
+          targetWhere: sql`deleted_at IS NULL`,
           set: {
             name: t.name,
             description: t.description,
