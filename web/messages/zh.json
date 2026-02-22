@@ -164,6 +164,7 @@
     "schemas": "Schemas",
     "wiki": "Wiki",
     "datasets": "Datasets",
+    "envVars": "环境变量",
     "functions": "Functions",
     "components": "Components",
     "tools": "Tools",

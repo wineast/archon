@@ -176,46 +176,71 @@ type WithPoolMeta<T> = T & {
 
 ---
 
-## Builtin 工具
+## Builtin 池资源
 
-代码位于 `web/src/lib/pool/seed-builtin-tools.ts`。
+### 架构概览
 
-### `ensureBuiltinPoolTools(db)`
+Builtin 池资源的管理分为三层：
 
-将代码中定义的 build-chat 工具（`buildAllTools()`）同步为池资源：
+| 层 | 位置 | 职责 |
+|---|---|---|
+| **数据定义** | `web/src/db/builtins/` | 静态数据（JSON）+ 代码提取（tools） |
+| **入库 Seeder** | `web/src/db/seeders/seed-builtin-pool.ts` | 从 builtins 加载定义 → upsert 到数据库 |
+| **Ref 创建** | `web/src/lib/pool/builtin-refs.ts` | 为 agent 创建池资源引用 |
 
-- `agentId = NULL`
-- `origin = "builtin"`
-- `parametersSchema`：通过 `z.toJSONSchema()` 从 Zod inputSchema 转换
-- 使用 `onConflictDoUpdate` 保证幂等，冲突时更新 `description` 和 `parametersSchema`
+### 数据定义（`web/src/db/builtins/`）
 
-### `ensureBuiltinToolRefs(db, buildChatAgentId)`
+所有 builtin 资源的静态定义集中在此目录：
 
-为指定的 build-chat agent 创建对所有 builtin 池工具的引用：
+| 文件 | 格式 | 加载函数 |
+|---|---|---|
+| `functions.json` | JSON 数组 | `loadBuiltinFunctionDefs()` |
+| `components.json` | JSON 数组 | `loadBuiltinComponentDefs()` |
+| `wiki.json` | JSON 清单（key→file 映射） | `loadBuiltinWikiManifest()` |
+| `tools.ts` | 代码提取 | `loadBuiltinToolDefs()` |
+| `types.ts` | 共享类型定义 | — |
+| `index.ts` | 统一导出 | — |
 
-1. 先调用 `ensureBuiltinPoolTools()` 确保池工具存在
-2. 查询所有 `agentId IS NULL AND origin = "builtin"` 的工具
-3. 为每个工具创建 `agentResourceRefs` 记录（`onConflictDoNothing`）
+每种资源类型一个 JSON 文件，所有元素必须有 `key` + `name` 字段。
 
-此函数在 `ensureOrgDefaults()` 中调用，保证每个组织的 build-chat agent 自动关联所有内置工具。
+**工具的特殊处理**：工具通过 `loadBuiltinToolDefs()` 从 Vercel AI SDK 的 `tool()` 定义中提取元数据（key、description、parametersSchema），这是代码绑定的，不能变成静态 JSON。
+
+**Wiki 内容加载**：`wiki.json` 只存 `{ key, name, file }` 映射，实际内容在 seeder 阶段从 `guide/{file}` 读取。`GUIDE_DIR` 常量指向 guide 目录的绝对路径。
+
+### Seed Pipeline
+
+```
+seedModels → seedBuiltinPool → seedUsers
+```
+
+`seedBuiltinPool`（`web/src/db/seeders/seed-builtin-pool.ts`）从 `@/db/builtins` 导入 4 个 loader，内部包含 4 个 upsert 函数，依次入库：
+
+1. 工具 — `onConflictDoUpdate` 更新 description + parametersSchema
+2. 函数 — `onConflictDoNothing`，同时插入 `functionTestCases`
+3. 组件 — `onConflictDoNothing`
+4. Wiki — `onConflictDoUpdate` 更新 name + content
+
+### 设计原则
+
+- **池资源 seed** 在 pipeline 中集中完成，早于用户/org 创建
+- **`ensureOrgDefaults()`** 只做 org 级别的事：创建 agent、refs、configs，不负责池资源创建
+- **Ref 函数**（`web/src/lib/pool/builtin-refs.ts`）只查询 + 创建引用，不触碰池资源本身
+
+### Ref 创建
+
+代码位于 `web/src/lib/pool/builtin-refs.ts`，提供两个函数：
+
+#### `ensureBuiltinToolRefs(db, buildChatAgentId, versionId)`
+
+为 builder slot agent 创建对所有 builtin 池工具的引用。在 `ensureOrgDefaults()` 中调用。
+
+#### `ensureBuiltinWikiRefs(db, agentId, versionId)`
+
+为 assist slot agent 创建对所有 builtin 池 wiki 的引用。在 `ensureOrgDefaults()` 中调用。
 
 ---
 
-## Builtin 函数
-
-代码位于 `web/src/lib/pool/seed-builtin-functions.ts`。
-
-### `ensureBuiltinPoolFunctions(db)`
-
-将内置函数（如 `compileExpression`）同步为池资源：
-
-- `agentId = NULL`
-- `origin = "builtin"`
-- `code` 字段存储可执行的 sandbox 代码（非文档注释），使标准测试端点可直接运行
-- 同时插入对应的 `functionTestCases` 记录（`showAsExample: true`）
-- 使用 `onConflictDoNothing` 保证幂等
-
-此函数在 `ensureOrgDefaults()` 中调用（在 slot 循环之前），每次 org 初始化时自动创建 builtin 池函数。
+## Builtin 函数运行时
 
 ### 运行时依赖注入
 
@@ -236,6 +261,30 @@ Agent 必须从共享池添加 builtin 函数引用，运行时才会注入对�
 | Key | 名称 | 说明 |
 |-----|------|------|
 | `compileExpression` | Compile Expression | 将字符串表达式编译为可执行函数（数学公式、条件逻辑等），底层使用 filtrex |
+
+---
+
+## Builtin Wiki 与 AI 辅助编辑
+
+### 概念
+
+`web/guide/` 下的所有使用指南文档作为 builtin wiki 池资源存入数据库，供 assist agent 通过 LiquidJS `{% include 'key' %}` 引用。
+
+清单文件 `web/src/db/builtins/wiki.json` 的格式为 `[{ key, file, name }]`，key 用于 LiquidJS `{% include 'key' %}` 引用。
+
+### AI 辅助编辑集成
+
+assist agent 的系统提示词是一个 LiquidJS 模板，通过 `{% if fieldContext == "xxx" %}{% include 'yyy' %}{% endif %}` 条件引用不同的 guide wiki。`fieldContext` 作为 `extraVars` 在模板渲染时注入，由各 assist 路由传入。
+
+| 路由 | fieldContext | entity |
+|------|-------------|--------|
+| prompt-assist | `system-prompt` | `prompt` |
+| tool-code-assist | `tool-handler` | `code` |
+| jsx-assist | `component-jsx` | `jsx` |
+| function-code-assist | `function-code` | `code` |
+| wiki-assist | `wiki-content` | `content` |
+| dataset-assist | `dataset-data` | `data` |
+| schema-code-assist | `schema` | `schema` |
 
 ---
 

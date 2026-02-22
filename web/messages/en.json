@@ -164,6 +164,7 @@
     "schemas": "Schemas",
     "wiki": "Wiki",
     "datasets": "Datasets",
+    "envVars": "Env Vars",
     "functions": "Functions",
     "components": "Components",
     "tools": "Tools",

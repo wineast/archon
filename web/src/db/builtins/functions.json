@@ -1,0 +1,64 @@
+[
+  {
+    "key": "compileExpression",
+    "name": "Compile Expression",
+    "description": "Compiles a string expression (e.g. math formulas, conditional logic) into an executable function. Powered by the filtrex library.",
+    "code": "export default function(input) {\n  const expr = compileExpression(input.expression);\n  return expr(input.data);\n}",
+    "parametersSchema": {
+      "type": "object",
+      "properties": {
+        "expression": {
+          "type": "string",
+          "description": "The expression string to compile, e.g. \"x + y * 2\", \"if score >= 700 then 1 else 0\""
+        },
+        "data": {
+          "type": "object",
+          "description": "An object whose keys are the variable names used in the expression"
+        }
+      },
+      "required": ["expression", "data"]
+    },
+    "returnParametersSchema": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "object",
+          "description": "The evaluation result. Type depends on the expression: number for arithmetic, boolean for comparisons/logical."
+        }
+      },
+      "required": ["result"]
+    },
+    "testCases": [
+      {
+        "name": "Arithmetic",
+        "input": { "expression": "x + y * 2", "data": { "x": 10, "y": 5 } },
+        "expectedOutput": 20,
+        "showAsExample": true
+      },
+      {
+        "name": "Comparison",
+        "input": { "expression": "score >= 700", "data": { "score": 740 } },
+        "expectedOutput": true,
+        "showAsExample": true
+      },
+      {
+        "name": "Conditional",
+        "input": { "expression": "if ltv > 80 then 1 else 0", "data": { "ltv": 95 } },
+        "expectedOutput": 1,
+        "showAsExample": true
+      },
+      {
+        "name": "Math functions",
+        "input": { "expression": "max(a, b) + floor(c)", "data": { "a": 3, "b": 7, "c": 2.9 } },
+        "expectedOutput": 9,
+        "showAsExample": true
+      },
+      {
+        "name": "Logical AND",
+        "input": { "expression": "x > 0 and y > 0", "data": { "x": 5, "y": 3 } },
+        "expectedOutput": true,
+        "showAsExample": true
+      }
+    ]
+  }
+]

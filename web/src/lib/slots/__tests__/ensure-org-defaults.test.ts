@@ -55,17 +55,10 @@ vi.mock("nanoid", () => ({
 }));
 
 const mockEnsureBuiltinToolRefs = vi.fn();
-vi.mock("@/lib/pool/seed-builtin-tools", () => ({
+const mockEnsureBuiltinWikiRefs = vi.fn();
+vi.mock("@/lib/pool/builtin-refs", () => ({
   ensureBuiltinToolRefs: (...args: unknown[]) => mockEnsureBuiltinToolRefs(...args),
-}));
-
-vi.mock("@/lib/pool/seed-builtin-functions", () => ({
-  ensureBuiltinPoolFunctions: vi.fn(),
-}));
-
-const mockEnsureBuiltinPoolComponents = vi.fn();
-vi.mock("@/lib/pool/seed-builtin-components", () => ({
-  ensureBuiltinPoolComponents: (...args: unknown[]) => mockEnsureBuiltinPoolComponents(...args),
+  ensureBuiltinWikiRefs: (...args: unknown[]) => mockEnsureBuiltinWikiRefs(...args),
 }));
 
 import { ensureOrgDefaults } from "../ensure-org-defaults";
@@ -118,6 +111,17 @@ describe("ensureOrgDefaults", () => {
     );
     expect(embedCall).toBeDefined();
     expect((embedCall![0] as Record<string, unknown>).token).toMatch(/^et_/);
+  });
+
+  it("seeds builtin wiki refs only for assist slot", async () => {
+    await ensureOrgDefaults("org-1");
+
+    expect(mockEnsureBuiltinWikiRefs).toHaveBeenCalledTimes(1);
+    expect(mockEnsureBuiltinWikiRefs).toHaveBeenCalledWith(
+      expect.anything(),
+      "new-agent-id",
+      "new-agent-id",
+    );
   });
 
   it("skips agent creation if agent already exists, but still ensures orgSlot", async () => {
@@ -188,5 +192,33 @@ describe("ensureOrgDefaults", () => {
       }
     );
     expect(evaluatorConfig).toBeDefined();
+  });
+
+  it("sets non-empty systemPrompt with fieldContext for assist slot model config", async () => {
+    await ensureOrgDefaults("org-1");
+
+    const modelConfigValues = mockValues.mock.calls.filter(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return val.key === "default" && val.name === "Default" && "systemPrompt" in val;
+      }
+    );
+
+    const assistConfig = modelConfigValues.find(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return typeof val.systemPrompt === "string" && (val.systemPrompt as string).includes("fieldContext");
+      }
+    );
+    expect(assistConfig).toBeDefined();
+    expect((assistConfig![0] as Record<string, unknown>).systemPrompt).not.toBe("");
+  });
+
+  it("backfills empty assist system prompt for existing agents", async () => {
+    selectLimitResult = [{ id: "existing-agent" }];
+    await ensureOrgDefaults("org-1");
+
+    // Should call update for the assist slot's empty system prompt
+    expect(mockUpdate).toHaveBeenCalled();
   });
 });
