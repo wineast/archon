@@ -4,6 +4,7 @@ import { SLOT_KEYS } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { SLOT_DEFS } from "./constants";
 import { ensureBuiltinToolRefs } from "@/lib/pool/seed-builtin-tools";
+import { ensureBuiltinPoolFunctions } from "@/lib/pool/seed-builtin-functions";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "@/db/schema";
@@ -21,6 +22,9 @@ type DbLike = PostgresJsDatabase<typeof schema>;
  */
 export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promise<void> {
   const db = database ?? appDb;
+
+  // Seed builtin pool functions (once per call, idempotent)
+  await ensureBuiltinPoolFunctions(db);
 
   for (const slotKey of SLOT_KEYS) {
     const def = SLOT_DEFS[slotKey];

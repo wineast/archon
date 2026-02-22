@@ -20,16 +20,18 @@ import type { JsonSchema7 } from "@/lib/schemas/types";
 interface FunctionDetailProps {
   agentId: string;
   fn: FunctionRow;
-  onSave: (
+  readOnly?: boolean;
+  onSave?: (
     id: string,
     data: { name: string; description: string; code: string; parametersSchema: JsonSchema7 | null; returnParametersSchema: JsonSchema7 | null }
   ) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export function FunctionDetail({
   agentId,
   fn,
+  readOnly,
   onSave,
   onDelete,
 }: FunctionDetailProps) {
@@ -41,7 +43,7 @@ export function FunctionDetail({
   const busy = saving || deleting;
 
   const handleSave = useCallback(async () => {
-    if (!draftRef) return;
+    if (!draftRef || !onSave) return;
     const draft = draftRef.getDraft();
     setSaving(true);
     try {
@@ -62,6 +64,7 @@ export function FunctionDetail({
   }, [draftRef]);
 
   const handleDelete = useCallback(async () => {
+    if (!onDelete) return;
     setDeleting(true);
     try {
       await onDelete(fn.id);
@@ -91,57 +94,62 @@ export function FunctionDetail({
               code={fn.code}
               parametersSchema={fn.parametersSchema ?? null}
               returnParametersSchema={fn.returnParametersSchema ?? null}
+              readOnly={readOnly}
               onDraftRef={setDraftRef}
               onDirtyChange={setDirty}
             />
           </div>
         </ScrollArea>
 
-        <div className="flex items-center gap-2 border-t px-4 py-2">
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={busy || !dirty}
-          >
-            {saving ? (
-              <Spinner className="mr-1 size-3" />
-            ) : (
-              <SaveIcon className="mr-1 size-3" />
-            )}
-            {saving ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleReset}
-            disabled={busy || !dirty}
-          >
-            <RotateCcwIcon className="mr-1 size-3" />
-            Reset
-          </Button>
-          <div className="flex-1" />
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setConfirmOpen(true)}
-            disabled={busy}
-          >
-            {deleting ? (
-              <Spinner className="mr-1 size-3" />
-            ) : (
-              <Trash2Icon className="mr-1 size-3" />
-            )}
-            {deleting ? "Deleting..." : "Delete"}
-          </Button>
-        </div>
+        {!readOnly && (
+          <>
+            <div className="flex items-center gap-2 border-t px-4 py-2">
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={busy || !dirty}
+              >
+                {saving ? (
+                  <Spinner className="mr-1 size-3" />
+                ) : (
+                  <SaveIcon className="mr-1 size-3" />
+                )}
+                {saving ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                disabled={busy || !dirty}
+              >
+                <RotateCcwIcon className="mr-1 size-3" />
+                Reset
+              </Button>
+              <div className="flex-1" />
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmOpen(true)}
+                disabled={busy}
+              >
+                {deleting ? (
+                  <Spinner className="mr-1 size-3" />
+                ) : (
+                  <Trash2Icon className="mr-1 size-3" />
+                )}
+                {deleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
 
-        <ConfirmDialog
-          open={confirmOpen}
-          onOpenChange={setConfirmOpen}
-          title="Delete Function"
-          description={`Are you sure you want to delete "${fn.name}"? This action cannot be undone.`}
-          onConfirm={handleDelete}
-        />
+            <ConfirmDialog
+              open={confirmOpen}
+              onOpenChange={setConfirmOpen}
+              title="Delete Function"
+              description={`Are you sure you want to delete "${fn.name}"? This action cannot be undone.`}
+              onConfirm={handleDelete}
+            />
+          </>
+        )}
       </TabsContent>
 
       <TabsContent value="examples" className="flex min-h-0 flex-1 flex-col">

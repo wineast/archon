@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -12,30 +12,11 @@ import {
   deleteFunction,
 } from "@/lib/functions/hooks";
 import { removeAgentRef, useAgentRefs } from "@/lib/pool/ref-hooks";
-import { BUILTIN_FUNCTIONS } from "@/lib/functions/builtin";
-import type { BuiltinFunction } from "@/lib/functions/builtin";
 import { FunctionsSidebar } from "./functions-sidebar";
 import { FunctionDetail } from "./function-detail";
-import { FunctionBuiltinDetail } from "./function-builtin-detail";
 import { FunctionsEmptyState } from "./functions-empty-state";
 import { FunctionCreateDialog } from "./function-create-dialog";
 import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
-
-/** Map builtin key → BuiltinFunction for quick lookup */
-const builtinByKey = new Map<string, BuiltinFunction>(
-  BUILTIN_FUNCTIONS.map((fn) => [fn.key, fn])
-);
-
-function parseActiveId(id: string | null): {
-  type: "builtin" | "dynamic" | null;
-  key: string | null;
-} {
-  if (!id) return { type: null, key: null };
-  if (id.startsWith("builtin:")) {
-    return { type: "builtin", key: id.slice("builtin:".length) };
-  }
-  return { type: "dynamic", key: id };
-}
 
 export function FunctionsPanel({ agentId }: { agentId: string }) {
   const { functions, mutate: mutateList } = useFunctions(agentId);
@@ -45,19 +26,13 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
-  const { type: activeType, key: activeKey } = useMemo(
-    () => parseActiveId(activeFunctionId),
-    [activeFunctionId]
-  );
-
-  // Only fetch dynamic function from API when it's a dynamic type
-  const dynamicFetchId = activeType === "dynamic" ? activeKey : null;
   const { fn: activeFunction, mutate: mutateDetail } =
-    useFunction(dynamicFetchId);
+    useFunction(activeFunctionId);
 
-  // Resolve the selected builtin function
-  const activeBuiltin =
-    activeType === "builtin" && activeKey ? builtinByKey.get(activeKey) ?? null : null;
+  // Resolve pool meta for active function
+  const activeFnMeta = functions.find((f) => f.id === activeFunctionId);
+  const isReadOnly =
+    activeFnMeta?._source === "pool" && activeFnMeta?.origin === "builtin";
 
   useEffect(() => {
     if (activeFunctionId) {
@@ -122,31 +97,26 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
 
   /** Render the right-side detail panel based on active selection */
   function renderDetail() {
-    if (activeBuiltin) {
-      return <FunctionBuiltinDetail key={activeBuiltin.key} fn={activeBuiltin} />;
-    }
     if (activeFunction) {
       return (
         <FunctionDetail
           key={activeFunction.id}
           agentId={agentId}
           fn={activeFunction}
-          onSave={handleSave}
-          onDelete={handleDelete}
+          readOnly={isReadOnly}
+          onSave={isReadOnly ? undefined : handleSave}
+          onDelete={isReadOnly ? undefined : handleDelete}
         />
       );
     }
     return <FunctionsEmptyState onCreate={openCreateDialog} />;
   }
 
-  const hasActiveSelection = activeBuiltin || activeFunction;
-
   return (
     <div className="flex h-full flex-col">
       {/* Desktop layout */}
       <div className="hidden h-full sm:flex">
         <FunctionsSidebar
-          builtinFunctions={BUILTIN_FUNCTIONS}
           functions={functions}
           activeFunctionId={activeFunctionId}
           onSelect={setActiveFunctionId}
@@ -159,9 +129,8 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
 
       {/* Mobile layout */}
       <div className="flex h-full flex-col sm:hidden">
-        {mobileView === "sidebar" || !hasActiveSelection ? (
+        {mobileView === "sidebar" || !activeFunction ? (
           <FunctionsSidebar
-            builtinFunctions={BUILTIN_FUNCTIONS}
             functions={functions}
             activeFunctionId={activeFunctionId}
             onSelect={setActiveFunctionId}

@@ -201,6 +201,44 @@ type WithPoolMeta<T> = T & {
 
 ---
 
+## Builtin 函数
+
+代码位于 `web/src/lib/pool/seed-builtin-functions.ts`。
+
+### `ensureBuiltinPoolFunctions(db)`
+
+将内置函数（如 `compileExpression`）同步为池资源：
+
+- `agentId = NULL`
+- `origin = "builtin"`
+- `code` 字段存储可执行的 sandbox 代码（非文档注释），使标准测试端点可直接运行
+- 同时插入对应的 `functionTestCases` 记录（`showAsExample: true`）
+- 使用 `onConflictDoNothing` 保证幂等
+
+此函数在 `ensureOrgDefaults()` 中调用（在 slot 循环之前），每次 org 初始化时自动创建 builtin 池函数。
+
+### 运行时依赖注入
+
+Builtin 函数不仅是池资源本身，还关联着运行时依赖（如 filtrex 的 `compileExpression`）。Agent 的用户函数通过 `import { compileExpression } from "archon:lib/filtrex"` 使用这些依赖。
+
+依赖注入遵循 **引用即可用** 原则：
+
+1. `tool-context.ts` 中 `getCompiledFunctions()` 调用 `getReferencedBuiltinFunctionKeys(agentId)` 查询 Agent 引用的 builtin 函数
+2. `buildBaseDeps(referencedKeys)` 根据引用的 key 构建过滤后的依赖 map
+3. 沙箱模块加载器只在对应依赖存在时才响应 `archon:lib/*` 请求，否则返回编译错误
+
+这意味着：Agent 必须从共享池添加 builtin 函数引用，其用户函数才能使用对应的 `archon:lib/*` 导入。未引用时 import 会得到编译错误提示。
+
+> 注意：函数的 ref 不使用 `enabled` 字段（该字段为 tool 等资源预留），ref 存在即表示可用。
+
+### 当前 Builtin 函数列表
+
+| Key | 名称 | 依赖 | 说明 |
+|-----|------|------|------|
+| `compileExpression` | Compile Expression | `archon:lib/filtrex` | 将字符串表达式编译为可执行函数（数学公式、条件逻辑等） |
+
+---
+
 ## UI
 
 ### Admin 池管理区

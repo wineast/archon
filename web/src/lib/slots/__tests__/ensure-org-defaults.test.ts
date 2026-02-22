@@ -52,6 +52,10 @@ vi.mock("@/lib/pool/seed-builtin-tools", () => ({
   ensureBuiltinToolRefs: (...args: unknown[]) => mockEnsureBuiltinToolRefs(...args),
 }));
 
+vi.mock("@/lib/pool/seed-builtin-functions", () => ({
+  ensureBuiltinPoolFunctions: vi.fn(),
+}));
+
 import { ensureOrgDefaults } from "../ensure-org-defaults";
 
 describe("ensureOrgDefaults", () => {

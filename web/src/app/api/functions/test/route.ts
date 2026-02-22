@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
+import { ALL_BASE_DEPS } from "@/lib/functions/compile";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const result = await compileAndExecFn(code, validatedInput);
+    const result = await compileAndExecFn(code, validatedInput, ALL_BASE_DEPS);
 
     return NextResponse.json({ success: true, result });
   } catch (e) {

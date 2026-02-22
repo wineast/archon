@@ -19,10 +19,39 @@ import {
 } from "./sandbox";
 import { inferDepsFromImports } from "@/lib/modules/detect";
 
-// Base dependencies available to all functions (npm packages)
-const BASE_DEPS: Record<string, unknown> = {
+/**
+ * All base dependencies available to functions (npm packages).
+ * Used by test endpoints that always want all deps available.
+ */
+export const ALL_BASE_DEPS: Record<string, unknown> = {
   compileExpression,
 };
+
+/**
+ * Mapping: builtin function key → required dep keys from ALL_BASE_DEPS.
+ * Used to build a filtered deps map based on enabled builtin function refs.
+ */
+const BUILTIN_DEP_KEYS: Record<string, string[]> = {
+  compileExpression: ["compileExpression"],
+};
+
+/**
+ * Build a filtered base deps map from enabled builtin function keys.
+ * Only includes deps whose corresponding builtin function is enabled.
+ */
+export function buildBaseDeps(
+  enabledBuiltinKeys: Set<string>,
+): Record<string, unknown> {
+  const deps: Record<string, unknown> = {};
+  for (const [builtinKey, depKeys] of Object.entries(BUILTIN_DEP_KEYS)) {
+    if (enabledBuiltinKeys.has(builtinKey)) {
+      for (const dk of depKeys) {
+        deps[dk] = ALL_BASE_DEPS[dk];
+      }
+    }
+  }
+  return deps;
+}
 
 /**
  * Extract function-level dependencies from ES module import statements.
@@ -101,6 +130,7 @@ function topoSort(records: FunctionRecord[]): FunctionRecord[] {
 export async function resolveAndCompileFunctions(
   rows: FunctionRecord[],
   defsMap?: Record<string, JsonSchema7>,
+  baseDeps?: Record<string, unknown>,
 ): Promise<{ fns: Map<string, unknown>; sandbox: FunctionsSandbox }> {
   const sorted = topoSort(rows);
   const knownKeys = new Set(rows.map((r) => r.key));
@@ -110,7 +140,7 @@ export async function resolveAndCompileFunctions(
     code: row.code,
   }));
 
-  const sandbox = await createFunctionsSandbox(records, BASE_DEPS);
+  const sandbox = await createFunctionsSandbox(records, baseDeps ?? ALL_BASE_DEPS);
 
   // Build map of key → sync wrapper with Zod validation
   const fns = new Map<string, unknown>();

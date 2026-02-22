@@ -21,8 +21,10 @@ import {
   resolveAndCompileFunctions,
   getCachedFunctions,
   setCachedFunctions,
+  buildBaseDeps,
   type FunctionRecord,
 } from "@/lib/functions/compile";
+import { getReferencedBuiltinFunctionKeys } from "@/lib/pool/queries";
 import { extractLabel } from "@/lib/ontology/utils";
 import { proxyToExternal } from "@/lib/ontology/external-proxy";
 import { getDefsMap } from "@/lib/schemas/resolve-inline";
@@ -149,7 +151,9 @@ export function createToolContext(agentId?: string): ToolContext {
     }));
 
     const defsMap = await getDefsMap(agentId);
-    const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords, defsMap);
+    const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId);
+    const baseDeps = buildBaseDeps(enabledBuiltinKeys);
+    const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
     setCachedFunctions(agentId, fns, sandbox);
     return fns;
   }

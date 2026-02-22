@@ -259,9 +259,15 @@ export async function compileAndExecFn(
       if (moduleName.startsWith("archon:lib/")) {
         const libName = moduleName.slice("archon:lib/".length);
         if (libName === "filtrex") {
-          return `export const compileExpression = globalThis.compileExpression;`;
+          if (deps?.compileExpression) {
+            return `export const compileExpression = globalThis.compileExpression;`;
+          }
+          return { error: new Error(`Module "archon:lib/filtrex" is not available. Enable the "compileExpression" builtin function for this agent.`) };
         }
-        return `export default globalThis.${libName};`;
+        if (deps?.[libName]) {
+          return `export default globalThis.${libName};`;
+        }
+        return { error: new Error(`Unknown module: ${moduleName}`) };
       }
       return { error: new Error(`Unknown module: ${moduleName}`) };
     });
@@ -362,9 +368,15 @@ export async function createFunctionsSandbox(
     if (moduleName.startsWith("archon:lib/")) {
       const libName = moduleName.slice("archon:lib/".length);
       if (libName === "filtrex") {
-        return `export const compileExpression = globalThis.compileExpression;`;
+        if (deps?.compileExpression) {
+          return `export const compileExpression = globalThis.compileExpression;`;
+        }
+        return { error: new Error(`Module "archon:lib/filtrex" is not available. Enable the "compileExpression" builtin function for this agent.`) };
       }
-      return `export default globalThis.${libName};`;
+      if (deps?.[libName]) {
+        return `export default globalThis.${libName};`;
+      }
+      return { error: new Error(`Unknown module: ${moduleName}`) };
     }
     return { error: new Error(`Unknown module: ${moduleName}`) };
   });

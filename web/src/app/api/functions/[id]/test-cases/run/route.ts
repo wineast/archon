@@ -4,6 +4,7 @@ import { functions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import deepEqual from "fast-deep-equal";
 import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
+import { ALL_BASE_DEPS } from "@/lib/functions/compile";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
 import { getDefsMap, resolveInlineSchema } from "@/lib/schemas/resolve-inline";
@@ -59,7 +60,7 @@ export async function POST(
   // Compile + execute in sandbox
   let result: unknown;
   try {
-    result = await compileAndExecFn(fn.code, validatedInput);
+    result = await compileAndExecFn(fn.code, validatedInput, ALL_BASE_DEPS);
   } catch (e) {
     if (e instanceof SandboxCompilationError) {
       return NextResponse.json({

@@ -11,47 +11,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { FunctionRow } from "@/db/schema";
 import type { WithPoolMeta } from "@/lib/pool/queries";
-import type { BuiltinFunction } from "@/lib/functions/builtin";
 
 interface FunctionsSidebarProps {
-  builtinFunctions: BuiltinFunction[];
   functions: WithPoolMeta<FunctionRow>[];
   activeFunctionId: string | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
   onAddFromPool?: () => void;
   onRemoveRef?: (refId: string) => void;
-}
-
-function BuiltinListItem({
-  fn,
-  isActive,
-  onSelect,
-}: {
-  fn: BuiltinFunction;
-  isActive: boolean;
-  onSelect: (id: string) => void;
-}) {
-  const tc = useTranslations("common");
-  const id = `builtin:${fn.key}`;
-  const handleSelect = useCallback(() => {
-    onSelect(id);
-  }, [id, onSelect]);
-
-  return (
-    <button
-      className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent text-left",
-        isActive && "bg-muted font-medium"
-      )}
-      onClick={handleSelect}
-    >
-      <span className="min-w-0 flex-1 truncate">{fn.name}</span>
-      <Badge variant="outline" className="shrink-0 text-[10px]">
-        {tc("builtIn")}
-      </Badge>
-    </button>
-  );
 }
 
 function FunctionListItem({
@@ -84,7 +51,6 @@ function FunctionListItem({
 }
 
 export function FunctionsSidebar({
-  builtinFunctions,
   functions,
   activeFunctionId,
   onSelect,
@@ -94,6 +60,7 @@ export function FunctionsSidebar({
 }: FunctionsSidebarProps) {
   const t = useTranslations("build");
   const ta = useTranslations("admin");
+  const tc = useTranslations("common");
 
   const privateFunctions = functions.filter((f) => f._source === "private");
   const poolFunctions = functions.filter((f) => f._source === "pool");
@@ -116,15 +83,7 @@ export function FunctionsSidebar({
       </div>
       <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="p-1">
-          {builtinFunctions.map((fn) => (
-            <BuiltinListItem
-              key={fn.key}
-              fn={fn}
-              isActive={activeFunctionId === `builtin:${fn.key}`}
-              onSelect={onSelect}
-            />
-          ))}
-          {privateFunctions.length === 0 && builtinFunctions.length === 0 ? (
+          {privateFunctions.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               {t("noFunctions")}
             </p>
@@ -158,6 +117,11 @@ export function FunctionsSidebar({
                   >
                     <GlobeIcon className="size-3 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1 truncate text-left">{fn.name}</span>
+                    {fn.origin === "builtin" && (
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
+                        {tc("builtIn")}
+                      </Badge>
+                    )}
                   </button>
                   {fn._refId && onRemoveRef && (
                     <Button
