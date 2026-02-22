@@ -73,7 +73,7 @@ export const orgs = pgTable("orgs", {
   slug: text("slug").notNull(),
   isPersonal: boolean("is_personal").notNull().default(false),
   avatarUrl: text("avatar_url"),
-  creditBalanceUSD: real("credit_balance_usd").notNull().default(0),
+  creditBalanceUSD: numeric("credit_balance_usd", { mode: "number" }).notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -1723,11 +1723,11 @@ export const orgCreditTransactions = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
-    amount: real("amount").notNull(),
+    amount: numeric("amount", { mode: "number" }).notNull(),
     type: text("type").notNull().$type<OrgCreditTransactionType>(),
     description: text("description"),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
-    balanceAfter: real("balance_after").notNull(),
+    balanceAfter: numeric("balance_after", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
