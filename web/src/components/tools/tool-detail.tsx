@@ -9,13 +9,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToolForm, type ToolFormHandle } from "./tool-form";
+import { ToolPoolView } from "./tool-pool-view";
 import { ToolExamplesPanel } from "./tool-examples-panel";
 import { ToolPlayground } from "./tool-playground";
 import { ToolTestCasesPanel } from "./tool-test-cases-panel";
 import type { ToolRow } from "@/db/schema";
 import type { ToolDefinition } from "@/lib/tools/types";
 import type { PoolMeta } from "@/components/pool/types";
-import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
 import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface ToolDetailProps {
@@ -75,7 +75,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle, poolMeta
   return (
     <Tabs defaultValue="edit" className="flex h-full flex-col">
       <TabsList variant="line" className="shrink-0 px-4 pt-1">
-        <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="edit">{isPoolRef ? "Info" : "Edit"}</TabsTrigger>
         <TabsTrigger value="examples">Examples</TabsTrigger>
         <TabsTrigger value="playground">Playground</TabsTrigger>
         <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
@@ -83,36 +83,37 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle, poolMeta
 
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
         {/* Form body */}
-        <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
-          <div className="p-4 min-w-0 overflow-hidden">
-            {isPoolRef && (
-              <div className="mb-3">
-                <PoolRefBadge origin={poolMeta.origin} />
-              </div>
-            )}
-            <ToolForm
-              tool={{
-                id: tool.id,
-                key: tool.key,
-                name: tool.name,
-                description: tool.description,
-                parametersSchema: tool.parametersSchema ?? null,
-                returnParametersSchema: tool.returnParametersSchema ?? null,
-                handler: tool.handler ?? null,
-                url: tool.url ?? null,
-                componentId: tool.componentId ?? null,
-                enabled: tool.enabled,
-                executionTarget: tool.executionTarget ?? "server",
-                sandboxMode: tool.sandboxMode ?? "light",
-              }}
-              agentId={agentId}
-              onDraftRef={handleDraftRef}
-              onDirtyChange={setDirty}
-              readOnly={isPoolRef}
-              hideBuiltinSections={isPoolRef && poolMeta.origin === "builtin"}
-            />
-          </div>
-        </ScrollArea>
+        {isPoolRef ? (
+          <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
+            <div className="p-4 min-w-0 overflow-hidden">
+              <ToolPoolView tool={tool} poolMeta={poolMeta!} />
+            </div>
+          </ScrollArea>
+        ) : (
+          <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
+            <div className="p-4 min-w-0 overflow-hidden">
+              <ToolForm
+                tool={{
+                  id: tool.id,
+                  key: tool.key,
+                  name: tool.name,
+                  description: tool.description,
+                  parametersSchema: tool.parametersSchema ?? null,
+                  returnParametersSchema: tool.returnParametersSchema ?? null,
+                  handler: tool.handler ?? null,
+                  url: tool.url ?? null,
+                  componentId: tool.componentId ?? null,
+                  enabled: tool.enabled,
+                  executionTarget: tool.executionTarget ?? "server",
+                  sandboxMode: tool.sandboxMode ?? "light",
+                }}
+                agentId={agentId}
+                onDraftRef={handleDraftRef}
+                onDirtyChange={setDirty}
+              />
+            </div>
+          </ScrollArea>
+        )}
 
         {/* Bottom bar */}
         {isPoolRef && agentId ? (

@@ -9,13 +9,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SchemaForm, type SchemaFormHandle, type SchemaFormValues } from "./schema-form";
+import { SchemaPoolView } from "./schema-pool-view";
 import { SchemaPlayground } from "./schema-playground";
 import { SchemaExamplesPanel } from "./schema-examples-panel";
 import { SchemaTestCasesPanel } from "./schema-test-cases-panel";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
 import type { SchemaRow } from "@/db/schema";
 import type { PoolMeta } from "@/components/pool/types";
-import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
 import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface SchemaDetailProps {
@@ -123,7 +123,7 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete, po
   return (
     <Tabs defaultValue="edit" className="flex h-full flex-col">
       <TabsList variant="line" className="shrink-0 px-4 pt-1">
-        <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="edit">{isPoolRef ? "Info" : "Edit"}</TabsTrigger>
         <TabsTrigger value="examples">Examples</TabsTrigger>
         <TabsTrigger value="playground">Playground</TabsTrigger>
         <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
@@ -132,55 +132,55 @@ export function SchemaDetail({ schema, allSchemas, agentId, onSave, onDelete, po
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
         <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 min-w-0">
-            {isPoolRef && (
-              <div className="mb-3">
-                <PoolRefBadge origin={poolMeta.origin} />
-              </div>
-            )}
-            <SchemaForm
-              schema={{
-                key: schema.key,
-                name: schema.name,
-                description: schema.description,
-                parameters: schema.parameters,
-              }}
-              onDraftRef={handleDraftRef}
-              onDirtyChange={setDirty}
-              parametersHidden={innerTab === "preview"}
-              context={schemaAssistContext}
-              templateVariableNames={templateVariableNames}
-              templateVariableMap={datasetVars}
-              agentId={agentId}
-              readOnly={isPoolRef}
-            >
-              <Tabs
-                value={innerTab}
-                onValueChange={handleInnerTabChange}
-              >
-                <TabsList className="h-7">
-                  <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
-                  <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </SchemaForm>
+            {isPoolRef ? (
+              <SchemaPoolView schema={schema} poolMeta={poolMeta!} />
+            ) : (
+              <>
+                <SchemaForm
+                  schema={{
+                    key: schema.key,
+                    name: schema.name,
+                    description: schema.description,
+                    parameters: schema.parameters,
+                  }}
+                  onDraftRef={handleDraftRef}
+                  onDirtyChange={setDirty}
+                  parametersHidden={innerTab === "preview"}
+                  context={schemaAssistContext}
+                  templateVariableNames={templateVariableNames}
+                  templateVariableMap={datasetVars}
+                  agentId={agentId}
+                >
+                  <Tabs
+                    value={innerTab}
+                    onValueChange={handleInnerTabChange}
+                  >
+                    <TabsList className="h-7">
+                      <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
+                      <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </SchemaForm>
 
-            {innerTab === "preview" && (
-              previewLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Spinner />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {previewJsonError && (
-                    <p className="text-xs text-destructive">{previewJsonError}</p>
-                  )}
-                  <JsonEditor
-                    value={previewContent}
-                    height="400px"
-                    readOnly
-                  />
-                </div>
-              )
+                {innerTab === "preview" && (
+                  previewLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Spinner />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {previewJsonError && (
+                        <p className="text-xs text-destructive">{previewJsonError}</p>
+                      )}
+                      <JsonEditor
+                        value={previewContent}
+                        height="400px"
+                        readOnly
+                      />
+                    </div>
+                  )
+                )}
+              </>
             )}
           </div>
         </ScrollArea>

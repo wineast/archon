@@ -13,11 +13,11 @@ import {
 } from "./function-form";
 import { FunctionExamplesPanel } from "./function-examples-panel";
 import { FunctionPlayground } from "./function-playground";
+import { FunctionPoolView } from "./function-pool-view";
 import { FunctionTestCasesPanel } from "./function-test-cases-panel";
 import type { FunctionRow } from "@/db/schema";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { PoolMeta } from "@/components/pool/types";
-import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
 import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface FunctionDetailProps {
@@ -79,7 +79,7 @@ export function FunctionDetail({
   return (
     <Tabs defaultValue="edit" className="flex h-full flex-col">
       <TabsList variant="line" className="shrink-0 px-4 pt-1">
-        <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="edit">{isPoolRef ? "Info" : "Edit"}</TabsTrigger>
         <TabsTrigger value="examples">Examples</TabsTrigger>
         <TabsTrigger value="playground">Playground</TabsTrigger>
         <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
@@ -88,23 +88,22 @@ export function FunctionDetail({
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
         <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 space-y-3">
-            {isPoolRef && (
-              <PoolRefBadge origin={poolMeta.origin} />
+            {isPoolRef ? (
+              <FunctionPoolView fn={fn} poolMeta={poolMeta} />
+            ) : (
+              <FunctionForm
+                key={fn.id}
+                agentId={agentId}
+                functionKey={fn.key}
+                name={fn.name}
+                description={fn.description}
+                code={fn.code}
+                parametersSchema={fn.parametersSchema ?? null}
+                returnParametersSchema={fn.returnParametersSchema ?? null}
+                onDraftRef={setDraftRef}
+                onDirtyChange={setDirty}
+              />
             )}
-            <FunctionForm
-              key={fn.id}
-              agentId={agentId}
-              functionKey={fn.key}
-              name={fn.name}
-              description={fn.description}
-              code={fn.code}
-              parametersSchema={fn.parametersSchema ?? null}
-              returnParametersSchema={fn.returnParametersSchema ?? null}
-              onDraftRef={setDraftRef}
-              onDirtyChange={setDirty}
-              readOnly={isPoolRef}
-              hideBuiltinSections={isPoolRef && poolMeta.origin === "builtin"}
-            />
           </div>
         </ScrollArea>
 

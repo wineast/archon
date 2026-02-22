@@ -21,6 +21,7 @@ function toWikiDocument(row: WikiDocumentRow & { _source?: string; _refId?: stri
     order: row.order,
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),
+    origin: row.origin,
   };
   if ("_source" in row && row._source) {
     return { ...base, _source: row._source, _refId: row._refId, _refEnabled: row._refEnabled };

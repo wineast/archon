@@ -47,7 +47,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
   const isPoolRef = !!poolMeta;
   const [name, setName] = useState(doc.name);
   const [content, setContent] = useState(doc.content);
-  const [activeTab, setActiveTab] = useState<"preview" | "edit">("edit");
+  const [activeTab, setActiveTab] = useState<"preview" | "edit">(isPoolRef ? "preview" : "edit");
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -87,7 +87,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
     setName(doc.name);
     setContent(doc.content);
     snapshotRef.current = { name: doc.name, content: doc.content };
-    setActiveTab("edit");
+    setActiveTab(isPoolRef ? "preview" : "edit");
   }, [doc.id, doc.name, doc.content]);
 
   const dirty = name !== snapshotRef.current.name || content !== snapshotRef.current.content;
@@ -135,13 +135,17 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
           <KeyField value={doc.key} />
           <div>
             <label className="text-xs font-medium text-muted-foreground">Name</label>
-            <Input
-              className="mt-1 h-8 text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Document name"
-              disabled={readOnly}
-            />
+            {isPoolRef ? (
+              <p className="mt-0.5 text-sm">{name || "—"}</p>
+            ) : (
+              <Input
+                className="mt-1 h-8 text-sm"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Document name"
+                disabled={readOnly}
+              />
+            )}
           </div>
         </div>
 
@@ -149,10 +153,12 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
         <div className="flex items-center gap-2 shrink-0 mx-6">
           <label className="text-xs font-medium text-muted-foreground">Content</label>
           <GuideDialog title="Wiki 模板语法" content={wikiContentGuide} />
-          <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-xs" onClick={() => setAssistOpen(true)}>
-            <SparklesIcon className="size-3" />
-            AI 编辑
-          </Button>
+          {!isPoolRef && (
+            <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-xs" onClick={() => setAssistOpen(true)}>
+              <SparklesIcon className="size-3" />
+              AI 编辑
+            </Button>
+          )}
         </div>
         <Tabs
           value={activeTab}
@@ -176,7 +182,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
               ontologyTypes={completionOntologyTypes}
               placeholder="Write your content in Markdown..."
               className="h-full"
-              readOnly={readOnly}
+              readOnly={readOnly || isPoolRef}
             />
           </TabsContent>
           <TabsContent value="preview" className="flex-1 min-h-0 overflow-auto px-6 py-4">

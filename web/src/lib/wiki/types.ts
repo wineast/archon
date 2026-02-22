@@ -1,3 +1,5 @@
+import type { ResourceOrigin } from "@/db/schema";
+
 export interface WikiDocument {
   id: string;
   parentId: string | null;
@@ -7,4 +9,5 @@ export interface WikiDocument {
   order: number;
   createdAt: number;
   updatedAt: number;
+  origin?: ResourceOrigin;
 }

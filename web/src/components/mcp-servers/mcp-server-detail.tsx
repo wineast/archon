@@ -10,11 +10,11 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { McpServerForm, type McpServerFormHandle } from "./mcp-server-form";
+import { McpServerPoolView } from "./mcp-server-pool-view";
 import { testMcpServer, type McpToolDef } from "@/lib/mcp-servers/hooks";
 import { McpToolPlayground } from "./mcp-tool-playground";
 import type { McpServerRow } from "@/db/schema";
 import type { PoolMeta } from "@/components/pool/types";
-import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
 import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface McpServerDetailProps {
@@ -117,30 +117,42 @@ export function McpServerDetail({
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex h-full flex-col">
       <TabsList variant="line" className="shrink-0 px-4 pt-1">
-        <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="edit">{isPoolRef ? "Info" : "Edit"}</TabsTrigger>
         <TabsTrigger value="playground">Playground</TabsTrigger>
       </TabsList>
 
       <TabsContent value="edit" className="flex min-h-0 flex-1 flex-col">
-        <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
-          <div className="p-4 space-y-4">
-            {isPoolRef && (
-              <PoolRefBadge origin={poolMeta.origin} />
-            )}
-            <McpServerForm
-              key={mcpServer.id}
-              serverKey={mcpServer.key}
-              name={mcpServer.name}
-              description={mcpServer.description}
-              url={mcpServer.url}
-              transportType={mcpServer.transportType}
-              headers={mcpServer.headers}
-              onDraftRef={setDraftRef}
-              onDirtyChange={setDirty}
-              readOnly={isPoolRef}
-            />
-          </div>
-        </ScrollArea>
+        {isPoolRef ? (
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
+            <div className="p-4 space-y-4">
+              <McpServerPoolView
+                mcpServer={mcpServer}
+                poolMeta={poolMeta!}
+                onTestSuccess={(tools, config) => {
+                  setPlaygroundTools(tools);
+                  setPlaygroundConfig(config);
+                  setActiveTab("playground");
+                }}
+              />
+            </div>
+          </ScrollArea>
+        ) : (
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
+            <div className="p-4 space-y-4">
+              <McpServerForm
+                key={mcpServer.id}
+                serverKey={mcpServer.key}
+                name={mcpServer.name}
+                description={mcpServer.description}
+                url={mcpServer.url}
+                transportType={mcpServer.transportType}
+                headers={mcpServer.headers}
+                onDraftRef={setDraftRef}
+                onDirtyChange={setDirty}
+              />
+            </div>
+          </ScrollArea>
+        )}
 
         {isPoolRef && agentId ? (
           <PoolRefBottomBar

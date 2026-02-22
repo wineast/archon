@@ -10,9 +10,9 @@ import {
   DatasetForm,
   type DatasetFormHandle,
 } from "./dataset-form";
+import { DatasetPoolView } from "./dataset-pool-view";
 import type { DatasetRow } from "@/db/schema";
 import type { PoolMeta } from "@/components/pool/types";
-import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
 import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface DatasetDetailProps {
@@ -74,22 +74,20 @@ export function DatasetDetail({
     <div className="flex h-full flex-col">
       <ScrollArea className="flex-1 min-h-0 overflow-hidden [&_[data-slot=scroll-area-viewport]>div]:!block">
         <div className="p-4">
-          {isPoolRef && (
-            <div className="mb-3">
-              <PoolRefBadge origin={poolMeta.origin} />
-            </div>
+          {isPoolRef ? (
+            <DatasetPoolView dataset={dataset} poolMeta={poolMeta!} />
+          ) : (
+            <DatasetForm
+              key={dataset.id}
+              datasetKey={dataset.key}
+              name={dataset.name}
+              description={dataset.description}
+              data={dataset.data}
+              agentId={dataset.agentId}
+              onDraftRef={setDraftRef}
+              onDirtyChange={setDirty}
+            />
           )}
-          <DatasetForm
-            key={dataset.id}
-            datasetKey={dataset.key}
-            name={dataset.name}
-            description={dataset.description}
-            data={dataset.data}
-            agentId={dataset.agentId}
-            onDraftRef={setDraftRef}
-            onDirtyChange={setDirty}
-            readOnly={isPoolRef}
-          />
         </div>
       </ScrollArea>
 

@@ -254,20 +254,30 @@ Agent Build 页面中，每种资源 Tab 提供"从共享池添加"入口：
 3. 点击"添加"创建 `agentResourceRef`
 4. 添加后的池资源出现在该 agent 的资源列表中，带有 `_source: "pool"` 标识
 
-### 池引用详情视图（只读模式）
+### 池引用详情视图（纯展示模式）
 
-Agent Build 页面中，点击池引用资源（`_source === "pool"`）时，详情视图切换为**只读模式**：
+Agent Build 页面中，点击池引用资源（`_source === "pool"`）时，详情视图渲染**专用纯展示组件**，从信息展示角度而非编辑角度呈现资源内容：
+
+#### 设计原则
+
+- 文本字段（name, description）→ 纯文本 `<p>`，不用 disabled `<Input>`
+- 代码字段（handler, code, JSX）→ `JsEditor readOnly`（Monaco 本身是好的展示方式）
+- JSON 字段（data, parameters）→ `JsonEditor readOnly`
+- Schema 字段 → `InlineSchemaEditor readOnly`（已有良好的只读展示路径）
+- 选择器（executionTarget, transportType）→ `Badge` 展示
+- 动态列表（headers）→ 纯文本 key-value 列表
+- Builtin 资源 → 隐藏不适用区域（handler/code/JSX），显示提示文字
+- 有 Tabs 的资源 → 池引用时 "Edit" tab 改名 "Info"
+- Wiki → 池引用时默认展示 Markdown 渲染预览
 
 #### 规则
 
-1. **表单只读**：所有字段 `disabled`/`readOnly`，不可编辑
+1. **纯展示组件**：Detail 组件在 `isPoolRef` 时渲染对应的 `*PoolView` 组件，完全替代编辑表单
 2. **隐藏 Save/Delete**：底部操作栏替换为 `PoolRefBottomBar`
 3. **来源 Badge**：顶部显示 `PoolRefBadge`（`系统内置` / `共享池`）
-4. **Builtin 额外隐藏**：`origin === "builtin"` 的资源隐藏不适用的编辑区域：
-   - Tool：隐藏 Handler 编辑器 + 执行环境选择器
-   - Function：隐藏 Code 编辑器
-   - Component：隐藏 JSX/CSS 编辑器
-5. **引用层控制**：
+4. **Builtin 额外隐藏**：`origin === "builtin"` 的资源隐藏不适用的展示区域（显示平台管理提示文字）
+5. **Tab 名称**：有 Tabs 的资源将 "Edit" tab 改为 "Info"
+6. **引用层控制**：
    - "移除引用"按钮（带确认弹窗）
    - Enabled 开关仅 `resourceType === "tool"` 时显示
 
@@ -275,17 +285,48 @@ Agent Build 页面中，点击池引用资源（`_source === "pool"`）时，详
 
 | 组件 | 路径 | 用途 |
 |---|---|---|
+| `ToolPoolView` | `web/src/components/tools/tool-pool-view.tsx` | 工具纯展示 |
+| `McpServerPoolView` | `web/src/components/mcp-servers/mcp-server-pool-view.tsx` | MCP Server 纯展示（含 Test Connection） |
+| `FunctionPoolView` | `web/src/components/functions/function-pool-view.tsx` | 函数纯展示 |
+| `ComponentPoolView` | `web/src/components/components/component-pool-view.tsx` | 组件纯展示 |
+| `DatasetPoolView` | `web/src/components/datasets/dataset-pool-view.tsx` | 数据集纯展示 |
+| `SchemaPoolView` | `web/src/components/schemas/schema-pool-view.tsx` | Schema 纯展示 |
 | `PoolRefBadge` | `web/src/components/pool/pool-ref-badge.tsx` | 显示来源标签 |
 | `PoolRefBottomBar` | `web/src/components/pool/pool-ref-bottom-bar.tsx` | 替代底部操作栏 |
 | `PoolMeta` | `web/src/components/pool/types.ts` | 池引用元数据类型 |
 | `toPoolMeta()` | `web/src/components/pool/types.ts` | 从 `WithPoolMeta` 提取 `PoolMeta` |
 
+Wiki 不新建 PoolView 组件，而是就地修改 `WikiEditor`：`isPoolRef` 时 Name 用纯文本、默认 Preview tab、隐藏 AI 编辑按钮、MdEditor 强制 readOnly。
+
+#### 展示字段通用样式
+
+```tsx
+// 文本字段
+<div>
+  <p className="text-xs font-medium text-muted-foreground">Label</p>
+  <p className="mt-0.5 text-sm">{value || "—"}</p>
+</div>
+
+// Badge 字段
+<div>
+  <p className="text-xs font-medium text-muted-foreground">Label</p>
+  <Badge variant="outline" className="mt-1">{displayValue}</Badge>
+</div>
+
+// 代码字段
+<div>
+  <p className="text-xs font-medium text-muted-foreground">Label</p>
+  <div className="mt-1">
+    <JsEditor value={code} onChange={() => {}} readOnly height="300px" />
+  </div>
+</div>
+```
+
 #### 数据流
 
 1. Panel 组件中列表数据为 `WithPoolMeta<T>[]`，包含 `_source`/`_refId`/`_refEnabled`
 2. Panel 调用 `toPoolMeta(activeItem)` 提取 `PoolMeta`（私有资源返回 `undefined`）
-3. Detail 组件接收 `poolMeta?: PoolMeta`，存在时启用只读模式
-4. Form 组件接收 `readOnly` + `hideBuiltinSections` props
+3. Detail 组件接收 `poolMeta?: PoolMeta`，存在时渲染对应的 `*PoolView` 纯展示组件
 
 ---
 

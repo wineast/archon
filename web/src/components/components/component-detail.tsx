@@ -10,12 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ComponentExamplesPanel } from "./component-examples-panel";
 import { ComponentForm, type ComponentFormHandle } from "./component-form";
 import { ComponentPlayground } from "./component-playground";
+import { ComponentPoolView } from "./component-pool-view";
 import { ComponentTestCasesPanel } from "./component-test-cases-panel";
 import type { ComponentRow } from "@/db/schema";
 import type { ComponentDefinition } from "@/lib/components/types";
 import type { ComponentRecord } from "@/tool-ui";
 import type { PoolMeta } from "@/components/pool/types";
-import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
 import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 
 interface ComponentDetailProps {
@@ -62,7 +62,7 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
   return (
     <Tabs defaultValue="edit" className="flex h-full flex-col">
       <TabsList variant="line" className="shrink-0 px-4 pt-1">
-        <TabsTrigger value="edit">Edit</TabsTrigger>
+        <TabsTrigger value="edit">{isPoolRef ? "Info" : "Edit"}</TabsTrigger>
         <TabsTrigger value="examples">Examples</TabsTrigger>
         <TabsTrigger value="playground">Playground</TabsTrigger>
         <TabsTrigger value="test-cases">Test Cases</TabsTrigger>
@@ -72,37 +72,36 @@ export function ComponentDetail({ component, agentId, allComponents, onSave, onD
         {/* Form body */}
         <ScrollArea className="flex-1 min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="p-4 min-w-0 overflow-hidden">
-            {isPoolRef && (
-              <div className="mb-3">
-                <PoolRefBadge origin={poolMeta.origin} />
-              </div>
-            )}
-            <ComponentForm
-              component={{
-                id: component.id,
-                key: component.key,
-                name: component.name,
-                description: component.description,
-                toolInputSchema: component.toolInputSchema ?? null,
-                componentInputSchema: component.componentInputSchema ?? null,
-                componentSource: component.componentSource,
-              }}
-              agentId={agentId}
-              allComponents={allComponents}
-              onDraftRef={handleDraftRef}
-              onDirtyChange={setDirty}
-              readOnly={isPoolRef}
-              hideBuiltinSections={isPoolRef && poolMeta.origin === "builtin"}
-            />
-            {component.generatedCss && (
-              <div className="mt-4">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Generated CSS
-                </label>
-                <pre className="mt-1 bg-muted rounded p-3 text-xs font-mono overflow-auto max-h-[200px]">
-                  {component.generatedCss}
-                </pre>
-              </div>
+            {isPoolRef ? (
+              <ComponentPoolView component={component} allComponents={allComponents} poolMeta={poolMeta} />
+            ) : (
+              <>
+                <ComponentForm
+                  component={{
+                    id: component.id,
+                    key: component.key,
+                    name: component.name,
+                    description: component.description,
+                    toolInputSchema: component.toolInputSchema ?? null,
+                    componentInputSchema: component.componentInputSchema ?? null,
+                    componentSource: component.componentSource,
+                  }}
+                  agentId={agentId}
+                  allComponents={allComponents}
+                  onDraftRef={handleDraftRef}
+                  onDirtyChange={setDirty}
+                />
+                {component.generatedCss && (
+                  <div className="mt-4">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Generated CSS
+                    </label>
+                    <pre className="mt-1 bg-muted rounded p-3 text-xs font-mono overflow-auto max-h-[200px]">
+                      {component.generatedCss}
+                    </pre>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </ScrollArea>
