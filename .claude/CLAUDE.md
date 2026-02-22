@@ -94,6 +94,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 代码预览统一使用 Monaco 只读编辑器（`readOnly`）：JS/TS 用 `JsEditor`，JSON 用 `JsonEditor`，不用 `CodeBlockContent`（shiki）或 `<pre>` 标签。固定高度（如 `height="400px"`）启用内部滚动，不要 `height="auto"` 导致无限撑高
 - 工具栏中 Copy/Export 等辅助按钮用 `size="icon" variant="ghost"` 只显示图标，不加文字，保持紧凑
 - 编辑区 label 行辅助按钮顺序：`Label` → `GuideDialog(?)` → `AI 编辑`——信息参考紧跟 label，操作按钮放最后
+- 模块开关（如 Skills、MCP Servers 等可整体启用/禁用的功能模块）：侧边栏 header 使用 `<Switch className="scale-75" />` 组件，不用 `PowerIcon` 按钮。Switch 放在 header 右侧、新增按钮左侧
 
 ### Storybook
 - Story 的 `name` 字段统一使用中文，如 `name: "基础示例"`、`name: "交互演示"`

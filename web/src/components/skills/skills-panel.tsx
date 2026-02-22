@@ -121,9 +121,16 @@ export function SkillsPanel({ agentId, skillsEnabled, onToggleFeature }: SkillsP
         <SkillsSidebar
           skills={skills}
           activeSkillId={activeSkillId}
+          skillsEnabled={skillsEnabled}
           onSelect={setActiveSkillId}
           onCreate={openCreateDialog}
-          onDisableFeature={() => setConfirmDisableOpen(true)}
+          onToggleFeature={(enabled) => {
+            if (!enabled) {
+              setConfirmDisableOpen(true);
+            } else {
+              handleEnable();
+            }
+          }}
         />
         <div className="flex-1 overflow-hidden">
           {activeSkill ? (
@@ -147,9 +154,16 @@ export function SkillsPanel({ agentId, skillsEnabled, onToggleFeature }: SkillsP
           <SkillsSidebar
             skills={skills}
             activeSkillId={activeSkillId}
+            skillsEnabled={skillsEnabled}
             onSelect={setActiveSkillId}
             onCreate={openCreateDialog}
-            onDisableFeature={() => setConfirmDisableOpen(true)}
+            onToggleFeature={(enabled) => {
+              if (!enabled) {
+                setConfirmDisableOpen(true);
+              } else {
+                handleEnable();
+              }
+            }}
           />
         ) : (
           <>

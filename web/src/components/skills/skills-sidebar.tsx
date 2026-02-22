@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { PlusIcon, PowerIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import skillsGuide from "../../../guide/skills.md";
@@ -12,17 +13,19 @@ import { cn } from "@/lib/utils";
 interface SkillsSidebarProps {
   skills: SkillRow[];
   activeSkillId: string | null;
+  skillsEnabled: boolean;
   onSelect: (id: string) => void;
   onCreate: () => void;
-  onDisableFeature?: () => void;
+  onToggleFeature: (enabled: boolean) => void;
 }
 
 export function SkillsSidebar({
   skills,
   activeSkillId,
+  skillsEnabled,
   onSelect,
   onCreate,
-  onDisableFeature,
+  onToggleFeature,
 }: SkillsSidebarProps) {
   const t = useTranslations("build");
   return (
@@ -33,16 +36,11 @@ export function SkillsSidebar({
           <GuideDialog title="技能模块" content={skillsGuide} />
         </div>
         <div className="flex items-center gap-0.5">
-          {onDisableFeature && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={onDisableFeature}
-              title={t("disableSkills")}
-            >
-              <PowerIcon className="size-4" />
-            </Button>
-          )}
+          <Switch
+            checked={skillsEnabled}
+            onCheckedChange={onToggleFeature}
+            className="scale-75"
+          />
           <Button
             variant="ghost"
             size="icon-xs"
