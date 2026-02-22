@@ -167,6 +167,7 @@ export function DatasetAssistDialog({
   draftRef.current = draftData;
 
   const hasDiff = draftData !== originalData;
+  const sessionIdRef = useRef<string | null>(null);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -174,6 +175,7 @@ export function DatasetAssistDialog({
         setDraftData(data);
         setOriginalData(data);
         draftRef.current = data;
+        sessionIdRef.current = null;
       }
       onOpenChange(nextOpen);
     },
@@ -184,12 +186,16 @@ export function DatasetAssistDialog({
     () =>
       new DefaultChatTransport({
         api: "/api/dataset-assist",
-        body: () => ({
-          currentData: draftRef.current,
-          datasetName,
-          datasetDescription,
-          agentId,
-        }),
+        body: () => {
+          if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+          return {
+            currentData: draftRef.current,
+            datasetName,
+            datasetDescription,
+            agentId,
+            sessionId: sessionIdRef.current,
+          };
+        },
       }),
     [datasetName, datasetDescription, agentId]
   );

@@ -7,17 +7,19 @@ export const maxDuration = 30;
 export const POST = createAssistHandler({
   source: "dataset-assist",
   buildParams: (body) => {
-    const { messages, currentData, datasetName, datasetDescription, agentId } = body as {
+    const { messages, currentData, datasetName, datasetDescription, agentId, sessionId } = body as {
       messages: UIMessage[];
       currentData: string;
       datasetName?: string;
       datasetDescription?: string;
       agentId?: string;
+      sessionId?: string;
     };
 
     return {
       messages,
       agentId,
+      sessionId,
       system: `你是一位专业的数据编辑助手。你的任务是帮助用户编写和优化数据集内容。
 
 当前编辑器中的数据如下：

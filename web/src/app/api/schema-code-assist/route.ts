@@ -7,16 +7,18 @@ export const maxDuration = 30;
 export const POST = createAssistHandler({
   source: "schema-code-assist",
   buildParams: (body) => {
-    const { messages, currentSchema, context, agentId } = body as {
+    const { messages, currentSchema, context, agentId, sessionId } = body as {
       messages: UIMessage[];
       currentSchema: string;
       context?: string;
       agentId?: string;
+      sessionId?: string;
     };
 
     return {
       messages,
       agentId,
+      sessionId,
       system: `你是一位专业的 JSON Schema 7 专家。你的任务是帮助用户编写和优化 JSON Schema 定义。
 
 当前编辑器中的 JSON Schema 如下：

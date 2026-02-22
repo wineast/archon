@@ -7,12 +7,13 @@ export const maxDuration = 30;
 export const POST = createAssistHandler({
   source: "tool-code-assist",
   buildParams: (body) => {
-    const { messages, currentCode, toolName, toolDescription, agentId } = body as {
+    const { messages, currentCode, toolName, toolDescription, agentId, sessionId } = body as {
       messages: UIMessage[];
       currentCode: string;
       toolName?: string;
       toolDescription?: string;
       agentId?: string;
+      sessionId?: string;
     };
 
     const toolContext = [
@@ -25,6 +26,7 @@ export const POST = createAssistHandler({
     return {
       messages,
       agentId,
+      sessionId,
       system: `你是一位专业的工具 Handler 开发工程师。你的任务是帮助用户编写和优化工具的 Handler 代码。
 
 当前编辑器中的 Handler 代码如下：

@@ -134,6 +134,7 @@ export function ToolCodeAssistDialog({
   draftCodeRef.current = draftCode;
 
   const hasDiff = draftCode !== originalCode;
+  const sessionIdRef = useRef<string | null>(null);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -141,6 +142,7 @@ export function ToolCodeAssistDialog({
         setDraftCode(code);
         setOriginalCode(code);
         draftCodeRef.current = code;
+        sessionIdRef.current = null;
       }
       onOpenChange(nextOpen);
     },
@@ -151,12 +153,16 @@ export function ToolCodeAssistDialog({
     () =>
       new DefaultChatTransport({
         api: "/api/tool-code-assist",
-        body: () => ({
-          currentCode: draftCodeRef.current,
-          toolName,
-          toolDescription,
-          agentId,
-        }),
+        body: () => {
+          if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+          return {
+            currentCode: draftCodeRef.current,
+            toolName,
+            toolDescription,
+            agentId,
+            sessionId: sessionIdRef.current,
+          };
+        },
       }),
     [toolName, toolDescription, agentId]
   );

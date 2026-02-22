@@ -158,6 +158,7 @@ export function PromptAssistDialog({
   draftPromptRef.current = draftPrompt;
 
   const hasDiff = draftPrompt !== originalPrompt;
+  const sessionIdRef = useRef<string | null>(null);
 
   // Reset state when dialog opens
   const handleOpenChange = useCallback(
@@ -166,6 +167,7 @@ export function PromptAssistDialog({
         setDraftPrompt(systemPrompt);
         setOriginalPrompt(systemPrompt);
         draftPromptRef.current = systemPrompt;
+        sessionIdRef.current = null;
       }
       onOpenChange(nextOpen);
     },
@@ -176,10 +178,14 @@ export function PromptAssistDialog({
     () =>
       new DefaultChatTransport({
         api: "/api/prompt-assist",
-        body: () => ({
-          currentPrompt: draftPromptRef.current,
-          agentId,
-        }),
+        body: () => {
+          if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+          return {
+            currentPrompt: draftPromptRef.current,
+            agentId,
+            sessionId: sessionIdRef.current,
+          };
+        },
       }),
     [agentId]
   );

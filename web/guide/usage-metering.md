@@ -20,7 +20,7 @@
 | cachedInputTokens | INTEGER | 缓存命中 token 数 |
 | reasoningTokens | INTEGER | 推理 token 数 |
 | costUSD | NUMERIC | 费用（美元），由 tokenlens 计算 |
-| source | ENUM | 来源：chat / embed / prompt-assist / eval |
+| source | TEXT | 来源：chat / embed / build-chat / prompt-assist / jsx-assist / function-code-assist / schema-code-assist / tool-code-assist / wiki-assist / dataset-assist / eval |
 | createdAt | TIMESTAMP | 记录时间 |
 
 ### 存储统计
@@ -29,11 +29,12 @@
 
 ## 埋点位置
 
-4 个 LLM 调用入口：
+所有 LLM 调用入口均在 `onFinish` 的 `after()` 中非阻塞写入：
 
-1. **execute-stream.ts** — 主对话 + embed 对话，`onFinish` 的 `after()` 中写入
-2. **prompt-assist/route.ts** — 提示词辅助
-3. **eval/run/[runId]/case/route.ts** — 评估运行（含 judge 模型调用）
+1. **execute-stream.ts** — 主对话（chat）+ embed 对话
+2. **build-chat/execute-stream.ts** — Build Chat 配置助手
+3. **assist-utils.ts** — 7 个 AI Assist 路由（prompt/tool-code/wiki/function-code/dataset/schema-code/jsx）共用
+4. **eval/run/[runId]/case/route.ts** — 评估运行（含 judge 模型调用）
 
 费用计算使用 `tokenlens` 包的 `getUsage()` 函数。
 
