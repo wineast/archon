@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,11 @@ function nameToSlug(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
+interface OrgFormData {
+  name: string;
+  slug: string;
+}
+
 interface OrgFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,61 +45,61 @@ export function OrgFormDialog({
 }: OrgFormDialogProps) {
   const isEdit = !!org;
 
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
+  const { register, handleSubmit: rhfHandleSubmit, reset, setValue, control } =
+    useForm<OrgFormData>({
+      defaultValues: { name: "", slug: "" },
+    });
+  const nameValue = useWatch({ control, name: "name" });
   const [slugManual, setSlugManual] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open) {
       if (org) {
-        setName(org.name);
-        setSlug(org.slug);
+        reset({ name: org.name, slug: org.slug });
         setSlugManual(true);
       } else {
-        setName("");
-        setSlug("");
+        reset({ name: "", slug: "" });
         setSlugManual(false);
       }
     }
-  }, [open, org]);
+  }, [open, org, reset]);
 
   const handleNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const v = e.target.value;
-      setName(v);
+      setValue("name", v);
       if (!slugManual) {
-        setSlug(nameToSlug(v));
+        setValue("slug", nameToSlug(v));
       }
     },
-    [slugManual]
+    [slugManual, setValue]
   );
 
   const handleSlugChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setSlugManual(true);
-      setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+      setValue("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
     },
-    []
+    [setValue]
   );
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!name.trim()) return;
+  const onSubmit = useCallback(
+    async (data: OrgFormData) => {
+      if (!data.name.trim()) return;
       setBusy(true);
       try {
         if (isEdit && org) {
-          await updateOrg(org.id, { name, slug }, mutate);
+          await updateOrg(org.id, { name: data.name, slug: data.slug }, mutate);
         } else {
-          await createOrg({ name, slug }, mutate);
+          await createOrg({ name: data.name, slug: data.slug }, mutate);
         }
         onOpenChange(false);
       } finally {
         setBusy(false);
       }
     },
-    [name, slug, isEdit, org, mutate, onOpenChange]
+    [isEdit, org, mutate, onOpenChange]
   );
 
   return (
@@ -105,12 +111,12 @@ export function OrgFormDialog({
             {isEdit ? "修改组织信息" : "创建一个新的组织"}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={rhfHandleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="space-y-2">
             <Label htmlFor="org-name">名称</Label>
             <Input
               id="org-name"
-              value={name}
+              {...register("name")}
               onChange={handleNameChange}
               placeholder="我的团队"
               autoFocus
@@ -120,7 +126,7 @@ export function OrgFormDialog({
             <Label htmlFor="org-slug">Slug</Label>
             <Input
               id="org-slug"
-              value={slug}
+              {...register("slug")}
               onChange={handleSlugChange}
               placeholder="my-team"
             />
@@ -132,7 +138,7 @@ export function OrgFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               取消
             </Button>
-            <Button type="submit" disabled={!name.trim() || busy}>
+            <Button type="submit" disabled={!nameValue.trim() || busy}>
               {busy && <Spinner className="mr-2" />}
               {isEdit ? "保存" : "创建"}
             </Button>

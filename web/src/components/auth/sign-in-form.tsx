@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSignIn } from "@clerk/nextjs";
@@ -12,6 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 
+interface SignInFormData {
+  email: string;
+  password: string;
+  code: string;
+}
+
 interface SignInFormProps {
   redirectUrl: string;
 }
@@ -22,9 +29,9 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
   const { signIn, setActive, isLoaded } = useSignIn();
   const locale = useLocale();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
+  const { register, handleSubmit: rhfHandleSubmit, getValues } = useForm<SignInFormData>({
+    defaultValues: { email: "", password: "", code: "" },
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<"form" | "verify">("form");
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -34,15 +41,14 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
     router.push(redirectUrl);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: SignInFormData) => {
     if (!isLoaded || busyAction) return;
 
     setBusyAction("submit");
     try {
       const result = await signIn.create({
-        identifier: email,
-        password,
+        identifier: data.email,
+        password: data.password,
       });
 
       if (result.status === "complete") {
@@ -50,7 +56,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
       } else if (result.status === "needs_first_factor") {
         const factorResult = await signIn.attemptFirstFactor({
           strategy: "password",
-          password,
+          password: data.password,
         });
         if (factorResult.status === "complete") {
           await completeSignIn(factorResult.createdSessionId);
@@ -70,15 +76,14 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
     }
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onVerify = async (data: SignInFormData) => {
     if (!isLoaded || busyAction) return;
 
     setBusyAction("verify");
     try {
       const result = await signIn.attemptSecondFactor({
         strategy: "email_code",
-        code,
+        code: data.code,
       });
       if (result.status === "complete") {
         await completeSignIn(result.createdSessionId);
@@ -128,10 +133,10 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">{t("verify.title")}</CardTitle>
-          <CardDescription>{t("verify.description", { email })}</CardDescription>
+          <CardDescription>{t("verify.description", { email: getValues("email") })}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleVerify} className="grid gap-4">
+          <form onSubmit={rhfHandleSubmit(onVerify)} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="code">{t("code.label")}</Label>
               <Input
@@ -142,8 +147,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
                 autoComplete="one-time-code"
                 required
                 maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
+                {...register("code")}
               />
             </div>
             <Button type="submit" className="w-full" disabled={!!busyAction}>
@@ -198,7 +202,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
             <span className="relative z-10 bg-card px-2 text-muted-foreground">{tc("or")}</span>
           </div>
 
-          <form onSubmit={handleSubmit} className="grid gap-4">
+          <form onSubmit={rhfHandleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">{t("email.label")}</Label>
               <Input
@@ -207,8 +211,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
                 placeholder={t("email.placeholder")}
                 autoComplete="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register("email")}
               />
             </div>
             <div className="grid gap-2">
@@ -219,8 +222,7 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register("password")}
                   className="pr-10"
                 />
                 <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSignUp } from "@clerk/nextjs";
@@ -28,6 +29,13 @@ async function consumeInvitationCode(code: string) {
   }
 }
 
+interface SignUpFormData {
+  email: string;
+  password: string;
+  code: string;
+  invitationCode: string;
+}
+
 interface SignUpFormProps {
   redirectUrl: string;
 }
@@ -38,19 +46,17 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
   const { signUp, setActive, isLoaded } = useSignUp();
   const locale = useLocale();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const [invitationCode, setInvitationCode] = useState("");
+  const { register, handleSubmit: rhfHandleSubmit, getValues, setValue } = useForm<SignUpFormData>({
+    defaultValues: { email: "", password: "", code: "", invitationCode: "" },
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<"invitation" | "form" | "verify">("invitation");
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
-  const handleVerifyInvitation = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyInvitation = async (data: SignUpFormData) => {
     if (busyAction) return;
 
-    const trimmed = invitationCode.trim();
+    const trimmed = data.invitationCode.trim();
     if (!trimmed) return;
 
     setBusyAction("invitation");
@@ -60,12 +66,12 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: trimmed }),
       });
-      const data = await res.json();
-      if (data.valid) {
+      const result = await res.json();
+      if (result.valid) {
         sessionStorage.setItem(INVITATION_CODE_KEY, trimmed.toUpperCase());
         setStep("form");
       } else {
-        toast.error(data.error || "邀请码无效");
+        toast.error(result.error || "邀请码无效");
       }
     } catch {
       toast.error("验证邀请码失败");
@@ -74,15 +80,14 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: SignUpFormData) => {
     if (!isLoaded || busyAction) return;
 
     setBusyAction("submit");
     try {
       await signUp.create({
-        emailAddress: email,
-        password,
+        emailAddress: data.email,
+        password: data.password,
       });
 
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
@@ -95,13 +100,12 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
     }
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onVerify = async (data: SignUpFormData) => {
     if (!isLoaded || busyAction) return;
 
     setBusyAction("verify");
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code });
+      const result = await signUp.attemptEmailAddressVerification({ code: data.code });
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
@@ -160,7 +164,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
           <CardDescription>请输入邀请码以继续注册</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleVerifyInvitation} className="grid gap-4">
+          <form onSubmit={rhfHandleSubmit(handleVerifyInvitation)} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="invitation-code">邀请码</Label>
               <Input
@@ -170,8 +174,11 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
                 autoComplete="off"
                 required
                 maxLength={8}
-                value={invitationCode}
-                onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                {...register("invitationCode", {
+                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                    setValue("invitationCode", e.target.value.toUpperCase());
+                  },
+                })}
                 className="text-center text-lg tracking-widest"
               />
             </div>
@@ -200,10 +207,10 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">{t("verify.emailTitle")}</CardTitle>
-          <CardDescription>{t("verify.description", { email })}</CardDescription>
+          <CardDescription>{t("verify.description", { email: getValues("email") })}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleVerify} className="grid gap-4">
+          <form onSubmit={rhfHandleSubmit(onVerify)} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="code">{t("code.label")}</Label>
               <Input
@@ -214,8 +221,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
                 autoComplete="one-time-code"
                 required
                 maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
+                {...register("code")}
               />
             </div>
             <Button type="submit" className="w-full" disabled={!!busyAction}>
@@ -270,7 +276,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
             <span className="relative z-10 bg-card px-2 text-muted-foreground">{tc("or")}</span>
           </div>
 
-          <form onSubmit={handleSubmit} className="grid gap-4">
+          <form onSubmit={rhfHandleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">{t("email.label")}</Label>
               <Input
@@ -279,8 +285,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
                 placeholder={t("email.placeholder")}
                 autoComplete="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register("email")}
               />
             </div>
             <div className="grid gap-2">
@@ -291,8 +296,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register("password")}
                   className="pr-10"
                 />
                 <button

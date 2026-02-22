@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import {
   Dialog,
@@ -29,6 +30,13 @@ function nameToSlug(name: string): string {
   return ascii || "";
 }
 
+interface AgentFormData {
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+}
+
 interface AgentFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,88 +56,90 @@ export function AgentFormDialog({
   const tc = useTranslations("common");
   const isEdit = !!agent;
 
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
+  const { register, handleSubmit: rhfHandleSubmit, reset, setValue, control } =
+    useForm<AgentFormData>({
+      defaultValues: { name: "", slug: "", description: "", icon: "bot" },
+    });
+  const nameValue = useWatch({ control, name: "name" });
   const [slugManual, setSlugManual] = useState(false);
-  const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState("bot");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open) {
       if (agent) {
-        setName(agent.name);
-        setSlug(agent.slug);
+        reset({
+          name: agent.name,
+          slug: agent.slug,
+          description: agent.description,
+          icon: agent.icon,
+        });
         setSlugManual(true);
-        setDescription(agent.description);
-        setIcon(agent.icon);
       } else {
-        setName("");
-        setSlug("");
+        reset({ name: "", slug: "", description: "", icon: "bot" });
         setSlugManual(false);
-        setDescription("");
-        setIcon("bot");
       }
     }
-  }, [open, agent]);
+  }, [open, agent, reset]);
 
   const handleNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const v = e.target.value;
-      setName(v);
+      setValue("name", v);
       if (!slugManual) {
-        setSlug(nameToSlug(v));
+        setValue("slug", nameToSlug(v));
       }
     },
-    [slugManual]
+    [slugManual, setValue]
   );
 
   const handleSlugChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setSlugManual(true);
-      setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+      setValue("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
     },
-    []
+    [setValue]
   );
 
   const handleReset = useCallback(() => {
     if (agent) {
-      setName(agent.name);
-      setSlug(agent.slug);
+      reset({
+        name: agent.name,
+        slug: agent.slug,
+        description: agent.description,
+        icon: agent.icon,
+      });
       setSlugManual(true);
-      setDescription(agent.description);
-      setIcon(agent.icon);
     } else {
-      setName("");
-      setSlug("");
+      reset({ name: "", slug: "", description: "", icon: "bot" });
       setSlugManual(false);
-      setDescription("");
-      setIcon("bot");
     }
-  }, [agent]);
+  }, [agent, reset]);
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!name.trim()) return;
+  const onSubmit = useCallback(
+    async (data: AgentFormData) => {
+      if (!data.name.trim()) return;
       setBusy(true);
       try {
         if (isEdit && agent) {
           await updateAgent(
             agent.id,
-            { name, slug, description, icon },
+            { name: data.name, slug: data.slug, description: data.description, icon: data.icon },
             mutate,
             t
           );
         } else {
-          await createAgent({ name, slug, description, icon, orgId }, mutate, t);
+          await createAgent(
+            { name: data.name, slug: data.slug, description: data.description, icon: data.icon, orgId },
+            mutate,
+            t
+          );
         }
         onOpenChange(false);
       } finally {
         setBusy(false);
       }
     },
-    [name, slug, description, icon, isEdit, agent, mutate, onOpenChange, orgId]
+    [isEdit, agent, mutate, onOpenChange, orgId, t]
   );
 
   return (
@@ -141,12 +151,12 @@ export function AgentFormDialog({
             {isEdit ? t("editDescription") : t("newDescription")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={rhfHandleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="space-y-2">
             <Label htmlFor="agent-name">{t("name")}</Label>
             <Input
               id="agent-name"
-              value={name}
+              {...register("name")}
               onChange={handleNameChange}
               placeholder={t("namePlaceholder")}
               autoFocus
@@ -156,7 +166,7 @@ export function AgentFormDialog({
             <Label htmlFor="agent-slug">{t("slug")}</Label>
             <Input
               id="agent-slug"
-              value={slug}
+              {...register("slug")}
               onChange={handleSlugChange}
               placeholder={t("slugPlaceholder")}
             />
@@ -168,15 +178,20 @@ export function AgentFormDialog({
             <Label htmlFor="agent-desc">{t("description")}</Label>
             <Textarea
               id="agent-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              {...register("description")}
               placeholder={t("descriptionPlaceholder")}
               rows={3}
             />
           </div>
           <div className="space-y-2">
             <Label>{t("icon")}</Label>
-            <IconPicker value={icon} onChange={setIcon} />
+            <Controller
+              name="icon"
+              control={control}
+              render={({ field }) => (
+                <IconPicker value={field.value} onChange={field.onChange} />
+              )}
+            />
           </div>
           <DialogFooter>
             {isEdit && (
@@ -187,7 +202,7 @@ export function AgentFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               {tc("cancel")}
             </Button>
-            <Button type="submit" disabled={!name.trim() || busy}>
+            <Button type="submit" disabled={!nameValue.trim() || busy}>
               {busy && <Spinner className="mr-2" />}
               {isEdit ? tc("save") : tc("create")}
             </Button>
