@@ -42,13 +42,12 @@ interface FunctionFormProps {
   code: string;
   parametersSchema: JsonSchema7 | null;
   returnParametersSchema: JsonSchema7 | null;
-  readOnly?: boolean;
-  onDraftRef: (ref: FunctionFormHandle) => void;
-  onDirtyChange?: (dirty: boolean) => void;
   /** When true, all fields are disabled/readOnly. */
   readOnly?: boolean;
   /** When true, hide code editor (for builtin resources). */
   hideBuiltinSections?: boolean;
+  onDraftRef: (ref: FunctionFormHandle) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export function FunctionForm({
@@ -60,10 +59,9 @@ export function FunctionForm({
   parametersSchema: initialParametersSchema,
   returnParametersSchema: initialReturnParametersSchema,
   readOnly,
+  hideBuiltinSections,
   onDraftRef,
   onDirtyChange,
-  readOnly,
-  hideBuiltinSections,
 }: FunctionFormProps) {
   const defaultValues: FunctionFormValues = {
     name: initialName,
