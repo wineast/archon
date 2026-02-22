@@ -152,7 +152,9 @@
     "importError": "Import failed",
     "importSuccess": "Session imported successfully",
     "importFormatError": "Import failed: invalid file format",
-    "deleteSessionFailed": "Failed to delete session"
+    "deleteSessionFailed": "Failed to delete session",
+    "quotaExceeded": "Platform quota exceeded, please contact admin to recharge",
+    "chatError": "Failed to send message, please try again later"
   },
   "build": {
     "titleSuffix": "· Build",

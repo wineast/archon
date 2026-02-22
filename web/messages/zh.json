@@ -152,7 +152,9 @@
     "importError": "导入失败",
     "importSuccess": "会话导入成功",
     "importFormatError": "导入失败：文件格式错误",
-    "deleteSessionFailed": "删除会话失败"
+    "deleteSessionFailed": "删除会话失败",
+    "quotaExceeded": "平台额度已用完，请联系管理员充值",
+    "chatError": "发送消息失败，请稍后重试"
   },
   "build": {
     "titleSuffix": "· 构造",

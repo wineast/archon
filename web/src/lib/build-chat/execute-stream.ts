@@ -97,6 +97,33 @@ export async function executeBuildChatStream(
   const streamStartTime = performance.now();
   const userMessage = messages[messages.length - 1];
 
+  // ── Eager persist: session + user message (before streaming) ──
+  if (sessionId && userMessage) {
+    try {
+      if (messages.length === 1) {
+        const title =
+          extractTextContent(userMessage.parts as unknown[]).slice(0, 100) ||
+          "Build Chat";
+        await createSession({
+          id: sessionId,
+          title,
+          model: config.model,
+          systemPrompt,
+          agentId,
+          userId,
+        });
+      }
+      await saveMessage({
+        id: crypto.randomUUID(),
+        sessionId,
+        role: userMessage.role as "user" | "assistant" | "system",
+        parts: userMessage.parts as unknown[],
+      });
+    } catch (e) {
+      console.error("[build-chat] failed to eagerly save session/user message:", e);
+    }
+  }
+
   const result = streamText({
     model,
     messages: await convertToModelMessages(messages),
@@ -148,29 +175,10 @@ export async function executeBuildChatStream(
         await recordRuntimeEvents(events);
       });
 
-      // Session persistence
+      // Save assistant response (session + user message already persisted before streaming)
       if (!sessionId || !userMessage) return;
       after(async () => {
         try {
-          if (messages.length === 1) {
-            const title =
-              extractTextContent(userMessage.parts as unknown[]).slice(0, 100) ||
-              "Build Chat";
-            await createSession({
-              id: sessionId,
-              title,
-              model: config.model,
-              systemPrompt,
-              agentId,
-              userId,
-            });
-          }
-          await saveMessage({
-            id: crypto.randomUUID(),
-            sessionId,
-            role: userMessage.role as "user" | "assistant" | "system",
-            parts: userMessage.parts as unknown[],
-          });
           const uiParts = responseMessagesToUIParts(response.messages);
           if (uiParts.length > 0) {
             await saveMessage({
@@ -181,7 +189,7 @@ export async function executeBuildChatStream(
             });
           }
         } catch (e) {
-          console.error("[build-chat] failed to save messages:", e);
+          console.error("[build-chat] failed to save assistant message:", e);
         }
       });
     },

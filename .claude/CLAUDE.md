@@ -139,9 +139,9 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 不要在项目根目录或其他位置随意放置截图文件
 
 ### Chat Persistence
-- 非阻塞原则：用 Next.js `after()` 异步保存，绝不阻塞流式响应
-- 正确：`Request → streamText → return → after() { save }`
-- 错误：`Request → await save → streamText`（❌）
+- 分层持久化：session 创建 + 用户消息在 `streamText()` 前 `await` 保存（~10-50ms）；AI 响应消息保留在 `onFinish → after()` 中异步保存
+- 正确：`Request → await createSession + saveUser → streamText → return → after() { saveAssistant }`
+- 错误：`Request → streamText → return → after() { createSession + saveUser + saveAssistant }`（刷新丢消息 ❌）
 
 ### Debug
 - 服务端错误日志在 `.logs/dev.log`，排查 API 500 等服务端报错时优先查看此文件
