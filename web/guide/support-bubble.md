@@ -7,11 +7,11 @@ Build 页面右下角的客服聊天气泡，帮助用户了解和使用 Archon 
 - 客服助手本身是一个 Archon Agent（slug: `archon-support`），通过 embed 体系嵌入 build 页面
 - 使用现有的 `widget.js` 嵌入脚本（dogfooding），不单独实现 UI
 - API 按 slug 查询 agent + embed token，无需额外 schema 字段
-- 该 Agent 标记为 `scope: "platform"`（在 `agent.json` 中设置），普通用户的 Agent 列表 API 会过滤掉平台级 Agent，仅超级管理员可见
+- 该 Agent 标记为 `scope: "platform"`，普通用户的 Agent 列表 API 会过滤掉平台级 Agent，仅超级管理员可见
 
 ## 数据流
 
-1. Seed 阶段：统一管线自动发现 `seed-data/archon-support/` 目录，创建 Agent + embed token
+1. Agent 通过 Import API 导入 `fixtures/archon-support.json`（或在 UI 中手动创建）
 2. Build 页面加载：`<SupportBubble>` 组件请求 `/api/platform/support-bubble`
 3. API 按 slug `archon-support` 查 agent → 查其 embed token → 返回 `{ agentId, token }`
 4. 组件动态注入 `<script src="/embed/widget.js" data-agent-id="..." data-token="...">`
@@ -19,34 +19,18 @@ Build 页面右下角的客服聊天气泡，帮助用户了解和使用 Archon 
 
 ## Seed 管线
 
-统一管线架构（`seed.ts`）：
+Seed 管线仅播种全局数据（models、users）并为每个 user 创建 personal org + 3 个 slot agents（builder、assist、evaluator）。
 
-1. **全局阶段**：`seedModels → seedPlatformSettings → seedUsers → seedOrgs`（运行一次）
-2. **Agent 阶段**：自动扫描 `seed-data/` 下所有含 `agent.json` 的目录，根据文件存在性决定跑哪些 seeder
-
-每个 agent 目录的文件决定了运行哪些 seeder：
-
-| 文件/目录 | 对应 Seeder |
-|-----------|-------------|
-| `agent.json` | seedAgent（必须） |
-| `components/` | seedComponents |
-| `datasets.json` | seedDatasets |
-| `tools.json` | seedTools |
-| `wiki/` | seedWiki |
-| `model-configs.json` | seedModelConfigs |
-| `chat-config.json` | seedChatConfig |
-| `functions/` | seedFunctions |
-| `eval-cases.json` | seedEval |
-| `memory.json` | seedMemory |
-| `mcp-servers.json` | seedMcpServers |
-| （无需文件） | seedEmbedToken、seedVersion |
+Agent 数据（如 archon-support、gmcc-advisor）不再通过 seed 播种，而是通过 Export/Import 机制管理：
+- 导出：`GET /api/agents/{id}/export` → JSON 快照
+- 导入：`POST /api/agents/import` → 还原 Agent 及所有版本资源
+- 种子 fixtures 保存在 `fixtures/` 目录（已 gitignore）
 
 ## 关键文件
 
 | 文件 | 作用 |
 |------|------|
-| `web/src/db/seed-data/archon-support/` | Agent seed 数据 |
-| `web/src/db/seeders/seed-embed-token.ts` | 为每个 agent 创建默认 embed token |
+| `fixtures/archon-support.json` | Agent 导出快照（用于 Import 还原） |
 | `web/src/app/api/platform/support-bubble/route.ts` | 按 slug 查询客服配置的 API |
 | `web/src/components/support-bubble/support-bubble.tsx` | 动态注入 widget.js 的包装组件 |
 | `web/public/embed/widget.js` | 嵌入脚本（已有，复用） |

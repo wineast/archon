@@ -6,16 +6,20 @@ import { resolveDatasets } from "@/lib/datasets/queries";
 import { isModuleFormat } from "@/lib/modules/detect";
 import { transformToolHandlerImports } from "@/lib/modules/transform-tool-handler";
 
-// ── Load seed data ──
-const seedDir = path.resolve(__dirname, "../../../db/seed-data/gmcc-advisor");
+// ── Load fixture data ──
+const fixturePath = path.resolve(__dirname, "../../../../../fixtures/gmcc-advisor.json");
+const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8")) as {
+  versions: Array<{
+    snapshot: {
+      datasets: Array<{ key: string; data: unknown }>;
+      tools: Array<{ key: string; name: string; handler: string }>;
+    };
+  }>;
+};
+const snapshot = fixture.versions[0].snapshot;
 
-const allDatasets = JSON.parse(
-  fs.readFileSync(path.join(seedDir, "datasets.json"), "utf8")
-) as Array<{ key: string; data: unknown }>;
-
-const tools = JSON.parse(
-  fs.readFileSync(path.join(seedDir, "tools.json"), "utf8")
-) as Array<{ name: string; handler: string }>;
+const allDatasets = snapshot.datasets;
+const tools = snapshot.tools;
 
 // ── Resolve datasets (dependency-graph driven) ──
 const { resolvedVars } = resolveDatasets(allDatasets);

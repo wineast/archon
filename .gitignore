@@ -15,3 +15,4 @@ start.sh
 .playwright-mcp
 screenshots/
 .logs/
+fixtures/

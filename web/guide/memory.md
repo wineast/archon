@@ -279,7 +279,7 @@ Vercel Cron 配置位于 `web/vercel.json`。
 | 自动提取 | `extract.ts` | 批量 `Promise.all`，单条失败不影响其他 |
 | 手动创建 | `POST /api/memories` | try/catch，失败 embedding 为 null |
 | 内容更新 | `PATCH /api/memories/[id]` | 仅 content 变更时重新生成 |
-| Seed 数据 | `seed-memory.ts` | 不生成 embedding（null） |
+| Import 数据 | Import API | 不生成 embedding（null） |
 
 ### Docker 配置
 
