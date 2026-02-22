@@ -185,9 +185,12 @@ export async function copyVersionResources(
     .from(objectRelations)
     .where(and(eq(objectRelations.versionId, sourceVersionId), isNull(objectRelations.deletedAt)));
 
-  if (objRelRows.length > 0) {
+  const validObjRelRows = objRelRows.filter(
+    (r) => objTypeIdMap.has(r.sourceTypeId) && objTypeIdMap.has(r.targetTypeId)
+  );
+  if (validObjRelRows.length > 0) {
     await tx.insert(objectRelations).values(
-      objRelRows.map((r) => ({
+      validObjRelRows.map((r) => ({
         agentId,
         versionId: targetVersionId,
         key: r.key,

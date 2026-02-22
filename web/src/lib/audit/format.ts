@@ -34,7 +34,6 @@ export const RESOURCE_TYPE_LABELS: Record<AuditLogResourceType, string> = {
   wiki: "Wiki",
   model_config: "模型配置",
   eval_case: "评测用例",
-  eval_judge_config: "评测裁判",
   judge_config: "Judge 配置",
   object_type: "对象类型",
   object_relation: "对象关系",

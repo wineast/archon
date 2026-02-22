@@ -4,6 +4,7 @@ import {
   text,
   integer,
   real,
+  numeric,
   boolean,
   jsonb,
   timestamp,
@@ -681,7 +682,7 @@ export const evalRunResults = pgTable(
     runId: uuid("run_id")
       .notNull()
       .references(() => evalRuns.id, { onDelete: "cascade" }),
-    caseId: text("case_id").notNull(),
+    caseId: uuid("case_id").notNull(),
     caseName: text("case_name").notNull(),
     mode: text("mode").notNull().default("single").$type<EvalCaseMode>(),
     turns: jsonb("turns").$type<EvalTurn[]>().notNull().default([]),
@@ -1027,7 +1028,6 @@ export const embedTokens = pgTable(
   },
   (table) => [
     index("embed_tokens_agent_id_idx").on(table.agentId),
-    index("embed_tokens_token_idx").on(table.token),
   ]
 );
 
@@ -1252,7 +1252,7 @@ export const usageRecords = pgTable(
     outputTokens: integer("output_tokens").notNull().default(0),
     cachedInputTokens: integer("cached_input_tokens").notNull().default(0),
     reasoningTokens: integer("reasoning_tokens").notNull().default(0),
-    costUSD: real("cost_usd").notNull().default(0),
+    costUSD: numeric("cost_usd", { precision: 12, scale: 6, mode: "number" }).notNull().default(0),
     source: text("source").notNull().$type<"chat" | "embed" | "build-chat" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "schema-code-assist" | "tool-code-assist" | "wiki-assist" | "dataset-assist" | "eval">(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -1349,7 +1349,7 @@ export type NewSkillRow = typeof skills.$inferInsert;
 
 export const auditLogResourceTypes = [
   "tool", "function", "component", "schema", "dataset", "wiki",
-  "model_config", "eval_case", "eval_judge_config", "judge_config",
+  "model_config", "eval_case", "judge_config",
   "object_type", "object_relation", "chat_config",
   "memory_config", "memory", "mcp_server", "skill",
 ] as const;
