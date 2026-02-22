@@ -201,4 +201,26 @@ describe("ToolDetail — pool ref mode", () => {
     expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
   });
+
+  it("shows Edit/Parameters tabs for schema in pool ref mode", () => {
+    const toolWithSchema: ToolRow = {
+      ...baseTool,
+      parametersSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+    };
+    render(
+      <ToolDetail
+        tool={toolWithSchema}
+        agentId="agent-1"
+        onSave={vi.fn()}
+        onDelete={vi.fn()}
+        onToggle={vi.fn()}
+        poolMeta={poolMeta}
+      />
+    );
+    // Should have Edit and Parameters tabs for both Input and Output schemas
+    const editTabs = screen.getAllByRole("tab", { name: "Edit" });
+    const parametersTabs = screen.getAllByRole("tab", { name: "Parameters" });
+    expect(editTabs.length).toBeGreaterThanOrEqual(2);
+    expect(parametersTabs.length).toBeGreaterThanOrEqual(2);
+  });
 });
