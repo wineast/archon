@@ -39,7 +39,13 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   return (
-    <ClerkProvider localization={locale === "zh" ? zhCN : undefined}>
+    <ClerkProvider
+      localization={locale === "zh" ? zhCN : undefined}
+      signInUrl={`/${locale}/sign-in`}
+      signUpUrl={`/${locale}/sign-up`}
+      signInFallbackRedirectUrl="/"
+      signUpFallbackRedirectUrl="/"
+    >
       <html lang={locale}>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
