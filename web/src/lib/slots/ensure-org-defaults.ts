@@ -75,16 +75,13 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
         .where(eq(agents.id, agentId));
 
       // Create default active model config
-      const systemPrompt = slotKey === "evaluator"
-        ? "You are a judge evaluating AI assistant responses.\n\nYou will receive the user input, expected output (if any), and the actual response.\nEvaluate the response on each of the following dimensions, scoring from 1 to 10.\n\nFor each dimension, return a JSON object with the dimension key mapped to { \"score\": <1-10>, \"reason\": \"<brief explanation>\" }."
-        : "";
       await db.insert(modelConfigs).values({
         agentId,
         versionId: version.id,
         key: "default",
         name: "Default",
         modelId: def.defaultModel,
-        systemPrompt,
+        systemPrompt: def.defaultSystemPrompt,
         temperature: def.defaultTemperature,
         isActive: true,
       });

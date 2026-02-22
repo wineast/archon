@@ -10,10 +10,10 @@
 
 | slotKey | 用途 | 默认 agent slug | 默认模型 | 默认温度 |
 |---------|------|----------------|----------|----------|
-| `builder` | Build Chat 对话助手 | build-chat | anthropic/claude-sonnet-4 | 0.3 |
-| `assist` | AI 辅助编辑 | assist | anthropic/claude-sonnet-4 | 0.7 |
-| `evaluator` | Agent 评估 | evaluator | anthropic/claude-sonnet-4 | 0.3 |
-| `support` | 客服聊天气泡 | support | anthropic/claude-sonnet-4 | 0.7 |
+| `builder` | Build Chat 对话助手 | build-chat | （空，需用户配置） | 0.3 |
+| `assist` | AI 辅助编辑 | assist | （空，需用户配置） | 0.7 |
+| `evaluator` | Agent 评估 | evaluator | （空，需用户配置） | 0.3 |
+| `support` | 客服聊天气泡 | support | （空，需用户配置） | 0.7 |
 
 ## 数据模型
 

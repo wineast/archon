@@ -75,7 +75,7 @@ describe("resolveSlot", () => {
 
     const result = await resolveSlot("my-agent", "builder");
     expect(result.agentId).toBe("");
-    expect(result.model).toBe("anthropic/claude-sonnet-4");
+    expect(result.model).toBe("");
     expect(result.temperature).toBe(0.3);
   });
 
@@ -85,7 +85,7 @@ describe("resolveSlot", () => {
 
     const result = await resolveSlot("my-agent", "assist");
     expect(result.agentId).toBe("override-agent");
-    expect(result.model).toBe("anthropic/claude-sonnet-4");
+    expect(result.model).toBe("");
     expect(result.temperature).toBe(0.7);
   });
 
