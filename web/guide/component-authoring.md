@@ -50,7 +50,7 @@ data = { name, input, output }
 | 模块 | 可用导出 |
 |------|---------|
 | `archon:react` | `React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment` |
-| `archon:ui` | `Badge`、`Spinner`、`Table`、`TableBody`、`TableCell`、`TableHead`、`TableHeader`、`TableRow`、`Tooltip`、`TooltipContent`、`TooltipTrigger`、`CollapsibleSection`、`ResultHeader`、`ResultSection` |
+| `archon:ui` | `Badge`、`Spinner`、`Table`、`TableBody`、`TableCell`、`TableHead`、`TableHeader`、`TableRow`、`Tooltip`、`TooltipContent`、`TooltipTrigger`、`CollapsibleSection`、`ResultHeader`、`ResultSection`、`RateSheetLinks`、`RateSheetPanel`、`SourceDocumentViewer` |
 | `archon:icons` | `ChevronRight`、`FileText` |
 | `archon:component/<key>` | 引用同 Agent 下的其他组件 |
 
@@ -63,6 +63,30 @@ import ProductCard from "archon:component/product-card";
 
 export default function({ data }) {
   return <ProductCard data={data} />;
+}
+```
+
+---
+
+## JSX 片段简写
+
+如果不需要导入依赖，可以直接写 JSX 片段，系统会自动包装为 ES module：
+
+```jsx
+<div className="p-4">
+  <p>简单展示：{data.output.message}</p>
+</div>
+```
+
+等价于：
+
+```jsx
+export default function({ data }) {
+  return (
+    <div className="p-4">
+      <p>简单展示：{data.output.message}</p>
+    </div>
+  );
 }
 ```
 

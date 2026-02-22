@@ -1,79 +1,30 @@
-import {
-  streamText,
-  gateway,
-  tool,
-  UIMessage,
-  convertToModelMessages,
-} from "ai";
-import { z } from "zod";
-import { after } from "next/server";
-import { requireAuth } from "@/lib/auth/require-agent-role";
-import { NextResponse } from "next/server";
-import { recordUsage } from "@/lib/usage/record";
+import type { UIMessage } from "ai";
+import { createAssistHandler, buildAssistTools } from "@/lib/ai/assist-utils";
+import datasetDataGuide from "../../../../guide/dataset-data.md";
 
 export const maxDuration = 30;
 
-export async function POST(req: Request) {
-  const authResult = await requireAuth();
-  if (authResult instanceof NextResponse) return authResult;
+export const POST = createAssistHandler({
+  source: "dataset-assist",
+  buildParams: (body) => {
+    const { messages, currentData, datasetName, datasetDescription } = body as {
+      messages: UIMessage[];
+      currentData: string;
+      datasetName?: string;
+      datasetDescription?: string;
+    };
 
-  const {
-    messages,
-    currentData,
-    datasetName,
-    datasetDescription,
-  }: {
-    messages: UIMessage[];
-    currentData: string;
-    datasetName?: string;
-    datasetDescription?: string;
-  } = await req.json();
-
-  const currentUserId = authResult.id;
-
-  const result = streamText({
-    model: gateway("claude-sonnet-4-20250514"),
-    messages: await convertToModelMessages(messages),
-    onFinish: ({ totalUsage }) => {
-      after(async () => {
-        await recordUsage({
-          orgId: null,
-          agentId: null,
-          userId: currentUserId,
-          sessionId: null,
-          modelId: "claude-sonnet-4-20250514",
-          usage: {
-            inputTokens: totalUsage.inputTokens,
-            outputTokens: totalUsage.outputTokens,
-            cachedInputTokens: totalUsage.cachedInputTokens,
-            reasoningTokens: totalUsage.reasoningTokens,
-          },
-          source: "dataset-assist",
-        });
-      });
-    },
-    system: `你是一位专业的数据编辑助手。你的任务是帮助用户编写和优化数据集内容。
+    return {
+      messages,
+      system: `你是一位专业的数据编辑助手。你的任务是帮助用户编写和优化数据集内容。
 
 当前编辑器中的数据如下：
 <current_data>
 ${currentData}
 </current_data>
 
-${datasetName ? `## 数据集名称\n\n${datasetName}\n\n` : ""}${datasetDescription ? `## 数据集描述\n\n${datasetDescription}\n\n` : ""}## 数据格式
-
-数据可以是有效的 JSON，也可以包含 LiquidJS 模板语法（\`{{var}}\`、\`{% %}\`）。
-
-### JSON 模式
-当数据是纯 JSON 时，保持有效的 JSON 结构。
-
-### 模板模式
-当数据包含 LiquidJS 模板语法时，保持模板语法不变，只修改数据内容部分。
-
-### 常见数据模式
-- 简单值：\`"text"\`
-- 对象：\`{"key": "value"}\`
-- 数组：\`["item1", "item2"]\`
-- 嵌套条目对象：\`{"entry1": {"field": "value"}, "entry2": {"field": "value"}}\`
+${datasetName ? `## 数据集名称\n\n${datasetName}\n\n` : ""}${datasetDescription ? `## 数据集描述\n\n${datasetDescription}\n\n` : ""}## 编辑参考
+${datasetDataGuide}
 
 ## 可用工具
 
@@ -90,22 +41,7 @@ ${datasetName ? `## 数据集名称\n\n${datasetName}\n\n` : ""}${datasetDescrip
 4. JSON 模式下确保输出是合法的 JSON
 5. 模板模式下保持 LiquidJS 语法不变
 6. 用中文回复用户的问题和说明`,
-    tools: {
-      update_data: tool({
-        description: "整体替换编辑器中的数据。适用于大范围重写。",
-        inputSchema: z.object({
-          content: z.string().describe("完整的更新后数据字符串"),
-        }),
-      }),
-      edit_data: tool({
-        description: "局部编辑数据。在当前内容中找到 old_text 并替换为 new_text。",
-        inputSchema: z.object({
-          old_text: z.string().describe("要匹配的原文片段，必须精确匹配"),
-          new_text: z.string().describe("替换后的内容。为空字符串表示删除"),
-        }),
-      }),
-    },
-  });
-
-  return result.toUIMessageStreamResponse();
-}
+    };
+  },
+  tools: buildAssistTools("data"),
+});

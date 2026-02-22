@@ -1,76 +1,30 @@
-import {
-  streamText,
-  tool,
-  UIMessage,
-  convertToModelMessages,
-} from "ai";
-import { z } from "zod";
-import { after } from "next/server";
-import { requireAuth } from "@/lib/auth/require-agent-role";
-import { NextResponse } from "next/server";
-import { recordUsage } from "@/lib/usage/record";
-import { resolveModel } from "@/lib/ai/resolve-model";
-import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
-import { QuotaExceededError } from "@/lib/credits/errors";
-
-const MODEL_ID = "anthropic/claude-sonnet-4-20250514";
+import type { UIMessage } from "ai";
+import { createAssistHandler, buildAssistTools } from "@/lib/ai/assist-utils";
+import promptEditingGuide from "../../../../guide/prompt-editing.md";
 
 export const maxDuration = 30;
 
-export async function POST(req: Request) {
-  const authResult = await requireAuth();
-  if (authResult instanceof NextResponse) return authResult;
+export const POST = createAssistHandler({
+  source: "prompt-assist",
+  buildParams: (body) => {
+    const { messages, currentPrompt, agentId } = body as {
+      messages: UIMessage[];
+      currentPrompt: string;
+      agentId?: string;
+    };
 
-  const {
-    messages,
-    currentPrompt,
-    agentId,
-  }: {
-    messages: UIMessage[];
-    currentPrompt: string;
-    agentId?: string;
-  } = await req.json();
-
-  const currentUserId = authResult.id;
-  const orgId = await getOrgIdByAgentId(agentId);
-
-  let model;
-  try {
-    model = await resolveModel(MODEL_ID, orgId);
-  } catch (e) {
-    if (e instanceof QuotaExceededError) {
-      return Response.json({ error: "quota_exceeded", message: e.message }, { status: 402 });
-    }
-    throw e;
-  }
-
-  const result = streamText({
-    model,
-    messages: await convertToModelMessages(messages),
-    onFinish: ({ totalUsage }) => {
-      after(async () => {
-        await recordUsage({
-          orgId,
-          agentId: agentId ?? null,
-          userId: currentUserId,
-          sessionId: null,
-          modelId: MODEL_ID,
-          usage: {
-            inputTokens: totalUsage.inputTokens,
-            outputTokens: totalUsage.outputTokens,
-            cachedInputTokens: totalUsage.cachedInputTokens,
-            reasoningTokens: totalUsage.reasoningTokens,
-          },
-          source: "prompt-assist",
-        });
-      });
-    },
-    system: `你是一位专业的提示词工程师（Prompt Engineer）。你的任务是帮助用户优化和编辑 AI 系统提示词（System Prompt）。
+    return {
+      messages,
+      agentId,
+      system: `你是一位专业的提示词工程师（Prompt Engineer）。你的任务是帮助用户优化和编辑 AI 系统提示词（System Prompt）。
 
 当前编辑器中的提示词内容如下：
 <current_prompt>
 ${currentPrompt}
 </current_prompt>
+
+## 编辑参考
+${promptEditingGuide}
 
 ## 可用工具
 你有两个工具可以修改编辑器内容：
@@ -88,24 +42,9 @@ ${currentPrompt}
 1. 小范围修改优先使用 edit_prompt，避免不必要的整体替换
 2. 大范围重写或结构调整使用 update_prompt
 3. edit_prompt 的 old_text 必须与当前提示词中的文本精确匹配（包括空格和换行）
-4. 保持提示词的模板语法不变（如 {{变量}}、{% include '文档' %}、{{lookup.xxx}} 等 LiquidJS 语法）
+4. 保持提示词的模板语法不变（如 {{变量}}、{% include '文档' %} 等 LiquidJS 语法）
 5. 用中文回复用户的问题和说明`,
-    tools: {
-      update_prompt: tool({
-        description: "整体替换编辑器中的系统提示词内容。适用于大范围重写。",
-        inputSchema: z.object({
-          content: z.string().describe("完整的更新后提示词内容"),
-        }),
-      }),
-      edit_prompt: tool({
-        description: "局部编辑提示词。在当前内容中找到 old_text 并替换为 new_text。",
-        inputSchema: z.object({
-          old_text: z.string().describe("要匹配的原文片段，必须精确匹配"),
-          new_text: z.string().describe("替换后的内容。为空字符串表示删除"),
-        }),
-      }),
-    },
-  });
-
-  return result.toUIMessageStreamResponse();
-}
+    };
+  },
+  tools: buildAssistTools("prompt"),
+});

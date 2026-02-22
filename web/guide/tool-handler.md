@@ -25,7 +25,7 @@ return await res.json();
 
 ### 代码模式
 
-使用 ES module 格式编写 Handler：
+**ES module 格式是唯一支持的代码格式。** 使用 `import` 导入虚拟模块，`export default` 导出处理函数：
 
 ```js
 import { wiki, dataset, fn, ontology } from "archon:context";
@@ -40,12 +40,21 @@ export default async function(args) {
 - 通过 `import` 从虚拟模块导入运行时 API（见下方）
 - 返回值为任意可序列化的 JSON 对象
 
-工具 Handler 支持以下虚拟模块：
+**只支持** `archon:*` 虚拟模块，其他 import 路径（如 `fs`、`path`、npm 包名）会报错。
 
 | 命名空间 | 用途 | 示例 |
 |----------|------|------|
 | `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, fn } from "archon:context"` |
 | `archon:lib/filtrex` | 表达式过滤引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
+
+### 运行环境
+
+代码在 **QuickJS WASM 沙盒**中执行，完全隔离：
+
+- 无法访问 Node.js API（`fs`、`path`、`http` 等）
+- 无法访问文件系统、网络、环境变量
+- 可使用标准 JavaScript 内置对象（`Math`、`Date`、`JSON`、`RegExp`、`Promise` 等）
+- 支持 `async/await`
 
 ## Context API
 
@@ -56,15 +65,15 @@ export default async function(args) {
 ```js
 import { wiki } from "archon:context";
 
-// 按 key 或 ID 获取文档（content 经过模板渲染）
+// 按 key 或 ID 获取文档（content 经过完整模板渲染，含 {% include %} 展开）
 const doc = await wiki.get("product-intro");
 // → { meta: { ... } | null, content: "渲染后的正文" }
 
-// 按 key 前缀批量查找（content 为原始正文）
+// 按 key 前缀批量查找（content 为原始正文，未渲染）
 const docs = await wiki.findByPrefix("product-");
 // → [{ id, title, meta, content }, ...]
 
-// 按内容关键词搜索（content 为原始正文）
+// 按内容关键词搜索（content 为原始正文，未渲染）
 const results = await wiki.search("关键词");
 // → [{ id, title, meta, content }, ...]
 ```
@@ -133,14 +142,18 @@ const graph = await ontology.graph("customer", id, { depth: 2 });
 // → { nodes: [...], edges: [...] }
 ```
 
-## 沙盒模式
+### archon:lib/filtrex
 
-代码模式在服务端执行时，可选择沙盒隔离级别：
+```js
+import { compileExpression } from "archon:lib/filtrex";
 
-| 模式 | 说明 |
-|------|------|
-| **轻量** | 快速执行，适合简单逻辑（默认） |
-| **完整** | 完全隔离的 VM 沙盒，适合执行不可信代码 |
+const evaluate = compileExpression("price * quantity > 100");
+const result = evaluate({ price: 50, quantity: 3 }); // true
+```
+
+`compileExpression(expression, options?)` — 编译一个表达式字符串，返回一个求值函数 `(data: object) => unknown`。支持算术运算、比较、逻辑运算和属性访问。
+
+> **重要**：`wiki.get()` 返回的 `content` 经过完整模板渲染（含 `{% include %}` 展开），而 `wiki.findByPrefix()` 和 `wiki.search()` 返回的 `content` 是原始正文（仅去除 frontmatter），不经过渲染。
 
 ## 示例
 

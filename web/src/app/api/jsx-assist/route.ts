@@ -1,108 +1,30 @@
-import {
-  streamText,
-  tool,
-  UIMessage,
-  convertToModelMessages,
-} from "ai";
-import { z } from "zod";
-import { after } from "next/server";
-import { requireAuth } from "@/lib/auth/require-agent-role";
-import { NextResponse } from "next/server";
-import { recordUsage } from "@/lib/usage/record";
-import { resolveModel } from "@/lib/ai/resolve-model";
-import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
-import { QuotaExceededError } from "@/lib/credits/errors";
-
-const MODEL_ID = "anthropic/claude-sonnet-4-20250514";
+import type { UIMessage } from "ai";
+import { createAssistHandler, buildAssistTools } from "@/lib/ai/assist-utils";
+import componentAuthoringGuide from "../../../../guide/component-authoring.md";
 
 export const maxDuration = 30;
 
-export async function POST(req: Request) {
-  const authResult = await requireAuth();
-  if (authResult instanceof NextResponse) return authResult;
+export const POST = createAssistHandler({
+  source: "jsx-assist",
+  buildParams: (body) => {
+    const { messages, currentJsx, agentId } = body as {
+      messages: UIMessage[];
+      currentJsx: string;
+      agentId?: string;
+    };
 
-  const {
-    messages,
-    currentJsx,
-    agentId,
-  }: {
-    messages: UIMessage[];
-    currentJsx: string;
-    agentId?: string;
-  } = await req.json();
-
-  const currentUserId = authResult.id;
-  const orgId = await getOrgIdByAgentId(agentId);
-
-  let model;
-  try {
-    model = await resolveModel(MODEL_ID, orgId);
-  } catch (e) {
-    if (e instanceof QuotaExceededError) {
-      return Response.json({ error: "quota_exceeded", message: e.message }, { status: 402 });
-    }
-    throw e;
-  }
-
-  const result = streamText({
-    model,
-    messages: await convertToModelMessages(messages),
-    onFinish: ({ totalUsage }) => {
-      after(async () => {
-        await recordUsage({
-          orgId,
-          agentId: agentId ?? null,
-          userId: currentUserId,
-          sessionId: null,
-          modelId: MODEL_ID,
-          usage: {
-            inputTokens: totalUsage.inputTokens,
-            outputTokens: totalUsage.outputTokens,
-            cachedInputTokens: totalUsage.cachedInputTokens,
-            reasoningTokens: totalUsage.reasoningTokens,
-          },
-          source: "jsx-assist",
-        });
-      });
-    },
-    system: `你是一位专业的 React 组件开发工程师。你的任务是帮助用户编写和优化 JSX 组件代码。
+    return {
+      messages,
+      agentId,
+      system: `你是一位专业的 React 组件开发工程师。你的任务是帮助用户编写和优化 JSX 组件代码。
 
 当前编辑器中的组件代码如下：
 <current_jsx>
 ${currentJsx}
 </current_jsx>
 
-## 组件架构
-
-组件使用 ES module 格式，通过 \`archon:*\` 虚拟模块导入依赖，\`export default function\` 导出渲染函数。
-
-\`\`\`jsx
-import { useState } from "archon:react";
-import { Badge } from "archon:ui";
-
-export default function ({ tool, state, isLoading, isComplete, isError }) {
-  return <div>...</div>;
-}
-\`\`\`
-
-### 可用模块
-- \`archon:react\`：React, useState, useMemo, useCallback, useEffect, useRef, Fragment
-- \`archon:ui\`：Badge, Spinner, Table/TableBody/TableCell/TableHead/TableHeader/TableRow, Tooltip/TooltipContent/TooltipTrigger, CollapsibleSection, ResultHeader, ResultSection, RateSheetLinks, RateSheetPanel, SourceDocumentViewer
-- \`archon:icons\`：ChevronRight, FileText
-- \`archon:component/<key>\`：同 Agent 下其他组件（default export）
-
-### Props
-- tool: { name: string, input: object, output: any }
-- state: "partial-call" | "call" | "result" | "error"
-- isLoading: boolean（正在加载）
-- isComplete: boolean（已完成）
-- isError: boolean（出错）
-
-### 样式
-可直接使用 Tailwind CSS 类名。
-
-### JSX 片段简写
-如果不需要导入依赖，可以直接写 JSX 片段，系统会自动包装为 ES module。
+## 编辑参考
+${componentAuthoringGuide}
 
 ## 可用工具
 
@@ -118,22 +40,7 @@ export default function ({ tool, state, isLoading, isComplete, isError }) {
 3. edit_jsx 的 old_text 必须与当前代码中的文本精确匹配（包括空格和换行）
 4. 生成的代码必须遵循 ES module 格式（除非是 JSX 片段简写）
 5. 用中文回复用户的问题和说明`,
-    tools: {
-      update_jsx: tool({
-        description: "整体替换编辑器中的组件代码。适用于大范围重写。",
-        inputSchema: z.object({
-          content: z.string().describe("完整的更新后组件代码"),
-        }),
-      }),
-      edit_jsx: tool({
-        description: "局部编辑组件代码。在当前内容中找到 old_text 并替换为 new_text。",
-        inputSchema: z.object({
-          old_text: z.string().describe("要匹配的原文片段，必须精确匹配"),
-          new_text: z.string().describe("替换后的内容。为空字符串表示删除"),
-        }),
-      }),
-    },
-  });
-
-  return result.toUIMessageStreamResponse();
-}
+    };
+  },
+  tools: buildAssistTools("jsx"),
+});
