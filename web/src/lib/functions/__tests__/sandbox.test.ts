@@ -42,10 +42,9 @@ describe("compileAndExecFn", () => {
     expect(result).toBe(42);
   });
 
-  it("bridges compileExpression from filtrex via archon:lib", async () => {
+  it("uses compileExpression injected as global dep", async () => {
     const { compileExpression } = await import("filtrex");
-    const code = `import { compileExpression } from "archon:lib/filtrex";
-var expr = compileExpression("x + y * 2");
+    const code = `var expr = compileExpression("x + y * 2");
 export default function(input) { return expr(input); }`;
     const result = await compileAndExecFn(
       code,
@@ -221,14 +220,13 @@ export default function(input) { return double({ value: double({ value: input.va
     }
   });
 
-  it("supports module-format function importing archon:lib/filtrex", async () => {
+  it("uses compileExpression injected as global dep in shared sandbox", async () => {
     const { compileExpression } = await import("filtrex");
     const sandbox = await createFunctionsSandbox(
       [
         {
           key: "evaluate",
-          code: `import { compileExpression } from "archon:lib/filtrex";
-var expr = compileExpression("x + y * 2");
+          code: `var expr = compileExpression("x + y * 2");
 export default function(input) { return expr(input); }`,
         },
       ],

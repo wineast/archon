@@ -14,31 +14,6 @@ export default async function(args) {
     expect(result).not.toContain("export default");
   });
 
-  it("transforms archon:lib/filtrex named imports", () => {
-    const code = `import { compileExpression } from "archon:lib/filtrex";
-export default function(args) {
-  const expr = compileExpression("x + y");
-  return expr(args);
-}`;
-    const result = transformToolHandlerImports(code);
-    expect(result).toContain("var compileExpression = __libs.compileExpression;");
-    expect(result).not.toContain("import");
-    expect(result).not.toContain("export default");
-  });
-
-  it("transforms both archon:context and archon:lib/filtrex imports", () => {
-    const code = `import { dataset } from "archon:context";
-import { compileExpression } from "archon:lib/filtrex";
-export default async function(args) {
-  const data = await dataset.get(args.key);
-  const expr = compileExpression(args.filter);
-  return expr(data);
-}`;
-    const result = transformToolHandlerImports(code);
-    expect(result).toContain("var dataset = __context.dataset;");
-    expect(result).toContain("var compileExpression = __libs.compileExpression;");
-  });
-
   it("throws on unsupported archon:fn import", () => {
     const code = `import calc from "archon:fn/pricing_engine";
 export default async function(args) {
@@ -48,7 +23,7 @@ export default async function(args) {
       '工具 Handler 不支持模块 "archon:fn/pricing_engine"'
     );
     expect(() => transformToolHandlerImports(code)).toThrow(
-      'archon:lib/filtrex'
+      'archon:context'
     );
   });
 
@@ -59,7 +34,7 @@ export default function(args) { return args; }`;
       '工具 Handler 不支持模块 "archon:react"'
     );
     expect(() => transformToolHandlerImports(code)).toThrow(
-      'archon:lib/filtrex'
+      'archon:context'
     );
   });
 

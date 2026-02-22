@@ -4,7 +4,7 @@
  * Uses filtrex for expression evaluation.
  * Public API: pricingEngine(input) where input = { config, fieldValues, ... }
  */
-import { compileExpression } from "archon:lib/filtrex";
+import compileExpression from "archon:fn/compileExpression";
 
 // ── Constants ──
 

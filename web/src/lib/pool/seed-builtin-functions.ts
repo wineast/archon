@@ -30,8 +30,7 @@ const BUILTIN_DEFS: BuiltinFunctionDef[] = [
     name: "Compile Expression",
     description:
       "Compiles a string expression (e.g. math formulas, conditional logic) into an executable function. Powered by the filtrex library.",
-    code: `import { compileExpression } from "archon:lib/filtrex";
-export default function(input) {
+    code: `export default function(input) {
   const expr = compileExpression(input.expression);
   return expr(input.data);
 }`,

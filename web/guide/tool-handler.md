@@ -45,7 +45,6 @@ export default async function(args) {
 | 命名空间 | 用途 | 示例 |
 |----------|------|------|
 | `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, fn } from "archon:context"` |
-| `archon:lib/filtrex` | 表达式过滤引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
 
 ### 运行环境
 
@@ -142,17 +141,6 @@ const graph = await ontology.graph("customer", id, { depth: 2 });
 // → { nodes: [...], edges: [...] }
 ```
 
-### archon:lib/filtrex
-
-```js
-import { compileExpression } from "archon:lib/filtrex";
-
-const evaluate = compileExpression("price * quantity > 100");
-const result = evaluate({ price: 50, quantity: 3 }); // true
-```
-
-`compileExpression(expression, options?)` — 编译一个表达式字符串，返回一个求值函数 `(data: object) => unknown`。支持算术运算、比较、逻辑运算和属性访问。
-
 > **重要**：`wiki.get()` 返回的 `content` 经过完整模板渲染（含 `{% include %}` 展开），而 `wiki.findByPrefix()` 和 `wiki.search()` 返回的 `content` 是原始正文（仅去除 frontmatter），不经过渲染。
 
 ## 示例
@@ -204,16 +192,16 @@ export default async function(args) {
 }
 ```
 
-### 使用 filtrex 过滤数据
+### 使用 fn() 调用共享函数过滤数据
 
 ```js
-import { dataset } from "archon:context";
-import { compileExpression } from "archon:lib/filtrex";
+import { dataset, fn } from "archon:context";
 
 export default async function(args) {
   const items = await dataset.get(args.datasetKey);
   const entries = Object.values(items || {});
-  const filter = compileExpression(args.filter);
+  const compileExpr = await fn("compileExpression");
+  const filter = compileExpr({ expression: args.filter, data: {} });
   return entries.filter(entry => filter(entry));
 }
 ```

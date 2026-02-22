@@ -77,7 +77,6 @@ export default async function(args) {
 | 命名空间 | 用途 | 语法 |
 |----------|------|------|
 | `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, dataset, fn, ontology } from "archon:context"` |
-| `archon:lib/filtrex` | Filtrex 表达式引擎 | `import { compileExpression } from "archon:lib/filtrex"` |
 
 ### 被其他资源引用
 

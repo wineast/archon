@@ -259,39 +259,22 @@ export default async function(args) {
     expect(ctx.dataset.get).toHaveBeenCalledWith("prices");
   });
 
-  it("executes a module-format handler importing archon:lib/filtrex", async () => {
-    const ctx = createMockContext();
+  it("calls fn() to use a shared function", async () => {
+    const mockEvaluator = (data: Record<string, unknown>) => (data.x as number) + (data.y as number) * 2;
+    const ctx = createMockContext({
+      fn: vi.fn().mockResolvedValue(mockEvaluator),
+    });
     const result = await executeToolInSandbox(
-      `import { compileExpression } from "archon:lib/filtrex";
-export default function(args) {
-  const expr = compileExpression("x + y * 2");
-  return { value: expr(args) };
+      `import { fn } from "archon:context";
+export default async function(args) {
+  const calc = await fn("compileExpression");
+  return { value: calc(args) };
 }`,
       { x: 10, y: 5 },
       ctx
     );
     expect(result).toEqual({ value: 20 });
-  });
-
-  it("executes a handler importing both archon:context and archon:lib/filtrex", async () => {
-    const ctx = createMockContext({
-      dataset: {
-        get: vi.fn().mockResolvedValue({ x: 3, y: 7 }),
-      },
-    });
-    const result = await executeToolInSandbox(
-      `import { dataset } from "archon:context";
-import { compileExpression } from "archon:lib/filtrex";
-export default async function(args) {
-  const data = await dataset.get(args.key);
-  const expr = compileExpression("x + y");
-  return { value: expr(data) };
-}`,
-      { key: "nums" },
-      ctx
-    );
-    expect(result).toEqual({ value: 10 });
-    expect(ctx.dataset.get).toHaveBeenCalledWith("nums");
+    expect(ctx.fn).toHaveBeenCalledWith("compileExpression");
   });
 
   it("throws on module-format handler with non-function default export", async () => {

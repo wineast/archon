@@ -98,19 +98,12 @@ declare module "archon:icons" {
 }
 `;
 
-export const ARCHON_LIB_FILTREX_DTS = `
-declare module "archon:lib/filtrex" {
-  export function compileExpression(expression: string, options?: Record<string, unknown>): (data: Record<string, unknown>) => unknown;
-}
-`;
-
 /** All static archon:* type declarations. */
 export const STATIC_ARCHON_DECLARATIONS = [
   ARCHON_CONTEXT_DTS,
   ARCHON_REACT_DTS,
   ARCHON_UI_DTS,
   ARCHON_ICONS_DTS,
-  ARCHON_LIB_FILTREX_DTS,
 ].join("\n");
 
 // ── Dynamic declarations (per-agent) ──

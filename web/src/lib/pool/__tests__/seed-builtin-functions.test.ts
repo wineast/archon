@@ -75,7 +75,7 @@ describe("ensureBuiltinPoolFunctions", () => {
       name: "Compile Expression",
       origin: "builtin",
     });
-    expect(values.code).toContain('import { compileExpression } from "archon:lib/filtrex"');
+    expect(values.code).toContain('compileExpression(input.expression)');
     expect(values.description).toBeTruthy();
     expect(values.parametersSchema).toBeTruthy();
     expect(values.returnParametersSchema).toBeTruthy();

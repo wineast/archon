@@ -31,7 +31,6 @@ export default function(input) {
 | 模块 | 说明 |
 |------|------|
 | `archon:fn/<key>` | 导入同 Agent 下的其他函数 |
-| `archon:lib/filtrex` | 导入 filtrex 表达式编译器（`compileExpression`） |
 
 ### archon:fn/<key>
 
@@ -46,21 +45,6 @@ export default function(input) {
   return { ...result, processed: true };
 }
 ```
-
-### archon:lib/filtrex
-
-`compileExpression(expression, options?)` — 编译一个表达式字符串，返回一个求值函数 `(data: object) => unknown`。
-
-```js
-import { compileExpression } from "archon:lib/filtrex";
-
-export default function(input) {
-  const evaluate = compileExpression("price * quantity");
-  return { total: evaluate(input) };
-}
-```
-
-支持算术运算、比较、逻辑运算和属性访问。
 
 ---
 
@@ -82,17 +66,15 @@ export default async function(input) {
 ## 完整示例
 
 ```js
-import { compileExpression } from "archon:lib/filtrex";
 import format_currency from "archon:fn/format_currency";
 
 export default function(input) {
   const { items, taxRate } = input;
-  const calcTax = compileExpression("price * rate");
 
   const result = items.map(item => ({
     name: item.name,
     price: item.price,
-    tax: calcTax({ price: item.price, rate: taxRate }),
+    tax: item.price * taxRate,
   }));
 
   const total = result.reduce((sum, r) => sum + r.price + r.tax, 0);
