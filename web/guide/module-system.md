@@ -4,12 +4,6 @@
 
 ---
 
-## 与旧格式的关系
-
-系统通过代码中是否包含 `import`/`export` 语句自动检测格式，新旧格式可在同一 Agent 内共存。旧格式代码完全不受影响。
-
----
-
 ## 模块命名空间
 
 | 命名空间 | 用途 | 适用场景 |
@@ -26,18 +20,6 @@
 
 ## 函数
 
-### 旧格式
-
-```js
-function fn({ compileExpression, other_fn }) {
-  return function(input) {
-    return other_fn({ value: compileExpression("x * 2")(input) });
-  }
-}
-```
-
-### 新格式
-
 ```js
 import { compileExpression } from "archon:lib/filtrex";
 import other_fn from "archon:fn/other_fn";
@@ -49,7 +31,6 @@ export default function(input) {
 
 - `export default` 必须导出一个函数，接收 `input` 参数
 - 函数之间的依赖关系从 `archon:fn/<key>` 导入语句自动推断
-- 新旧格式函数可互相引用
 
 ---
 

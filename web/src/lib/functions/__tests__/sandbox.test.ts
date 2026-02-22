@@ -9,13 +9,13 @@ import {
 
 describe("compileAndExecFn", () => {
   it("evaluates numeric computation", async () => {
-    const code = `function fn() { return function(input) { return input.a + input.b; } }`;
+    const code = `export default function(input) { return input.a + input.b; }`;
     const result = await compileAndExecFn(code, { a: 10, b: 5 });
     expect(result).toBe(15);
   });
 
   it("evaluates string computation", async () => {
-    const code = `function fn() { return function(input) { return input.greeting + " " + input.name; } }`;
+    const code = `export default function(input) { return input.greeting + " " + input.name; }`;
     const result = await compileAndExecFn(code, {
       greeting: "Hello",
       name: "World",
@@ -24,30 +24,29 @@ describe("compileAndExecFn", () => {
   });
 
   it("returns object results", async () => {
-    const code = `function fn() { return function(input) { return { sum: input.x + input.y, product: input.x * input.y }; } }`;
+    const code = `export default function(input) { return { sum: input.x + input.y, product: input.x * input.y }; }`;
     const result = await compileAndExecFn(code, { x: 3, y: 4 });
     expect(result).toEqual({ sum: 7, product: 12 });
   });
 
   it("returns array results", async () => {
-    const code = `function fn() { return function(input) { return input.items.map(function(x) { return x * 2; }); } }`;
+    const code = `export default function(input) { return input.items.map(function(x) { return x * 2; }); }`;
     const result = await compileAndExecFn(code, { items: [1, 2, 3] });
     expect(result).toEqual([2, 4, 6]);
   });
 
   it("injects host dependencies as globals", async () => {
     const double = (x: number) => x * 2;
-    const code = `function fn({ double }) { return function(input) { return double(input.value); } }`;
+    const code = `export default function(input) { return double(input.value); }`;
     const result = await compileAndExecFn(code, { value: 21 }, { double });
     expect(result).toBe(42);
   });
 
-  it("bridges compileExpression from filtrex", async () => {
+  it("bridges compileExpression from filtrex via archon:lib", async () => {
     const { compileExpression } = await import("filtrex");
-    const code = `function fn({ compileExpression }) {
-      var expr = compileExpression("x + y * 2");
-      return function(input) { return expr(input); };
-    }`;
+    const code = `import { compileExpression } from "archon:lib/filtrex";
+var expr = compileExpression("x + y * 2");
+export default function(input) { return expr(input); }`;
     const result = await compileAndExecFn(
       code,
       { x: 10, y: 5 },
@@ -57,45 +56,45 @@ describe("compileAndExecFn", () => {
   });
 
   it("handles async functions via executePendingJobs", async () => {
-    const code = `function fn() { return async function(input) { return input.value + 1; } }`;
+    const code = `export default async function(input) { return input.value + 1; }`;
     const result = await compileAndExecFn(code, { value: 41 });
     expect(result).toBe(42);
   });
 
   it("throws SandboxCompilationError on syntax error", async () => {
-    const code = `function fn() { return function(input { return 1; } }`;
+    const code = `export default function(input { return 1; }`;
     await expect(compileAndExecFn(code, {})).rejects.toThrow(
       SandboxCompilationError
     );
   });
 
-  it("throws SandboxCompilationError when fn is not defined", async () => {
+  it("throws SandboxCompilationError when no default export", async () => {
     const code = `var x = 42;`;
     await expect(compileAndExecFn(code, {})).rejects.toThrow(
       SandboxCompilationError
     );
   });
 
-  it("throws SandboxCompilationError when fn() does not return a function", async () => {
-    const code = `function fn() { return 42; }`;
+  it("throws SandboxCompilationError when default export is not a function", async () => {
+    const code = `export default 42;`;
     await expect(compileAndExecFn(code, {})).rejects.toThrow(
       SandboxCompilationError
     );
   });
 
   it("throws SandboxTimeoutError on infinite loop", async () => {
-    const code = `function fn() { return function(input) { while(true) {} } }`;
+    const code = `export default function(input) { while(true) {} }`;
     await expect(
       compileAndExecFn(code, {}, undefined, { timeoutMs: 200 })
     ).rejects.toThrow(SandboxTimeoutError);
   });
 
   it("throws on excessive memory allocation", async () => {
-    const code = `function fn() { return function(input) {
+    const code = `export default function(input) {
       var arr = [];
       for (var i = 0; i < 100000000; i++) { arr.push(new Array(10000)); }
       return arr.length;
-    } }`;
+    }`;
     await expect(
       compileAndExecFn(code, {}, undefined, {
         memoryLimitBytes: 1024 * 1024,
@@ -105,17 +104,17 @@ describe("compileAndExecFn", () => {
   });
 
   it("cannot access Node.js globals", async () => {
-    const code = `function fn() { return function(input) {
+    const code = `export default function(input) {
       return typeof process;
-    } }`;
+    }`;
     const result = await compileAndExecFn(code, {});
     expect(result).toBe("undefined");
   });
 
   it("cannot access require", async () => {
-    const code = `function fn() { return function(input) {
+    const code = `export default function(input) {
       return typeof require;
-    } }`;
+    }`;
     const result = await compileAndExecFn(code, {});
     expect(result).toBe("undefined");
   });
@@ -126,8 +125,7 @@ describe("createFunctionsSandbox", () => {
     const sandbox = await createFunctionsSandbox([
       {
         key: "add",
-        code: `function fn() { return function(input) { return input.a + input.b; } }`,
-        depNames: [],
+        code: `export default function(input) { return input.a + input.b; }`,
       },
     ]);
     try {
@@ -138,17 +136,16 @@ describe("createFunctionsSandbox", () => {
     }
   });
 
-  it("supports function-to-function dependencies", async () => {
+  it("supports function-to-function dependencies via import", async () => {
     const sandbox = await createFunctionsSandbox([
       {
         key: "double",
-        code: `function fn() { return function(input) { return input.value * 2; } }`,
-        depNames: [],
+        code: `export default function(input) { return input.value * 2; }`,
       },
       {
         key: "quadruple",
-        code: `function fn({ double }) { return function(input) { return double({ value: double({ value: input.value }) }); } }`,
-        depNames: ["double"],
+        code: `import double from "archon:fn/double";
+export default function(input) { return double({ value: double({ value: input.value }) }); }`,
       },
     ]);
     try {
@@ -165,8 +162,7 @@ describe("createFunctionsSandbox", () => {
       [
         {
           key: "calc",
-          code: `function fn({ triple }) { return function(input) { return triple(input.value); } }`,
-          depNames: ["triple"],
+          code: `export default function(input) { return triple(input.value); }`,
         },
       ],
       { triple }
@@ -182,8 +178,7 @@ describe("createFunctionsSandbox", () => {
     const sandbox = await createFunctionsSandbox([
       {
         key: "noop",
-        code: `function fn() { return function() { return null; } }`,
-        depNames: [],
+        code: `export default function() { return null; }`,
       },
     ]);
     sandbox.dispose();
@@ -194,8 +189,7 @@ describe("createFunctionsSandbox", () => {
     const sandbox = await createFunctionsSandbox([
       {
         key: "a",
-        code: `function fn() { return function() { return 1; } }`,
-        depNames: [],
+        code: `export default function() { return 1; }`,
       },
     ]);
     try {
@@ -207,60 +201,21 @@ describe("createFunctionsSandbox", () => {
 
   // ── ES module format tests ──
 
-  it("compiles and calls a module-format function", async () => {
-    const sandbox = await createFunctionsSandbox([
-      {
-        key: "add",
-        code: `export default function(input) { return input.a + input.b; }`,
-        depNames: [],
-      },
-    ]);
-    try {
-      expect(sandbox.keys).toEqual(["add"]);
-      expect(sandbox.call("add", { a: 10, b: 20 })).toBe(30);
-    } finally {
-      sandbox.dispose();
-    }
-  });
-
   it("supports module-format function importing another module-format function", async () => {
     const sandbox = await createFunctionsSandbox([
       {
         key: "double",
         code: `export default function(input) { return input.value * 2; }`,
-        depNames: [],
       },
       {
         key: "quadruple",
         code: `import double from "archon:fn/double";
 export default function(input) { return double({ value: double({ value: input.value }) }); }`,
-        depNames: ["double"],
       },
     ]);
     try {
       expect(sandbox.call("double", { value: 5 })).toBe(10);
       expect(sandbox.call("quadruple", { value: 5 })).toBe(20);
-    } finally {
-      sandbox.dispose();
-    }
-  });
-
-  it("supports module-format function importing a legacy function", async () => {
-    const sandbox = await createFunctionsSandbox([
-      {
-        key: "double",
-        code: `function fn() { return function(input) { return input.value * 2; } }`,
-        depNames: [],
-      },
-      {
-        key: "calc",
-        code: `import double from "archon:fn/double";
-export default function(input) { return double({ value: input.x }); }`,
-        depNames: ["double"],
-      },
-    ]);
-    try {
-      expect(sandbox.call("calc", { x: 7 })).toBe(14);
     } finally {
       sandbox.dispose();
     }
@@ -275,7 +230,6 @@ export default function(input) { return double({ value: input.x }); }`,
           code: `import { compileExpression } from "archon:lib/filtrex";
 var expr = compileExpression("x + y * 2");
 export default function(input) { return expr(input); }`,
-          depNames: [],
         },
       ],
       { compileExpression }
@@ -293,30 +247,8 @@ export default function(input) { return expr(input); }`,
         {
           key: "bad",
           code: `export default 42;`,
-          depNames: [],
         },
       ])
     ).rejects.toThrow(SandboxCompilationError);
-  });
-
-  it("mixes legacy and module-format functions in same sandbox", async () => {
-    const sandbox = await createFunctionsSandbox([
-      {
-        key: "legacyAdd",
-        code: `function fn() { return function(input) { return input.a + input.b; } }`,
-        depNames: [],
-      },
-      {
-        key: "moduleDouble",
-        code: `export default function(input) { return input.value * 2; }`,
-        depNames: [],
-      },
-    ]);
-    try {
-      expect(sandbox.call("legacyAdd", { a: 1, b: 2 })).toBe(3);
-      expect(sandbox.call("moduleDouble", { value: 10 })).toBe(20);
-    } finally {
-      sandbox.dispose();
-    }
   });
 });
