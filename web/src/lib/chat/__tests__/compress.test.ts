@@ -9,11 +9,11 @@ const updateMock = vi.fn(() => ({ set: updateSetMock }));
 const limitMock = vi.fn(() => selectRows);
 const whereSelectMock = vi.fn(() => ({ limit: limitMock }));
 const fromMock = vi.fn(() => ({ where: whereSelectMock }));
-const selectMock = vi.fn(() => ({ from: fromMock }));
+const selectFieldsMock = vi.fn(() => ({ from: fromMock }));
 
 vi.mock("@/db", () => ({
   db: {
-    select: () => selectMock(),
+    select: () => selectFieldsMock(),
     update: () => updateMock(),
   },
 }));
@@ -23,6 +23,10 @@ vi.mock("@/db/schema", () => ({
     id: "chat_sessions.id",
     metadata: "chat_sessions.metadata",
     updatedAt: "chat_sessions.updated_at",
+  },
+  models: {
+    modelId: "models.model_id",
+    contextWindow: "models.context_window",
   },
 }));
 
@@ -57,35 +61,62 @@ const {
   compressMessages,
   getCompressionData,
   saveCompressionData,
+  getInputMax,
   KEEP_RECENT_COUNT,
 } = await import("../compress");
 
 describe("shouldCompress", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("returns true when inputTokens exceeds threshold", () => {
-    getContextWindowMock.mockReturnValue({ inputMax: 100_000 });
     // threshold = 100_000 * 0.75 = 75_000
-    expect(shouldCompress(80_000, "anthropic/claude-sonnet-4")).toBe(true);
+    expect(shouldCompress(80_000, 100_000)).toBe(true);
   });
 
   it("returns false when inputTokens is below threshold", () => {
-    getContextWindowMock.mockReturnValue({ inputMax: 100_000 });
-    expect(shouldCompress(50_000, "anthropic/claude-sonnet-4")).toBe(false);
+    expect(shouldCompress(50_000, 100_000)).toBe(false);
   });
 
   it("returns false at exactly the threshold", () => {
-    getContextWindowMock.mockReturnValue({ inputMax: 100_000 });
-    expect(shouldCompress(75_000, "anthropic/claude-sonnet-4")).toBe(false);
+    expect(shouldCompress(75_000, 100_000)).toBe(false);
   });
 
-  it("uses fallback inputMax when tokenlens returns null", () => {
+  it("works with large context windows", () => {
+    // 1M context: threshold = 750_000
+    expect(shouldCompress(800_000, 1_000_000)).toBe(true);
+    expect(shouldCompress(700_000, 1_000_000)).toBe(false);
+  });
+});
+
+describe("getInputMax", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    selectRows = [];
+  });
+
+  it("returns DB contextWindow when available", async () => {
+    selectRows = [{ contextWindow: 200_000 }];
+    const result = await getInputMax("anthropic/claude-sonnet-4");
+    expect(result).toBe(200_000);
+  });
+
+  it("falls back to tokenlens when DB has no value", async () => {
+    selectRows = [{ contextWindow: null }];
+    getContextWindowMock.mockReturnValue({ inputMax: 150_000 });
+    const result = await getInputMax("some/model");
+    expect(result).toBe(150_000);
+  });
+
+  it("falls back to 128K when both DB and tokenlens have no data", async () => {
+    selectRows = [{ contextWindow: null }];
     getContextWindowMock.mockReturnValue(null);
-    // fallback = 128_000, threshold = 96_000
-    expect(shouldCompress(100_000, "unknown/model")).toBe(true);
-    expect(shouldCompress(90_000, "unknown/model")).toBe(false);
+    const result = await getInputMax("unknown/model");
+    expect(result).toBe(128_000);
+  });
+
+  it("falls back to 128K when model not found in DB", async () => {
+    selectRows = [];
+    getContextWindowMock.mockReturnValue(null);
+    const result = await getInputMax("nonexistent/model");
+    expect(result).toBe(128_000);
   });
 });
 
@@ -136,6 +167,19 @@ describe("getCompressionData", () => {
     expect(result).toEqual(compression);
   });
 
+  it("returns compression data with lastInputTokens", async () => {
+    const compression = {
+      summary: "test summary",
+      compressedCount: 10,
+      lastCompressedAt: "2026-01-01T00:00:00.000Z",
+      lastInputTokens: 85_000,
+    };
+    selectRows = [{ metadata: { compression } }];
+    const result = await getCompressionData("session-1");
+    expect(result).toEqual(compression);
+    expect(result?.lastInputTokens).toBe(85_000);
+  });
+
   it("returns null when session not found", async () => {
     selectRows = [];
     const result = await getCompressionData("session-1");
@@ -175,6 +219,23 @@ describe("saveCompressionData", () => {
       summary: "summary",
       compressedCount: 3,
       lastCompressedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await saveCompressionData("session-1", data);
+
+    const setArg = updateSetMock.mock.calls[0]?.[0] as
+      | { metadata: Record<string, unknown> }
+      | undefined;
+    expect(setArg?.metadata).toEqual({ compression: data });
+  });
+
+  it("persists lastInputTokens in compression data", async () => {
+    selectRows = [{ metadata: {} }];
+    const data = {
+      summary: "summary",
+      compressedCount: 3,
+      lastCompressedAt: "2026-01-01T00:00:00.000Z",
+      lastInputTokens: 92_000,
     };
 
     await saveCompressionData("session-1", data);

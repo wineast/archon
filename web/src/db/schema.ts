@@ -1006,6 +1006,7 @@ export const models = pgTable("models", {
   modelId: text("model_id").notNull().unique(),
   name: text("name").notNull(),
   provider: text("provider").notNull(),
+  contextWindow: integer("context_window"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
