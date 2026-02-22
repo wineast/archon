@@ -354,6 +354,7 @@ export const wikiDocuments = pgTable(
     uniqueIndex("wiki_documents_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
     uniqueIndex("wiki_documents_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("wiki_documents_version_id_idx").on(table.versionId),
+    index("wiki_documents_parent_id_idx").on(table.parentId),
     check("wiki_documents_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
   ]
 );
@@ -1241,6 +1242,7 @@ export const objectLinks = pgTable(
       .notNull(),
   },
   (t) => [
+    unique("object_links_relation_source_target_idx").on(t.relationId, t.sourceId, t.targetId),
     index("object_links_relation_id_idx").on(t.relationId),
     index("object_links_source_id_idx").on(t.sourceId),
     index("object_links_target_id_idx").on(t.targetId),
