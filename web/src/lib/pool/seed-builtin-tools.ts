@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { tools, agentResourceRefs } from "@/db/schema";
-import { and, isNull, eq, sql } from "drizzle-orm";
+import { and, isNull, eq, sql, SQL } from "drizzle-orm";
 import { buildAllTools } from "@/lib/build-chat/tools";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -47,7 +47,7 @@ export async function ensureBuiltinPoolTools(db: DbLike): Promise<void> {
       .values(rows)
       .onConflictDoUpdate({
         target: [tools.key],
-        targetWhere: isNull(tools.agentId),
+        targetWhere: and(isNull(tools.agentId), isNull(tools.deletedAt)) as SQL,
         set: {
           description: sql`excluded.description`,
           parametersSchema: sql`excluded.parameters_schema`,

@@ -1,4 +1,5 @@
 import { orgs, orgMembers, users } from "../schema";
+import { isNull } from "drizzle-orm";
 import { logSection, log } from "../seed-utils";
 import type { Seeder } from "./types";
 
@@ -25,6 +26,7 @@ export const seedOrgs: Seeder = {
       .values({ name, slug, isPersonal: true })
       .onConflictDoUpdate({
         target: orgs.slug,
+        targetWhere: isNull(orgs.deletedAt),
         set: { name },
       })
       .returning();

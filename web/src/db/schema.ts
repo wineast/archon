@@ -70,7 +70,7 @@ export type OrgRole = keyof typeof ORG_ROLE_LEVELS;
 export const orgs = pgTable("orgs", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
+  slug: text("slug").notNull(),
   isPersonal: boolean("is_personal").notNull().default(false),
   avatarUrl: text("avatar_url"),
   creditBalanceUSD: real("credit_balance_usd").notNull().default(0),
@@ -82,7 +82,9 @@ export const orgs = pgTable("orgs", {
     .notNull()
     .$onUpdate(() => new Date()),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+}, (t) => [
+  uniqueIndex("orgs_slug_idx").on(t.slug).where(sql`deleted_at IS NULL`),
+]);
 
 export type OrgRow = typeof orgs.$inferSelect;
 export type NewOrgRow = typeof orgs.$inferInsert;
@@ -662,8 +664,8 @@ export const judgeConfigs = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("eval_judge_configs_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
-    index("eval_judge_configs_version_id_idx").on(t.versionId),
+    uniqueIndex("judge_configs_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
+    index("judge_configs_version_id_idx").on(t.versionId),
   ]
 );
 

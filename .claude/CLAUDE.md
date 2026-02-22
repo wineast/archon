@@ -139,6 +139,9 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 正确：`Request → streamText → return → after() { save }`
 - 错误：`Request → await save → streamText`（❌）
 
+### Debug
+- 服务端错误日志在 `.logs/dev.log`，排查 API 500 等服务端报错时优先查看此文件
+
 ### 收尾检查
 - 代码修改完成后，必须依次执行 `make typecheck` 和 `make test`，确认类型无报错 + 测试通过后才算任务完成
 - 新增或修改功能必须有对应的测试用例覆盖，不能只让现有测试通过就算完成

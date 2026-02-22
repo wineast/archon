@@ -6,11 +6,22 @@ async function main() {
   await sql`CREATE EXTENSION IF NOT EXISTS vector`;
   console.log("✓ pgvector extension ensured");
 
-  await sql`
-    CREATE INDEX IF NOT EXISTS memories_embedding_idx
-      ON memories USING hnsw (embedding vector_cosine_ops)
+  // HNSW index — skip if memories table doesn't exist yet (e.g. during db-reset before push)
+  const [{ exists }] = await sql`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'memories'
+    )
   `;
-  console.log("✓ HNSW index ensured");
+  if (exists) {
+    await sql`
+      CREATE INDEX IF NOT EXISTS memories_embedding_idx
+        ON memories USING hnsw (embedding vector_cosine_ops)
+    `;
+    console.log("✓ HNSW index ensured");
+  } else {
+    console.log("⏭ memories table not found, skipping HNSW index");
+  }
 
   await sql.end();
 }
