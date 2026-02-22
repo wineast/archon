@@ -28,6 +28,7 @@ import { renderTemplate, gatherTemplateData } from "@/lib/template/render";
 import { resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 import { recordUsage } from "@/lib/usage/record";
 import type { RuntimeEventInput } from "@/lib/runtime-events/record";
+import { wrapMcpExecuteWithTiming } from "./wrap-mcp-tool";
 import { recordRuntimeEvents } from "@/lib/runtime-events/record";
 import { extractMemories, serialiseConversation } from "@/lib/memory/extract";
 import { resolveModel } from "@/lib/ai/resolve-model";
@@ -165,6 +166,14 @@ export async function executeChatStream(
           const mcpTools = await client.tools();
           for (const [toolName, toolDef] of Object.entries(mcpTools)) {
             const prefixedName = `mcp_${server.key}__${toolName}`;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const originalExecute = (toolDef as any).execute;
+            if (typeof originalExecute === "function") {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (toolDef as any).execute = wrapMcpExecuteWithTiming(
+                originalExecute, prefixedName, server.key, server.id, agentId, eventCollector,
+              );
+            }
             allTools[prefixedName] = toolDef;
           }
         } catch (e) {
