@@ -46,6 +46,8 @@ export async function POST(req: Request) {
         mcpEnabled: body.agent.mcpEnabled ?? false,
         memoryEnabled: body.agent.memoryEnabled ?? false,
         skillsEnabled: body.agent.skillsEnabled ?? false,
+        contextCompressionEnabled: body.agent.contextCompressionEnabled ?? false,
+        scope: body.agent.scope ?? "org",
       })
       .returning();
 

@@ -7,8 +7,8 @@
 - **文件名**：`{agent.slug}.json`
 - **权限**：viewer 及以上（所有能看到 Agent 的用户均可导出）
 - **内容**：
-  - Agent 基本信息（name、description、icon、slug、isPublic、mcpEnabled、memoryEnabled、skillsEnabled）
-  - 所有版本（version、changelog、snapshot），每个版本含完整快照
+  - Agent 基本信息（name、description、icon、slug、isPublic、mcpEnabled、memoryEnabled、skillsEnabled、contextCompressionEnabled、scope）
+  - 所有版本（version、changelog、snapshot），每个版本含完整快照（包括 chatConfig、memoryConfig 等）
   - `isEditing` / `isPublished` 标记标识当前编辑版本和已发布版本
 
 ## 导入
@@ -36,7 +36,9 @@
     "isPublic": false,
     "mcpEnabled": false,
     "memoryEnabled": false,
-    "skillsEnabled": false
+    "skillsEnabled": false,
+    "contextCompressionEnabled": false,
+    "scope": "org"
   },
   "versions": [
     {

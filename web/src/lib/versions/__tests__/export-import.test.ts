@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { validateExportData } from "../types";
-import type { AgentExportData, AgentSnapshot } from "../types";
+import type {
+  AgentExportData,
+  AgentSnapshot,
+  ChatConfigSnapshotItem,
+  MemoryConfigSnapshotItem,
+} from "../types";
 
 const MINIMAL_SNAPSHOT: AgentSnapshot = {
   agent: { name: "test", description: "", icon: "bot", slug: "test", isPublic: false },
@@ -12,6 +17,7 @@ const MINIMAL_SNAPSHOT: AgentSnapshot = {
   datasets: [],
   modelConfigs: [],
   chatConfig: null,
+  memoryConfig: null,
   evalCases: [],
   judgeConfigs: [],
   objectTypes: [],
@@ -34,6 +40,8 @@ function makeValidExport(overrides?: Partial<AgentExportData>): AgentExportData 
       mcpEnabled: false,
       memoryEnabled: false,
       skillsEnabled: false,
+      contextCompressionEnabled: false,
+      scope: "org",
     },
     versions: [
       {
@@ -110,5 +118,100 @@ describe("validateExportData", () => {
 
   it("rejects versions as non-array", () => {
     expect(validateExportData({ ...makeValidExport(), versions: "not-array" })).toBe(false);
+  });
+});
+
+describe("AgentExportData — agent metadata fields", () => {
+  it("includes contextCompressionEnabled and scope", () => {
+    const data = makeValidExport();
+    expect(data.agent.contextCompressionEnabled).toBe(false);
+    expect(data.agent.scope).toBe("org");
+  });
+
+  it("supports platform scope", () => {
+    const data = makeValidExport();
+    data.agent.scope = "platform";
+    expect(data.agent.scope).toBe("platform");
+    expect(validateExportData(data)).toBe(true);
+  });
+});
+
+describe("ChatConfigSnapshotItem — enableVoice/enableAttachment", () => {
+  it("includes enableVoice and enableAttachment fields", () => {
+    const chatConfig: ChatConfigSnapshotItem = {
+      title: "Test",
+      welcomeTitle: "Hello",
+      welcomeIcon: "bot",
+      quickActions: [],
+      placeholder: "Ask...",
+      suggestions: [],
+      enableVoice: true,
+      enableAttachment: false,
+    };
+    expect(chatConfig.enableVoice).toBe(true);
+    expect(chatConfig.enableAttachment).toBe(false);
+  });
+
+  it("snapshot with chatConfig preserves new fields via JSON round-trip", () => {
+    const snapshot: AgentSnapshot = {
+      ...MINIMAL_SNAPSHOT,
+      chatConfig: {
+        title: "T",
+        welcomeTitle: "W",
+        welcomeIcon: "bot",
+        quickActions: ["q1"],
+        placeholder: "P",
+        suggestions: ["s1"],
+        enableVoice: true,
+        enableAttachment: true,
+      },
+    };
+    const parsed = JSON.parse(JSON.stringify(snapshot)) as AgentSnapshot;
+    expect(parsed.chatConfig?.enableVoice).toBe(true);
+    expect(parsed.chatConfig?.enableAttachment).toBe(true);
+  });
+});
+
+describe("MemoryConfigSnapshotItem", () => {
+  it("has all required fields", () => {
+    const config: MemoryConfigSnapshotItem = {
+      autoExtract: true,
+      extractionPrompt: "Extract key info",
+      maxMemoriesPerUser: 50,
+      maxGlobalMemories: 500,
+      injectionMode: "system_prompt",
+      maxInjectedMemories: 5,
+      decayEnabled: true,
+      decayDays: 30,
+      memoryTypeDefs: [{ key: "preference", description: "User prefs" }],
+    };
+    expect(config.autoExtract).toBe(true);
+    expect(config.injectionMode).toBe("system_prompt");
+    expect(config.memoryTypeDefs).toHaveLength(1);
+  });
+
+  it("snapshot with memoryConfig preserves data via JSON round-trip", () => {
+    const snapshot: AgentSnapshot = {
+      ...MINIMAL_SNAPSHOT,
+      memoryConfig: {
+        autoExtract: false,
+        extractionPrompt: "",
+        maxMemoriesPerUser: 100,
+        maxGlobalMemories: 1000,
+        injectionMode: "context",
+        maxInjectedMemories: 10,
+        decayEnabled: false,
+        decayDays: 90,
+        memoryTypeDefs: [],
+      },
+    };
+    const parsed = JSON.parse(JSON.stringify(snapshot)) as AgentSnapshot;
+    expect(parsed.memoryConfig).not.toBeNull();
+    expect(parsed.memoryConfig?.injectionMode).toBe("context");
+    expect(parsed.memoryConfig?.maxGlobalMemories).toBe(1000);
+  });
+
+  it("snapshot with null memoryConfig is valid", () => {
+    expect(MINIMAL_SNAPSHOT.memoryConfig).toBeNull();
   });
 });

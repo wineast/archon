@@ -51,6 +51,8 @@ export async function GET(
       mcpEnabled: agent.mcpEnabled,
       memoryEnabled: agent.memoryEnabled,
       skillsEnabled: agent.skillsEnabled,
+      contextCompressionEnabled: agent.contextCompressionEnabled,
+      scope: agent.scope,
     },
     versions,
   };

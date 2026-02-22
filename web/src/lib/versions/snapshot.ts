@@ -19,6 +19,7 @@ import {
   mcpServers,
   skills,
   agentResourceRefs,
+  memoryConfigs,
 } from "@/db/schema";
 import type { ResourceType } from "@/db/schema";
 import { eq, and, isNull, inArray } from "drizzle-orm";
@@ -37,6 +38,7 @@ import type {
   DatasetSnapshotItem,
   ModelConfigSnapshotItem,
   ChatConfigSnapshotItem,
+  MemoryConfigSnapshotItem,
   EvalCaseSnapshotItem,
   JudgeConfigSnapshotItem,
   ToolTestCaseSnapshotItem,
@@ -71,6 +73,7 @@ export async function buildSnapshot(agentId: string, versionId: string, external
     datasetRows,
     modelConfigRows,
     chatConfigRows,
+    memoryConfigRows,
     evalCaseRows,
     judgeConfigRows,
     toolTestCaseRows,
@@ -91,6 +94,7 @@ export async function buildSnapshot(agentId: string, versionId: string, external
     _db.select().from(datasets).where(and(eq(datasets.versionId, versionId), isNull(datasets.deletedAt))),
     _db.select().from(modelConfigs).where(and(eq(modelConfigs.versionId, versionId), isNull(modelConfigs.deletedAt))),
     _db.select().from(chatConfigs).where(eq(chatConfigs.versionId, versionId)),
+    _db.select().from(memoryConfigs).where(eq(memoryConfigs.versionId, versionId)),
     _db.select().from(evalCases).where(and(eq(evalCases.versionId, versionId), isNull(evalCases.deletedAt))),
     _db
       .select()
@@ -295,7 +299,22 @@ export async function buildSnapshot(agentId: string, versionId: string, external
           quickActions: chatConfigRows[0].quickActions,
           placeholder: chatConfigRows[0].placeholder,
           suggestions: chatConfigRows[0].suggestions,
+          enableVoice: chatConfigRows[0].enableVoice,
+          enableAttachment: chatConfigRows[0].enableAttachment,
         } satisfies ChatConfigSnapshotItem)
+      : null,
+    memoryConfig: memoryConfigRows[0]
+      ? ({
+          autoExtract: memoryConfigRows[0].autoExtract,
+          extractionPrompt: memoryConfigRows[0].extractionPrompt,
+          maxMemoriesPerUser: memoryConfigRows[0].maxMemoriesPerUser,
+          maxGlobalMemories: memoryConfigRows[0].maxGlobalMemories,
+          injectionMode: memoryConfigRows[0].injectionMode,
+          maxInjectedMemories: memoryConfigRows[0].maxInjectedMemories,
+          decayEnabled: memoryConfigRows[0].decayEnabled,
+          decayDays: memoryConfigRows[0].decayDays,
+          memoryTypeDefs: memoryConfigRows[0].memoryTypeDefs,
+        } satisfies MemoryConfigSnapshotItem)
       : null,
     evalCases: evalCaseRows.map(
       (e): EvalCaseSnapshotItem => ({
@@ -390,6 +409,7 @@ export async function restoreSnapshot(
     tx.delete(datasets).where(eq(datasets.versionId, versionId)),
     tx.delete(modelConfigs).where(eq(modelConfigs.versionId, versionId)),
     tx.delete(chatConfigs).where(eq(chatConfigs.versionId, versionId)),
+    tx.delete(memoryConfigs).where(eq(memoryConfigs.versionId, versionId)),
     tx.delete(evalCases).where(eq(evalCases.versionId, versionId)),
     tx.delete(judgeConfigs).where(eq(judgeConfigs.versionId, versionId)),
     tx.delete(mcpServers).where(eq(mcpServers.versionId, versionId)),
@@ -653,6 +673,25 @@ export async function restoreSnapshot(
       quickActions: snapshot.chatConfig.quickActions,
       placeholder: snapshot.chatConfig.placeholder,
       suggestions: snapshot.chatConfig.suggestions,
+      enableVoice: snapshot.chatConfig.enableVoice ?? false,
+      enableAttachment: snapshot.chatConfig.enableAttachment ?? false,
+    });
+  }
+
+  // 9b. Rebuild memory config
+  if (snapshot.memoryConfig) {
+    await tx.insert(memoryConfigs).values({
+      agentId,
+      versionId,
+      autoExtract: snapshot.memoryConfig.autoExtract,
+      extractionPrompt: snapshot.memoryConfig.extractionPrompt,
+      maxMemoriesPerUser: snapshot.memoryConfig.maxMemoriesPerUser,
+      maxGlobalMemories: snapshot.memoryConfig.maxGlobalMemories,
+      injectionMode: snapshot.memoryConfig.injectionMode,
+      maxInjectedMemories: snapshot.memoryConfig.maxInjectedMemories,
+      decayEnabled: snapshot.memoryConfig.decayEnabled,
+      decayDays: snapshot.memoryConfig.decayDays,
+      memoryTypeDefs: snapshot.memoryConfig.memoryTypeDefs,
     });
   }
 

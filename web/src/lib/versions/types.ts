@@ -1,6 +1,6 @@
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
-import type { ResourceType } from "@/db/schema";
+import type { AgentScope, MemoryTypeDef, ResourceType } from "@/db/schema";
 
 /* ─────────── Snapshot Item Types (no id/agentId/createdAt/updatedAt) ─────────── */
 
@@ -77,6 +77,20 @@ export interface ChatConfigSnapshotItem {
   quickActions: string[];
   placeholder: string;
   suggestions: string[];
+  enableVoice: boolean;
+  enableAttachment: boolean;
+}
+
+export interface MemoryConfigSnapshotItem {
+  autoExtract: boolean;
+  extractionPrompt: string;
+  maxMemoriesPerUser: number;
+  maxGlobalMemories: number;
+  injectionMode: "system_prompt" | "context" | "none";
+  maxInjectedMemories: number;
+  decayEnabled: boolean;
+  decayDays: number;
+  memoryTypeDefs: MemoryTypeDef[];
 }
 
 export interface EvalCaseSnapshotItem {
@@ -194,6 +208,7 @@ export interface AgentSnapshot {
   datasets: DatasetSnapshotItem[];
   modelConfigs: ModelConfigSnapshotItem[];
   chatConfig: ChatConfigSnapshotItem | null;
+  memoryConfig: MemoryConfigSnapshotItem | null;
   evalCases: EvalCaseSnapshotItem[];
   judgeConfigs: JudgeConfigSnapshotItem[];
   objectTypes: ObjectTypeSnapshotItem[];
@@ -244,6 +259,8 @@ export interface AgentExportData {
     mcpEnabled: boolean;
     memoryEnabled: boolean;
     skillsEnabled: boolean;
+    contextCompressionEnabled: boolean;
+    scope: AgentScope;
   };
   versions: AgentExportVersion[];
 }
