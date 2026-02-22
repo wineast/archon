@@ -4,7 +4,7 @@ description: 待办事项管理。当用户说"记个待办"、"TODO"、"以后�
 allowed-tools: Read, Write, Edit, Glob, Bash
 ---
 
-待办事项管理技能——在 `todo/` 目录下维护待办列表。
+待办事项管理技能——在 `.claude/skills/todo/` 目录下维护待办列表。
 
 ## 触发条件
 
@@ -22,13 +22,17 @@ allowed-tools: Read, Write, Edit, Glob, Bash
 ## 目录结构（文件夹即状态）
 
 ```
-todo/
-  pending/      ← 待办
+.claude/skills/todo/
+  pending/      ← 当前要做
+  backlog/      ← 确认要做但不急，等条件成熟再提到 pending
   done/         ← 已完成
 ```
 
 - 一个待办一个文件，文件通过所在文件夹表示状态
 - 状态变更 = 移动文件到对应文件夹
+- **pending**：当前阶段该做的，可以随时创建工作区开工
+- **backlog**：确认有价值但当前不做，通常是等功能上线、等规模增长、等需求明确后才做
+- **done**：已完成
 
 ## 待办文件规范
 
@@ -47,19 +51,33 @@ todo/
 
 ### 添加待办
 
-1. 确保 `todo/pending/` 目录存在
-2. 创建文件到 `todo/pending/`
+1. 确保 `.claude/skills/todo/pending/` 目录存在
+2. 创建文件到 `.claude/skills/todo/pending/`
 3. 确认：`已添加待办 — {内容}`
 
 ### 查看待办
 
-列出 `todo/pending/` 下所有文件。
+列出 `.claude/skills/todo/pending/` 和 `.claude/skills/todo/backlog/` 下所有文件。
 
 ### 完成待办
 
-将文件从 `todo/pending/` 移动到 `todo/done/`：
+将文件从 `pending/` 移动到 `done/`：
 ```bash
-mv todo/pending/{name}.md todo/done/
+mv .claude/skills/todo/pending/{name}.md .claude/skills/todo/done/
+```
+
+### 暂缓待办
+
+将文件从 `pending/` 移动到 `backlog/`：
+```bash
+mv .claude/skills/todo/pending/{name}.md .claude/skills/todo/backlog/
+```
+
+### 激活待办
+
+将文件从 `backlog/` 移动到 `pending/`：
+```bash
+mv .claude/skills/todo/backlog/{name}.md .claude/skills/todo/pending/
 ```
 
 ### 删除待办
