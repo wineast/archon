@@ -1,11 +1,12 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { components } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import type { ComponentRow } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { compileCssForComponent } from "@/lib/components/compile-css";
 import { logAudit } from "@/lib/audit/log";
+import { getAgentResources } from "@/lib/pool/queries";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -16,11 +17,7 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await db
-    .select()
-    .from(components)
-    .where(and(eq(components.agentId, agentId), isNull(components.deletedAt)))
-    .orderBy(components.key);
+  const rows = await getAgentResources<ComponentRow>(agentId, "component");
   return NextResponse.json(rows);
 }
 

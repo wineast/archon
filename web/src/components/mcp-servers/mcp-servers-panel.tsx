@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import useSWR from "swr";
 import {
   useMcpServers,
@@ -10,16 +11,19 @@ import {
   updateMcpServer,
   deleteMcpServer,
 } from "@/lib/mcp-servers/hooks";
+import { removeAgentRef, useAgentRefs } from "@/lib/pool/ref-hooks";
 import { McpServersSidebar } from "./mcp-servers-sidebar";
 import { McpServerDetail } from "./mcp-server-detail";
 import { McpServersEmptyState } from "./mcp-servers-empty-state";
 import { McpServerCreateDialog } from "./mcp-server-create-dialog";
+import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
 import type { AgentRow } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function McpServersPanel({ agentId }: { agentId: string }) {
   const { mcpServers, mutate: mutateList } = useMcpServers(agentId);
+  const { mutate: mutateRefs } = useAgentRefs(agentId);
   const { data: agent, mutate: mutateAgent } = useSWR<AgentRow>(
     `/api/agents/${agentId}`,
     fetcher
@@ -27,6 +31,7 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
   const mcpEnabled = agent?.mcpEnabled ?? false;
   const activeMcpServer = mcpServers.find((s) => s.id === activeId) ?? null;
@@ -86,6 +91,22 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
     [mutateList, activeId]
   );
 
+  const handleRemoveRef = useCallback(
+    async (refId: string) => {
+      try {
+        await removeAgentRef(agentId, refId, mutateRefs);
+        await mutateList();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to remove ref");
+      }
+    },
+    [agentId, mutateRefs, mutateList],
+  );
+
+  const handlePoolAdded = useCallback(() => {
+    mutateList();
+  }, [mutateList]);
+
   const handleToggleMcp = useCallback(
     async (enabled: boolean) => {
       await fetch(`/api/agents/${agentId}`, {
@@ -109,6 +130,8 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
           onSelect={setActiveId}
           onCreate={openCreateDialog}
           onToggleMcp={handleToggleMcp}
+          onAddFromPool={() => setPoolDialogOpen(true)}
+          onRemoveRef={handleRemoveRef}
         />
         <div className="flex-1 overflow-hidden">
           {activeMcpServer ? (
@@ -165,6 +188,13 @@ export function McpServersPanel({ agentId }: { agentId: string }) {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreate={handleCreateWithKey}
+      />
+      <AddFromPoolDialog
+        open={poolDialogOpen}
+        onOpenChange={setPoolDialogOpen}
+        resourceType="mcp-server"
+        agentId={agentId}
+        onAdded={handlePoolAdded}
       />
     </div>
   );

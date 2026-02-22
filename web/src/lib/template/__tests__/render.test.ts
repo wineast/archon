@@ -12,61 +12,13 @@ vi.mock("@/db", () => ({
   },
 }));
 
-vi.mock("@/db/schema", () => ({
-  datasets: {
-    key: "key",
-    name: "name",
-    data: "data",
-    agentId: "agent_id",
-    id: "id",
-    deletedAt: "deleted_at",
-  },
-  wikiDocuments: {
-    id: "id",
-    agentId: "agent_id",
-    content: "content",
-    order: "order",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-    deletedAt: "deleted_at",
-  },
-  tools: {
-    id: "id",
-    agentId: "agent_id",
-    name: "name",
-    description: "description",
-    parametersSchema: "parameters_schema",
-    returnParametersSchema: "return_parameters_schema",
-    output: "output",
-    handler: "handler",
-    component: "component",
-    enabled: "enabled",
-    createdAt: "created_at",
-    updatedAt: "updated_at",
-    deletedAt: "deleted_at",
-  },
-  schemas: {
-    id: "id",
-    agentId: "agent_id",
-    key: "key",
-    name: "name",
-    parameters: "parameters",
-    deletedAt: "deleted_at",
-  },
-  objectTypes: {
-    id: "id",
-    agentId: "agent_id",
-    key: "key",
-    name: "name",
-    order: "order",
-    deletedAt: "deleted_at",
-  },
-  objectRelations: {
-    id: "id",
-    agentId: "agent_id",
-    deletedAt: "deleted_at",
-  },
-}));
+vi.mock("@/db/schema", () => {
+  const col = (name: string) => name;
+  return {
+    objectTypes: { id: col("id"), agentId: col("agent_id"), key: col("key"), name: col("name"), order: col("order"), deletedAt: col("deleted_at") },
+    objectRelations: { id: col("id"), agentId: col("agent_id"), deletedAt: col("deleted_at") },
+  };
+});
 
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((a, b) => ({ op: "eq", a, b })),
@@ -76,28 +28,49 @@ vi.mock("drizzle-orm", () => ({
   isNull: vi.fn((a) => ({ op: "isNull", a })),
 }));
 
+const mockGetAgentDatasets = vi.fn();
+const mockGetAgentWikiDocs = vi.fn();
+const mockGetAgentEnabledTools = vi.fn();
+const mockGetAgentSchemas = vi.fn();
+
+vi.mock("@/lib/pool/queries", () => ({
+  getAgentDatasets: (...args: unknown[]) => mockGetAgentDatasets(...args),
+  getAgentWikiDocs: (...args: unknown[]) => mockGetAgentWikiDocs(...args),
+  getAgentEnabledTools: (...args: unknown[]) => mockGetAgentEnabledTools(...args),
+  getAgentSchemas: (...args: unknown[]) => mockGetAgentSchemas(...args),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Build a mock chain for db.select().from().where()...
- * gatherTemplateData issues queries in this order:
- *   [0] datasets rows       — getResolvedDatasets → getDatasets
- *   [1] wiki doc rows       — getWikiDocs
- *   [2] tool rows           — getEnabledTools
- *   [3] objectTypes rows    — ontology types
- *   [4] objectRelations rows — ontology relations
- *   [5] all schema rows     — for resolveParameters
+ * Build mocks for gatherTemplateData.
+ * Indices match the original query order for backward compatibility:
+ *   [0] datasets rows       — mockGetAgentDatasets
+ *   [1] wiki doc rows       — mockGetAgentWikiDocs
+ *   [2] tool rows           — mockGetAgentEnabledTools
+ *   [3] objectTypes rows    — db.select (direct)
+ *   [4] objectRelations rows — db.select (direct)
+ *   [5] all schema rows     — mockGetAgentSchemas
  *
  * For convenience, pass 3 items and the helper fills the rest with [].
  */
 function setupDbChain(queries: unknown[][]) {
   // Auto-fill missing trailing queries with empty arrays
   while (queries.length < 6) queries.push([]);
+
+  // Pool query mocks
+  mockGetAgentDatasets.mockResolvedValue(queries[0]);
+  mockGetAgentWikiDocs.mockResolvedValue(queries[1]);
+  mockGetAgentEnabledTools.mockResolvedValue(queries[2]);
+  mockGetAgentSchemas.mockResolvedValue(queries[5]);
+
+  // DB chain for direct queries: objectTypes [3], objectRelations [4]
   let callIdx = 0;
+  const dbQueries = [queries[3], queries[4]];
   mockSelect.mockImplementation(() => {
-    const rows = queries[callIdx] ?? [];
+    const rows = dbQueries[callIdx] ?? [];
     callIdx++;
     return {
       from: () => ({
@@ -225,8 +198,9 @@ describe("renderSystemPrompt", () => {
       [
         {
           id: "faq-doc",
+          parentId: null,
           key: "faq",
-          title: "FAQ",
+          name: "FAQ",
           content: "Q: What? A: This.",
           order: 0,
           createdAt: now,
@@ -293,18 +267,10 @@ describe("renderSystemPrompt", () => {
   });
 
   it("returns original text on rendering failure", async () => {
-    const err = new Error("DB connection failed");
-    function rejectThenable() {
-      const t = {
-        from: () => t,
-        where: () => t,
-        orderBy: () => t,
-        limit: () => t,
-        then: (_res: unknown, rej: (e: Error) => void) => { rej(err); },
-      };
-      return t;
-    }
-    mockSelect.mockImplementation(rejectThenable);
+    mockGetAgentDatasets.mockRejectedValue(new Error("DB connection failed"));
+    mockGetAgentWikiDocs.mockRejectedValue(new Error("DB connection failed"));
+    mockGetAgentEnabledTools.mockRejectedValue(new Error("DB connection failed"));
+    mockGetAgentSchemas.mockRejectedValue(new Error("DB connection failed"));
 
     const { renderSystemPrompt } = await import("../render");
     const original = "Hello {{world}}";
@@ -425,7 +391,7 @@ describe("renderSystemPrompt", () => {
         { key: "product_name",data: "GMCC Universe" },
         {
           key: "routes",
-         
+
           data: { universe: { label: "{{product_name}}", states: ["CA"] } },
         },
       ],
@@ -484,8 +450,9 @@ describe("renderWikiContent", () => {
       [
         {
           id: "doc-1",
+          parentId: null,
           key: "main",
-          title: "Main",
+          name: "Main",
           content: "Main doc",
           order: 0,
           createdAt: now,
@@ -493,8 +460,9 @@ describe("renderWikiContent", () => {
         },
         {
           id: "doc-2",
+          parentId: null,
           key: "footer",
-          title: "Footer",
+          name: "Footer",
           content: "-- End --",
           order: 1,
           createdAt: now,
@@ -515,18 +483,10 @@ describe("renderWikiContent", () => {
   });
 
   it("returns original content on failure", async () => {
-    const err = new Error("DB error");
-    function rejectThenable() {
-      const t = {
-        from: () => t,
-        where: () => t,
-        orderBy: () => t,
-        limit: () => t,
-        then: (_res: unknown, rej: (e: Error) => void) => { rej(err); },
-      };
-      return t;
-    }
-    mockSelect.mockImplementation(rejectThenable);
+    mockGetAgentDatasets.mockRejectedValue(new Error("DB error"));
+    mockGetAgentWikiDocs.mockRejectedValue(new Error("DB error"));
+    mockGetAgentEnabledTools.mockRejectedValue(new Error("DB error"));
+    mockGetAgentSchemas.mockRejectedValue(new Error("DB error"));
 
     const { renderWikiContent } = await import("../render");
     const original = "Some {{content}}";
@@ -545,6 +505,9 @@ describe("renderWikiContent", () => {
       [
         {
           id: "wiki-uw-ocean",
+          parentId: null,
+          key: "wiki-uw-ocean",
+          name: "UW Ocean",
           content: "合格：{{ocean_incomes}}。\n不合格：{{ocean_incomes_excluded}}。\n州：{{ocean_states}}。",
           order: 0,
           createdAt: now,

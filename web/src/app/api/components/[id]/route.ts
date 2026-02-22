@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { components } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
-import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { requireAgentRole, requireSuperAdmin } from "@/lib/auth/require-agent-role";
 import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { compileCssForComponent } from "@/lib/components/compile-css";
 import { logAudit } from "@/lib/audit/log";
@@ -23,7 +23,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Component not found" }, { status: 404 });
   }
 
-  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  // Pool resource (agentId IS NULL) → require super admin
+  // Private resource → require agent editor role
+  const ctx = existing.agentId === null
+    ? await requireSuperAdmin()
+    : await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
   for (const [field, label] of [
@@ -54,17 +58,20 @@ export async function PATCH(
     .where(eq(components.id, id))
     .returning();
 
-  after(async () => {
-    await logAudit({
-      agentId: existing.agentId!,
-      userId: ctx.user.id,
-      action: "updated",
-      resourceType: "component",
-      resourceId: id,
-      resourceKey: updated.key,
-      resourceName: updated.name,
+  if (existing.agentId) {
+    const userId = "user" in ctx ? ctx.user.id : ctx.id;
+    after(async () => {
+      await logAudit({
+        agentId: existing.agentId!,
+        userId,
+        action: "updated",
+        resourceType: "component",
+        resourceId: id,
+        resourceKey: updated.key,
+        resourceName: updated.name,
+      });
     });
-  });
+  }
 
   return NextResponse.json(updated);
 }
@@ -84,22 +91,27 @@ export async function DELETE(
     return NextResponse.json({ error: "Component not found" }, { status: 404 });
   }
 
-  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  const ctx = existing.agentId === null
+    ? await requireSuperAdmin()
+    : await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
   await db.update(components).set({ deletedAt: new Date() }).where(eq(components.id, id));
 
-  after(async () => {
-    await logAudit({
-      agentId: existing.agentId!,
-      userId: ctx.user.id,
-      action: "deleted",
-      resourceType: "component",
-      resourceId: id,
-      resourceKey: existing.key,
-      resourceName: existing.name,
+  if (existing.agentId) {
+    const userId = "user" in ctx ? ctx.user.id : ctx.id;
+    after(async () => {
+      await logAudit({
+        agentId: existing.agentId!,
+        userId,
+        action: "deleted",
+        resourceType: "component",
+        resourceId: id,
+        resourceKey: existing.key,
+        resourceName: existing.name,
+      });
     });
-  });
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { InvitationCodesSection } from "@/components/admin/invitation-codes-section";
 import { PlatformAgentsSection } from "@/components/admin/platform-agents-section";
+import { PoolResourcesSection } from "@/components/admin/pool-resources-section";
 import {
   useAdminUsers,
   updateUserRole,
@@ -47,6 +48,8 @@ export default function AdminPage() {
       <main className="flex-1 p-6">
         <div className="mx-auto max-w-3xl space-y-8">
           <PlatformAgentsSection />
+
+          <PoolResourcesSection />
 
           <InvitationCodesSection />
 

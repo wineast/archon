@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   useFunctions,
   useFunction,
@@ -10,6 +11,7 @@ import {
   updateFunction,
   deleteFunction,
 } from "@/lib/functions/hooks";
+import { removeAgentRef, useAgentRefs } from "@/lib/pool/ref-hooks";
 import { BUILTIN_FUNCTIONS } from "@/lib/functions/builtin";
 import type { BuiltinFunction } from "@/lib/functions/builtin";
 import { FunctionsSidebar } from "./functions-sidebar";
@@ -17,6 +19,7 @@ import { FunctionDetail } from "./function-detail";
 import { FunctionBuiltinDetail } from "./function-builtin-detail";
 import { FunctionsEmptyState } from "./functions-empty-state";
 import { FunctionCreateDialog } from "./function-create-dialog";
+import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
 
 /** Map builtin key → BuiltinFunction for quick lookup */
 const builtinByKey = new Map<string, BuiltinFunction>(
@@ -36,9 +39,11 @@ function parseActiveId(id: string | null): {
 
 export function FunctionsPanel({ agentId }: { agentId: string }) {
   const { functions, mutate: mutateList } = useFunctions(agentId);
+  const { mutate: mutateRefs } = useAgentRefs(agentId);
   const [activeFunctionId, setActiveFunctionId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
   const { type: activeType, key: activeKey } = useMemo(
     () => parseActiveId(activeFunctionId),
@@ -99,6 +104,22 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
     [mutateList, activeFunctionId]
   );
 
+  const handleRemoveRef = useCallback(
+    async (refId: string) => {
+      try {
+        await removeAgentRef(agentId, refId, mutateRefs);
+        await mutateList();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to remove ref");
+      }
+    },
+    [agentId, mutateRefs, mutateList],
+  );
+
+  const handlePoolAdded = useCallback(() => {
+    mutateList();
+  }, [mutateList]);
+
   /** Render the right-side detail panel based on active selection */
   function renderDetail() {
     if (activeBuiltin) {
@@ -130,6 +151,8 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
           activeFunctionId={activeFunctionId}
           onSelect={setActiveFunctionId}
           onCreate={openCreateDialog}
+          onAddFromPool={() => setPoolDialogOpen(true)}
+          onRemoveRef={handleRemoveRef}
         />
         <div className="flex-1 overflow-hidden">{renderDetail()}</div>
       </div>
@@ -165,6 +188,13 @@ export function FunctionsPanel({ agentId }: { agentId: string }) {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreate={handleCreateWithKey}
+      />
+      <AddFromPoolDialog
+        open={poolDialogOpen}
+        onOpenChange={setPoolDialogOpen}
+        resourceType="function"
+        agentId={agentId}
+        onAdded={handlePoolAdded}
       />
     </div>
   );

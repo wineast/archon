@@ -1,0 +1,256 @@
+# 资源共享池
+
+## 概念
+
+资源共享池是全局资源管理机制。资源不再只能归属于某个 agent，还可以作为"池资源"存在于全局共享池中，供任意 agent 按需引用。
+
+### 7 种资源类型
+
+| resourceType | 对应表 | 说明 |
+|---|---|---|
+| `tool` | `tools` | 工具定义 |
+| `component` | `components` | 可复用 UI 组件 |
+| `function` | `functions` | 服务端函数 |
+| `dataset` | `datasets` | JSON 数据集 |
+| `wiki` | `wikiDocuments` | Wiki 文档 |
+| `schema` | `schemas` | 参数 Schema |
+| `mcp-server` | `mcpServers` | MCP 服务器 |
+
+类型常量定义在 `web/src/db/schema.ts` 的 `RESOURCE_TYPES`。
+
+### 资源形态
+
+- **池资源**：`agentId = NULL`，存在于全局池中，任何 agent 可通过引用使用
+- **私有资源**：`agentId = X`，归属特定 agent，仅该 agent 可用
+
+### origin 字段
+
+所有 7 种资源表都有 `origin` 字段，标识资源来源：
+
+| origin | 含义 | 可编辑 | 示例 |
+|---|---|---|---|
+| `builtin` | 平台内置 | 否 | build-chat 系统工具 |
+| `user` | 用户创建 | 是 | 用户自定义工具 |
+| `marketplace` | 市场安装 | 否（发布者维护） | 未来市场工具 |
+
+类型常量定义在 `RESOURCE_ORIGINS`。
+
+---
+
+## 数据模型
+
+### 资源表变更
+
+7 种资源表统一做了以下改造：
+
+1. `agentId` 改为 **nullable**（`NULL` 表示池资源）
+2. 外键删除策略改为 `onDelete: "set null"`（池资源不跟 agent 删除）
+3. 新增 `origin` 字段：`text("origin").notNull().default("user").$type<ResourceOrigin>()`
+4. 新增池内唯一索引：`uniqueIndex("xxx_pool_key_idx").on(table.key).where(sql\`agent_id IS NULL\`)`
+
+不受影响的表（保持 agent 私有）：`chatConfigs`、`modelConfigs`、`evalCases`、`evalJudgeConfigs`、`chatSessions`、`memories`、`skills`、`embedTokens` 等。
+
+### agentResourceRefs 表
+
+Agent 引用池资源的关联表（`web/src/db/schema.ts`）。
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `id` | UUID PK | 主键 |
+| `agentId` | UUID FK → agents | 引用方 agent |
+| `resourceType` | TEXT | 资源类型枚举（`tool`/`component`/`function`/`dataset`/`wiki`/`schema`/`mcp-server`） |
+| `resourceId` | UUID | 被引用的池资源 ID |
+| `enabled` | BOOLEAN | 是否启用，默认 `true` |
+| `createdAt` | TIMESTAMP | 引用创建时间 |
+
+唯一约束：`(agentId, resourceType, resourceId)` —— 同一 agent 不能重复引用同一池资源。
+
+索引：`agent_resource_refs_resource_idx` on `(resourceId)` —— 加速"查看哪些 agent 引用了此资源"。
+
+---
+
+## API
+
+### 池资源 CRUD
+
+路由为通用的 `[resourceType]` 参数化路由，7 种类型共用一套。
+
+#### `GET /api/pool/[resourceType]`
+
+列出池中该类型的所有资源（`agentId IS NULL`，排除软删除）。按 `key` 升序排列。
+
+- 权限：登录用户即可（`requireAuth`）
+- 返回：资源数组
+
+#### `POST /api/pool/[resourceType]`
+
+创建池资源。请求体为资源字段，`agentId` 会被强制设为 `null`。
+
+- 权限：`requireSuperAdmin`
+- 返回：创建的资源，状态码 `201`
+
+#### `PATCH /api/pool/[resourceType]/[id]`
+
+编辑池资源。校验资源存在且 `agentId IS NULL`。请求体中的 `agentId` 和 `id` 会被忽略。
+
+- 权限：`requireSuperAdmin`
+- 返回：更新后的资源
+
+#### `DELETE /api/pool/[resourceType]/[id]`
+
+删除池资源。删除前检查 `agentResourceRefs` 中是否有引用：
+- 有引用 → 返回 `409 Conflict`，附带 `refCount` 和 `agentIds`
+- 无引用 → 软删除（设置 `deletedAt`）
+
+- 权限：`requireSuperAdmin`
+- 返回：`{ ok: true }` 或 `409`
+
+**表映射**：`RESOURCE_TABLE_MAP`（`web/src/lib/pool/constants.ts`）将 `ResourceType` 映射到对应的 Drizzle 表对象。
+
+### Agent 引用管理
+
+#### `GET /api/agents/[id]/refs`
+
+列出某 agent 的所有池资源引用。
+
+- 权限：`requireAgentRole(agentId, "viewer")`
+- 返回：`agentResourceRefs` 行数组
+
+#### `POST /api/agents/[id]/refs`
+
+添加一条池资源引用。请求体：`{ resourceType, resourceId }`。
+
+会校验目标资源存在且为池资源（`agentId IS NULL`）。使用 `onConflictDoNothing` 保证幂等。
+
+- 权限：`requireAgentRole(agentId, "editor")`
+- 返回：创建的引用行，状态码 `201`；已存在则返回现有行
+
+#### `PATCH /api/agents/[id]/refs/[refId]`
+
+切换引用的启用状态。请求体：`{ enabled: boolean }`。
+
+- 权限：`requireAgentRole(agentId, "editor")`
+- 返回：更新后的引用行
+
+#### `DELETE /api/agents/[id]/refs/[refId]`
+
+移除一条引用。
+
+- 权限：`requireAgentRole(agentId, "editor")`
+- 返回：`{ ok: true }`
+
+---
+
+## 运行时查询
+
+查询函数位于 `web/src/lib/pool/queries.ts`。
+
+### 核心模式
+
+Agent 运行时可用的资源 = **私有资源**（`agentId = X`） + **池引用**（通过 `agentResourceRefs` 关联的 `agentId IS NULL` 资源）。
+
+### 通用函数
+
+#### `getAgentResources<T>(agentId, resourceType)`
+
+返回 `WithPoolMeta<T>[]`，每条记录附带元数据：
+
+```ts
+type WithPoolMeta<T> = T & {
+  _source: "private" | "pool";
+  _refId?: string;      // pool 资源的引用 ID
+  _refEnabled?: boolean; // pool 资源的引用启用状态
+};
+```
+
+### 专用函数
+
+| 函数 | 用途 |
+|---|---|
+| `getAgentTools(agentId)` | 获取所有工具（私有 + 池），带 `_source` 元数据 |
+| `getAgentEnabledTools(agentId)` | 运行时：仅返回启用的工具（私有 `enabled=true` + 池引用 `refEnabled=true AND enabled=true`） |
+| `getAgentEnabledMcpServers(agentId)` | 运行时：仅返回启用的 MCP 服务器 |
+| `getAgentDatasets(agentId)` | 获取所有数据集（轻量字段：key/name/data） |
+| `getAgentWikiDocs(agentId)` | 获取所有 Wiki 文档 |
+| `getAgentSchemas(agentId)` | 获取所有 Schema |
+
+---
+
+## Builtin 工具
+
+代码位于 `web/src/lib/pool/seed-builtin-tools.ts`。
+
+### `ensureBuiltinPoolTools(db)`
+
+将代码中定义的 build-chat 工具（`buildAllTools()`）同步为池资源：
+
+- `agentId = NULL`
+- `origin = "builtin"`
+- `isSystem = true`
+- 使用 `onConflictDoNothing` 保证幂等
+
+### `ensureBuiltinToolRefs(db, buildChatAgentId)`
+
+为指定的 build-chat agent 创建对所有 builtin 池工具的引用：
+
+1. 先调用 `ensureBuiltinPoolTools()` 确保池工具存在
+2. 查询所有 `agentId IS NULL AND origin = "builtin"` 的工具
+3. 为每个工具创建 `agentResourceRefs` 记录（`onConflictDoNothing`）
+
+此函数在 `ensureOrgDefaults()` 中调用，保证每个组织的 build-chat agent 自动关联所有内置工具。
+
+---
+
+## UI
+
+### Admin 池管理区
+
+超级管理员在 Admin 面板中管理全局池资源。支持对 7 种资源类型的 CRUD 操作。删除时如果资源仍被 agent 引用，会返回 409 错误并显示引用详情。
+
+### Agent Build "从池中添加"
+
+Agent Build 页面中，每种资源 Tab 提供"从共享池添加"入口：
+
+1. 弹出 Dialog 展示池中该类型的所有资源
+2. 已引用的资源标记为"已添加"
+3. 点击"添加"创建 `agentResourceRef`
+4. 添加后的池资源出现在该 agent 的资源列表中，带有 `_source: "pool"` 标识
+
+---
+
+## 版本快照兼容
+
+Agent 版本快照（`buildSnapshot` / `restoreSnapshot`）支持池资源引用的序列化与恢复。
+
+### 快照格式
+
+`AgentSnapshot` 包含 `resourceRefs` 字段，每条引用序列化为：
+
+```ts
+interface ResourceRefSnapshotItem {
+  resourceType: ResourceType; // "tool" | "component" | ...
+  resourceKey: string;        // 池资源的 key（人类可读，保持可移植性）
+  enabled: boolean;           // 引用启用状态
+}
+```
+
+### Build（构建快照）
+
+`buildSnapshot()` 查询 `agentResourceRefs` 表获取 agent 的所有池资源引用，通过 `RESOURCE_TABLE_MAP` 批量查找对应资源表将 `resourceId` 解析为 `resourceKey`。
+
+### Restore（恢复快照）
+
+`restoreSnapshot()` 处理流程：
+1. **删除阶段**：与其他资源并行删除 `agentResourceRefs` 中该 agent 的所有引用
+2. **重建阶段**（步骤 14，在所有私有资源恢复完毕后）：对每条 `ResourceRefSnapshotItem`，通过 `(key, agentId IS NULL)` 查找池资源，找到则插入引用，找不到则跳过
+
+---
+
+## 权限
+
+| 操作 | 所需权限 |
+|---|---|
+| 查看池资源列表 | 登录用户（`requireAuth`） |
+| 创建/编辑/删除池资源 | `requireSuperAdmin` |
+| 查看 agent 的引用列表 | `requireAgentRole(agentId, "viewer")` |
+| 添加/移除/切换引用 | `requireAgentRole(agentId, "editor")` |

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   useDatasets,
   useDataset,
@@ -10,16 +11,20 @@ import {
   updateDataset,
   deleteDataset,
 } from "@/lib/datasets/hooks";
+import { removeAgentRef, useAgentRefs } from "@/lib/pool/ref-hooks";
 import { DatasetsSidebar } from "./datasets-sidebar";
 import { DatasetDetail } from "./dataset-detail";
 import { DatasetsEmptyState } from "./datasets-empty-state";
 import { DatasetCreateDialog } from "./dataset-create-dialog";
+import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
 
 export function DatasetsPanel({ agentId }: { agentId: string }) {
   const { datasets, mutate: mutateList } = useDatasets(agentId);
+  const { mutate: mutateRefs } = useAgentRefs(agentId);
   const [activeDatasetId, setActiveDatasetId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
   const { dataset: activeDataset, mutate: mutateDetail } =
     useDataset(activeDatasetId);
@@ -69,6 +74,22 @@ export function DatasetsPanel({ agentId }: { agentId: string }) {
     [mutateList, activeDatasetId]
   );
 
+  const handleRemoveRef = useCallback(
+    async (refId: string) => {
+      try {
+        await removeAgentRef(agentId, refId, mutateRefs);
+        await mutateList();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to remove ref");
+      }
+    },
+    [agentId, mutateRefs, mutateList],
+  );
+
+  const handlePoolAdded = useCallback(() => {
+    mutateList();
+  }, [mutateList]);
+
   return (
     <div className="flex h-full flex-col">
       {/* Desktop layout */}
@@ -78,6 +99,8 @@ export function DatasetsPanel({ agentId }: { agentId: string }) {
           activeDatasetId={activeDatasetId}
           onSelect={setActiveDatasetId}
           onCreate={openCreateDialog}
+          onAddFromPool={() => setPoolDialogOpen(true)}
+          onRemoveRef={handleRemoveRef}
         />
         <div className="flex-1 overflow-hidden">
           {activeDataset ? (
@@ -130,6 +153,13 @@ export function DatasetsPanel({ agentId }: { agentId: string }) {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreate={handleCreateWithKey}
+      />
+      <AddFromPoolDialog
+        open={poolDialogOpen}
+        onOpenChange={setPoolDialogOpen}
+        resourceType="dataset"
+        agentId={agentId}
+        onAdded={handlePoolAdded}
       />
     </div>
   );

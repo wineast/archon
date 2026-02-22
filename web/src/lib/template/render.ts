@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { wikiDocuments, tools, schemas, objectTypes, objectRelations } from "@/db/schema";
+import { objectTypes, objectRelations } from "@/db/schema";
 import type { ToolRow } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import type { JsonSchema7 } from "@/lib/schemas/types";
@@ -7,7 +7,13 @@ import { resolveInlineSchema } from "@/lib/schemas/resolve-inline";
 import { processTemplate } from "@/lib/wiki/template";
 import { stripFrontmatter } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
-import { getResolvedDatasets } from "@/lib/datasets/queries";
+import { resolveDatasets } from "@/lib/datasets/queries";
+import {
+  getAgentEnabledTools,
+  getAgentWikiDocs,
+  getAgentSchemas,
+  getAgentDatasets,
+} from "@/lib/pool/queries";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,19 +56,7 @@ export interface TemplateData {
 // ---------------------------------------------------------------------------
 
 async function getWikiDocs(agentId: string): Promise<WikiDocument[]> {
-  const rows = await db
-    .select({
-      id: wikiDocuments.id,
-      parentId: wikiDocuments.parentId,
-      name: wikiDocuments.name,
-      key: wikiDocuments.key,
-      content: wikiDocuments.content,
-      order: wikiDocuments.order,
-      createdAt: wikiDocuments.createdAt,
-      updatedAt: wikiDocuments.updatedAt,
-    })
-    .from(wikiDocuments)
-    .where(and(eq(wikiDocuments.agentId, agentId), isNull(wikiDocuments.deletedAt)));
+  const rows = await getAgentWikiDocs(agentId);
 
   return rows.map((r) => ({
     ...r,
@@ -94,10 +88,7 @@ function getBuiltinVars(): Record<string, string> {
 // ---------------------------------------------------------------------------
 
 async function getEnabledTools(agentId: string): Promise<ToolRow[]> {
-  return db
-    .select()
-    .from(tools)
-    .where(and(eq(tools.agentId, agentId), eq(tools.enabled, true), isNull(tools.deletedAt)));
+  return getAgentEnabledTools(agentId);
 }
 
 export function buildToolNamespace(
@@ -200,20 +191,16 @@ export async function gatherTemplateData(
     return { resolvedVars: {}, docs: [], toolRows: [], defsMap: {}, datasetEntries: {}, ontologyTypes: [] };
   }
 
-  const [{ resolvedVars, datasetEntries }, docs, toolRows, objTypeRows, objRelRows] = await Promise.all([
-    getResolvedDatasets(agentId),
+  const [datasetRows, docs, toolRows, allSchemaRows, objTypeRows, objRelRows] = await Promise.all([
+    getAgentDatasets(agentId),
     getWikiDocs(agentId),
     getEnabledTools(agentId),
+    getAgentSchemas(agentId),
     db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))).orderBy(objectTypes.order),
     db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
   ]);
 
-  // Load ALL schemas for this agent — build defsMap (key → parameters) for $ref resolution
-  // and a local id-based map for ontology type schema lookups
-  const allSchemaRows = await db
-    .select()
-    .from(schemas)
-    .where(and(eq(schemas.agentId, agentId), isNull(schemas.deletedAt)));
+  const { resolvedVars, datasetEntries } = resolveDatasets(datasetRows);
 
   const defsMap: Record<string, JsonSchema7> = {};
   const schemaByIdMap: Record<string, JsonSchema7> = {};

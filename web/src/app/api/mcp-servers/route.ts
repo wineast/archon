@@ -1,9 +1,10 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { mcpServers } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import type { McpServerRow } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
+import { getAgentResources } from "@/lib/pool/queries";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -14,11 +15,7 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await db
-    .select()
-    .from(mcpServers)
-    .where(and(eq(mcpServers.agentId, agentId), isNull(mcpServers.deletedAt)))
-    .orderBy(mcpServers.key);
+  const rows = await getAgentResources<McpServerRow>(agentId, "mcp-server");
   return NextResponse.json(rows);
 }
 

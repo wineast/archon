@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
-import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { requireAgentRole, requireSuperAdmin } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
 
 export async function PATCH(
@@ -20,7 +20,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  // Pool resource (agentId IS NULL) → require super admin
+  // Private resource → require agent editor role
+  const ctx = existing.agentId === null
+    ? await requireSuperAdmin()
+    : await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
   const body = await req.json();
@@ -37,17 +41,20 @@ export async function PATCH(
 
   await db.update(wikiDocuments).set(updates).where(eq(wikiDocuments.id, id));
 
-  after(async () => {
-    await logAudit({
-      agentId: existing.agentId!,
-      userId: ctx.user.id,
-      action: "updated",
-      resourceType: "wiki",
-      resourceId: id,
-      resourceKey: existing.key,
-      resourceName: existing.name,
+  if (existing.agentId) {
+    const userId = "user" in ctx ? ctx.user.id : ctx.id;
+    after(async () => {
+      await logAudit({
+        agentId: existing.agentId!,
+        userId,
+        action: "updated",
+        resourceType: "wiki",
+        resourceId: id,
+        resourceKey: existing.key,
+        resourceName: existing.name,
+      });
     });
-  });
+  }
 
   return NextResponse.json({ ok: true });
 }
@@ -67,22 +74,27 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const ctx = await requireAgentRole(existing.agentId!, "editor");
+  const ctx = existing.agentId === null
+    ? await requireSuperAdmin()
+    : await requireAgentRole(existing.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
   await db.update(wikiDocuments).set({ deletedAt: new Date() }).where(eq(wikiDocuments.id, id));
 
-  after(async () => {
-    await logAudit({
-      agentId: existing.agentId!,
-      userId: ctx.user.id,
-      action: "deleted",
-      resourceType: "wiki",
-      resourceId: id,
-      resourceKey: existing.key,
-      resourceName: existing.name,
+  if (existing.agentId) {
+    const userId = "user" in ctx ? ctx.user.id : ctx.id;
+    after(async () => {
+      await logAudit({
+        agentId: existing.agentId!,
+        userId,
+        action: "deleted",
+        resourceType: "wiki",
+        resourceId: id,
+        resourceKey: existing.key,
+        resourceName: existing.name,
+      });
     });
-  });
+  }
 
   return NextResponse.json({ ok: true });
 }

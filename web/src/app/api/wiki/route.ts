@@ -1,12 +1,12 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { wikiDocuments } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
 import { resolveName } from "@/lib/wiki/frontmatter";
 import type { WikiDocument } from "@/lib/wiki/types";
 import type { WikiDocumentRow } from "@/db/schema";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
+import { getAgentResources } from "@/lib/pool/queries";
 
 function toWikiDocument(row: WikiDocumentRow): WikiDocument {
   return {
@@ -30,10 +30,7 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await db
-    .select()
-    .from(wikiDocuments)
-    .where(and(eq(wikiDocuments.agentId, agentId), isNull(wikiDocuments.deletedAt)));
+  const rows = await getAgentResources<WikiDocumentRow>(agentId, "wiki");
   return NextResponse.json(rows.map(toWikiDocument));
 }
 

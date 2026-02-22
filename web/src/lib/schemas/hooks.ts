@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { toast } from "sonner";
 import type { SchemaRow } from "@/db/schema";
+import type { WithPoolMeta } from "@/lib/pool/queries";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -11,7 +12,7 @@ export function schemasApiKey(agentId?: string) {
 }
 
 export function useSchemas(agentId?: string) {
-  const { data, error, isLoading, mutate } = useSWR<SchemaRow[]>(
+  const { data, error, isLoading, mutate } = useSWR<WithPoolMeta<SchemaRow>[]>(
     schemasApiKey(agentId),
     fetcher
   );

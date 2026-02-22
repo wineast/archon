@@ -4,13 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   componentsApiKey,
   createComponent,
   updateComponent,
   deleteComponent,
 } from "@/lib/components/hooks";
+import { removeAgentRef, useAgentRefs } from "@/lib/pool/ref-hooks";
 import type { ComponentRow } from "@/db/schema";
+import type { WithPoolMeta } from "@/lib/pool/queries";
 import type { ComponentDefinition } from "@/lib/components/types";
 import type { ComponentRecord } from "@/tool-ui";
 import { BUILTIN_COMPONENTS } from "./builtin-components";
@@ -19,17 +22,20 @@ import { ComponentsSidebar } from "./components-sidebar";
 import { ComponentDetail } from "./component-detail";
 import { ComponentsEmptyState } from "./components-empty-state";
 import { ComponentCreateDialog } from "./component-create-dialog";
+import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function ComponentsPanel({ agentId }: { agentId: string }) {
-  const { data: components = [], mutate } = useSWR<ComponentRow[]>(
+  const { data: components = [], mutate } = useSWR<WithPoolMeta<ComponentRow>[]>(
     componentsApiKey(agentId),
     fetcher
   );
+  const { mutate: mutateRefs } = useAgentRefs(agentId);
   const [activeComponentId, setActiveComponentId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
   const activeBuiltinDef = useMemo(() => {
     if (!activeComponentId?.startsWith("builtin:")) return null;
@@ -104,12 +110,35 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
     [mutate, activeComponentId]
   );
 
+  const handleRemoveRef = useCallback(
+    async (refId: string) => {
+      try {
+        await removeAgentRef(agentId, refId, mutateRefs);
+        await mutate();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to remove ref");
+      }
+    },
+    [agentId, mutateRefs, mutate],
+  );
+
+  const handlePoolAdded = useCallback(() => {
+    mutate();
+  }, [mutate]);
+
   return (
     <div className="flex h-full flex-col">
       <ComponentCreateDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreate={handleCreate}
+      />
+      <AddFromPoolDialog
+        open={poolDialogOpen}
+        onOpenChange={setPoolDialogOpen}
+        resourceType="component"
+        agentId={agentId}
+        onAdded={handlePoolAdded}
       />
 
       {/* Desktop layout */}
@@ -119,6 +148,8 @@ export function ComponentsPanel({ agentId }: { agentId: string }) {
           activeComponentId={activeComponentId}
           onSelect={setActiveComponentId}
           onCreate={handleOpenCreateDialog}
+          onAddFromPool={() => setPoolDialogOpen(true)}
+          onRemoveRef={handleRemoveRef}
         />
         <div className="flex-1 min-w-0 overflow-hidden">
           {activeBuiltinDef ? (

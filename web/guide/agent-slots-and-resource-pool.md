@@ -125,109 +125,30 @@ runEval(agentId):
 
 ---
 
-## Part 2: 资源共享池
+## Part 2: 资源共享池 ✅ 已实现
 
-### 概念
+详细文档见 [resource-pool.md](./resource-pool.md)。
 
-全局共享池，所有资源类型（Tools、Components、Functions、Datasets、Wiki、Schemas、MCP Servers）都支持。
+### 概要
 
-资源分两种存在形态：
-- **池资源**：`agentId = NULL`，存在于全局池中，任何 agent 可引用
-- **私有资源**：`agentId = X`，归属特定 agent，仅该 agent 可用（现有行为）
+全局共享池，支持 7 种资源类型（tool、component、function、dataset、wiki、schema、mcp-server）。资源分两种形态：
 
-### origin 字段
+- **池资源**：`agentId = NULL`，存在于全局池中，任何 agent 可通过 `agentResourceRefs` 引用
+- **私有资源**：`agentId = X`，归属特定 agent，仅该 agent 可用
 
-所有资源表新增 `origin` 字段：
-
-| origin | 含义 | 可编辑 | 示例 |
-|--------|------|--------|------|
-| `builtin` | 平台内置 | 否 | build-chat 系统工具 |
-| `user` | 用户创建 | 是 | 用户自己写的工具 |
-| `marketplace` | 市场安装 | 否（发布者维护） | 未来市场工具 |
-
-### 数据模型
-
-#### 资源表变更
-
-所有含 `agentId` 的资源表：
-- `agentId` 改为 **nullable**（`NULL` = 池资源）
-- 新增 `origin: text("origin").notNull().default("user")`
-- 删除 `agentId` 上的 cascade delete（池资源不跟 agent 删除）
-
-受影响的表：`tools`、`components`、`functions`、`datasets`、`wikiDocuments`、`schemas`、`mcpServers`
-
-不受影响的表（保持 agent 私有）：`chatConfigs`、`modelConfigs`、`evalCases`、`evalJudgeConfigs`、`chatSessions`、`memories`、`skills`、`embedTokens` 等
-
-#### agentResourceRefs 表
-
-Agent 引用池资源的关联表。
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 主键 |
-| agentId | UUID FK | 引用方 agent |
-| resourceType | TEXT | 资源类型（tool/component/function/dataset/wiki/schema/mcp-server） |
-| resourceId | UUID | 池资源 ID |
-| enabled | BOOLEAN | 是否启用（默认 true） |
-| createdAt | TIMESTAMP | 引用创建时间 |
-
-唯一约束：`(agentId, resourceType, resourceId)`
-
-### Agent 的可用资源
-
-Agent 运行时可用的资源 = 私有资源 + 引用的池资源（enabled=true）
-
-```sql
--- 获取 agent X 的所有可用工具
-SELECT * FROM tools WHERE agentId = :agentId
-UNION ALL
-SELECT t.* FROM tools t
-  JOIN agent_resource_refs r ON r.resourceId = t.id
-  WHERE r.agentId = :agentId
-    AND r.resourceType = 'tool'
-    AND r.enabled = true
-    AND t.agentId IS NULL
-```
-
-### API 设计
-
-#### 池资源 CRUD
-- `GET /api/pool/tools` — 列出池中所有工具
-- `POST /api/pool/tools` — 创建池工具（admin）
-- `PATCH /api/pool/tools/[id]` — 编辑池工具
-- `DELETE /api/pool/tools/[id]` — 删除池工具（检查引用）
-
-其他资源类型类推。
-
-#### Agent 引用管理
-- `GET /api/agents/[id]/refs` — 该 agent 引用的池资源列表
-- `POST /api/agents/[id]/refs` — 添加引用
-- `DELETE /api/agents/[id]/refs/[refId]` — 移除引用
-- `PATCH /api/agents/[id]/refs/[refId]` — 切换 enabled
-
-### UI
-
-#### 资源浏览器
-Agent Build 页面中，每个资源 Tab（如 Tools）增加"从共享池添加"入口：
-- 弹出 Dialog 展示池中该类型的所有资源
-- 已引用的标记为已添加
-- 点击"添加"创建 agentResourceRef
-
-#### 池管理（Admin 或 Org Settings）
-- 池资源的 CRUD 界面
-- 查看引用情况（哪些 agent 在用）
-
-### 迁移策略
-
-1. 现有 `isSystem=true` 的工具 → 迁移为 `origin: "builtin"` 的池资源
-2. 现有 agent 私有资源不变（`agentId` 保持不变）
-3. build-chat 的系统工具从"每 org 各一份"变为"全局池中一份 + 各 org 的 build-chat agent 引用"
+已完成内容：
+- schema：资源表 `agentId` nullable + `origin` 字段 + `agentResourceRefs` 关联表
+- 池资源 CRUD API：`GET/POST /api/pool/[resourceType]`，`PATCH/DELETE /api/pool/[resourceType]/[id]`
+- Agent 引用管理 API：`GET/POST /api/agents/[id]/refs`，`PATCH/DELETE /api/agents/[id]/refs/[refId]`
+- 运行时查询：`getAgentResources()` 等函数合并私有 + 池引用
+- Builtin 工具：`ensureBuiltinPoolTools()` + `ensureBuiltinToolRefs()` 自动播种机制
+- 权限：池资源操作需 superAdmin，引用操作需 agent editor 角色
 
 ---
 
 ## 工作区拆分
 
-### WS-1: agent-slots（基础，必须先做）
+### WS-1: agent-slots ✅ 已完成
 
 - schema: orgSlots、agentSlotOverrides 表，scope 简化
 - `resolveSlot()` 工具函数
@@ -238,7 +159,7 @@ Agent Build 页面中，每个资源 Tab（如 Tools）增加"从共享池添加
 - Org 设置页"功能槽位"Tab
 - Agent 设置页槽位覆盖 UI
 
-### WS-2: resource-pool（依赖 WS-1 合并后）
+### WS-2: resource-pool ✅ 已完成
 
 - schema: 资源表 agentId nullable + origin 字段 + agentResourceRefs 表
 - 池资源 CRUD API

@@ -351,6 +351,7 @@ function EmbedChat({
         enabled: true,
         executionTarget: t.executionTarget as "server" | "client" | "host",
         sandboxMode: "light" as const,
+        origin: "user" as const,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,

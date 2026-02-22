@@ -1,9 +1,9 @@
 import { db as appDb } from "@/db";
-import { agents, modelConfigs, orgSlots, tools } from "@/db/schema";
+import { agents, modelConfigs, orgSlots } from "@/db/schema";
 import { SLOT_KEYS } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { SLOT_DEFS } from "./constants";
-import { buildAllTools } from "@/lib/build-chat/tools";
+import { ensureBuiltinToolRefs } from "@/lib/pool/seed-builtin-tools";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "@/db/schema";
@@ -62,9 +62,9 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
         isActive: true,
       });
 
-      // Seed system tools for builder slot
+      // Seed builtin tool refs for builder slot
       if (slotKey === "builder") {
-        await seedSystemTools(db, agentId);
+        await ensureBuiltinToolRefs(db, agentId);
       }
     }
 
@@ -80,25 +80,3 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
   }
 }
 
-/**
- * Seed system tools for a build-chat agent by introspecting buildAllTools.
- */
-async function seedSystemTools(db: DbLike, buildChatAgentId: string): Promise<void> {
-  // Use a dummy agentId — we only need the tool metadata (key + description)
-  const allTools = buildAllTools("00000000-0000-0000-0000-000000000000");
-
-  const rows = Object.entries(allTools).map(([key, t]) => ({
-    agentId: buildChatAgentId,
-    key,
-    name: key,
-    description: (t as { description?: string }).description ?? "",
-    isSystem: true,
-    enabled: true,
-    handler: null,
-    executionTarget: "server" as const,
-  }));
-
-  if (rows.length > 0) {
-    await db.insert(tools).values(rows).onConflictDoNothing();
-  }
-}

@@ -5,6 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { validateObjectSchema } from "@/lib/schemas/json-schema-utils";
 import { logAudit } from "@/lib/audit/log";
+import { getAgentTools } from "@/lib/pool/queries";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -15,11 +16,7 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const rows = await db
-    .select()
-    .from(tools)
-    .where(and(eq(tools.agentId, agentId), isNull(tools.deletedAt)))
-    .orderBy(tools.key);
+  const rows = await getAgentTools(agentId);
   return NextResponse.json(rows);
 }
 

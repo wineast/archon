@@ -18,6 +18,7 @@ const MINIMAL_SNAPSHOT: AgentSnapshot = {
   objectRelations: [],
   mcpServers: [],
   skills: [],
+  resourceRefs: [],
 };
 
 function makeValidExport(overrides?: Partial<AgentExportData>): AgentExportData {

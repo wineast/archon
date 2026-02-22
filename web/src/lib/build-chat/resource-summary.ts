@@ -1,20 +1,23 @@
 import { db } from "@/db";
 import {
   agents,
-  tools,
-  schemas,
-  wikiDocuments,
-  datasets,
-  functions,
-  components,
   modelConfigs,
   chatConfigs,
   objectTypes,
   objectRelations,
-  mcpServers,
   skills,
 } from "@/db/schema";
+import type {
+  ToolRow,
+  SchemaRow,
+  WikiDocumentRow,
+  DatasetRow,
+  FunctionRow,
+  ComponentRow,
+  McpServerRow,
+} from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { getAgentResources } from "@/lib/pool/queries";
 
 export interface ResourceSummary {
   tools: { id: string; key: string; name: string; description: string; enabled: boolean }[];
@@ -68,74 +71,25 @@ export async function gatherResourceSummary(
   const skillsFeatureEnabled = agentRow?.skillsEnabled !== false;
 
   const [
-    toolRows,
-    schemaRows,
-    wikiRows,
-    datasetRows,
-    functionRows,
-    componentRows,
+    allToolRows,
+    allSchemaRows,
+    allWikiRows,
+    allDatasetRows,
+    allFunctionRows,
+    allComponentRows,
     modelConfigRows,
     chatConfigRows,
     objectTypeRows,
     objectRelationRows,
-    mcpServerRows,
+    allMcpServerRows,
     skillRows,
   ] = await Promise.all([
-    db
-      .select({
-        id: tools.id,
-        key: tools.key,
-        name: tools.name,
-        description: tools.description,
-        enabled: tools.enabled,
-      })
-      .from(tools)
-      .where(eq(tools.agentId, agentId)),
-    db
-      .select({
-        id: schemas.id,
-        key: schemas.key,
-        name: schemas.name,
-        description: schemas.description,
-      })
-      .from(schemas)
-      .where(eq(schemas.agentId, agentId)),
-    db
-      .select({
-        id: wikiDocuments.id,
-        key: wikiDocuments.key,
-        name: wikiDocuments.name,
-      })
-      .from(wikiDocuments)
-      .where(eq(wikiDocuments.agentId, agentId)),
-    db
-      .select({
-        id: datasets.id,
-        key: datasets.key,
-        name: datasets.name,
-        description: datasets.description,
-      })
-      .from(datasets)
-      .where(eq(datasets.agentId, agentId)),
-    db
-      .select({
-        id: functions.id,
-        key: functions.key,
-        name: functions.name,
-        description: functions.description,
-      })
-      .from(functions)
-      .where(eq(functions.agentId, agentId)),
-    db
-      .select({
-        id: components.id,
-        key: components.key,
-        name: components.name,
-        description: components.description,
-        toolInputSchema: components.toolInputSchema,
-      })
-      .from(components)
-      .where(eq(components.agentId, agentId)),
+    getAgentResources<ToolRow>(agentId, "tool"),
+    getAgentResources<SchemaRow>(agentId, "schema"),
+    getAgentResources<WikiDocumentRow>(agentId, "wiki"),
+    getAgentResources<DatasetRow>(agentId, "dataset"),
+    getAgentResources<FunctionRow>(agentId, "function"),
+    getAgentResources<ComponentRow>(agentId, "component"),
     db
       .select({
         id: modelConfigs.id,
@@ -177,18 +131,7 @@ export async function gatherResourceSummary(
       })
       .from(objectRelations)
       .where(eq(objectRelations.agentId, agentId)),
-    db
-      .select({
-        id: mcpServers.id,
-        key: mcpServers.key,
-        name: mcpServers.name,
-        description: mcpServers.description,
-        url: mcpServers.url,
-        transportType: mcpServers.transportType,
-        enabled: mcpServers.enabled,
-      })
-      .from(mcpServers)
-      .where(eq(mcpServers.agentId, agentId)),
+    getAgentResources<McpServerRow>(agentId, "mcp-server"),
     skillsFeatureEnabled
       ? db
           .select({
@@ -205,17 +148,17 @@ export async function gatherResourceSummary(
   ]);
 
   return {
-    tools: toolRows,
-    schemas: schemaRows,
-    wiki: wikiRows,
-    datasets: datasetRows,
-    functions: functionRows,
-    components: componentRows,
+    tools: allToolRows.map((r) => ({ id: r.id, key: r.key, name: r.name, description: r.description, enabled: r.enabled })),
+    schemas: allSchemaRows.map((r) => ({ id: r.id, key: r.key, name: r.name, description: r.description })),
+    wiki: allWikiRows.map((r) => ({ id: r.id, key: r.key, name: r.name })),
+    datasets: allDatasetRows.map((r) => ({ id: r.id, key: r.key, name: r.name, description: r.description })),
+    functions: allFunctionRows.map((r) => ({ id: r.id, key: r.key, name: r.name, description: r.description })),
+    components: allComponentRows.map((r) => ({ id: r.id, key: r.key, name: r.name, description: r.description, toolInputSchema: r.toolInputSchema })),
     modelConfigs: modelConfigRows,
     chatConfig: chatConfigRows[0] ?? null,
     objectTypes: objectTypeRows,
     objectRelations: objectRelationRows,
-    mcpServers: mcpServerRows,
+    mcpServers: allMcpServerRows.map((r) => ({ id: r.id, key: r.key, name: r.name, description: r.description, url: r.url, transportType: r.transportType, enabled: r.enabled })),
     skills: skillRows,
   };
 }

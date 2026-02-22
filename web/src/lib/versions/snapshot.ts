@@ -18,8 +18,11 @@ import {
   objectRelations,
   mcpServers,
   skills,
+  agentResourceRefs,
 } from "@/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import type { ResourceType } from "@/db/schema";
+import { eq, and, isNull, inArray } from "drizzle-orm";
+import { RESOURCE_TABLE_MAP } from "@/lib/pool/constants";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
@@ -43,6 +46,7 @@ import type {
   ObjectRelationSnapshotItem,
   McpServerSnapshotItem,
   SkillSnapshotItem,
+  ResourceRefSnapshotItem,
 } from "./types";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 
@@ -91,6 +95,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
     objectRelationRows,
     mcpServerRows,
     skillRows,
+    refRows,
   ] = await Promise.all([
     _db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
     _db.select().from(tools).where(and(eq(tools.agentId, agentId), isNull(tools.deletedAt))),
@@ -129,6 +134,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
     _db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
     _db.select().from(mcpServers).where(and(eq(mcpServers.agentId, agentId), isNull(mcpServers.deletedAt))),
     _db.select().from(skills).where(and(eq(skills.agentId, agentId), isNull(skills.deletedAt))),
+    _db.select().from(agentResourceRefs).where(eq(agentResourceRefs.agentId, agentId)),
   ]);
 
   if (!agent) throw new Error("Agent not found");
@@ -189,6 +195,34 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
 
   // ObjectType: convert id to key for relation snapshot references
   const objTypeIdToKey = new Map(objectTypeRows.map((t) => [t.id, t.key]));
+
+  // ResourceRefs: resolve pool resource IDs to keys
+  const resourceRefs: ResourceRefSnapshotItem[] = [];
+  if (refRows.length > 0) {
+    // Group refs by resourceType
+    const refsByType = new Map<ResourceType, typeof refRows>();
+    for (const ref of refRows) {
+      const group = refsByType.get(ref.resourceType) ?? [];
+      group.push(ref);
+      refsByType.set(ref.resourceType, group);
+    }
+    // For each type, batch-query the resource table to get keys
+    for (const [type, refs] of refsByType) {
+      const table = RESOURCE_TABLE_MAP[type];
+      const ids = refs.map((r) => r.resourceId);
+      const rows = await _db
+        .select({ id: table.id, key: table.key })
+        .from(table)
+        .where(inArray(table.id, ids));
+      const idToKey = new Map(rows.map((r: { id: string; key: string }) => [r.id, r.key]));
+      for (const ref of refs) {
+        const key = idToKey.get(ref.resourceId);
+        if (key) {
+          resourceRefs.push({ resourceType: type, resourceKey: key, enabled: ref.enabled });
+        }
+      }
+    }
+  }
 
   return {
     agent: {
@@ -350,6 +384,7 @@ export async function buildSnapshot(agentId: string, externalDb?: typeof db): Pr
         order: s.order,
       })
     ),
+    resourceRefs,
   };
 }
 
@@ -379,6 +414,7 @@ export async function restoreSnapshot(
     tx.delete(evalJudgeConfigs).where(eq(evalJudgeConfigs.agentId, agentId)),
     tx.delete(mcpServers).where(eq(mcpServers.agentId, agentId)),
     tx.delete(skills).where(eq(skills.agentId, agentId)),
+    tx.delete(agentResourceRefs).where(eq(agentResourceRefs.agentId, agentId)),
   ]);
 
   // 2a. Rebuild datasets first (schemas may reference them via enumDatasetId in parameters)
@@ -707,5 +743,28 @@ export async function restoreSnapshot(
         order: s.order,
       }))
     );
+  }
+
+  // 14. Rebuild resource refs (pool resource references)
+  if (snapshot.resourceRefs?.length) {
+    for (const ref of snapshot.resourceRefs) {
+      const table = RESOURCE_TABLE_MAP[ref.resourceType];
+      const [poolResource] = await tx
+        .select({ id: table.id })
+        .from(table)
+        .where(and(eq(table.key, ref.resourceKey), isNull(table.agentId)))
+        .limit(1);
+      if (poolResource) {
+        await tx
+          .insert(agentResourceRefs)
+          .values({
+            agentId,
+            resourceType: ref.resourceType,
+            resourceId: (poolResource as { id: string }).id,
+            enabled: ref.enabled,
+          })
+          .onConflictDoNothing();
+      }
+    }
   }
 }

@@ -10,8 +10,8 @@ import { buildSystemPrompt } from "./system-prompt";
 import { buildAllTools } from "./tools";
 import { resolveSlot } from "@/lib/slots";
 import { db } from "@/db";
-import { agents, tools as toolsTable } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { agents, tools as toolsTable, agentResourceRefs } from "@/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { QuotaExceededError } from "@/lib/credits/errors";
 import { recordUsage } from "@/lib/usage/record";
@@ -54,15 +54,37 @@ export async function executeBuildChatStream(
   const systemPrompt = buildSystemPrompt(summary);
   const codeTools = buildAllTools(agentId, { skillsEnabled });
 
-  // Filter tools by DB enabled state if build-chat agent exists
+  // Filter tools by DB enabled state: check pool refs for builtin tools
   let filteredTools = codeTools;
   if (config.agentId) {
+    // Query builtin pool tools referenced by this build-chat agent
     const dbTools = await db
-      .select({ key: toolsTable.key, enabled: toolsTable.enabled })
-      .from(toolsTable)
-      .where(and(eq(toolsTable.agentId, config.agentId), eq(toolsTable.isSystem, true)));
+      .select({ key: toolsTable.key, enabled: agentResourceRefs.enabled })
+      .from(agentResourceRefs)
+      .innerJoin(toolsTable, eq(toolsTable.id, agentResourceRefs.resourceId))
+      .where(
+        and(
+          eq(agentResourceRefs.agentId, config.agentId),
+          eq(agentResourceRefs.resourceType, "tool"),
+          eq(toolsTable.origin, "builtin"),
+          isNull(toolsTable.agentId),
+        )
+      );
 
-    if (dbTools.length > 0) {
+    // Fallback: also check legacy direct system tools on the agent
+    if (dbTools.length === 0) {
+      const legacyTools = await db
+        .select({ key: toolsTable.key, enabled: toolsTable.enabled })
+        .from(toolsTable)
+        .where(and(eq(toolsTable.agentId, config.agentId), eq(toolsTable.isSystem, true)));
+
+      if (legacyTools.length > 0) {
+        const enabledKeys = new Set(legacyTools.filter((t) => t.enabled).map((t) => t.key));
+        filteredTools = Object.fromEntries(
+          Object.entries(codeTools).filter(([key]) => enabledKeys.has(key))
+        );
+      }
+    } else {
       const enabledKeys = new Set(dbTools.filter((t) => t.enabled).map((t) => t.key));
       filteredTools = Object.fromEntries(
         Object.entries(codeTools).filter(([key]) => enabledKeys.has(key))

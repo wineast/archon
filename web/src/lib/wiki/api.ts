@@ -1,6 +1,9 @@
 import { toast } from "sonner";
 import type { KeyedMutator } from "swr";
 import type { WikiDocument } from "./types";
+import type { WithPoolMeta } from "@/lib/pool/queries";
+
+export type WikiDocumentWithPool = WithPoolMeta<WikiDocument>;
 
 export function wikiApiKey(agentId?: string) {
   return agentId ? `/api/wiki?agentId=${agentId}` : null;
@@ -12,12 +15,12 @@ export const WIKI_API_KEY = "/api/wiki";
 export const wikiFetcher = (url: string) =>
   fetch(url).then((res) => {
     if (!res.ok) throw new Error("Failed to load documents");
-    return res.json() as Promise<WikiDocument[]>;
+    return res.json() as Promise<WikiDocumentWithPool[]>;
   });
 
 export async function createDocument(
-  docs: WikiDocument[],
-  mutate: KeyedMutator<WikiDocument[]>,
+  docs: WikiDocumentWithPool[],
+  mutate: KeyedMutator<WikiDocumentWithPool[]>,
   agentId: string,
   name: string,
   key: string,
@@ -36,7 +39,7 @@ export async function createDocument(
       body: JSON.stringify({ agentId, name, key, content: "", order, parentId: resolvedParentId }),
     });
     if (!res.ok) throw new Error("Failed to create document");
-    const created: WikiDocument = await res.json();
+    const created: WikiDocumentWithPool = await res.json();
     await mutate([...docs, created], { revalidate: false });
     return created.id;
   } catch (e) {
@@ -49,8 +52,8 @@ export async function createDocument(
 export async function updateDocument(
   id: string,
   updates: { content: string; name: string },
-  docs: WikiDocument[],
-  mutate: KeyedMutator<WikiDocument[]>
+  docs: WikiDocumentWithPool[],
+  mutate: KeyedMutator<WikiDocumentWithPool[]>
 ): Promise<boolean> {
   try {
     const res = await fetch(`/api/wiki/${id}`, {
@@ -77,8 +80,8 @@ export async function updateDocument(
 
 export async function deleteDocument(
   id: string,
-  docs: WikiDocument[],
-  mutate: KeyedMutator<WikiDocument[]>
+  docs: WikiDocumentWithPool[],
+  mutate: KeyedMutator<WikiDocumentWithPool[]>
 ): Promise<boolean> {
   try {
     const res = await fetch(`/api/wiki/${id}`, { method: "DELETE" });
@@ -103,8 +106,8 @@ export async function deleteDocument(
 export async function moveDocument(
   id: string,
   parentId: string | null,
-  docs: WikiDocument[],
-  mutate: KeyedMutator<WikiDocument[]>
+  docs: WikiDocumentWithPool[],
+  mutate: KeyedMutator<WikiDocumentWithPool[]>
 ): Promise<boolean> {
   // Calculate order at end of new parent's children
   const siblings = docs.filter((d) => d.parentId === parentId && d.id !== id);
@@ -135,8 +138,8 @@ export async function moveDocument(
 export async function reorderDocument(
   id: string,
   direction: "up" | "down",
-  docs: WikiDocument[],
-  mutate: KeyedMutator<WikiDocument[]>,
+  docs: WikiDocumentWithPool[],
+  mutate: KeyedMutator<WikiDocumentWithPool[]>,
   agentId?: string
 ): Promise<void> {
   // Find the document to get its parentId, then sort only siblings

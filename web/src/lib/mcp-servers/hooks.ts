@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { toast } from "sonner";
 import type { McpServerRow } from "@/db/schema";
+import type { WithPoolMeta } from "@/lib/pool/queries";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -11,7 +12,7 @@ export function mcpServersApiKey(agentId?: string) {
 }
 
 export function useMcpServers(agentId?: string) {
-  const { data, error, isLoading, mutate } = useSWR<McpServerRow[]>(
+  const { data, error, isLoading, mutate } = useSWR<WithPoolMeta<McpServerRow>[]>(
     mcpServersApiKey(agentId),
     fetcher
   );

@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { toast } from "sonner";
 import type { ComponentRow } from "@/db/schema";
+import type { WithPoolMeta } from "@/lib/pool/queries";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -11,7 +12,7 @@ export function componentsApiKey(agentId?: string) {
 }
 
 export function useComponents(agentId?: string) {
-  const { data, error, isLoading, mutate } = useSWR<ComponentRow[]>(
+  const { data, error, isLoading, mutate } = useSWR<WithPoolMeta<ComponentRow>[]>(
     componentsApiKey(agentId),
     fetcher
   );

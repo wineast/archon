@@ -37,6 +37,7 @@ vi.mock("drizzle-orm", () => ({
 
 vi.mock("@/lib/auth/require-agent-role", () => ({
   requireAgentRole: vi.fn().mockResolvedValue({ user: { id: "user-1" }, agentId: "agent-1" }),
+  requireSuperAdmin: vi.fn().mockResolvedValue({ id: "user-1", platformRole: "super_admin" }),
 }));
 
 vi.mock("next/server", async (importOriginal) => {
@@ -45,6 +46,9 @@ vi.mock("next/server", async (importOriginal) => {
 });
 
 vi.mock("@/lib/audit/log", () => ({ logAudit: vi.fn() }));
+vi.mock("@/lib/pool/queries", () => ({
+  getAgentResources: vi.fn().mockResolvedValue([]),
+}));
 
 const { POST } = await import("../route");
 const { PATCH } = await import("../[id]/route");

@@ -1,5 +1,6 @@
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
+import type { ResourceType } from "@/db/schema";
 
 /* ─────────── Snapshot Item Types (no id/agentId/createdAt/updatedAt) ─────────── */
 
@@ -170,6 +171,14 @@ export interface SkillSnapshotItem {
   order: number;
 }
 
+/* ─────────── Resource Ref Snapshot Items ─────────── */
+
+export interface ResourceRefSnapshotItem {
+  resourceType: ResourceType;
+  resourceKey: string;
+  enabled: boolean;
+}
+
 /* ─────────── Agent Snapshot ─────────── */
 
 export interface AgentSnapshot {
@@ -194,6 +203,7 @@ export interface AgentSnapshot {
   objectRelations: ObjectRelationSnapshotItem[];
   mcpServers: McpServerSnapshotItem[];
   skills: SkillSnapshotItem[];
+  resourceRefs: ResourceRefSnapshotItem[];
 }
 
 /* ─────────── Version List Item (without snapshot) ─────────── */

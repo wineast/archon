@@ -12,18 +12,22 @@ import {
   toggleToolEnabled,
 } from "@/lib/tools/hooks";
 import { useSkills } from "@/lib/skills/hooks";
+import { removeAgentRef, useAgentRefs } from "@/lib/pool/ref-hooks";
 import type { ToolRow } from "@/db/schema";
+import type { WithPoolMeta } from "@/lib/pool/queries";
 import type { ToolDefinition } from "@/lib/tools/types";
 import { ToolsSidebar } from "./tools-sidebar";
 import { ToolDetail } from "./tool-detail";
 import { BuiltinToolDetail } from "./builtin-tool-detail";
 import { ToolsEmptyState } from "./tools-empty-state";
 import { ToolCreateDialog } from "./tool-create-dialog";
+import { AddFromPoolDialog } from "@/components/pool/add-from-pool-dialog";
+import { toast } from "sonner";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string; skillsEnabled?: boolean }) {
-  const { data: tools = [], mutate } = useSWR<ToolRow[]>(
+  const { data: tools = [], mutate } = useSWR<WithPoolMeta<ToolRow>[]>(
     toolsApiKey(agentId),
     fetcher
   );
@@ -32,10 +36,12 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
     () => skillsEnabled && skills.some((s) => s.enabled),
     [skillsEnabled, skills]
   );
+  const { mutate: mutateRefs } = useAgentRefs(agentId);
   const [activeToolId, setActiveToolId] = useState<string | null>(null);
   const [activeBuiltinToolKey, setActiveBuiltinToolKey] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">("sidebar");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [poolDialogOpen, setPoolDialogOpen] = useState(false);
 
   const activeTool = useMemo(
     () => tools.find((t) => t.id === activeToolId) ?? null,
@@ -119,12 +125,35 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
     [mutate]
   );
 
+  const handleRemoveRef = useCallback(
+    async (refId: string) => {
+      try {
+        await removeAgentRef(agentId, refId, mutateRefs);
+        await mutate();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to remove ref");
+      }
+    },
+    [agentId, mutateRefs, mutate],
+  );
+
+  const handlePoolAdded = useCallback(() => {
+    mutate();
+  }, [mutate]);
+
   return (
     <div className="flex h-full flex-col">
       <ToolCreateDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onCreate={handleCreate}
+      />
+      <AddFromPoolDialog
+        open={poolDialogOpen}
+        onOpenChange={setPoolDialogOpen}
+        resourceType="tool"
+        agentId={agentId}
+        onAdded={handlePoolAdded}
       />
 
       {/* Desktop layout */}
@@ -137,6 +166,8 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
           hasEnabledSkills={hasEnabledSkills}
           onSelectBuiltin={handleSelectBuiltin}
           activeBuiltinToolKey={activeBuiltinToolKey}
+          onAddFromPool={() => setPoolDialogOpen(true)}
+          onRemoveRef={handleRemoveRef}
         />
         <div className="flex-1 min-w-0 overflow-hidden">
           {activeBuiltinToolKey ? (
@@ -167,6 +198,8 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
             hasEnabledSkills={hasEnabledSkills}
             onSelectBuiltin={handleSelectBuiltin}
             activeBuiltinToolKey={activeBuiltinToolKey}
+            onAddFromPool={() => setPoolDialogOpen(true)}
+            onRemoveRef={handleRemoveRef}
           />
         ) : (
           <>

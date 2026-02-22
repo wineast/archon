@@ -36,11 +36,9 @@ vi.mock("@/db/schema", () => ({
   SLOT_KEYS: ["builder", "assist", "evaluator"],
 }));
 
-vi.mock("@/lib/build-chat/tools", () => ({
-  buildAllTools: vi.fn().mockReturnValue({
-    list_tools: { description: "List tools" },
-    create_tool: { description: "Create tool" },
-  }),
+const mockEnsureBuiltinToolRefs = vi.fn();
+vi.mock("@/lib/pool/seed-builtin-tools", () => ({
+  ensureBuiltinToolRefs: (...args: unknown[]) => mockEnsureBuiltinToolRefs(...args),
 }));
 
 import { ensureOrgDefaults } from "../ensure-org-defaults";
@@ -54,21 +52,20 @@ describe("ensureOrgDefaults", () => {
   it("creates 3 agents + modelConfigs + orgSlots when none exist", async () => {
     await ensureOrgDefaults("org-1");
 
-    // For each of 3 slots: agent insert + modelConfig insert + orgSlot insert = 3 inserts
-    // builder also gets tools insert = 1 extra
-    // Total: 3*(agent + modelConfig + orgSlot) + 1 tools = 10
-    expect(mockInsert).toHaveBeenCalledTimes(10);
+    // For each of 3 slots: agent insert + modelConfig insert + orgSlot insert = 9
+    expect(mockInsert).toHaveBeenCalledTimes(9);
   });
 
-  it("seeds system tools only for builder slot", async () => {
+  it("seeds builtin tool refs only for builder slot", async () => {
     await ensureOrgDefaults("org-1");
 
-    const toolsInsertCall = mockValues.mock.calls.find(
-      (call) => Array.isArray(call[0]) && call[0][0]?.isSystem === true
+    // ensureBuiltinToolRefs called once for builder slot
+    expect(mockEnsureBuiltinToolRefs).toHaveBeenCalledTimes(1);
+    // Second argument is the builder agent ID
+    expect(mockEnsureBuiltinToolRefs).toHaveBeenCalledWith(
+      expect.anything(),
+      "new-agent-id",
     );
-
-    expect(toolsInsertCall).toBeTruthy();
-    expect(toolsInsertCall![0]).toHaveLength(2);
   });
 
   it("skips agent creation if agent already exists, but still ensures orgSlot", async () => {

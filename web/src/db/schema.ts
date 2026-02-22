@@ -9,8 +9,10 @@ import {
   timestamp,
   index,
   unique,
+  uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
@@ -24,6 +26,18 @@ export type AgentScope = (typeof AGENT_SCOPES)[number];
 
 export const SLOT_KEYS = ["builder", "assist", "evaluator"] as const;
 export type SlotKey = (typeof SLOT_KEYS)[number];
+
+/* ─────────── Resource Origin Constants ─────────── */
+
+export const RESOURCE_ORIGINS = ["builtin", "user", "marketplace"] as const;
+export type ResourceOrigin = (typeof RESOURCE_ORIGINS)[number];
+
+/* ─────────── Resource Type Constants ─────────── */
+
+export const RESOURCE_TYPES = [
+  "tool", "component", "function", "dataset", "wiki", "schema", "mcp-server",
+] as const;
+export type ResourceType = (typeof RESOURCE_TYPES)[number];
 
 /* ─────────── Org Role Constants ─────────── */
 
@@ -223,7 +237,7 @@ export const functions = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id").references(() => agents.id, {
-      onDelete: "cascade",
+      onDelete: "set null",
     }),
     key: text("key").notNull(),
     name: text("name").notNull(),
@@ -231,6 +245,7 @@ export const functions = pgTable(
     code: text("code").notNull(),
     parametersSchema: jsonb("parameters_schema").$type<JsonSchema7>(),
     returnParametersSchema: jsonb("return_parameters_schema").$type<JsonSchema7>(),
+    origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -242,6 +257,7 @@ export const functions = pgTable(
   },
   (table) => [
     unique("functions_agent_id_key_idx").on(table.agentId, table.key),
+    uniqueIndex("functions_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
   ]
 );
 
@@ -255,12 +271,13 @@ export const datasets = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id").references(() => agents.id, {
-      onDelete: "cascade",
+      onDelete: "set null",
     }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     data: jsonb("data").$type<unknown>().notNull(),
+    origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -272,6 +289,7 @@ export const datasets = pgTable(
   },
   (table) => [
     unique("datasets_agent_id_key_idx").on(table.agentId, table.key),
+    uniqueIndex("datasets_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
   ]
 );
 
@@ -283,7 +301,7 @@ export const wikiDocuments = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id").references(() => agents.id, {
-      onDelete: "cascade",
+      onDelete: "set null",
     }),
     parentId: uuid("parent_id").references((): AnyPgColumn => wikiDocuments.id, {
       onDelete: "set null",
@@ -292,6 +310,7 @@ export const wikiDocuments = pgTable(
     key: text("key").notNull(),
     content: text("content").notNull().default(""),
     order: integer("order").notNull().default(0),
+    origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -303,6 +322,7 @@ export const wikiDocuments = pgTable(
   },
   (table) => [
     unique("wiki_documents_agent_id_key_idx").on(table.agentId, table.key),
+    uniqueIndex("wiki_documents_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
   ]
 );
 
@@ -316,12 +336,12 @@ export const schemas = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "cascade" }),
+      .references(() => agents.id, { onDelete: "set null" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     parameters: jsonb("parameters").$type<JsonSchema7>().notNull().default({}),
+    origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -333,6 +353,7 @@ export const schemas = pgTable(
   },
   (table) => [
     unique("schemas_agent_id_key_idx").on(table.agentId, table.key),
+    uniqueIndex("schemas_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
   ]
 );
 
@@ -427,7 +448,7 @@ export const tools = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id").references(() => agents.id, {
-      onDelete: "cascade",
+      onDelete: "set null",
     }),
     key: text("key").notNull(),
     name: text("name").notNull(),
@@ -441,6 +462,7 @@ export const tools = pgTable(
     enabled: boolean("enabled").notNull().default(true),
     executionTarget: text("execution_target").notNull().default("server").$type<"server" | "client" | "host">(),
     sandboxMode: text("sandbox_mode").notNull().default("light").$type<"light" | "full">(),
+    origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -452,6 +474,7 @@ export const tools = pgTable(
   },
   (table) => [
     unique("tools_agent_id_key_idx").on(table.agentId, table.key),
+    uniqueIndex("tools_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
   ]
 );
 
@@ -813,7 +836,7 @@ export const components = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id").references(() => agents.id, {
-      onDelete: "cascade",
+      onDelete: "set null",
     }),
     key: text("key").notNull(),
     name: text("name").notNull(),
@@ -822,6 +845,7 @@ export const components = pgTable(
     generatedCss: text("generated_css").notNull().default(""),
     toolInputSchema: jsonb("tool_input_schema").$type<JsonSchema7>(),
     componentInputSchema: jsonb("component_input_schema").$type<JsonSchema7>(),
+    origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -833,6 +857,7 @@ export const components = pgTable(
   },
   (table) => [
     unique("components_agent_id_key_idx").on(table.agentId, table.key),
+    uniqueIndex("components_pool_key_idx").on(table.key).where(sql`agent_id IS NULL`),
   ]
 );
 
@@ -1374,8 +1399,7 @@ export const mcpServers = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     agentId: uuid("agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "cascade" }),
+      .references(() => agents.id, { onDelete: "set null" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -1383,6 +1407,7 @@ export const mcpServers = pgTable(
     transportType: text("transport_type").notNull().default("sse").$type<"sse" | "http">(),
     headers: jsonb("headers").$type<Record<string, string>>().notNull().default({}),
     enabled: boolean("enabled").notNull().default(true),
+    origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -1394,6 +1419,7 @@ export const mcpServers = pgTable(
   },
   (t) => [
     unique("mcp_servers_agent_id_key_idx").on(t.agentId, t.key),
+    uniqueIndex("mcp_servers_pool_key_idx").on(t.key).where(sql`agent_id IS NULL`),
   ]
 );
 
@@ -1542,6 +1568,31 @@ export const agentSlotOverrides = pgTable(
 
 export type AgentSlotOverrideRow = typeof agentSlotOverrides.$inferSelect;
 export type NewAgentSlotOverrideRow = typeof agentSlotOverrides.$inferInsert;
+
+/* ─────────── Agent Resource Refs (pool resource references) ─────────── */
+
+export const agentResourceRefs = pgTable(
+  "agent_resource_refs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    resourceType: text("resource_type").notNull().$type<ResourceType>(),
+    resourceId: uuid("resource_id").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique("agent_resource_refs_uniq").on(t.agentId, t.resourceType, t.resourceId),
+    index("agent_resource_refs_resource_idx").on(t.resourceId),
+  ]
+);
+
+export type AgentResourceRefRow = typeof agentResourceRefs.$inferSelect;
+export type NewAgentResourceRefRow = typeof agentResourceRefs.$inferInsert;
 
 /* ─────────── Invitation Codes ─────────── */
 

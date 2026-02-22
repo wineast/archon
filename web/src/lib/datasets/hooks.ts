@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { toast } from "sonner";
 import type { DatasetRow } from "@/db/schema";
+import type { WithPoolMeta } from "@/lib/pool/queries";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -11,7 +12,7 @@ export function datasetsApiKey(agentId?: string) {
 }
 
 export function useDatasets(agentId?: string) {
-  const { data, error, isLoading, mutate } = useSWR<DatasetRow[]>(
+  const { data, error, isLoading, mutate } = useSWR<WithPoolMeta<DatasetRow>[]>(
     datasetsApiKey(agentId),
     fetcher
   );

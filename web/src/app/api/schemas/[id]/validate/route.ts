@@ -27,10 +27,12 @@ export async function POST(
   }
 
   // Load all schemas for the same agent (for $ref resolution)
-  const allRows = await db
-    .select()
-    .from(schemas)
-    .where(and(eq(schemas.agentId, schema.agentId), isNull(schemas.deletedAt)));
+  const allRows = schema.agentId
+    ? await db
+        .select()
+        .from(schemas)
+        .where(and(eq(schemas.agentId, schema.agentId), isNull(schemas.deletedAt)))
+    : [];
 
   // Build defsMap: schema key → parameters
   const defsMap: Record<string, JsonSchema7> = {};
@@ -39,7 +41,9 @@ export async function POST(
   }
 
   // Load resolved dataset variables for template enum expansion
-  const { resolvedVars } = await getResolvedDatasets(schema.agentId);
+  const { resolvedVars } = schema.agentId
+    ? await getResolvedDatasets(schema.agentId)
+    : { resolvedVars: {} };
 
   // Build Zod schema and validate
   try {
