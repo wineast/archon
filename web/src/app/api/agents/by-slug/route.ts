@@ -26,6 +26,7 @@ export async function GET(req: Request) {
       slug: agents.slug,
       isPublic: agents.isPublic,
       memoryEnabled: agents.memoryEnabled,
+      ragEnabled: agents.ragEnabled,
       editingVersionId: agents.editingVersionId,
       publishedVersionId: agents.publishedVersionId,
       createdAt: agents.createdAt,

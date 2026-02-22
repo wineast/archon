@@ -19,6 +19,35 @@ vi.mock("@ai-sdk/openai", () => ({
   })),
 }));
 
+vi.mock("@ai-sdk/google", () => ({
+  createGoogleGenerativeAI: vi.fn(),
+}));
+
+vi.mock("@ai-sdk/mistral", () => ({
+  createMistral: vi.fn(),
+}));
+
+vi.mock("@ai-sdk/cohere", () => ({
+  createCohere: vi.fn(),
+}));
+
+vi.mock("@/lib/ai/resolve-model", () => ({
+  parseModelId: (id: string) => {
+    const sep = id.includes("/") ? "/" : null;
+    if (!sep) return null;
+    const idx = id.indexOf(sep);
+    return { provider: id.slice(0, idx), modelName: id.slice(idx + 1) };
+  },
+}));
+
+vi.mock("@/db/schema", () => ({
+  BYOK_PROVIDERS: [
+    "anthropic", "openai", "google", "xai", "deepseek",
+    "mistral", "cohere", "perplexity",
+    "alibaba", "moonshot", "zhipu", "minimax", "bytedance",
+  ],
+}));
+
 const getOrgApiKeyMock = vi.fn();
 vi.mock("@/lib/ai/org-api-keys", () => ({
   getOrgApiKey: (a: unknown, b: unknown) => getOrgApiKeyMock(a, b),
@@ -37,7 +66,7 @@ describe("generateEmbedding", () => {
     const result = await generateEmbedding("hello");
 
     expect(gatewayEmbeddingMock).toHaveBeenCalledWith(
-      `openai/${EMBEDDING_MODEL}`
+      "openai/text-embedding-3-small"
     );
     expect(embedMock).toHaveBeenCalledWith({
       model: "gateway-model",
@@ -61,11 +90,20 @@ describe("generateEmbedding", () => {
 
     const result = await generateEmbedding("hello", "org-1");
 
-    expect(createOpenAIEmbeddingMock).toHaveBeenCalledWith(EMBEDDING_MODEL);
+    expect(createOpenAIEmbeddingMock).toHaveBeenCalledWith("text-embedding-3-small");
     expect(embedMock).toHaveBeenCalledWith({
       model: "byok-model",
       value: "hello",
     });
+    expect(result).toEqual([0.1, 0.2, 0.3]);
+  });
+
+  it("supports custom modelId parameter", async () => {
+    const result = await generateEmbedding("hello", null, "openai/text-embedding-3-large");
+
+    expect(gatewayEmbeddingMock).toHaveBeenCalledWith(
+      "openai/text-embedding-3-large"
+    );
     expect(result).toEqual([0.1, 0.2, 0.3]);
   });
 
@@ -78,7 +116,7 @@ describe("generateEmbedding", () => {
 
 describe("constants", () => {
   it("exports correct model and dimensions", () => {
-    expect(EMBEDDING_MODEL).toBe("text-embedding-3-small");
+    expect(EMBEDDING_MODEL).toBe("openai/text-embedding-3-small");
     expect(EMBEDDING_DIMENSIONS).toBe(1536);
   });
 });

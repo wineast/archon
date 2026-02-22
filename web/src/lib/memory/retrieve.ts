@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { memories, memoryConfigs } from "@/db/schema";
 import { eq, and, isNull, or, desc, sql } from "drizzle-orm";
 import type { MemoryRow, MemoryConfigRow } from "@/db/schema";
-import { generateEmbedding } from "./embedding";
+import { generateEmbedding } from "@/lib/ai/embedding";
 
 export interface RetrieveMemoriesInput {
   agentId: string;
@@ -62,7 +62,7 @@ export async function retrieveMemories(
 
   if (userMessage) {
     try {
-      const queryEmbedding = await generateEmbedding(userMessage, orgId);
+      const queryEmbedding = await generateEmbedding(userMessage, orgId, config.embeddingModel);
       rows = await semanticRetrieve(agentId, userId, queryEmbedding, limit);
     } catch {
       // Embedding failed — fall through to fallback

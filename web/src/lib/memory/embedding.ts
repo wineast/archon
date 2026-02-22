@@ -1,30 +1,16 @@
-import { embed } from "ai";
-import { gateway } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
-import { getOrgApiKey } from "@/lib/ai/org-api-keys";
-
-export const EMBEDDING_MODEL = "text-embedding-3-small";
-export const EMBEDDING_DIMENSIONS = 1536;
-
 /**
- * Generate an embedding vector for the given text.
- * Uses BYOK key if available, otherwise falls back to platform gateway.
+ * Re-export from the public embedding module.
+ * Memory-specific code should import from "@/lib/ai/embedding" directly.
+ * This file exists for backward compatibility.
  */
-export async function generateEmbedding(
-  text: string,
-  orgId?: string | null
-): Promise<number[]> {
-  const model = await resolveEmbeddingModel(orgId);
-  const { embedding } = await embed({ model, value: text });
-  return embedding;
-}
+export {
+  generateEmbedding,
+  getEmbeddingDimensions,
+  DEFAULT_EMBEDDING_MODEL as EMBEDDING_MODEL,
+  DEFAULT_EMBEDDING_MODEL,
+} from "@/lib/ai/embedding";
 
-async function resolveEmbeddingModel(orgId?: string | null) {
-  if (orgId) {
-    const apiKey = await getOrgApiKey(orgId, "openai");
-    if (apiKey) {
-      return createOpenAI({ apiKey }).embedding(EMBEDDING_MODEL);
-    }
-  }
-  return gateway.textEmbeddingModel(`openai/${EMBEDDING_MODEL}`);
-}
+export { getEmbeddingDimensions as getEmbeddingDimensionsForModel } from "@/lib/ai/embedding";
+
+/** @deprecated Use getEmbeddingDimensions() instead */
+export const EMBEDDING_DIMENSIONS = 1536;

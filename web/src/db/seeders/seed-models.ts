@@ -9,17 +9,17 @@ export const seedModels: Seeder = {
     logSection("Seeding global models");
 
     const modelsSeed = readJson<
-      Array<{ modelId: string; name: string; provider: string; contextWindow?: number }>
+      Array<{ modelId: string; name: string; provider: string; contextWindow?: number; type?: string }>
     >(join(__dirname, "../seed-data/models.json"));
 
     await Promise.all(
       modelsSeed.map((m) =>
         ctx.db
           .insert(models)
-          .values(m)
+          .values({ ...m, type: (m.type ?? "chat") as "chat" | "embedding" })
           .onConflictDoUpdate({
             target: models.modelId,
-            set: { name: m.name, provider: m.provider, contextWindow: m.contextWindow ?? null },
+            set: { name: m.name, provider: m.provider, contextWindow: m.contextWindow ?? null, type: (m.type ?? "chat") as "chat" | "embedding" },
           }),
       ),
     );
