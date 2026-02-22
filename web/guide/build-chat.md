@@ -93,6 +93,24 @@ Build 助手的模型（model）和温度（temperature）配置存储在**组�
 - 服务端通过 `getOrgBuildChatSettings(orgId)` 查询，带 60s 内存缓存
 - API 路由：`GET/PUT /api/orgs/[id]/build-chat-settings`
 
+## AI 辅助模型配置
+
+所有 AI 辅助编辑功能（Prompt Assist、JSX Assist、Function Code Assist、Schema Code Assist、Tool Code Assist、Dataset Assist、Wiki Assist）共用一个可配置的模型。
+
+### 存储
+
+`orgs` 表的 `assist_model` 字段（nullable），默认 `anthropic/claude-sonnet-4`。
+
+### UI
+
+在组织设置页「Build 助手」Tab 中，位于 Build Chat Model 下方，显示为「AI 辅助模型」。
+
+### 服务端
+
+- `getOrgAssistModel(orgId)` — 快捷获取 assist model ID
+- 7 个 assist 路由均通过 `agentId → getOrgIdByAgentId → getOrgAssistModel → resolveModel` 动态解析模型
+- 之前 3 个使用 `gateway()` 的路由（tool-code-assist、dataset-assist、wiki-assist）已改为 `resolveModel`，支持 BYOK
+
 ## 前端面板
 
 - 复用 `ai-elements/` 组件：Conversation、Message、PromptInput、Suggestion

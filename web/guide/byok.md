@@ -105,6 +105,38 @@ Hooks：`web/src/lib/orgs/api-keys-hooks.ts`
 |------|------|
 | `API_KEY_ENCRYPTION_SECRET` | 用于 AES-256-GCM 加密 API Key 的密钥（任意长度字符串，会 SHA-256 hash 为 32 字节） |
 
+## 模型选择按 Provider Key 过滤
+
+ModelCombobox 组件支持 `disabledProviders` prop，禁用未配置 API Key 的 Provider 模型。
+
+### 过滤逻辑
+
+- **不支持 BYOK 的 Provider**（meta、amazon）：始终禁用
+- **支持 BYOK 但未配置 Key 的 Provider**：禁用
+- **已配置 Key 的 Provider**：可选
+
+### API
+
+`GET /api/orgs/[id]/configured-providers` — 返回已配置 active API Key 的 provider 名称列表（`string[]`），需 member 权限。
+
+### 工具函数
+
+`getDisabledProviders(allProviders, configuredProviders)` — 计算应禁用的 provider 列表。
+
+文件：`web/src/lib/models/get-disabled-providers.ts`
+
+### Hook
+
+`useOrgConfiguredProviders(orgId)` — SWR hook 获取已配置 provider 列表。
+
+文件：`web/src/lib/orgs/configured-providers-hooks.ts`
+
+### 使用位置
+
+- `OrgBuildChatPanel` — 直接使用 orgId
+- `ModelConfigDetail` — 通过 agentId → SWR 获取 agent → orgId
+- `JudgeConfigDetail` — 同上
+
 ## 影响的调用点
 
 所有 AI 调用点均已接入 `resolveModel()`：
@@ -115,5 +147,8 @@ Hooks：`web/src/lib/orgs/api-keys-hooks.ts`
 - Function Code Assist（`web/src/app/api/function-code-assist/route.ts`）
 - Schema Code Assist（`web/src/app/api/schema-code-assist/route.ts`）
 - JSX Assist（`web/src/app/api/jsx-assist/route.ts`）
+- Tool Code Assist（`web/src/app/api/tool-code-assist/route.ts`）
+- Dataset Assist（`web/src/app/api/dataset-assist/route.ts`）
+- Wiki Assist（`web/src/app/api/wiki-assist/route.ts`）
 - Memory Extract（`web/src/lib/memory/extract.ts`）
 - Eval（`web/src/app/api/eval/run/[runId]/case/route.ts`）

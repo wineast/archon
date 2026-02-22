@@ -23,6 +23,9 @@ import { useTools } from "@/lib/tools/hooks";
 import { TIME_VAR_NAMES, EVAL_VAR_NAMES } from "@/lib/template";
 import { wikiApiKey, wikiFetcher } from "@/lib/wiki/api";
 import { ModelCombobox } from "@/components/model-config/model-combobox";
+import { useOrgConfiguredProviders } from "@/lib/orgs/configured-providers-hooks";
+import { useModels } from "@/lib/models/hooks";
+import { getDisabledProviders } from "@/lib/models/get-disabled-providers";
 import type { EvalJudgeConfigRow } from "@/db/schema";
 import type { Dimension } from "@/lib/eval/types";
 
@@ -51,6 +54,18 @@ export function JudgeConfigDetail({
   const [settingDefault, setSettingDefault] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting || settingDefault;
+
+  // Get orgId from agent for provider filtering
+  const { data: agentData } = useSWR<{ orgId: string }>(
+    agentId ? `/api/agents/${agentId}` : null,
+    (url: string) => fetch(url).then((r) => r.json())
+  );
+  const { configuredProviders } = useOrgConfiguredProviders(agentData?.orgId);
+  const { models: allModelsList } = useModels();
+  const disabledProviders = useMemo(
+    () => getDisabledProviders(allModelsList.map((m) => m.provider), configuredProviders),
+    [allModelsList, configuredProviders]
+  );
 
   const { datasetVars } = useDatasetVarsMap(agentId);
   const { tools: toolDefinitions } = useTools(agentId);
@@ -187,6 +202,7 @@ export function JudgeConfigDetail({
               className="mt-1"
               value={model}
               onChange={setModel}
+              disabledProviders={disabledProviders}
             />
           </div>
           <div>

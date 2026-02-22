@@ -7,14 +7,16 @@ export const maxDuration = 30;
 export const POST = createAssistHandler({
   source: "wiki-assist",
   buildParams: (body) => {
-    const { messages, currentContent, documentName } = body as {
+    const { messages, currentContent, documentName, agentId } = body as {
       messages: UIMessage[];
       currentContent: string;
       documentName?: string;
+      agentId?: string;
     };
 
     return {
       messages,
+      agentId,
       system: `你是一位专业的文档编辑助手，帮助用户编写和优化 Wiki 文档。
 
 当前编辑的文档${documentName ? `「${documentName}」` : ""}内容如下：

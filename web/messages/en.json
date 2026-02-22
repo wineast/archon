@@ -233,7 +233,8 @@
     "slugHint": "URL path identifier, only lowercase letters, numbers and hyphens",
     "buildChat": "Build Assistant",
     "buildChatModel": "Model",
-    "buildChatTemperature": "Temperature"
+    "buildChatTemperature": "Temperature",
+    "assistModel": "AI Assist Model"
   },
   "share": {
     "preview": "Share Preview",

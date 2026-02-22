@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { RotateCcwIcon, SaveIcon } from "lucide-react";
@@ -15,16 +15,21 @@ import {
   useOrgBuildChatSettings,
   updateOrgBuildChatSettings,
 } from "@/lib/orgs/build-chat-settings-hooks";
+import { useOrgConfiguredProviders } from "@/lib/orgs/configured-providers-hooks";
+import { useModels } from "@/lib/models/hooks";
+import { getDisabledProviders } from "@/lib/models/get-disabled-providers";
 import { toast } from "sonner";
 
 interface FormValues {
   buildChatModel: string;
   buildChatTemperature: number;
+  assistModel: string;
 }
 
 const DEFAULTS: FormValues = {
   buildChatModel: "anthropic/claude-sonnet-4",
   buildChatTemperature: 0.3,
+  assistModel: "anthropic/claude-sonnet-4",
 };
 
 export function OrgBuildChatPanel({ orgId }: { orgId: string }) {
@@ -32,6 +37,13 @@ export function OrgBuildChatPanel({ orgId }: { orgId: string }) {
   const tc = useTranslations("common");
   const { settings, isLoading, mutate } = useOrgBuildChatSettings(orgId);
   const [busy, setBusy] = useState(false);
+
+  const { configuredProviders } = useOrgConfiguredProviders(orgId);
+  const { models } = useModels();
+  const disabledProviders = useMemo(
+    () => getDisabledProviders(models.map((m) => m.provider), configuredProviders),
+    [models, configuredProviders]
+  );
 
   const originalRef = useRef<FormValues>(DEFAULTS);
 
@@ -46,6 +58,7 @@ export function OrgBuildChatPanel({ orgId }: { orgId: string }) {
         buildChatModel: settings.buildChatModel ?? DEFAULTS.buildChatModel,
         buildChatTemperature:
           settings.buildChatTemperature ?? DEFAULTS.buildChatTemperature,
+        assistModel: settings.assistModel ?? DEFAULTS.assistModel,
       };
       originalRef.current = values;
       form.reset(values);
@@ -62,6 +75,7 @@ export function OrgBuildChatPanel({ orgId }: { orgId: string }) {
       {
         buildChatModel: values.buildChatModel,
         buildChatTemperature: values.buildChatTemperature,
+        assistModel: values.assistModel,
       },
       mutate
     );
@@ -100,6 +114,7 @@ export function OrgBuildChatPanel({ orgId }: { orgId: string }) {
                   value={field.value}
                   onChange={field.onChange}
                   className="mt-1"
+                  disabledProviders={disabledProviders}
                 />
               )}
             />
@@ -115,6 +130,23 @@ export function OrgBuildChatPanel({ orgId }: { orgId: string }) {
               step={0.1}
               className="mt-1 h-8 w-32"
               {...form.register("buildChatTemperature", { valueAsNumber: true })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground">
+              {t("assistModel")}
+            </Label>
+            <Controller
+              control={form.control}
+              name="assistModel"
+              render={({ field }) => (
+                <ModelCombobox
+                  value={field.value}
+                  onChange={field.onChange}
+                  className="mt-1"
+                  disabledProviders={disabledProviders}
+                />
+              )}
             />
           </div>
         </div>

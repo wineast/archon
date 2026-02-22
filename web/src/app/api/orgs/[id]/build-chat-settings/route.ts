@@ -21,6 +21,7 @@ export async function GET(
     .select({
       buildChatModel: orgs.buildChatModel,
       buildChatTemperature: orgs.buildChatTemperature,
+      assistModel: orgs.assistModel,
     })
     .from(orgs)
     .where(eq(orgs.id, orgId))
@@ -29,6 +30,7 @@ export async function GET(
   return NextResponse.json({
     buildChatModel: row?.buildChatModel ?? null,
     buildChatTemperature: row?.buildChatTemperature ?? null,
+    assistModel: row?.assistModel ?? null,
   });
 }
 
@@ -63,6 +65,14 @@ export async function PUT(
     }
   }
 
+  if ("assistModel" in body) {
+    if (body.assistModel === null) {
+      update.assistModel = null;
+    } else if (typeof body.assistModel === "string" && body.assistModel.trim()) {
+      update.assistModel = body.assistModel.trim();
+    }
+  }
+
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
@@ -74,6 +84,7 @@ export async function PUT(
     .returning({
       buildChatModel: orgs.buildChatModel,
       buildChatTemperature: orgs.buildChatTemperature,
+      assistModel: orgs.assistModel,
     });
 
   invalidateOrgBuildChatSettingsCache(orgId);

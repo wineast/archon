@@ -59,6 +59,7 @@ interface DatasetAssistDialogProps {
   datasetName?: string;
   datasetDescription?: string;
   templateVariables?: string[];
+  agentId?: string;
   onApply: (newData: string) => void;
 }
 
@@ -156,6 +157,7 @@ export function DatasetAssistDialog({
   datasetName,
   datasetDescription,
   templateVariables,
+  agentId,
   onApply,
 }: DatasetAssistDialogProps) {
   const [draftData, setDraftData] = useState(data);
@@ -186,9 +188,10 @@ export function DatasetAssistDialog({
           currentData: draftRef.current,
           datasetName,
           datasetDescription,
+          agentId,
         }),
       }),
-    [datasetName, datasetDescription]
+    [datasetName, datasetDescription, agentId]
   );
 
   const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<DatasetAssistMessage>({

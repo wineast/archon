@@ -10,9 +10,8 @@ import { requireAuth } from "@/lib/auth/require-agent-role";
 import { recordUsage, type UsageSource } from "@/lib/usage/record";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
+import { getOrgAssistModel } from "@/lib/orgs/build-chat-settings";
 import { QuotaExceededError } from "@/lib/credits/errors";
-
-const MODEL_ID = "anthropic/claude-sonnet-4-20250514";
 
 /**
  * Build the standard update/edit tool pair used by all AI assist routes.
@@ -69,10 +68,11 @@ export function createAssistHandler(config: AssistConfig) {
 
     const currentUserId = authResult.id;
     const orgId = await getOrgIdByAgentId(agentId);
+    const modelId = orgId ? await getOrgAssistModel(orgId) : "anthropic/claude-sonnet-4";
 
     let model;
     try {
-      model = await resolveModel(MODEL_ID, orgId);
+      model = await resolveModel(modelId, orgId);
     } catch (e) {
       if (e instanceof QuotaExceededError) {
         return Response.json(
@@ -93,7 +93,7 @@ export function createAssistHandler(config: AssistConfig) {
             agentId: agentId ?? null,
             userId: currentUserId,
             sessionId: null,
-            modelId: MODEL_ID,
+            modelId,
             usage: {
               inputTokens: totalUsage.inputTokens,
               outputTokens: totalUsage.outputTokens,

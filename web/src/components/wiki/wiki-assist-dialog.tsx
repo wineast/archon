@@ -57,6 +57,7 @@ interface WikiAssistDialogProps {
   onOpenChange: (open: boolean) => void;
   content: string;
   documentName?: string;
+  agentId?: string;
   onApply: (newContent: string) => void;
 }
 
@@ -156,6 +157,7 @@ export function WikiAssistDialog({
   onOpenChange,
   content,
   documentName,
+  agentId,
   onApply,
 }: WikiAssistDialogProps) {
   const [draftContent, setDraftContent] = useState(content);
@@ -186,9 +188,10 @@ export function WikiAssistDialog({
         body: () => ({
           currentContent: draftContentRef.current,
           documentName,
+          agentId,
         }),
       }),
-    [documentName]
+    [documentName, agentId]
   );
 
   const { messages, setMessages, sendMessage, status, addToolOutput } = useChat<WikiAssistMessage>({

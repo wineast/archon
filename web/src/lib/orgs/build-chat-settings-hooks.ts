@@ -5,6 +5,7 @@ import { toast } from "sonner";
 export interface OrgBuildChatSettingsData {
   buildChatModel: string | null;
   buildChatTemperature: number | null;
+  assistModel: string | null;
 }
 
 const fetcher = (url: string) =>
@@ -29,7 +30,11 @@ export function useOrgBuildChatSettings(orgId: string | undefined) {
 
 export async function updateOrgBuildChatSettings(
   orgId: string,
-  fields: { buildChatModel?: string | null; buildChatTemperature?: number | null },
+  fields: {
+    buildChatModel?: string | null;
+    buildChatTemperature?: number | null;
+    assistModel?: string | null;
+  },
   mutate: KeyedMutator<OrgBuildChatSettingsData>
 ): Promise<boolean> {
   try {
