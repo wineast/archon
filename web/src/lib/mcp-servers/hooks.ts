@@ -106,6 +106,14 @@ export async function deleteMcpServer(id: string, mutate: () => void) {
   }
 }
 
+export interface McpToolAnnotations {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 export interface McpToolDef {
   name: string;
   description?: string;
@@ -114,6 +122,7 @@ export interface McpToolDef {
     properties?: Record<string, unknown>;
     required?: string[];
   };
+  annotations?: McpToolAnnotations;
 }
 
 export interface TestMcpServerResult {

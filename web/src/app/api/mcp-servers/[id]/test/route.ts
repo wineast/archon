@@ -52,6 +52,7 @@ export async function POST(
       name: t.name,
       description: t.description,
       inputSchema: t.inputSchema,
+      annotations: t.annotations,
     }));
 
     return NextResponse.json({

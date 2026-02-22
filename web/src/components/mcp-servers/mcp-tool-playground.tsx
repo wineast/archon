@@ -18,7 +18,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { JsonEditor } from "@/components/editors/json-editor";
-import { executeMcpTool, type McpToolDef } from "@/lib/mcp-servers/hooks";
+import { Badge } from "@/components/ui/badge";
+import { executeMcpTool, type McpToolDef, type McpToolAnnotations } from "@/lib/mcp-servers/hooks";
 
 interface McpToolPlaygroundProps {
   tools: McpToolDef[];
@@ -174,6 +175,9 @@ export function McpToolPlayground({ tools, serverId, connectionConfig }: McpTool
                   <p className="text-xs text-muted-foreground">{currentTool.description}</p>
                 )}
 
+                {/* Annotations */}
+                <AnnotationBadges annotations={currentTool.annotations} />
+
                 {/* Parameters */}
                 {fields.length > 0 && (
                   <div className="space-y-2">
@@ -233,6 +237,32 @@ export function McpToolPlayground({ tools, serverId, connectionConfig }: McpTool
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------- Annotation Badges ----------
+
+const ANNOTATION_LABELS: { key: keyof McpToolAnnotations; label: string; destructive?: boolean }[] = [
+  { key: "readOnlyHint", label: "只读" },
+  { key: "destructiveHint", label: "破坏性", destructive: true },
+  { key: "idempotentHint", label: "幂等" },
+  { key: "openWorldHint", label: "开放世界" },
+];
+
+export function AnnotationBadges({ annotations }: { annotations?: McpToolAnnotations }) {
+  if (!annotations) return null;
+
+  const items = ANNOTATION_LABELS.filter(({ key }) => annotations[key] === true);
+  if (items.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {items.map(({ key, label, destructive }) => (
+        <Badge key={key} variant={destructive ? "destructive" : "outline"} className="text-[10px] px-1.5 py-0">
+          {label}
+        </Badge>
+      ))}
     </div>
   );
 }
