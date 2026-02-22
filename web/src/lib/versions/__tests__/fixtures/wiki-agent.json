@@ -1,0 +1,55 @@
+{
+  "exportVersion": 1,
+  "agent": {
+    "name": "Wiki Test Agent",
+    "description": "",
+    "icon": "bot",
+    "slug": "wiki-test",
+    "isPublic": false
+  },
+  "versions": [
+    {
+      "version": "0.1.0",
+      "changelog": "initial",
+      "isEditing": true,
+      "isPublished": false,
+      "snapshot": {
+        "agent": { "name": "Wiki Test Agent", "description": "", "icon": "bot", "slug": "wiki-test", "isPublic": false },
+        "tools": [],
+        "functions": [],
+        "components": [],
+        "schemas": [],
+        "datasets": [],
+        "wikiDocuments": [
+          {
+            "key": "getting-started",
+            "name": "Getting Started",
+            "content": "# Getting Started\n\nWelcome to the wiki.",
+            "order": 0,
+            "parentKey": null
+          },
+          {
+            "key": "faq",
+            "name": "FAQ",
+            "content": "# FAQ\n\nFrequently asked questions.",
+            "order": 1,
+            "parentKey": "getting-started"
+          },
+          {
+            "key": "advanced",
+            "name": "Advanced",
+            "content": "# Advanced\n\nAdvanced topics.",
+            "order": 2,
+            "parentKey": "getting-started"
+          }
+        ],
+        "modelConfigs": [],
+        "judgeConfigs": [],
+        "chatConfigs": [],
+        "resourceRefs": [],
+        "skills": [],
+        "mcpServers": []
+      }
+    }
+  ]
+}
