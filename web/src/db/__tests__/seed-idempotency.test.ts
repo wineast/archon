@@ -69,28 +69,36 @@ describe("seed idempotency", () => {
 
     for (const { table, label } of namedTables) {
       const rows = await db
-        .select({ name: table.name, count: sql<number>`count(*)` })
+        .select({
+          agentId: table.agentId,
+          key: table.key,
+          count: sql<number>`count(*)`,
+        })
         .from(table)
-        .groupBy(table.name);
+        .groupBy(table.agentId, table.key);
 
       for (const row of rows) {
         expect(
           Number(row.count),
-          `${label} has duplicate name "${row.name}"`
+          `${label} has duplicate (agentId, key) "${row.agentId}:${row.key}"`
         ).toBe(1);
       }
     }
 
-    // datasets: check by key instead of name
+    // datasets: check by (agentId, key) uniqueness
     const datasetRows = await db
-      .select({ key: datasets.key, count: sql<number>`count(*)` })
+      .select({
+        agentId: datasets.agentId,
+        key: datasets.key,
+        count: sql<number>`count(*)`,
+      })
       .from(datasets)
-      .groupBy(datasets.key);
+      .groupBy(datasets.agentId, datasets.key);
 
     for (const row of datasetRows) {
       expect(
         Number(row.count),
-        `datasets has duplicate key "${row.key}"`
+        `datasets has duplicate (agentId, key) "${row.agentId}:${row.key}"`
       ).toBe(1);
     }
   }, 120_000);
