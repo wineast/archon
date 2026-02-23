@@ -3,7 +3,6 @@
 import { use, Suspense } from "react";
 import { notFound } from "next/navigation";
 import useSWR from "swr";
-import { RocketIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { ChatPageContent } from "@/components/chat-page-content";
 import { useTranslations } from "next-intl";
@@ -11,30 +10,28 @@ import type { AgentRow } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string }) {
+function PreviewChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string }) {
   const t = useTranslations("chat");
-
-  if (!agent.publishedVersionId) {
-    return (
-      <div className="flex h-svh flex-col items-center justify-center gap-4 text-center">
-        <RocketIcon className="size-12 opacity-30" />
-        <p className="text-muted-foreground">{t("notPublished")}</p>
-      </div>
-    );
-  }
 
   return (
     <ChatPageContent
       agent={agent}
       orgSlug={orgSlug}
-      versionMode="published"
-      sessionSource="chat"
-      features={{ share: true, importExport: true, userSettings: true }}
+      transportBodyExtras={{ draft: true, source: "preview" }}
+      sessionSource="preview"
+      banner={
+        <div className="flex shrink-0 items-center gap-2 border-b bg-muted/50 px-4 py-1">
+          <span className="text-xs text-muted-foreground">
+            {t("draftPreview")}
+          </span>
+        </div>
+      }
+      requiredRole="editor"
     />
   );
 }
 
-export default function AgentChatPage({
+export default function AgentPreviewPage({
   params,
 }: {
   params: Promise<{ orgSlug: string; agentSlug: string }>;
@@ -66,7 +63,7 @@ export default function AgentChatPage({
         </div>
       }
     >
-      <AgentChatContent agent={agent} orgSlug={orgSlug} />
+      <PreviewChatContent agent={agent} orgSlug={orgSlug} />
     </Suspense>
   );
 }

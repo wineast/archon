@@ -12,8 +12,8 @@
 
 | 字段 | 说明 |
 |------|------|
-| `editingVersionId` | 当前正在编辑的版本，Build 页面使用此版本 |
-| `publishedVersionId` | 当前已发布的版本，Embed Chat 使用此版本 |
+| `editingVersionId` | 当前正在编辑的版本，Build 页面和草稿预览页使用此版本 |
+| `publishedVersionId` | 当前已发布的版本，Chat 页面、Embed Chat 使用此版本 |
 
 ### versionId 列
 
@@ -77,13 +77,72 @@ modelConfigs, chatConfigs, evalCases, judgeConfigs, skills, objectTypes, objectR
 
 ## versionId 解析
 
-后端从 `agents.editingVersionId` 自动解析 versionId，前端 SWR hooks 无需修改。
+后端通过 `mode` 参数区分编辑版本和发布版本：
 
 ```ts
-import { resolveEditingVersionId } from "@/lib/versions/resolve";
+import { resolveEditingVersionId, resolvePublishedVersionId, resolveVersionByMode } from "@/lib/versions/resolve";
 
-const versionId = await resolveEditingVersionId(agentId);
+// 直接使用
+const editingId = await resolveEditingVersionId(agentId);   // throws if missing
+const publishedId = await resolvePublishedVersionId(agentId); // throws if missing
+
+// 按 mode 解析（推荐用于 API 路由）
+const versionId = await resolveVersionByMode(agentId, mode); // returns null if published & missing
 ```
+
+### 资源 API 的 mode / versionId 参数
+
+资源 GET API（tools, components, chat-configs, model-configs, model-configs/active）支持两种版本选择方式：
+
+**方式一：mode 参数**（按指针解析）
+- 不传（默认）→ `resolveEditingVersionId`（Build 页面使用）
+- `mode=published` → `resolvePublishedVersionId`（Chat 页面使用，未发布返回 404）
+
+**方式二：versionId 参数**（直接指定版本）
+- `versionId=<uuid>` → 直接使用该版本（版本聊天使用）
+- 会校验 versionId 属于当前 agent
+
+`versionId` 优先级高于 `mode`，两者同时传时以 `versionId` 为准。
+
+前端 SWR hooks 通过 `VersionMode` 类型统一传递：
+
+```ts
+import type { VersionMode } from "@/lib/versions/mode";
+
+const { tools } = useTools(agentId);                         // Build 页面（默认 editing）
+const { tools } = useTools(agentId, "published");            // Chat 页面
+const { tools } = useTools(agentId, { versionId: "uuid" }); // 版本聊天
+```
+
+### 聊天 API 的版本选择
+
+`/api/chat` 支持三种模式，按优先级排序：
+
+```ts
+// 1. 版本聊天：指定 versionId（viewer+ 权限）
+body: { agentId, sessionId, versionId: "uuid" }
+
+// 2. 草稿预览：draft=true（editor 权限）
+body: { agentId, sessionId, draft: true }
+
+// 3. 正式聊天：默认 published（viewer+ 权限）
+body: { agentId, sessionId }
+```
+
+### 版本聊天
+
+每个历史版本都可以独立对话，类似分支预览：
+
+| 场景 | 路由 | 版本 | 权限 | 会话 source |
+|------|------|------|------|------------|
+| 正式聊天 | `/{org}/{agent}/chat` | publishedVersionId | viewer+ | `"chat"` |
+| 草稿预览 | `/{org}/{agent}/preview` | editingVersionId | editor+ | `"preview"` |
+| 版本聊天 | `/{org}/{agent}/v/{ref}/chat` | 指定 versionId | viewer+ | `"version:{versionId}"` |
+
+- URL 中的 `{ref}` 支持版本号（如 `1.0.0`）和 UUID
+- 版本解析 API：`GET /api/agents/{agentId}/versions/by-ref?ref=1.0.0`
+- 不同 source 的会话完全隔离
+- Build 页面 VersionsSidebar 每个版本的下拉菜单包含"对话"入口，点击在新窗口打开版本聊天
 
 所有资源查询函数（`getAgentTools`、`getAgentDatasets` 等）均接受 `versionId` 参数：
 
@@ -111,6 +170,9 @@ Snapshot 是版本资源的序列化表示，**仅用于导出/导入**。`agent
 |------|------|
 | `src/db/schema.ts` | 数据库 schema（所有 versionId 列定义） |
 | `src/lib/versions/copy-resources.ts` | 版本复制引擎 |
-| `src/lib/versions/resolve.ts` | versionId 解析工具 |
+| `src/lib/versions/resolve.ts` | versionId 解析工具（含 validateVersionBelongsToAgent、resolveVersionByRef） |
+| `src/lib/versions/mode.ts` | VersionMode 类型定义（hooks 和 ChatPageContent 使用） |
 | `src/lib/versions/snapshot.ts` | 快照构建/恢复（用于导出/导入） |
 | `src/lib/pool/queries.ts` | Pool 资源查询（按 versionId 过滤） |
+| `src/components/chat-page-content.tsx` | 聊天页面共享组件（chat/preview/版本聊天共用） |
+| `src/app/api/agents/[id]/versions/by-ref/route.ts` | 版本 ref 解析 API |

@@ -57,6 +57,8 @@ export interface ExecuteChatStreamOptions {
   registeredHostTools?: string[];
   /** Override version ID. If omitted, resolves to editingVersionId. */
   versionId?: string;
+  /** Session source for isolation: "chat" (default) or "preview". */
+  source?: string;
 }
 
 /**
@@ -381,6 +383,7 @@ export async function executeChatStream(
             systemPrompt: activeConfig.systemPrompt,
             agentId,
             userId: userId ?? undefined,
+            source: opts.source,
           });
         }
         await saveMessage({

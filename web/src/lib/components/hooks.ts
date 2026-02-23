@@ -4,16 +4,24 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import type { ComponentRow } from "@/db/schema";
 import type { WithPoolMeta } from "@/lib/pool/queries";
+import type { VersionMode } from "@/lib/versions/mode";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function componentsApiKey(agentId?: string) {
-  return agentId ? `/api/components?agentId=${agentId}` : null;
+export function componentsApiKey(agentId?: string, mode?: VersionMode) {
+  if (!agentId) return null;
+  const params = new URLSearchParams({ agentId });
+  if (mode === "published") {
+    params.set("mode", "published");
+  } else if (mode && typeof mode === "object") {
+    params.set("versionId", mode.versionId);
+  }
+  return `/api/components?${params}`;
 }
 
-export function useComponents(agentId?: string) {
+export function useComponents(agentId?: string, mode?: VersionMode) {
   const { data, error, isLoading, mutate } = useSWR<WithPoolMeta<ComponentRow>[]>(
-    componentsApiKey(agentId),
+    componentsApiKey(agentId, mode),
     fetcher
   );
 

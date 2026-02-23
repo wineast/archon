@@ -155,7 +155,10 @@
     "deleteSessionFailed": "Failed to delete session",
     "quotaExceeded": "Platform quota exceeded, please contact admin to recharge",
     "noModelConfig": "This Agent has no model configured. Please contact the administrator.",
-    "chatError": "Failed to send message, please try again later"
+    "chatError": "Failed to send message, please try again later",
+    "notPublished": "This Agent has not been published yet. Please contact the administrator.",
+    "draftPreview": "Draft Preview",
+    "versionChat": "Version v{version}"
   },
   "build": {
     "titleSuffix": "· Build",
@@ -208,6 +211,7 @@
     "newVersion": "New Version",
     "noVersions": "No versions",
     "unpublished": "Unpublished",
+    "chat": "Chat",
     "detail": "Detail",
     "publish": "Publish",
     "deleteVersion": "Delete Version",

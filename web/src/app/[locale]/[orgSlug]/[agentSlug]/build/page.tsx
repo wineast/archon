@@ -15,6 +15,7 @@ import {
   BracesIcon,
   CodeIcon,
   DatabaseIcon,
+  EyeIcon,
   FileIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
@@ -360,6 +361,11 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
           <span className="text-muted-foreground"> {t("titleSuffix")}</span>
         </span>
         <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="size-8" asChild>
+            <Link href={`/${orgSlug}/${agent.slug}/preview`} target="_blank">
+              <EyeIcon className="size-4" />
+            </Link>
+          </Button>
           <Button
             variant={chatOpen ? "secondary" : "ghost"}
             size="icon"
@@ -395,6 +401,9 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
               onPublish={handlePublish}
               onRollback={() => {}}
               onDelete={handleDelete}
+              onChat={(v) => {
+                window.open(`/${orgSlug}/${agent.slug}/v/${v.version}/chat`, "_blank");
+              }}
             />
           </div>
         )}

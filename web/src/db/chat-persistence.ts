@@ -117,6 +117,7 @@ export async function createSession(opts: {
   systemPrompt?: string;
   agentId?: string;
   userId?: string;
+  source?: string;
 }) {
   const [session] = await db
     .insert(chatSessions)
@@ -127,6 +128,7 @@ export async function createSession(opts: {
       systemPrompt: opts.systemPrompt,
       agentId: opts.agentId ?? null,
       userId: opts.userId ?? null,
+      source: opts.source ?? "chat",
     })
     .onConflictDoNothing()
     .returning();
@@ -170,24 +172,27 @@ export async function updateSessionTitle(id: string, title: string) {
   return session;
 }
 
-export async function listSessions(limit = 50, agentId?: string) {
-  const query = db
-    .select()
-    .from(chatSessions)
-    .orderBy(desc(chatSessions.updatedAt))
-    .limit(limit);
+export async function listSessions(limit = 50, agentId?: string, source = "chat") {
+  const conditions = [eq(chatSessions.source, source)];
+  if (agentId) conditions.push(eq(chatSessions.agentId, agentId));
 
-  if (agentId) {
-    return query.where(eq(chatSessions.agentId, agentId));
-  }
-  return query;
-}
-
-export async function listSessionsByUser(limit = 50, agentId: string, userId: string) {
   return db
     .select()
     .from(chatSessions)
-    .where(and(eq(chatSessions.agentId, agentId), eq(chatSessions.userId, userId)))
+    .where(and(...conditions))
+    .orderBy(desc(chatSessions.updatedAt))
+    .limit(limit);
+}
+
+export async function listSessionsByUser(limit = 50, agentId: string, userId: string, source = "chat") {
+  return db
+    .select()
+    .from(chatSessions)
+    .where(and(
+      eq(chatSessions.agentId, agentId),
+      eq(chatSessions.userId, userId),
+      eq(chatSessions.source, source),
+    ))
     .orderBy(desc(chatSessions.updatedAt))
     .limit(limit);
 }

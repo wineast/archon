@@ -155,7 +155,10 @@
     "deleteSessionFailed": "删除会话失败",
     "quotaExceeded": "平台额度已用完，请联系管理员充值",
     "noModelConfig": "该 Agent 尚未配置模型，请联系管理员",
-    "chatError": "发送消息失败，请稍后重试"
+    "chatError": "发送消息失败，请稍后重试",
+    "notPublished": "此 Agent 尚未发布，请联系管理员",
+    "draftPreview": "草稿预览",
+    "versionChat": "版本 v{version}"
   },
   "build": {
     "titleSuffix": "· 构造",
@@ -208,6 +211,7 @@
     "newVersion": "New Version",
     "noVersions": "No versions",
     "unpublished": "未发布",
+    "chat": "对话",
     "detail": "Detail",
     "publish": "Publish",
     "deleteVersion": "Delete Version",

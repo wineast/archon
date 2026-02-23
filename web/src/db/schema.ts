@@ -235,6 +235,8 @@ export const chatSessions = pgTable(
     systemPrompt: text("system_prompt"),
     messageCount: integer("message_count").default(0).notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    /** Session origin: "chat" (main chat page) or "preview" (draft preview). */
+    source: text("source").notNull().default("chat"),
     shareId: text("share_id").unique(),
     sharedAt: timestamp("shared_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

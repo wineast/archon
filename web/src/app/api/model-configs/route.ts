@@ -4,10 +4,11 @@ import { modelConfigs } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
-import { resolveEditingVersionId } from "@/lib/versions/resolve";
+import { resolveEditingVersionId, resolveVersionByMode } from "@/lib/versions/resolve";
 
 export async function GET(req: Request) {
-  const agentId = new URL(req.url).searchParams.get("agentId");
+  const url = new URL(req.url);
+  const agentId = url.searchParams.get("agentId");
   if (!agentId) {
     return NextResponse.json({ error: "agentId is required" }, { status: 400 });
   }
@@ -15,10 +16,27 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
+  const directVersionId = url.searchParams.get("versionId");
+  let versionId: string | null;
+  if (directVersionId) {
+    const { validateVersionBelongsToAgent } = await import("@/lib/versions/resolve");
+    const valid = await validateVersionBelongsToAgent(agentId, directVersionId);
+    if (!valid) {
+      return NextResponse.json({ error: "invalid_version", message: "Version not found for this agent" }, { status: 404 });
+    }
+    versionId = directVersionId;
+  } else {
+    const mode = url.searchParams.get("mode");
+    versionId = await resolveVersionByMode(agentId, mode);
+  }
+  if (!versionId) {
+    return NextResponse.json({ error: "not_published", message: "Agent has no published version" }, { status: 404 });
+  }
+
   const rows = await db
     .select()
     .from(modelConfigs)
-    .where(and(eq(modelConfigs.agentId, agentId), isNull(modelConfigs.deletedAt)))
+    .where(and(eq(modelConfigs.versionId, versionId), isNull(modelConfigs.deletedAt)))
     .orderBy(modelConfigs.createdAt);
   return NextResponse.json(rows);
 }
