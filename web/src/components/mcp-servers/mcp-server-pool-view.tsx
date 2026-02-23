@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { PlugIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { KeyField } from "@/components/ui/key-field";
+import { KeyDisplay } from "@/components/ui/key-display";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { testMcpServer, type McpToolDef } from "@/lib/mcp-servers/hooks";
@@ -47,7 +47,7 @@ export function McpServerPoolView({ mcpServer, poolMeta, onTestSuccess }: McpSer
   return (
     <div className="space-y-4">
       <PoolRefBadge origin={poolMeta.origin} />
-      <KeyField value={mcpServer.key} />
+      <KeyDisplay value={mcpServer.key} />
       <div>
         <p className="text-xs font-medium text-muted-foreground">Name</p>
         <p className="mt-0.5 text-sm">{mcpServer.name || "—"}</p>

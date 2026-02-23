@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { JsEditor } from "@/components/editors/js-editor";
-import { KeyField } from "@/components/ui/key-field";
+import { KeyDisplay } from "@/components/ui/key-display";
 import { InlineSchemaEditor } from "@/components/schemas/inline-schema-editor";
 import type { ToolRow } from "@/db/schema";
 import type { PoolMeta } from "@/components/pool/types";
@@ -30,7 +30,7 @@ export function ToolPoolView({ tool, poolMeta }: ToolPoolViewProps) {
   return (
     <div className="space-y-3 min-w-0">
       <PoolRefBadge origin={poolMeta.origin} />
-      <KeyField value={tool.key} />
+      <KeyDisplay value={tool.key} />
       <div>
         <p className="text-xs font-medium text-muted-foreground">Tool Name</p>
         <p className="mt-0.5 text-sm">{tool.name || "—"}</p>

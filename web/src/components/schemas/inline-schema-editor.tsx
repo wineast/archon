@@ -151,22 +151,7 @@ export function InlineSchemaEditor({
         <label className="text-xs font-medium text-muted-foreground">
           {label}
         </label>
-        <Tabs defaultValue="edit" className="mt-1">
-          <TabsList className="h-7">
-            <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
-            <TabsTrigger value="parameters" className="text-xs">Parameters</TabsTrigger>
-          </TabsList>
-          <TabsContent value="edit">
-            <JsonEditor
-              value={JSON.stringify(schema, null, 2)}
-              height="300px"
-              readOnly
-            />
-          </TabsContent>
-          <TabsContent value="parameters">
-            <SchemaParameterPreview schema={schema} />
-          </TabsContent>
-        </Tabs>
+        <SchemaParameterPreview schema={schema} />
       </div>
     );
   }
