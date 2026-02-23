@@ -183,25 +183,29 @@ export function createToolContext(agentId?: string): ToolContext {
     const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId);
     const baseDeps = buildBaseDeps(enabledBuiltinKeys);
 
-    const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
-    setCachedFunctions(agentId, fns, sandbox);
+    const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
+    setCachedFunctions(agentId, fns, exec);
     return fns;
   }
 
   return {
     wiki: {
       async get(id: string) {
-        // Try by id first
-        let row = await db
-          .select({
-            id: wikiDocuments.id,
-            content: wikiDocuments.content,
-            agentId: wikiDocuments.agentId,
-          })
-          .from(wikiDocuments)
-          .where(eq(wikiDocuments.id, id))
-          .limit(1)
-          .then((rows) => rows[0]);
+        // Try by UUID id first (only if it looks like a valid UUID)
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        let row: { id: string; content: string; agentId: string | null } | undefined;
+        if (isUuid) {
+          row = await db
+            .select({
+              id: wikiDocuments.id,
+              content: wikiDocuments.content,
+              agentId: wikiDocuments.agentId,
+            })
+            .from(wikiDocuments)
+            .where(eq(wikiDocuments.id, id))
+            .limit(1)
+            .then((rows) => rows[0]);
+        }
         // Fallback: try by key
         if (!row && agentId) {
           row = await db

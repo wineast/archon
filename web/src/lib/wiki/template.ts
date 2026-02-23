@@ -2,14 +2,14 @@ import { Liquid, Tag, type TopLevelToken, type TagToken, type Context, type Emit
 import type { WikiDocument } from "./types";
 import { stripFrontmatter } from "./frontmatter";
 import { registerBuiltinFilters } from "@/lib/template/filters";
-import type { FunctionsSandbox } from "@/lib/functions/sandbox";
+import type { FunctionsExec } from "@/lib/functions/exec";
 
 export interface TemplateContext {
   documents: WikiDocument[];
   currentDoc: WikiDocument;
   variables?: Record<string, unknown>;
-  /** QuickJS sandbox with compiled agent functions (for template filters/tags). */
-  fnSandbox?: FunctionsSandbox;
+  /** Compiled agent functions (for template filters/tags). */
+  fnExec?: FunctionsExec;
 }
 
 /** Build the data context with built-in + custom variables */
@@ -73,15 +73,15 @@ export function processTemplate(
     }
   });
 
-  // Register function filters and {% fn %} tag when sandbox is available
-  if (ctx.fnSandbox) {
-    const sandbox = ctx.fnSandbox;
+  // Register function filters and {% fn %} tag when exec context is available
+  if (ctx.fnExec) {
+    const exec = ctx.fnExec;
 
     // Register each function as a Liquid filter: {{ data | fn_key }}
-    for (const key of sandbox.keys) {
+    for (const key of exec.keys) {
       engine.registerFilter(key, (input: unknown) => {
         try {
-          return sandbox.call(key, input);
+          return exec.call(key, input);
         } catch {
           return "";
         }
@@ -106,7 +106,7 @@ export function processTemplate(
           if (this.inputVar) {
             input = context.get([this.inputVar]);
           }
-          const result = sandbox.call(this.fnName, input);
+          const result = exec.call(this.fnName, input);
           if (result !== null && result !== undefined && typeof result === "object") {
             emitter.write(JSON.stringify(result));
           } else {

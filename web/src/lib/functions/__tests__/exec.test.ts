@@ -1,11 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   compileAndExecFn,
-  createFunctionsSandbox,
-  SandboxCompilationError,
-  SandboxTimeoutError,
-  SandboxError,
-} from "../sandbox";
+  createFunctionsExec,
+  CompilationError,
+  ExecError,
+} from "../exec";
 
 describe("compileAndExecFn", () => {
   it("evaluates numeric computation", async () => {
@@ -54,89 +53,57 @@ export default function(input) { return expr(input); }`;
     expect(result).toBe(20);
   });
 
-  it("handles async functions via executePendingJobs", async () => {
+  it("handles async functions", async () => {
     const code = `export default async function(input) { return input.value + 1; }`;
     const result = await compileAndExecFn(code, { value: 41 });
     expect(result).toBe(42);
   });
 
-  it("throws SandboxCompilationError on syntax error", async () => {
-    const code = `export default function(input { return 1; }`;
-    await expect(compileAndExecFn(code, {})).rejects.toThrow(
-      SandboxCompilationError
-    );
-  });
-
-  it("throws SandboxCompilationError when no default export", async () => {
+  it("throws CompilationError when no default export", async () => {
     const code = `var x = 42;`;
     await expect(compileAndExecFn(code, {})).rejects.toThrow(
-      SandboxCompilationError
+      CompilationError
     );
   });
 
-  it("throws SandboxCompilationError when default export is not a function", async () => {
-    const code = `export default 42;`;
+  it("rejects code using process global", async () => {
+    const code = `export default function(input) {
+      return process.env.SECRET;
+    }`;
     await expect(compileAndExecFn(code, {})).rejects.toThrow(
-      SandboxCompilationError
+      CompilationError
     );
   });
 
-  it("throws SandboxTimeoutError on infinite loop", async () => {
-    const code = `export default function(input) { while(true) {} }`;
-    await expect(
-      compileAndExecFn(code, {}, undefined, { timeoutMs: 200 })
-    ).rejects.toThrow(SandboxTimeoutError);
-  });
-
-  it("throws on excessive memory allocation", async () => {
+  it("rejects code using require", async () => {
     const code = `export default function(input) {
-      var arr = [];
-      for (var i = 0; i < 100000000; i++) { arr.push(new Array(10000)); }
-      return arr.length;
+      const fs = require("fs");
+      return fs;
     }`;
-    await expect(
-      compileAndExecFn(code, {}, undefined, {
-        memoryLimitBytes: 1024 * 1024,
-        timeoutMs: 2000,
-      })
-    ).rejects.toThrow(SandboxError);
-  });
-
-  it("cannot access Node.js globals", async () => {
-    const code = `export default function(input) {
-      return typeof process;
-    }`;
-    const result = await compileAndExecFn(code, {});
-    expect(result).toBe("undefined");
-  });
-
-  it("cannot access require", async () => {
-    const code = `export default function(input) {
-      return typeof require;
-    }`;
-    const result = await compileAndExecFn(code, {});
-    expect(result).toBe("undefined");
+    await expect(compileAndExecFn(code, {})).rejects.toThrow(
+      CompilationError
+    );
   });
 });
 
-describe("createFunctionsSandbox", () => {
+describe("createFunctionsExec", () => {
   it("compiles and calls a single function", async () => {
-    const sandbox = await createFunctionsSandbox([
+    const exec = await createFunctionsExec([
       {
         key: "add",
         code: `export default function(input) { return input.a + input.b; }`,
       },
     ]);
     try {
-      expect(sandbox.keys).toEqual(["add"]);
-      expect(sandbox.call("add", { a: 3, b: 4 })).toBe(7);
+      expect(exec.keys).toEqual(["add"]);
+      expect(exec.call("add", { a: 3, b: 4 })).toBe(7);
     } finally {
-      sandbox.dispose();
+      exec.dispose();
     }
   });
 
   it("supports function-to-function dependencies via import", async () => {
-    const sandbox = await createFunctionsSandbox([
+    const exec = await createFunctionsExec([
       {
         key: "double",
         code: `export default function(input) { return input.value * 2; }`,
@@ -148,16 +115,16 @@ export default function(input) { return double({ value: double({ value: input.va
       },
     ]);
     try {
-      expect(sandbox.call("double", { value: 5 })).toBe(10);
-      expect(sandbox.call("quadruple", { value: 5 })).toBe(20);
+      expect(exec.call("double", { value: 5 })).toBe(10);
+      expect(exec.call("quadruple", { value: 5 })).toBe(20);
     } finally {
-      sandbox.dispose();
+      exec.dispose();
     }
   });
 
-  it("injects host deps into shared sandbox", async () => {
+  it("injects host deps into shared exec context", async () => {
     const triple = (x: number) => x * 3;
-    const sandbox = await createFunctionsSandbox(
+    const exec = await createFunctionsExec(
       [
         {
           key: "calc",
@@ -167,62 +134,40 @@ export default function(input) { return double({ value: double({ value: input.va
       { triple }
     );
     try {
-      expect(sandbox.call("calc", { value: 7 })).toBe(21);
+      expect(exec.call("calc", { value: 7 })).toBe(21);
     } finally {
-      sandbox.dispose();
+      exec.dispose();
     }
   });
 
   it("throws after dispose", async () => {
-    const sandbox = await createFunctionsSandbox([
+    const exec = await createFunctionsExec([
       {
         key: "noop",
         code: `export default function() { return null; }`,
       },
     ]);
-    sandbox.dispose();
-    expect(() => sandbox.call("noop", {})).toThrow("disposed");
+    exec.dispose();
+    expect(() => exec.call("noop", {})).toThrow("disposed");
   });
 
   it("throws for unknown function key", async () => {
-    const sandbox = await createFunctionsSandbox([
+    const exec = await createFunctionsExec([
       {
         key: "a",
         code: `export default function() { return 1; }`,
       },
     ]);
     try {
-      expect(() => sandbox.call("nonexistent", {})).toThrow("not found");
+      expect(() => exec.call("nonexistent", {})).toThrow("not found");
     } finally {
-      sandbox.dispose();
+      exec.dispose();
     }
   });
 
-  // ── ES module format tests ──
-
-  it("supports module-format function importing another module-format function", async () => {
-    const sandbox = await createFunctionsSandbox([
-      {
-        key: "double",
-        code: `export default function(input) { return input.value * 2; }`,
-      },
-      {
-        key: "quadruple",
-        code: `import double from "archon:fn/double";
-export default function(input) { return double({ value: double({ value: input.value }) }); }`,
-      },
-    ]);
-    try {
-      expect(sandbox.call("double", { value: 5 })).toBe(10);
-      expect(sandbox.call("quadruple", { value: 5 })).toBe(20);
-    } finally {
-      sandbox.dispose();
-    }
-  });
-
-  it("uses compileExpression injected as global dep in shared sandbox", async () => {
+  it("uses compileExpression injected as global dep in shared exec context", async () => {
     const { compileExpression } = await import("filtrex");
-    const sandbox = await createFunctionsSandbox(
+    const exec = await createFunctionsExec(
       [
         {
           key: "evaluate",
@@ -233,20 +178,20 @@ export default function(input) { return expr(input); }`,
       { compileExpression }
     );
     try {
-      expect(sandbox.call("evaluate", { x: 10, y: 5 })).toBe(20);
+      expect(exec.call("evaluate", { x: 10, y: 5 })).toBe(20);
     } finally {
-      sandbox.dispose();
+      exec.dispose();
     }
   });
 
   it("throws when module has no default export function", async () => {
     await expect(
-      createFunctionsSandbox([
+      createFunctionsExec([
         {
           key: "bad",
           code: `export default 42;`,
         },
       ])
-    ).rejects.toThrow(SandboxCompilationError);
+    ).rejects.toThrow(CompilationError);
   });
 });

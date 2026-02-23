@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { compileAndExecFn, SandboxCompilationError } from "@/lib/functions/sandbox";
+import { compileAndExecFn, CompilationError } from "@/lib/functions/exec";
 import { ALL_BASE_DEPS } from "@/lib/functions/compile";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import type { JsonSchema7 } from "@/lib/schemas/types";
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate input against parameters schema (host-side, before sandbox)
+    // Validate input against parameters schema (host-side, before exec)
     let validatedInput = input ?? {};
     if (parameters && Object.keys(parameters.properties ?? {}).length > 0) {
       try {
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, result });
   } catch (e) {
-    if (e instanceof SandboxCompilationError) {
+    if (e instanceof CompilationError) {
       return NextResponse.json({
         success: false,
         error: `Compilation error: ${e.message}`,

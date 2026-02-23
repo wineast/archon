@@ -45,7 +45,7 @@ vi.mock("@/lib/pool/queries", () => ({
 }));
 
 vi.mock("@/lib/functions/compile", () => ({
-  resolveAndCompileFunctions: vi.fn().mockResolvedValue({ sandbox: undefined }),
+  resolveAndCompileFunctions: vi.fn().mockResolvedValue({ exec: undefined }),
   buildBaseDeps: vi.fn().mockReturnValue({}),
 }));
 

@@ -12,7 +12,7 @@ import type { RuntimeEventInput } from "@/lib/runtime-events/record";
  *
  * Priority:
  *   1. url field set   → HTTP POST to that URL
- *   2. handler field set → JS sandbox execution
+ *   2. handler field set → JS exec
  *   3. neither         → error
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,10 +35,9 @@ function resolveExecutor(def: ToolDefinitionPayload, agentId?: string): (args: a
   const handler = def.handler?.trim();
   if (handler) {
     const context = createToolContext(agentId);
-    const sandboxMode = def.sandboxMode ?? "light";
     return async (args) => {
       try {
-        return await executeToolHandler(handler, args, context, sandboxMode);
+        return await executeToolHandler(handler, args, context);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         return { error: `JS handler execution error: ${msg}` };
