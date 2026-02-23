@@ -1,5 +1,5 @@
 import { db as appDb } from "@/db";
-import { agents, agentVersions, modelConfigs, judgeConfigs, orgSlots, embedTokens } from "@/db/schema";
+import { agents, agentVersions, modelConfigs, judgeConfigs, embedTokens } from "@/db/schema";
 import { SLOT_KEYS } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -12,9 +12,8 @@ import type * as schema from "@/db/schema";
 type DbLike = PostgresJsDatabase<typeof schema>;
 
 /**
- * Idempotently ensure all default slot agents and orgSlot records exist for the given org.
- * Creates builder, assist, and evaluator agents with default model configs,
- * and links them in the orgSlots table.
+ * Idempotently ensure all default slot agents exist for the given org.
+ * Creates builder, assist, evaluator and support agents with default model configs.
  * Builder slot also seeds system tools.
  *
  * @param orgId - The org to create defaults for
@@ -131,15 +130,5 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
         });
       }
     }
-
-    // Ensure orgSlot record exists
-    await db
-      .insert(orgSlots)
-      .values({
-        orgId,
-        slotKey,
-        agentId,
-      })
-      .onConflictDoNothing();
   }
 }

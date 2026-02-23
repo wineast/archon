@@ -45,7 +45,6 @@ vi.mock("@/db/schema", () => ({
   judgeConfigs: { agentId: "agentId" },
   tools: { agentId: "agentId" },
   components: Symbol("components"),
-  orgSlots: { orgId: "orgId", slotKey: "slotKey", agentId: "agentId" },
   embedTokens: Symbol("embedTokens"),
   SLOT_KEYS: ["builder", "assist", "evaluator", "support"],
 }));
@@ -69,13 +68,13 @@ describe("ensureOrgDefaults", () => {
     selectLimitResult = [];
   });
 
-  it("creates 4 agents + modelConfigs + orgSlots when none exist", async () => {
+  it("creates 4 agents + modelConfigs when none exist", async () => {
     await ensureOrgDefaults("org-1");
 
-    // For each of 4 slots: agent insert + agentVersion insert + modelConfig insert + orgSlot insert = 16
-    // Plus 1 judgeConfig insert for evaluator slot = 17
-    // Plus 1 embedToken insert for support slot = 18
-    expect(mockInsert).toHaveBeenCalledTimes(18);
+    // For each of 4 slots: agent insert + agentVersion insert + modelConfig insert = 12
+    // Plus 1 judgeConfig insert for evaluator slot = 13
+    // Plus 1 embedToken insert for support slot = 14
+    expect(mockInsert).toHaveBeenCalledTimes(14);
   });
 
   it("seeds builtin tool refs only for builder slot", async () => {
@@ -124,12 +123,12 @@ describe("ensureOrgDefaults", () => {
     );
   });
 
-  it("skips agent creation if agent already exists, but still ensures orgSlot", async () => {
+  it("skips agent creation if agent already exists", async () => {
     selectLimitResult = [{ id: "existing-agent" }];
     await ensureOrgDefaults("org-1");
 
-    // Only orgSlot inserts for 4 slots = 4
-    expect(mockInsert).toHaveBeenCalledTimes(4);
+    // No inserts needed when agents already exist
+    expect(mockInsert).toHaveBeenCalledTimes(0);
   });
 
   it("sets modelId to empty string for all slots", async () => {

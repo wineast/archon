@@ -1579,35 +1579,6 @@ export const memories = pgTable(
 export type MemoryRow = typeof memories.$inferSelect;
 export type NewMemoryRow = typeof memories.$inferInsert;
 
-/* ─────────── Org Slots (org-level default slot bindings) ─────────── */
-
-export const orgSlots = pgTable(
-  "org_slots",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    orgId: uuid("org_id")
-      .notNull()
-      .references(() => orgs.id, { onDelete: "cascade" }),
-    slotKey: text("slot_key").notNull().$type<SlotKey>(),
-    agentId: uuid("agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "restrict" }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (t) => [
-    unique("org_slots_org_id_slot_key_idx").on(t.orgId, t.slotKey),
-  ]
-);
-
-export type OrgSlotRow = typeof orgSlots.$inferSelect;
-export type NewOrgSlotRow = typeof orgSlots.$inferInsert;
-
 /* ─────────── Agent Slot Overrides (agent-level slot overrides) ─────────── */
 
 export const agentSlotOverrides = pgTable(

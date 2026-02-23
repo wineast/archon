@@ -99,6 +99,14 @@ export function createAssistHandler(config: AssistConfig) {
     const assistConfig = agentId
       ? await resolveSlot(agentId, "assist")
       : null;
+
+    if (assistConfig && !assistConfig.agentId) {
+      return Response.json(
+        { error: "slot_not_configured", message: "Assist Agent 未配置" },
+        { status: 422 },
+      );
+    }
+
     const modelId = assistConfig?.model ?? "anthropic/claude-sonnet-4";
 
     let model;

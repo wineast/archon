@@ -12,7 +12,6 @@ import {
   users,
   orgs,
   orgMembers,
-  orgSlots,
 } from "../schema";
 
 const pgClient = postgres(
@@ -63,33 +62,5 @@ describe("seed idempotency", () => {
       expect(personalOrgs.length, `user ${user.email} should have exactly 1 personal org`).toBe(1);
     }
 
-    // Each personal org has 4 slot agents (builder, assist, evaluator, support)
-    const personalOrgRows = await db
-      .select({ id: orgs.id })
-      .from(orgs)
-      .where(sql`${orgs.isPersonal} = true`);
-    for (const org of personalOrgRows) {
-      const slots = await db
-        .select()
-        .from(orgSlots)
-        .where(sql`${orgSlots.orgId} = ${org.id}`);
-      expect(slots.length, `org ${org.id} should have 4 slot agents`).toBe(4);
-    }
-
-    // OrgSlots: no duplicate (orgId, slotKey)
-    const slotRows = await db
-      .select({
-        orgId: orgSlots.orgId,
-        slotKey: orgSlots.slotKey,
-        count: sql<number>`count(*)`,
-      })
-      .from(orgSlots)
-      .groupBy(orgSlots.orgId, orgSlots.slotKey);
-    for (const row of slotRows) {
-      expect(
-        Number(row.count),
-        `orgSlots duplicate (orgId, slotKey) "${row.orgId}:${row.slotKey}"`
-      ).toBe(1);
-    }
   }, 120_000);
 });

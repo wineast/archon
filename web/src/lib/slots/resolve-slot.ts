@@ -1,5 +1,5 @@
 import { db as appDb } from "@/db";
-import { agents, agentSlotOverrides, orgSlots, modelConfigs } from "@/db/schema";
+import { agentSlotOverrides, modelConfigs } from "@/db/schema";
 import type { SlotKey } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { SLOT_DEFS } from "./constants";
@@ -7,7 +7,7 @@ import { SLOT_DEFS } from "./constants";
 /* ─────────── Types ─────────── */
 
 export interface ResolvedSlot {
-  agentId: string;
+  agentId: string | null;
   model: string;
   temperature: number;
 }
@@ -46,11 +46,10 @@ async function getActiveModelConfig(agentId: string): Promise<{ model: string; t
  * Resolve a slot for a given agent.
  *
  * Resolution order:
- * 1. agentSlotOverrides (agent-level override)
- * 2. orgSlots (org-level default)
- * 3. Hardcoded defaults from SLOT_DEFS
+ * 1. agentSlotOverrides (agent-level binding)
+ * 2. Not configured (return agentId: null)
  *
- * Returns the resolved agent's active model config, or hardcoded defaults.
+ * Returns the resolved agent's active model config, or null agentId if not configured.
  * Results are cached for 60s.
  */
 export async function resolveSlot(
@@ -64,7 +63,7 @@ export async function resolveSlot(
 
   const def = SLOT_DEFS[slotKey];
 
-  // 1. Check agent-level override
+  // 1. Check agent-level binding
   const [override] = await appDb
     .select({ targetAgentId: agentSlotOverrides.targetAgentId })
     .from(agentSlotOverrides)
@@ -82,37 +81,11 @@ export async function resolveSlot(
     return value;
   }
 
-  // 2. Check org-level default
-  const [agent] = await appDb
-    .select({ orgId: agents.orgId })
-    .from(agents)
-    .where(eq(agents.id, agentId))
-    .limit(1);
-
-  if (agent) {
-    const [orgSlot] = await appDb
-      .select({ agentId: orgSlots.agentId })
-      .from(orgSlots)
-      .where(and(eq(orgSlots.orgId, agent.orgId), eq(orgSlots.slotKey, slotKey)))
-      .limit(1);
-
-    if (orgSlot) {
-      const mc = await getActiveModelConfig(orgSlot.agentId);
-      const value: ResolvedSlot = {
-        agentId: orgSlot.agentId,
-        model: mc?.model || def.defaultModel,
-        temperature: mc?.temperature ?? def.defaultTemperature,
-      };
-      cache.set(key, { value, at: now });
-      return value;
-    }
-  }
-
-  // 3. Hardcoded defaults
+  // 2. Not configured
   const value: ResolvedSlot = {
-    agentId: "",
-    model: def.defaultModel,
-    temperature: def.defaultTemperature,
+    agentId: null,
+    model: "",
+    temperature: 0,
   };
   cache.set(key, { value, at: now });
   return value;

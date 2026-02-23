@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JsonEditor } from "@/components/editors/json-editor";
 import { Textarea } from "@/components/ui/textarea";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import { DatasetAssistDialog } from "./dataset-assist-dialog";
 
 export interface DatasetFormHandle {
@@ -190,6 +191,7 @@ export function DatasetForm({
   );
 
   const [assistOpen, setAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
 
   return (
     <>
@@ -283,6 +285,7 @@ export function DatasetForm({
         datasetDescription={description}
         templateVariables={templateVariables}
         agentId={agentId ?? undefined}
+        orgId={orgId}
         onApply={(newData) => handleDataChange(newData)}
       />
     </>

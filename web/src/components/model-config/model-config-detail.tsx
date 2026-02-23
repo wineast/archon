@@ -229,6 +229,7 @@ export function ModelConfigDetail({
               systemPrompt={systemPrompt}
               onApply={setSystemPrompt}
               agentId={agentId}
+              orgId={agentData?.orgId}
             />
             <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
               <TabsList className="h-7">

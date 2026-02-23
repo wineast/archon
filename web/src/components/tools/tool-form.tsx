@@ -24,6 +24,7 @@ import {
 import deepEqual from "fast-deep-equal";
 import { BoxIcon, CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, SparklesIcon, ZapIcon } from "lucide-react";
 import { GuideDialog } from "@/components/ui/guide-dialog";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import { ToolCodeAssistDialog } from "./tool-code-assist-dialog";
 import { Button } from "@/components/ui/button";
 import toolHandlerDoc from "../../../guide/tool-handler.md";
@@ -60,6 +61,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange, readOnly, h
     detectHandlerTab(tool)
   );
   const [codeAssistOpen, setCodeAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
   const originalRef = useRef<ToolDefinition>({ ...tool });
 
   // Watch only fields needed for validation / conditional rendering
@@ -280,6 +282,7 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange, readOnly, h
                   toolName={name}
                   toolDescription={form.getValues("description")}
                   agentId={agentId}
+                  orgId={orgId}
                   onApply={(src) => form.setValue("handler", src, { shouldDirty: true })}
                 />
                 {executionTarget === "server" && (

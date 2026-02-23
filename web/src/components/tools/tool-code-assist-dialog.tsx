@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DefaultChatTransport, isTextUIPart, isToolUIPart, getToolName } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage, UIDataTypes } from "ai";
-import { CheckIcon, CopyIcon, InfoIcon } from "lucide-react";
+import { CheckIcon, CopyIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,12 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog as SubDialog,
-  DialogContent as SubDialogContent,
-  DialogHeader as SubDialogHeader,
-  DialogTitle as SubDialogTitle,
-} from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Conversation,
@@ -44,6 +38,7 @@ import {
   ToolInput,
 } from "@/components/ai-elements/tool";
 import { JsEditor } from "@/components/editors/js-editor";
+import { SlotAgentSelect } from "@/components/slots/slot-agent-select";
 
 type ToolCodeAssistTools = {
   update_code: { input: { content: string }; output: string };
@@ -59,6 +54,7 @@ interface ToolCodeAssistDialogProps {
   toolName?: string;
   toolDescription?: string;
   agentId?: string;
+  orgId?: string;
   onApply: (newCode: string) => void;
 }
 
@@ -125,6 +121,7 @@ export function ToolCodeAssistDialog({
   toolName,
   toolDescription,
   agentId,
+  orgId,
   onApply,
 }: ToolCodeAssistDialogProps) {
   const [draftCode, setDraftCode] = useState(code);
@@ -239,32 +236,6 @@ export function ToolCodeAssistDialog({
     setTimeout(() => setCopied(false), 1500);
   }, [messages]);
 
-  const [sysPromptOpen, setSysPromptOpen] = useState(false);
-
-  const sysPromptPreview = useMemo(() => {
-    const toolContext = [
-      toolName && `工具名称：${toolName}`,
-      toolDescription && `工具描述：${toolDescription}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    return `你是一位专业的工具 Handler 开发工程师。你的任务是帮助用户编写和优化工具的 Handler 代码。
-
-当前编辑器中的 Handler 代码如下：
-<current_code>
-${draftCode}
-</current_code>
-
-${toolContext ? `## 工具信息\n\n${toolContext}\n\n` : ""}## Handler 架构
-
-Handler 使用 ES module 格式：\`import { wiki } from "archon:context"; export default async function(args) { ... }\`
-
-## Context API: wiki / dataset / fn / ontology（通过 \`import\` 从 \`archon:context\` 导入）
-
-（完整内容见 API 路由）`;
-  }, [draftCode, toolName, toolDescription]);
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
@@ -272,32 +243,17 @@ Handler 使用 ES module 格式：\`import { wiki } from "archon:context"; expor
         showCloseButton={false}
       >
         <DialogHeader className="border-b px-4 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <DialogTitle>AI 辅助编辑 Handler</DialogTitle>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setSysPromptOpen(true)}>
-                <InfoIcon className="size-3" />
-                系统提示词
+            {agentId && orgId && (
+              <SlotAgentSelect agentId={agentId} orgId={orgId} slotKey="assist" className="w-40" />
+            )}
+            {messages.length > 0 && (
+              <Button variant="ghost" size="sm" className="ml-auto h-7 gap-1 text-xs" onClick={handleCopyMessages}>
+                {copied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
+                {copied ? "已复制" : "复制对话"}
               </Button>
-              <SubDialog open={sysPromptOpen} onOpenChange={setSysPromptOpen}>
-                <SubDialogContent className="max-w-2xl max-h-[80vh] flex flex-col gap-0 p-0">
-                  <SubDialogHeader className="border-b px-4 py-3">
-                    <SubDialogTitle>系统提示词</SubDialogTitle>
-                  </SubDialogHeader>
-                  <div className="flex-1 min-h-0 overflow-y-auto">
-                    <pre className="whitespace-pre-wrap break-words p-4 text-xs font-mono leading-relaxed">
-                      {sysPromptPreview}
-                    </pre>
-                  </div>
-                </SubDialogContent>
-              </SubDialog>
-              {messages.length > 0 && (
-                <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={handleCopyMessages}>
-                  {copied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-                  {copied ? "已复制" : "复制对话"}
-                </Button>
-              )}
-            </div>
+            )}
           </div>
         </DialogHeader>
 

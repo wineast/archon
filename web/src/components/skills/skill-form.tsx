@@ -13,6 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MdEditor } from "@/components/editors/md-editor";
 import { PromptAssistDialog } from "@/components/model-config/prompt-assist-dialog";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { useFunctions } from "@/lib/functions/hooks";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
@@ -67,6 +68,7 @@ export function SkillForm({
   const [previewContent, setPreviewContent] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [promptAssistOpen, setPromptAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
 
   // Autocomplete data
   const { tools: allTools } = useTools(agentId);
@@ -205,6 +207,7 @@ export function SkillForm({
           systemPrompt={contentValue}
           onApply={handlePromptApply}
           agentId={agentId}
+          orgId={orgId}
         />
         <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">
           <TabsList className="h-7">

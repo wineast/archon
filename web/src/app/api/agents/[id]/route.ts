@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { agents, orgs, orgSlots, agentSlotOverrides, ragConfigs } from "@/db/schema";
-import { and, eq, isNull, or } from "drizzle-orm";
+import { agents, orgs, agentSlotOverrides, ragConfigs } from "@/db/schema";
+import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
@@ -146,23 +146,13 @@ export async function DELETE(
   if (ctx instanceof NextResponse) return ctx;
 
   // Check if agent is referenced by any slot binding
-  const refs = await db
-    .select({ id: orgSlots.id })
-    .from(orgSlots)
-    .where(eq(orgSlots.agentId, id))
-    .limit(1);
-
   const overrideRefs = await db
     .select({ id: agentSlotOverrides.id })
     .from(agentSlotOverrides)
-    .where(
-      or(
-        eq(agentSlotOverrides.targetAgentId, id),
-      )
-    )
+    .where(eq(agentSlotOverrides.targetAgentId, id))
     .limit(1);
 
-  if (refs.length > 0 || overrideRefs.length > 0) {
+  if (overrideRefs.length > 0) {
     return NextResponse.json(
       { error: "Agent is referenced by slot bindings. Remove the slot references first." },
       { status: 409 }

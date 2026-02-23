@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { agentSlotOverrides, agents, orgSlots, SLOT_KEYS } from "@/db/schema";
+import { agentSlotOverrides, agents, SLOT_KEYS } from "@/db/schema";
 import type { SlotKey } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { invalidateSlotCache } from "@/lib/slots";
-import { SLOT_DEFS } from "@/lib/slots/constants";
 
 export async function GET(
   _req: Request,
@@ -16,18 +15,7 @@ export async function GET(
   const ctx = await requireAgentRole(id, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  // Get the agent's orgId
-  const [agent] = await db
-    .select({ orgId: agents.orgId })
-    .from(agents)
-    .where(eq(agents.id, id))
-    .limit(1);
-
-  if (!agent) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
-  }
-
-  // Get overrides for this agent
+  // Get bindings for this agent
   const overrides = await db
     .select({
       slotKey: agentSlotOverrides.slotKey,
@@ -40,31 +28,14 @@ export async function GET(
     .innerJoin(agents, eq(agents.id, agentSlotOverrides.targetAgentId))
     .where(eq(agentSlotOverrides.agentId, id));
 
-  // Get org defaults
-  const orgDefaults = await db
-    .select({
-      slotKey: orgSlots.slotKey,
-      agentId: orgSlots.agentId,
-      agentName: agents.name,
-      agentSlug: agents.slug,
-      agentIcon: agents.icon,
-    })
-    .from(orgSlots)
-    .innerJoin(agents, eq(agents.id, orgSlots.agentId))
-    .where(eq(orgSlots.orgId, agent.orgId));
-
   const overrideMap = new Map(overrides.map((o) => [o.slotKey, o]));
-  const orgDefaultMap = new Map(orgDefaults.map((d) => [d.slotKey, d]));
 
   const result = SLOT_KEYS.map((slotKey) => {
     const override = overrideMap.get(slotKey);
-    const orgDefault = orgDefaultMap.get(slotKey);
-    const def = SLOT_DEFS[slotKey];
 
     if (override) {
       return {
         slotKey,
-        source: "override" as const,
         agentId: override.targetAgentId,
         agentName: override.targetAgentName,
         agentSlug: override.targetAgentSlug,
@@ -72,24 +43,12 @@ export async function GET(
       };
     }
 
-    if (orgDefault) {
-      return {
-        slotKey,
-        source: "org" as const,
-        agentId: orgDefault.agentId,
-        agentName: orgDefault.agentName,
-        agentSlug: orgDefault.agentSlug,
-        agentIcon: orgDefault.agentIcon,
-      };
-    }
-
     return {
       slotKey,
-      source: "default" as const,
       agentId: null,
-      agentName: def.defaultAgentName,
-      agentSlug: def.defaultAgentSlug,
-      agentIcon: def.defaultAgentIcon,
+      agentName: "",
+      agentSlug: "",
+      agentIcon: "",
     };
   });
 

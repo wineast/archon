@@ -8,63 +8,15 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 /* ─────────── Types ─────────── */
 
-export interface OrgSlotItem {
-  id: string;
-  slotKey: SlotKey;
-  agentId: string;
-  agentName: string;
-  agentSlug: string;
-  agentIcon: string;
-}
-
 export interface AgentSlotItem {
   slotKey: SlotKey;
-  source: "override" | "org" | "default";
   agentId: string | null;
   agentName: string;
   agentSlug: string;
   agentIcon: string;
 }
 
-/* ─────────── Org Slots ─────────── */
-
-export function useOrgSlots(orgId: string | undefined) {
-  const { data, error, isLoading, mutate } = useSWR<OrgSlotItem[]>(
-    orgId ? `/api/orgs/${orgId}/slots` : null,
-    fetcher
-  );
-
-  return {
-    slots: data ?? [],
-    isLoading,
-    error,
-    mutate,
-  };
-}
-
-export async function updateOrgSlot(
-  orgId: string,
-  slotKey: SlotKey,
-  agentId: string,
-  mutate: () => void
-) {
-  try {
-    const res = await fetch(`/api/orgs/${orgId}/slots`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotKey, agentId }),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    mutate();
-    return true;
-  } catch (e) {
-    console.warn("updateOrgSlot failed:", e);
-    toast.error("Failed to update slot");
-    return false;
-  }
-}
-
-/* ─────────── Agent Slot Overrides ─────────── */
+/* ─────────── Agent Slots ─────────── */
 
 export function useAgentSlots(agentId: string | undefined) {
   const { data, error, isLoading, mutate } = useSWR<AgentSlotItem[]>(
@@ -97,7 +49,7 @@ export async function updateAgentSlotOverride(
     return true;
   } catch (e) {
     console.warn("updateAgentSlotOverride failed:", e);
-    toast.error("Failed to update slot override");
+    toast.error("Failed to update slot");
     return false;
   }
 }
@@ -118,7 +70,7 @@ export async function deleteAgentSlotOverride(
     return true;
   } catch (e) {
     console.warn("deleteAgentSlotOverride failed:", e);
-    toast.error("Failed to remove slot override");
+    toast.error("Failed to remove slot");
     return false;
   }
 }

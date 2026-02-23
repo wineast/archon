@@ -53,6 +53,13 @@ export async function executeBuildChatStream(
   // Get model config via slot resolution
   const config = await resolveSlot(agentId, "builder");
 
+  if (!config.agentId) {
+    return new Response(
+      JSON.stringify({ error: "slot_not_configured", message: "Builder Agent 未配置" }),
+      { status: 422, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   const systemPrompt = buildSystemPrompt(summary);
   const codeTools = buildAllTools(agentId, { skillsEnabled });
 

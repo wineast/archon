@@ -32,9 +32,12 @@ import {
   ToolInput,
   ToolOutput,
 } from "@/components/ai-elements/tool";
+import { SlotAgentSelect } from "@/components/slots/slot-agent-select";
+import { SLOT_DEFS } from "@/lib/slots/constants";
 
 interface BuildChatPanelProps {
   agentId: string;
+  orgId: string;
 }
 
 const SUGGESTIONS = [
@@ -87,7 +90,7 @@ function BuildMessageParts({ message }: { message: UIMessage }) {
   );
 }
 
-export function BuildChatPanel({ agentId }: BuildChatPanelProps) {
+export function BuildChatPanel({ agentId, orgId }: BuildChatPanelProps) {
   const { mutate: globalMutate } = useSWRConfig();
   const sessionIdRef = useRef<string | null>(null);
 
@@ -139,6 +142,10 @@ export function BuildChatPanel({ agentId }: BuildChatPanelProps) {
 
   return (
     <div className="flex h-full w-96 shrink-0 flex-col border-r">
+      <div className="flex items-center gap-2 border-b px-3 py-2">
+        <span className="text-xs font-medium text-muted-foreground">{SLOT_DEFS.builder.label}</span>
+        <SlotAgentSelect agentId={agentId} orgId={orgId} slotKey="builder" className="flex-1" />
+      </div>
       <Conversation>
         {isEmpty ? (
           <ConversationEmptyState

@@ -1,0 +1,69 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAgentSlots, updateAgentSlotOverride, deleteAgentSlotOverride } from "@/lib/slots/hooks";
+import { useAgents } from "@/lib/agents/hooks";
+import type { SlotKey } from "@/db/schema";
+import { cn } from "@/lib/utils";
+
+interface SlotAgentSelectProps {
+  agentId: string;
+  orgId: string;
+  slotKey: SlotKey;
+  className?: string;
+  onChanged?: () => void;
+}
+
+const NONE_VALUE = "__none__";
+
+export function SlotAgentSelect({ agentId, orgId, slotKey, className, onChanged }: SlotAgentSelectProps) {
+  const { slots, mutate } = useAgentSlots(agentId);
+  const { agents } = useAgents(orgId);
+  const [busy, setBusy] = useState(false);
+
+  const currentSlot = slots.find((s) => s.slotKey === slotKey);
+  const currentAgentId = currentSlot?.agentId ?? null;
+
+  const handleChange = useCallback(
+    async (value: string) => {
+      setBusy(true);
+      if (value === NONE_VALUE) {
+        await deleteAgentSlotOverride(agentId, slotKey, mutate);
+      } else {
+        await updateAgentSlotOverride(agentId, slotKey, value, mutate);
+      }
+      setBusy(false);
+      onChanged?.();
+    },
+    [agentId, slotKey, mutate, onChanged]
+  );
+
+  return (
+    <Select
+      value={currentAgentId ?? NONE_VALUE}
+      onValueChange={handleChange}
+      disabled={busy}
+    >
+      <SelectTrigger className={cn("h-7 text-xs", className)}>
+        <SelectValue placeholder="未配置" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NONE_VALUE} className="text-xs text-muted-foreground">
+          未配置
+        </SelectItem>
+        {agents.map((agent) => (
+          <SelectItem key={agent.id} value={agent.id} className="text-xs">
+            {agent.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
