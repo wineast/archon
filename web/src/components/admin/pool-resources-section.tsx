@@ -40,6 +40,7 @@ function PoolResourceList({ resourceType }: { resourceType: ResourceType }) {
     id: string;
     key: string;
     name: string;
+    description?: string;
     origin: string;
   }>(resourceType);
   const [createOpen, setCreateOpen] = useState(false);
@@ -108,11 +109,11 @@ function PoolResourceList({ resourceType }: { resourceType: ResourceType }) {
   const originBadge = (origin: string) => {
     switch (origin) {
       case "builtin":
-        return <Badge variant="default" className="text-[10px]">{t("poolOriginBuiltin")}</Badge>;
+        return <Badge variant="secondary">{t("poolOriginBuiltin")}</Badge>;
       case "marketplace":
-        return <Badge variant="secondary" className="text-[10px]">{t("poolOriginMarketplace")}</Badge>;
+        return <Badge variant="secondary">{t("poolOriginMarketplace")}</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{t("poolOriginUser")}</Badge>;
+        return <Badge variant="outline">{t("poolOriginUser")}</Badge>;
     }
   };
 
@@ -141,7 +142,7 @@ function PoolResourceList({ resourceType }: { resourceType: ResourceType }) {
           {t("noPoolResources")}
         </p>
       ) : (
-        <ScrollArea className="max-h-80 min-h-0">
+        <ScrollArea className="h-[480px] min-h-0 [&_[data-slot=scroll-area-viewport]>div]:!block">
           <div className="space-y-1">
             {resources.map((r) => (
               <div
@@ -151,16 +152,21 @@ function PoolResourceList({ resourceType }: { resourceType: ResourceType }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{r.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{r.key}</p>
+                  {r.description && (
+                    <p className="truncate text-xs text-muted-foreground">{r.description}</p>
+                  )}
                 </div>
                 {originBadge(r.origin)}
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={busy}
-                  onClick={() => handleDelete(r.id)}
-                >
-                  <Trash2Icon className="size-3.5 text-destructive" />
-                </Button>
+                {r.origin !== "builtin" && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={busy}
+                    onClick={() => handleDelete(r.id)}
+                  >
+                    <Trash2Icon className="size-3.5 text-muted-foreground hover:text-destructive" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>
