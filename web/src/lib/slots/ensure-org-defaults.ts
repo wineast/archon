@@ -71,7 +71,7 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
         .insert(agentVersions)
         .values({
           agentId,
-          version: "0.1.0",
+          version: "0.0.0",
           changelog: "Initial version",
         })
         .returning();
