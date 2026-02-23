@@ -69,8 +69,19 @@ function compileModuleSource(
     }
   }
 
+  // Ensure archon:react is always available in deps (needed for JSX runtime)
+  if (!depsObj["archon:react"]) {
+    depsObj["archon:react"] = INJECTED_DEPS_BY_MODULE["archon:react"];
+  }
+
+  // Classic JSX runtime emits React.createElement — inject React if not already declared
+  const needsReactPreamble = !code.includes('const React = __deps__["archon:react"].default');
+  const finalCode = needsReactPreamble
+    ? `var React = __deps__["archon:react"].default;\n` + code
+    : code;
+
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
-  const factory = new Function("__deps__", code);
+  const factory = new Function("__deps__", finalCode);
   return factory(depsObj) as ComponentType<ComponentRendererProps>;
 }
 

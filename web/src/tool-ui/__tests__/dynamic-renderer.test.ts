@@ -166,3 +166,41 @@ export default function({ tool }) {
     expect(html).toContain("test_tool");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Auto-inject React — JSX works without explicit React default import
+// ---------------------------------------------------------------------------
+describe("compileSourceWithDeps — auto React injection", () => {
+  it("JSX works with only named imports from archon:react", () => {
+    const source = `
+import { useState, Fragment } from "archon:react";
+export default function({ tool }) {
+  return <div>{tool.output.message}</div>;
+}`;
+    const html = render(source, {
+      tool: { name: "greet", input: {}, output: { message: "works" } },
+    });
+    expect(html).toContain("works");
+  });
+
+  it("JSX works with no archon:react import at all", () => {
+    const source = `
+export default function({ data }) {
+  return <span>{data.label}</span>;
+}`;
+    const html = render(source, { data: { label: "no-import" } });
+    expect(html).toContain("no-import");
+  });
+
+  it("Fragment works with only named import", () => {
+    const source = `
+import { Fragment } from "archon:react";
+export default function({ tool }) {
+  return <Fragment><span>a</span><span>b</span></Fragment>;
+}`;
+    const html = render(source, {
+      tool: { name: "t", input: {}, output: {} },
+    });
+    expect(html).toContain("<span>a</span><span>b</span>");
+  });
+});
