@@ -143,6 +143,7 @@ export async function buildSnapshot(agentId: string, versionId: string, external
       input: row.tool_test_cases.input,
       expectedOutput: row.tool_test_cases.expectedOutput,
       tags: row.tool_test_cases.tags,
+      assertions: row.tool_test_cases.assertions,
     });
     toolTestsByKey.set(key, items);
   }
@@ -568,6 +569,7 @@ export async function restoreSnapshot(
         input: tc.input,
         expectedOutput: tc.expectedOutput,
         tags: tc.tags,
+        assertions: tc.assertions ?? [],
       }))
     );
     if (toolTCs.length > 0) {

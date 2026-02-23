@@ -98,3 +98,10 @@ export default async function(args) {
 
 - 左侧侧栏：工具列表，支持搜索和创建
 - 右侧详情：工具编辑（基本信息、参数 Schema、Handler、组件绑定、测试用例）
+
+## 相关文档
+
+- [Handler 编写指南](tool-handler.md)
+- [沙盒模式](tool-sandbox.md)
+- [工具 Examples 功能](tool-examples.md)
+- [测试用例断言](tool-test-assertions.md)

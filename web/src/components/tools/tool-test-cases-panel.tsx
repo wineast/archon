@@ -27,6 +27,7 @@ import {
   type ToolTestRunDetail,
 } from "@/lib/tools/test-case-hooks";
 import type { ToolTestRunResultRow } from "@/db/schema";
+import type { Assertion } from "@/lib/eval/types";
 
 interface ToolTestCasesPanelProps {
   toolId: string;
@@ -88,6 +89,7 @@ export function ToolTestCasesPanel({
       input: Record<string, unknown>;
       expectedOutput: unknown;
       tags: string[];
+      assertions: Assertion[];
     }) => {
       await createToolTestCase(toolId, data, mutate);
       setShowCreateForm(false);
@@ -103,6 +105,7 @@ export function ToolTestCasesPanel({
         input?: Record<string, unknown>;
         expectedOutput?: unknown;
         tags?: string[];
+        assertions?: Assertion[];
         showAsExample?: boolean;
       }
     ) => {
@@ -121,9 +124,10 @@ export function ToolTestCasesPanel({
   const handleRun = useCallback(
     async (
       input: Record<string, unknown>,
-      expectedOutput?: unknown
+      expectedOutput?: unknown,
+      assertions?: Assertion[]
     ) => {
-      return runToolTestCase(toolId, input, expectedOutput);
+      return runToolTestCase(toolId, input, expectedOutput, assertions);
     },
     [toolId]
   );
@@ -180,6 +184,7 @@ export function ToolTestCasesPanel({
               caseName: tc.name,
               input: tc.input,
               expectedOutput: tc.expectedOutput,
+              assertions: tc.assertions,
             }),
           }
         );
@@ -204,6 +209,7 @@ export function ToolTestCasesPanel({
           output: null,
           passed: false,
           error: err instanceof Error ? err.message : String(err),
+          assertionResults: null,
           durationMs: 0,
           createdAt: new Date(),
         });

@@ -7,6 +7,8 @@ import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
 import { executeToolHandler } from "@/lib/tools/execute-handler";
 import { getDefsMap, resolveInlineSchema } from "@/lib/schemas/resolve-inline";
+import { runAllAssertions } from "@/lib/eval/assertions";
+import type { Assertion, AssertionResult } from "@/lib/eval/types";
 
 export async function POST(
   req: Request,
@@ -47,9 +49,10 @@ export async function POST(
     });
   }
 
-  const { input, expectedOutput } = (await req.json()) as {
+  const { input, expectedOutput, assertions } = (await req.json()) as {
     input: Record<string, unknown>;
     expectedOutput?: unknown;
+    assertions?: Assertion[];
   };
 
   const start = Date.now();
@@ -105,16 +108,23 @@ export async function POST(
 
   const durationMs = Date.now() - start;
 
-  // Exact match comparison
-  const passed =
-    expectedOutput == null ||
-    deepEqual(result, expectedOutput);
+  // Judgment: expectedOutput exact match + assertions
+  let passed = true;
+  if (expectedOutput != null) {
+    passed = passed && deepEqual(result, expectedOutput);
+  }
+  let assertionResults: AssertionResult[] = [];
+  if (assertions && assertions.length > 0) {
+    assertionResults = runAllAssertions(assertions, JSON.stringify(result));
+    passed = passed && assertionResults.every((r) => r.passed);
+  }
 
   return NextResponse.json({
     success: true,
     result,
     durationMs,
     passed,
+    assertionResults,
     sandboxMode: tool.sandboxMode,
   });
 }
