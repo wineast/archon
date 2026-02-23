@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { agentSlotOverrides, agents, SLOT_KEYS } from "@/db/schema";
-import type { SlotKey } from "@/db/schema";
+import { agentSlots, agents, AGENT_SLOT_KEYS } from "@/db/schema";
+import type { AgentSlotKey } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { invalidateSlotCache } from "@/lib/slots";
@@ -16,30 +16,30 @@ export async function GET(
   if (ctx instanceof NextResponse) return ctx;
 
   // Get bindings for this agent
-  const overrides = await db
+  const bindings = await db
     .select({
-      slotKey: agentSlotOverrides.slotKey,
-      targetAgentId: agentSlotOverrides.targetAgentId,
+      slotKey: agentSlots.slotKey,
+      targetAgentId: agentSlots.targetAgentId,
       targetAgentName: agents.name,
       targetAgentSlug: agents.slug,
       targetAgentIcon: agents.icon,
     })
-    .from(agentSlotOverrides)
-    .innerJoin(agents, eq(agents.id, agentSlotOverrides.targetAgentId))
-    .where(eq(agentSlotOverrides.agentId, id));
+    .from(agentSlots)
+    .innerJoin(agents, eq(agents.id, agentSlots.targetAgentId))
+    .where(eq(agentSlots.agentId, id));
 
-  const overrideMap = new Map(overrides.map((o) => [o.slotKey, o]));
+  const bindingMap = new Map(bindings.map((b) => [b.slotKey, b]));
 
-  const result = SLOT_KEYS.map((slotKey) => {
-    const override = overrideMap.get(slotKey);
+  const result = AGENT_SLOT_KEYS.map((slotKey) => {
+    const binding = bindingMap.get(slotKey);
 
-    if (override) {
+    if (binding) {
       return {
         slotKey,
-        agentId: override.targetAgentId,
-        agentName: override.targetAgentName,
-        agentSlug: override.targetAgentSlug,
-        agentIcon: override.targetAgentIcon,
+        agentId: binding.targetAgentId,
+        agentName: binding.targetAgentName,
+        agentSlug: binding.targetAgentSlug,
+        agentIcon: binding.targetAgentIcon,
       };
     }
 
@@ -65,9 +65,9 @@ export async function PUT(
   if (ctx instanceof NextResponse) return ctx;
 
   const body = await req.json();
-  const { slotKey, targetAgentId } = body as { slotKey: SlotKey; targetAgentId: string };
+  const { slotKey, targetAgentId } = body as { slotKey: AgentSlotKey; targetAgentId: string };
 
-  if (!slotKey || !(SLOT_KEYS as readonly string[]).includes(slotKey)) {
+  if (!slotKey || !(AGENT_SLOT_KEYS as readonly string[]).includes(slotKey)) {
     return NextResponse.json({ error: "Invalid slotKey" }, { status: 400 });
   }
 
@@ -76,12 +76,12 @@ export async function PUT(
   }
 
   const [row] = await db
-    .insert(agentSlotOverrides)
+    .insert(agentSlots)
     .values({ agentId: id, slotKey, targetAgentId })
     .onConflictDoUpdate({
-      target: [agentSlotOverrides.agentId, agentSlotOverrides.slotKey],
+      target: [agentSlots.agentId, agentSlots.slotKey],
       set: { targetAgentId, updatedAt: new Date() },
-      where: and(eq(agentSlotOverrides.agentId, id), eq(agentSlotOverrides.slotKey, slotKey)),
+      where: and(eq(agentSlots.agentId, id), eq(agentSlots.slotKey, slotKey)),
     })
     .returning();
 
@@ -100,15 +100,15 @@ export async function DELETE(
   if (ctx instanceof NextResponse) return ctx;
 
   const body = await req.json();
-  const { slotKey } = body as { slotKey: SlotKey };
+  const { slotKey } = body as { slotKey: AgentSlotKey };
 
-  if (!slotKey || !(SLOT_KEYS as readonly string[]).includes(slotKey)) {
+  if (!slotKey || !(AGENT_SLOT_KEYS as readonly string[]).includes(slotKey)) {
     return NextResponse.json({ error: "Invalid slotKey" }, { status: 400 });
   }
 
   await db
-    .delete(agentSlotOverrides)
-    .where(and(eq(agentSlotOverrides.agentId, id), eq(agentSlotOverrides.slotKey, slotKey)));
+    .delete(agentSlots)
+    .where(and(eq(agentSlots.agentId, id), eq(agentSlots.slotKey, slotKey)));
 
   invalidateSlotCache(id);
 

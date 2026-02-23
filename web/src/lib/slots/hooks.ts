@@ -2,14 +2,22 @@
 
 import useSWR from "swr";
 import { toast } from "sonner";
-import type { SlotKey } from "@/db/schema";
+import type { AgentSlotKey, OrgSlotKey } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 /* ─────────── Types ─────────── */
 
 export interface AgentSlotItem {
-  slotKey: SlotKey;
+  slotKey: AgentSlotKey;
+  agentId: string | null;
+  agentName: string;
+  agentSlug: string;
+  agentIcon: string;
+}
+
+export interface OrgSlotItem {
+  slotKey: OrgSlotKey;
   agentId: string | null;
   agentName: string;
   agentSlug: string;
@@ -32,9 +40,9 @@ export function useAgentSlots(agentId: string | undefined) {
   };
 }
 
-export async function updateAgentSlotOverride(
+export async function updateAgentSlot(
   agentId: string,
-  slotKey: SlotKey,
+  slotKey: AgentSlotKey,
   targetAgentId: string,
   mutate: () => void
 ) {
@@ -48,15 +56,15 @@ export async function updateAgentSlotOverride(
     mutate();
     return true;
   } catch (e) {
-    console.warn("updateAgentSlotOverride failed:", e);
+    console.warn("updateAgentSlot failed:", e);
     toast.error("Failed to update slot");
     return false;
   }
 }
 
-export async function deleteAgentSlotOverride(
+export async function deleteAgentSlot(
   agentId: string,
-  slotKey: SlotKey,
+  slotKey: AgentSlotKey,
   mutate: () => void
 ) {
   try {
@@ -69,7 +77,66 @@ export async function deleteAgentSlotOverride(
     mutate();
     return true;
   } catch (e) {
-    console.warn("deleteAgentSlotOverride failed:", e);
+    console.warn("deleteAgentSlot failed:", e);
+    toast.error("Failed to remove slot");
+    return false;
+  }
+}
+
+/* ─────────── Org Slots ─────────── */
+
+export function useOrgSlots(orgId: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR<OrgSlotItem[]>(
+    orgId ? `/api/orgs/${orgId}/slots` : null,
+    fetcher
+  );
+
+  return {
+    slots: data ?? [],
+    isLoading,
+    error,
+    mutate,
+  };
+}
+
+export async function updateOrgSlot(
+  orgId: string,
+  slotKey: OrgSlotKey,
+  targetAgentId: string,
+  mutate: () => void
+) {
+  try {
+    const res = await fetch(`/api/orgs/${orgId}/slots`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slotKey, targetAgentId }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    mutate();
+    return true;
+  } catch (e) {
+    console.warn("updateOrgSlot failed:", e);
+    toast.error("Failed to update slot");
+    return false;
+  }
+}
+
+export async function deleteOrgSlot(
+  orgId: string,
+  slotKey: OrgSlotKey,
+  mutate: () => void
+) {
+  try {
+    const res = await fetch(`/api/orgs/${orgId}/slots`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slotKey }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    mutate();
+    return true;
+  } catch (e) {
+    console.warn("deleteOrgSlot failed:", e);
     toast.error("Failed to remove slot");
     return false;
   }

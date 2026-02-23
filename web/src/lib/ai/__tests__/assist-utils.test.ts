@@ -38,7 +38,7 @@ vi.mock("@/lib/ai/get-org-id", () => ({
 }));
 
 vi.mock("@/lib/slots", () => ({
-  resolveSlot: vi.fn().mockResolvedValue({
+  resolveAgentSlot: vi.fn().mockResolvedValue({
     agentId: "assist-agent-1",
     model: "anthropic/claude-sonnet-4",
     temperature: 0.7,
@@ -352,8 +352,8 @@ describe("createAssistHandler", () => {
   });
 
   it("returns 422 when assist slot is not configured", async () => {
-    const { resolveSlot } = await import("@/lib/slots");
-    vi.mocked(resolveSlot).mockResolvedValueOnce({
+    const { resolveAgentSlot } = await import("@/lib/slots");
+    vi.mocked(resolveAgentSlot).mockResolvedValueOnce({
       agentId: null,
       model: "",
       temperature: 0,

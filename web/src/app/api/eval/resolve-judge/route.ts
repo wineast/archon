@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { agents } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
-import { resolveSlot } from "@/lib/slots";
+import { resolveAgentSlot } from "@/lib/slots";
 
 /** GET ?agentId=X — resolve evaluator slot to get judge agent info */
 export async function GET(req: Request) {
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const resolved = await resolveSlot(agentId, "evaluator");
+  const resolved = await resolveAgentSlot(agentId, "evaluator");
 
   if (!resolved.agentId) {
     return NextResponse.json({ judgeAgentId: null, judgeAgentName: null, judgeAgentSlug: null });

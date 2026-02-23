@@ -56,7 +56,7 @@ vi.mock("@/db/schema", () => ({
 }));
 
 vi.mock("@/lib/slots", () => ({
-  resolveSlot: vi.fn().mockResolvedValue({
+  resolveAgentSlot: vi.fn().mockResolvedValue({
     agentId: "builder-agent-1",
     model: "anthropic/claude-sonnet-4",
     temperature: 0.3,
@@ -243,8 +243,8 @@ describe("executeBuildChatStream monitoring", () => {
   });
 
   it("returns 422 when builder slot is not configured", async () => {
-    const { resolveSlot } = await import("@/lib/slots");
-    vi.mocked(resolveSlot).mockResolvedValueOnce({
+    const { resolveAgentSlot } = await import("@/lib/slots");
+    vi.mocked(resolveAgentSlot).mockResolvedValueOnce({
       agentId: null,
       model: "",
       temperature: 0,

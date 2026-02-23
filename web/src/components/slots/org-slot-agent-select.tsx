@@ -8,23 +8,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAgentSlots, updateAgentSlot, deleteAgentSlot } from "@/lib/slots/hooks";
+import { useOrgSlots, updateOrgSlot, deleteOrgSlot } from "@/lib/slots/hooks";
 import { useAgents } from "@/lib/agents/hooks";
-import type { AgentSlotKey } from "@/db/schema";
+import type { OrgSlotKey } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-interface SlotAgentSelectProps {
-  agentId: string;
+interface OrgSlotAgentSelectProps {
   orgId: string;
-  slotKey: AgentSlotKey;
+  slotKey: OrgSlotKey;
   className?: string;
   onChanged?: () => void;
 }
 
 const NONE_VALUE = "__none__";
 
-export function SlotAgentSelect({ agentId, orgId, slotKey, className, onChanged }: SlotAgentSelectProps) {
-  const { slots, mutate } = useAgentSlots(agentId);
+export function OrgSlotAgentSelect({ orgId, slotKey, className, onChanged }: OrgSlotAgentSelectProps) {
+  const { slots, mutate } = useOrgSlots(orgId);
   const { agents } = useAgents(orgId);
   const [busy, setBusy] = useState(false);
 
@@ -35,14 +34,14 @@ export function SlotAgentSelect({ agentId, orgId, slotKey, className, onChanged 
     async (value: string) => {
       setBusy(true);
       if (value === NONE_VALUE) {
-        await deleteAgentSlot(agentId, slotKey, mutate);
+        await deleteOrgSlot(orgId, slotKey, mutate);
       } else {
-        await updateAgentSlot(agentId, slotKey, value, mutate);
+        await updateOrgSlot(orgId, slotKey, value, mutate);
       }
       setBusy(false);
       onChanged?.();
     },
-    [agentId, slotKey, mutate, onChanged]
+    [orgId, slotKey, mutate, onChanged]
   );
 
   return (

@@ -17,8 +17,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mockMutate = vi.fn();
-const mockUpdateAgentSlotOverride = vi.fn().mockResolvedValue(true);
-const mockDeleteAgentSlotOverride = vi.fn().mockResolvedValue(true);
+const mockUpdateAgentSlot = vi.fn().mockResolvedValue(true);
+const mockDeleteAgentSlot = vi.fn().mockResolvedValue(true);
 
 let mockSlots: { slotKey: string; agentId: string | null; agentName: string; agentSlug: string; agentIcon: string }[] = [];
 let mockAgents: { id: string; name: string }[] = [];
@@ -30,8 +30,8 @@ vi.mock("@/lib/slots/hooks", () => ({
     error: null,
     mutate: mockMutate,
   }),
-  updateAgentSlotOverride: (...args: unknown[]) => mockUpdateAgentSlotOverride(...args),
-  deleteAgentSlotOverride: (...args: unknown[]) => mockDeleteAgentSlotOverride(...args),
+  updateAgentSlot: (...args: unknown[]) => mockUpdateAgentSlot(...args),
+  deleteAgentSlot: (...args: unknown[]) => mockDeleteAgentSlot(...args),
 }));
 
 vi.mock("@/lib/agents/hooks", () => ({
@@ -52,7 +52,6 @@ describe("SlotAgentSelect", () => {
       { slotKey: "builder", agentId: null, agentName: "", agentSlug: "", agentIcon: "" },
       { slotKey: "assist", agentId: null, agentName: "", agentSlug: "", agentIcon: "" },
       { slotKey: "evaluator", agentId: null, agentName: "", agentSlug: "", agentIcon: "" },
-      { slotKey: "support", agentId: null, agentName: "", agentSlug: "", agentIcon: "" },
     ];
     mockAgents = [
       { id: "agent-a", name: "Agent A" },
@@ -77,7 +76,7 @@ describe("SlotAgentSelect", () => {
     expect(screen.getByText("Agent A")).toBeInTheDocument();
   });
 
-  it("calls updateAgentSlotOverride when selecting an agent", async () => {
+  it("calls updateAgentSlot when selecting an agent", async () => {
     const user = userEvent.setup();
     render(<SlotAgentSelect agentId="my-agent" orgId="org-1" slotKey="builder" />);
 
@@ -86,7 +85,7 @@ describe("SlotAgentSelect", () => {
     // Select Agent A
     await user.click(screen.getByText("Agent A"));
 
-    expect(mockUpdateAgentSlotOverride).toHaveBeenCalledWith(
+    expect(mockUpdateAgentSlot).toHaveBeenCalledWith(
       "my-agent",
       "builder",
       "agent-a",
@@ -94,7 +93,7 @@ describe("SlotAgentSelect", () => {
     );
   });
 
-  it("calls deleteAgentSlotOverride when selecting '未配置'", async () => {
+  it("calls deleteAgentSlot when selecting '未配置'", async () => {
     mockSlots[0] = {
       slotKey: "builder",
       agentId: "agent-a",
@@ -117,7 +116,7 @@ describe("SlotAgentSelect", () => {
       await user.click(dropdownOption);
     }
 
-    expect(mockDeleteAgentSlotOverride).toHaveBeenCalledWith(
+    expect(mockDeleteAgentSlot).toHaveBeenCalledWith(
       "my-agent",
       "builder",
       mockMutate

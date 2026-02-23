@@ -9,6 +9,7 @@ import {
   ArrowLeftIcon,
   BarChart3Icon,
   BuildingIcon,
+  HeadsetIcon,
   KeyIcon,
   UsersIcon,
   WalletIcon,
@@ -24,6 +25,7 @@ import { OrgUsagePanel } from "@/components/orgs/org-usage-panel";
 import { OrgApiKeysPanel } from "@/components/orgs/org-api-keys-panel";
 
 import { OrgCreditsPanel } from "@/components/orgs/org-credits-panel";
+import { OrgSupportPanel } from "@/components/orgs/org-support-panel";
 import { useOrgRole } from "@/lib/auth/hooks";
 import { updateOrg, useOrgs } from "@/lib/orgs/hooks";
 import { cn } from "@/lib/utils";
@@ -42,6 +44,7 @@ interface SettingsTab {
 const TABS: SettingsTab[] = [
   { value: "info", label: "info", icon: BuildingIcon, minRole: "manage" },
   { value: "members", label: "members", icon: UsersIcon, minRole: "manage" },
+  { value: "support", label: "support", icon: HeadsetIcon, minRole: "manage" },
   { value: "api-keys", label: "apiKeys", icon: KeyIcon, minRole: "manage" },
   { value: "credits", label: "credits", icon: WalletIcon, minRole: "manage" },
   { value: "usage", label: "usage", icon: BarChart3Icon, minRole: "manage" },
@@ -140,6 +143,8 @@ function OrgSettingsContent({ org }: { org: OrgRow }) {
         return <OrgInfoPanel org={org} />;
       case "members":
         return <OrgMembersPanel orgId={org.id} />;
+      case "support":
+        return <OrgSupportPanel orgId={org.id} />;
       case "api-keys":
         return <OrgApiKeysPanel orgId={org.id} />;
       case "credits":
