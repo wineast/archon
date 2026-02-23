@@ -125,12 +125,12 @@ export async function POST(req: Request) {
     role: "owner",
   });
 
-  // Auto-create initial version 0.1.0
+  // Auto-create initial version 0.0.0
   const [initialVersion] = await db
     .insert(agentVersions)
     .values({
       agentId: agent.id,
-      version: "0.1.0",
+      version: "0.0.0",
       changelog: "Initial version",
       createdBy: user.id,
     })
