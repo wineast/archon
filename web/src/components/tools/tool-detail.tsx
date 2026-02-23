@@ -104,6 +104,7 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle, poolMeta
                   url: tool.url ?? null,
                   componentId: tool.componentId ?? null,
                   enabled: tool.enabled,
+                  uiHidden: tool.uiHidden ?? false,
                   executionTarget: tool.executionTarget ?? "server",
                   sandboxMode: tool.sandboxMode ?? "light",
                 }}

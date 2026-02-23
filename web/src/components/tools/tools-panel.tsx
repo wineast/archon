@@ -12,7 +12,6 @@ import {
   toggleToolEnabled,
 } from "@/lib/tools/hooks";
 import { useSkills } from "@/lib/skills/hooks";
-import { useComponents } from "@/lib/components/hooks";
 import { removeAgentRef, useAgentRefs } from "@/lib/pool/ref-hooks";
 import type { ToolRow } from "@/db/schema";
 import type { WithPoolMeta } from "@/lib/pool/queries";
@@ -38,7 +37,6 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
     () => skillsEnabled && skills.some((s) => s.enabled),
     [skillsEnabled, skills]
   );
-  const { components: componentsList } = useComponents(agentId);
   const { mutate: mutateRefs } = useAgentRefs(agentId);
   const [activeToolId, setActiveToolId] = useState<string | null>(null);
   const [activeBuiltinToolKey, setActiveBuiltinToolKey] = useState<string | null>(null);
@@ -73,7 +71,6 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
 
   const handleCreate = useCallback(
     async (key: string, name: string) => {
-      const defaultComp = componentsList.find((c) => c.key === "tool-call-default");
       const result = await createTool(
         {
           agentId,
@@ -83,7 +80,6 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
           handler: null,
           url: null,
           enabled: true,
-          ...(defaultComp ? { componentId: defaultComp.id } : {}),
         },
         mutate
       );
@@ -92,7 +88,7 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
         setCreateDialogOpen(false);
       }
     },
-    [agentId, mutate, componentsList]
+    [agentId, mutate]
   );
 
   const handleSave = useCallback(
@@ -107,6 +103,7 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
           handler: updated.handler,
           url: updated.url,
           componentId: updated.componentId,
+          uiHidden: updated.uiHidden,
           sandboxMode: updated.sandboxMode,
         },
         mutate

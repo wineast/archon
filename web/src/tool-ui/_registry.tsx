@@ -44,4 +44,17 @@ export function getCompiledComponent(
 
 export function clearCompiledRegistry() {
   compiledRegistry.clear();
+  uiHiddenTools.clear();
+}
+
+/* ── UI-hidden tools registry ── */
+
+const uiHiddenTools = new Set<string>();
+
+export function registerUiHiddenTool(toolName: string) {
+  uiHiddenTools.add(toolName);
+}
+
+export function isToolUiHidden(toolName: string): boolean {
+  return uiHiddenTools.has(toolName);
 }

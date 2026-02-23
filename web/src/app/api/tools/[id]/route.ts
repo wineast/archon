@@ -65,6 +65,7 @@ export async function PATCH(
       ...(body.parametersSchema !== undefined && { parametersSchema: body.parametersSchema }),
       ...(body.returnParametersSchema !== undefined && { returnParametersSchema: body.returnParametersSchema }),
       ...(typeof body.enabled === "boolean" && { enabled: body.enabled }),
+      ...(typeof body.uiHidden === "boolean" && { uiHidden: body.uiHidden }),
       ...(body.executionTarget !== undefined && { executionTarget: body.executionTarget }),
     })
     .where(eq(tools.id, id))

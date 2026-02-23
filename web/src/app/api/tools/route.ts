@@ -56,6 +56,7 @@ export async function POST(req: Request) {
       url: body.url ?? null,
       componentId: body.componentId ?? null,
       enabled: body.enabled ?? true,
+      uiHidden: body.uiHidden ?? false,
       executionTarget: body.executionTarget ?? "server",
     })
     .returning();

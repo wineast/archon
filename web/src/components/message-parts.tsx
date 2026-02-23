@@ -12,13 +12,6 @@ import {
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
 import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "@/components/ai-elements/tool";
-import {
   Source,
   Sources,
   SourcesContent,
@@ -34,7 +27,16 @@ import {
   getDynamicComponentSource,
   DynamicComponentRenderer,
   DynamicComponentErrorBoundary,
+  isToolUiHidden,
 } from "@/tool-ui";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
+import type { ToolUIPart, DynamicToolUIPart } from "ai";
 
 export function MessageParts({
   message,
@@ -107,17 +109,26 @@ export function MessageParts({
             );
           }
 
-          // 2) Default tool UI (safety net — all environments)
+          // No component assigned — check uiHidden, then show default fallback
+          if (isToolUiHidden(toolName)) return null;
+
           return (
             <Tool key={`tool-${i}`}>
               {isDynamic ? (
-                <ToolHeader state={part.state} toolName={toolName} type="dynamic-tool" />
+                <ToolHeader
+                  type={"dynamic-tool" as const}
+                  state={part.state}
+                  toolName={toolName}
+                />
               ) : (
-                <ToolHeader state={part.state} type={part.type as `tool-${string}`} />
+                <ToolHeader
+                  type={part.type as ToolUIPart["type"]}
+                  state={part.state}
+                />
               )}
               <ToolContent>
                 <ToolInput input={part.input} />
-                <ToolOutput errorText={part.errorText} output={part.output} />
+                <ToolOutput output={part.output} errorText={(part as ToolUIPart).errorText} />
               </ToolContent>
             </Tool>
           );

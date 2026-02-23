@@ -4,7 +4,7 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 import useSWR from "swr";
 import { UserMenu } from "@/components/auth/user-menu";
-import { DefaultChatTransport, isTextUIPart } from "ai";
+import { DefaultChatTransport, isTextUIPart, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import {
@@ -56,6 +56,7 @@ import {
   registerCompiledComponent,
   clearCompiledRegistry,
   compileComponentGraph,
+  registerUiHiddenTool,
   type ComponentRecord,
 } from "@/tool-ui";
 import { SessionHistory } from "@/components/session-history";
@@ -168,6 +169,12 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
     }
 
     for (const t of toolsList) {
+      // Register uiHidden tools so message-parts can skip rendering
+      if (t.uiHidden) {
+        registerUiHiddenTool(t.name);
+        continue;
+      }
+
       const compKey = t.componentId ? idToKey.get(t.componentId) : undefined;
       const compiledComp = compKey ? compiled.get(compKey) : undefined;
       if (compiledComp) {
@@ -178,11 +185,10 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
         const comp = componentsList.find((c) => c.key === compKey);
         if (comp?.componentSource) registerDynamicComponentSource(t.name, comp.componentSource);
       } else {
-        // No component assigned — use tool-call-default as fallback
-        const fallback = compiled.get("tool-call-default");
-        if (fallback) {
-          registerCompiledComponent(t.name, fallback);
-        }
+        // No component assigned — use tool-call-default if available
+        const defaultComp = compiled.get("tool-call-default");
+        if (defaultComp) registerCompiledComponent(t.name, defaultComp);
+        // else: message-parts.tsx will render hardcoded fallback UI
       }
     }
   }, [toolsList, componentsList]);
@@ -241,6 +247,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
 
   const { messages, setMessages, sendMessage, status, addToolOutput } = useChat({
     transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: ({ toolCall }) => {
       executeClientTool(toolCall, addToolOutput, toolsList);
     },

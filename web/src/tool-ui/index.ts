@@ -4,6 +4,8 @@ export {
   registerCompiledComponent,
   getCompiledComponent,
   clearCompiledRegistry,
+  registerUiHiddenTool,
+  isToolUiHidden,
 } from "./_registry";
 export type { ComponentRendererProps } from "./_registry";
 export { DynamicComponentRenderer } from "./_dynamic-renderer";

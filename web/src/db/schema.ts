@@ -497,6 +497,7 @@ export const tools = pgTable(
     url: text("url"),
     componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),
     enabled: boolean("enabled").notNull().default(true),
+    uiHidden: boolean("ui_hidden").notNull().default(false),
     executionTarget: text("execution_target").notNull().default("server").$type<"server" | "client" | "host">(),
     sandboxMode: text("sandbox_mode").notNull().default("light").$type<"light" | "full">(),
     origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),

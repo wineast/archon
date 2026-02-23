@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DefaultChatTransport, isTextUIPart } from "ai";
+import { DefaultChatTransport, isTextUIPart, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import {
@@ -33,7 +33,14 @@ import { MessageParts, UserMessageContent } from "@/components/message-parts";
 import { ChatWelcome } from "@/components/chat-welcome";
 import { Spinner } from "@/components/ui/spinner";
 import { executeClientTool } from "@/lib/tools/client-executor";
-import { registerDynamicComponentSource } from "@/tool-ui";
+import {
+  registerDynamicComponentSource,
+  registerCompiledComponent,
+  clearCompiledRegistry,
+  compileComponentGraph,
+  registerUiHiddenTool,
+  type ComponentRecord,
+} from "@/tool-ui";
 import type { WelcomeIconKey } from "@/lib/config/types";
 import { PaperclipIcon, SearchCodeIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +71,7 @@ interface EmbedConfig {
     component: string | null;
     componentSource: string | null;
     executionTarget: string;
+    uiHidden: boolean;
   }>;
   components: Array<{
     key: string;
@@ -243,16 +251,52 @@ function EmbedChat({
       .catch((e) => setConfigError(e.message));
   }, [token, internalMode, agentId]);
 
-  // Register dynamic tool components + inject CSS
+  // Register dynamic tool components with composition support + inject CSS
   useMemo(() => {
     if (!config) return;
+    clearCompiledRegistry();
+
+    // Build component records for graph compilation
+    const records: ComponentRecord[] = config.components
+      .filter((c) => c.componentSource?.trim())
+      .map((c) => ({ key: c.key, source: c.componentSource }));
+
+    // Try to compile the full component graph (supports cross-component references)
+    let compiled: ReturnType<typeof compileComponentGraph> = new Map();
+    try {
+      compiled = compileComponentGraph(records);
+    } catch (e) {
+      console.error("[embed-component-composition]", e);
+    }
+
     const componentMap = new Map(
       config.components.map((c) => [c.key, c.componentSource])
     );
+
     for (const t of config.tools) {
-      const source =
-        (t.component && componentMap.get(t.component)) || t.componentSource;
-      if (source) registerDynamicComponentSource(t.name, source);
+      // Register uiHidden tools so message-parts can skip rendering
+      if (t.uiHidden) {
+        registerUiHiddenTool(t.name);
+        continue;
+      }
+
+      const compiledComp = t.component ? compiled.get(t.component) : undefined;
+      if (compiledComp) {
+        // Use pre-compiled component (with composition deps resolved)
+        registerCompiledComponent(t.name, compiledComp);
+      } else {
+        // Fallback: try dynamic source
+        const source =
+          (t.component && componentMap.get(t.component)) || t.componentSource;
+        if (source) {
+          registerDynamicComponentSource(t.name, source);
+        } else {
+          // No component assigned — use tool-call-default if available
+          const defaultComp = compiled.get("tool-call-default");
+          if (defaultComp) registerCompiledComponent(t.name, defaultComp);
+          // else: message-parts.tsx will render hardcoded fallback UI
+        }
+      }
     }
   }, [config]);
 
@@ -297,6 +341,7 @@ function EmbedChat({
 
   const { messages, sendMessage, status, addToolOutput } = useChat({
     transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onError: (error) => {
       try {
         const parsed = JSON.parse(error.message);
@@ -309,7 +354,7 @@ function EmbedChat({
       }
       toast.error(error.message || "发送消息失败，请稍后重试");
     },
-    onToolCall: async ({ toolCall }) => {
+    async onToolCall({ toolCall }) {
       if (!config) return;
 
       // Find the tool definition to check executionTarget
@@ -489,6 +534,7 @@ function EmbedChat({
                 messages={messages}
                 temperature={config.modelConfig.temperature}
                 agentId={agentId}
+                hostContext={hostContextRef.current}
               />
             </div>
           )}

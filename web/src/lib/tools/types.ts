@@ -11,6 +11,7 @@ export interface ToolDefinition {
   url: string | null;
   componentId: string | null;
   enabled: boolean;
+  uiHidden: boolean;
   executionTarget: "server" | "client" | "host";
   sandboxMode: "light" | "full";
 }

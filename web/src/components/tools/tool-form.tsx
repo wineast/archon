@@ -22,7 +22,8 @@ import {
   useWatch,
 } from "react-hook-form";
 import deepEqual from "fast-deep-equal";
-import { CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, SparklesIcon } from "lucide-react";
+import { CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, SparklesIcon, EyeOffIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import { useAgentOrgId } from "@/lib/agents/hooks";
 import { ToolCodeAssistDialog } from "./tool-code-assist-dialog";
@@ -303,6 +304,24 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange, readOnly, h
             />
           )}
         />
+        <div className="flex items-center gap-2">
+          <Controller
+            name="uiHidden"
+            control={form.control}
+            render={({ field }) => (
+              <Switch
+                className="scale-75"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                disabled={readOnly}
+              />
+            )}
+          />
+          <EyeOffIcon className="size-3.5 text-muted-foreground" />
+          <label className="text-xs font-medium text-muted-foreground">
+            隐藏工具 UI
+          </label>
+        </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">
             UI Component

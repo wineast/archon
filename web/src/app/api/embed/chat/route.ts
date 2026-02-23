@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { requireEmbedToken } from "@/lib/auth/require-embed-token";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { executeChatStream } from "@/lib/chat/execute-stream";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 
 export const maxDuration = 30;
 
@@ -19,19 +20,24 @@ export async function POST(req: Request) {
 
   let agentId: string;
   let userId: string | null;
+  let versionId: string;
 
   // Dual auth: try embed token first, then Clerk session
   const authHeader = req.headers.get("authorization");
   const hasEmbedToken = authHeader?.startsWith("Bearer et_");
 
   if (hasEmbedToken) {
-    // Embed token path
+    // Embed token path — use published version
     const ctx = await requireEmbedToken(req);
     if (ctx instanceof NextResponse) return ctx;
     agentId = ctx.agent.id;
     userId = null;
+    if (!ctx.agent.publishedVersionId) {
+      return NextResponse.json({ error: "Agent has no published version" }, { status: 404 });
+    }
+    versionId = ctx.agent.publishedVersionId;
   } else {
-    // Clerk session path (for internal assist mode)
+    // Clerk session path (for internal assist mode) — use editing version
     const { userId: clerkId } = await auth();
     if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,6 +50,7 @@ export async function POST(req: Request) {
     if (roleResult instanceof NextResponse) return roleResult;
     agentId = body.agentId;
     userId = roleResult.user.id;
+    versionId = await resolveEditingVersionId(agentId);
   }
 
   return executeChatStream({
@@ -51,6 +58,7 @@ export async function POST(req: Request) {
     sessionId: body.sessionId,
     agentId,
     userId,
+    versionId,
     hostContext: body.hostContext,
     registeredHostTools: body.registeredHostTools,
   });

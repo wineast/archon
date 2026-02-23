@@ -14,6 +14,7 @@ export interface ToolSnapshotItem {
   url: string | null;
   componentKey: string | null;
   enabled: boolean;
+  uiHidden?: boolean;
   executionTarget: "server" | "client" | "host";
   testCases: ToolTestCaseSnapshotItem[];
 }

@@ -55,6 +55,8 @@ export interface ExecuteChatStreamOptions {
   hostContext?: Record<string, unknown>;
   /** Tool names registered by the host page via ArchonEmbed.registerTools(). */
   registeredHostTools?: string[];
+  /** Override version ID. If omitted, resolves to editingVersionId. */
+  versionId?: string;
 }
 
 /**
@@ -87,7 +89,7 @@ export async function executeChatStream(
     }
   }
 
-  const versionId = await resolveEditingVersionId(agentId);
+  const versionId = opts.versionId ?? await resolveEditingVersionId(agentId);
 
   // Read active model config from DB (scoped to agent)
   const [activeConfig] = await db

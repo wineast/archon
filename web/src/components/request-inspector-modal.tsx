@@ -23,6 +23,7 @@ export interface RequestInspectorModalProps {
   messages: UIMessage[];
   temperature: number;
   agentId?: string;
+  hostContext?: Record<string, unknown>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -61,6 +62,7 @@ export function RequestInspectorModal({
   messages,
   temperature,
   agentId,
+  hostContext,
   open: controlledOpen,
   onOpenChange,
 }: RequestInspectorModalProps) {
@@ -91,7 +93,7 @@ export function RequestInspectorModal({
     fetch("/api/template/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: systemPrompt, agentId }),
+      body: JSON.stringify({ text: systemPrompt, agentId, hostContext }),
     })
       .then((res) => res.json())
       .then((data) => {

@@ -230,6 +230,7 @@ export async function buildSnapshot(agentId: string, versionId: string, external
         url: t.url,
         componentKey: t.componentId ? compIdToKey.get(t.componentId) ?? null : null,
         enabled: t.enabled,
+        uiHidden: t.uiHidden,
         executionTarget: t.executionTarget,
         testCases: toolTestsByKey.get(t.key) ?? [],
       })
@@ -539,6 +540,21 @@ export async function restoreSnapshot(
     }
   }
 
+  // 3b. Resolve pool component references for tools (e.g. builtin "tool-call-default")
+  const unresolvedCompKeys = snapshot.tools
+    .map((t) => t.componentKey)
+    .filter((k): k is string => !!k && !compKeyToNewId.has(k));
+  if (unresolvedCompKeys.length > 0) {
+    const uniqueKeys = [...new Set(unresolvedCompKeys)];
+    const poolComps = await tx
+      .select({ id: components.id, key: components.key })
+      .from(components)
+      .where(and(inArray(components.key, uniqueKeys), isNull(components.agentId)));
+    for (const c of poolComps) {
+      compKeyToNewId.set(c.key, c.id);
+    }
+  }
+
   // 4. Rebuild tools + test cases
   if (snapshot.tools.length > 0) {
     const insertedTools = await tx
@@ -556,6 +572,7 @@ export async function restoreSnapshot(
           url: t.url ?? null,
           componentId: t.componentKey ? compKeyToNewId.get(t.componentKey) ?? null : null,
           enabled: t.enabled,
+          uiHidden: t.uiHidden ?? false,
           executionTarget: t.executionTarget,
         }))
       )
