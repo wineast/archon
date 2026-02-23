@@ -154,6 +154,7 @@
     "importFormatError": "导入失败：文件格式错误",
     "deleteSessionFailed": "删除会话失败",
     "quotaExceeded": "平台额度已用完，请联系管理员充值",
+    "noModelConfig": "该 Agent 尚未配置模型，请联系管理员",
     "chatError": "发送消息失败，请稍后重试"
   },
   "build": {

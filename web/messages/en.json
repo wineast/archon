@@ -154,6 +154,7 @@
     "importFormatError": "Import failed: invalid file format",
     "deleteSessionFailed": "Failed to delete session",
     "quotaExceeded": "Platform quota exceeded, please contact admin to recharge",
+    "noModelConfig": "This Agent has no model configured. Please contact the administrator.",
     "chatError": "Failed to send message, please try again later"
   },
   "build": {

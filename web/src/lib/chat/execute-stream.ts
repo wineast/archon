@@ -98,7 +98,7 @@ export async function executeChatStream(
 
   if (!activeConfig?.modelId) {
     return new Response(
-      JSON.stringify({ error: "No active model config or modelId is empty" }),
+      JSON.stringify({ error: "no_model_config", message: "No active model config or modelId is empty" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }

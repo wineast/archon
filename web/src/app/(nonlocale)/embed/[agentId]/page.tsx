@@ -36,6 +36,7 @@ import { executeClientTool } from "@/lib/tools/client-executor";
 import { registerDynamicComponentSource } from "@/tool-ui";
 import type { WelcomeIconKey } from "@/lib/config/types";
 import { PaperclipIcon } from "lucide-react";
+import { toast } from "sonner";
 
 /* ─── Types ─── */
 
@@ -276,6 +277,18 @@ function EmbedChat({
 
   const { messages, sendMessage, status, addToolOutput } = useChat({
     transport,
+    onError: (error) => {
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.error === "no_model_config") {
+          toast.error("该 Agent 尚未配置模型，请联系管理员");
+          return;
+        }
+      } catch {
+        // not JSON, fall through
+      }
+      toast.error(error.message || "发送消息失败，请稍后重试");
+    },
     onToolCall: async ({ toolCall }) => {
       if (!config) return;
 

@@ -54,8 +54,15 @@ up: db-up
 		lsof -ti :$$DEV_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$SB_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$STUDIO_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
-		echo "🚀 启动服务 (dev=$$DEV_PORT, storybook=$$SB_PORT, studio=$$STUDIO_PORT)" && \
+		echo "" && \
+		echo "🚀 启动服务..." && \
 		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio}.log" && \
+		echo "" && \
+		echo "  Dev Server   → http://localhost:$$DEV_PORT" && \
+		echo "  Storybook    → http://localhost:$$SB_PORT" && \
+		echo "  DB Studio    → https://local.drizzle.studio?port=$$STUDIO_PORT" && \
+		echo "  Embed Test   → http://localhost:$$DEV_PORT/embed/test.html" && \
+		echo "" && \
 		(cd web && npm run dev -- --port $$DEV_PORT) > $(LOG_DIR)/dev.log 2>&1 & \
 		(cd web && npm run storybook -- -p $$SB_PORT) > $(LOG_DIR)/storybook.log 2>&1 & \
 		(cd web && npx drizzle-kit studio --port $$STUDIO_PORT) > $(LOG_DIR)/studio.log 2>&1 & \
@@ -64,8 +71,15 @@ up: db-up
 		lsof -ti :3000 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :4983 2>/dev/null | xargs kill 2>/dev/null || true; \
-		echo "🚀 启动服务 (dev=3000, storybook=6006, studio=4983)" && \
+		echo "" && \
+		echo "🚀 启动服务..." && \
 		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio}.log" && \
+		echo "" && \
+		echo "  Dev Server   → http://localhost:3000" && \
+		echo "  Storybook    → http://localhost:6006" && \
+		echo "  DB Studio    → https://local.drizzle.studio" && \
+		echo "  Embed Test   → http://localhost:3000/embed/test.html" && \
+		echo "" && \
 		(cd web && npm run dev) > $(LOG_DIR)/dev.log 2>&1 & \
 		(cd web && npm run storybook) > $(LOG_DIR)/storybook.log 2>&1 & \
 		(cd web && npm run db:studio) > $(LOG_DIR)/studio.log 2>&1 & \
