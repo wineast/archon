@@ -4,7 +4,7 @@ import { evalRuns, evalRunResults, modelConfigs, judgeConfigs, tools } from "@/d
 import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
-import { gatherTemplateData, renderTemplate } from "@/lib/template/render";
+import { gatherTemplateData, renderTemplate, disposeTemplateData } from "@/lib/template/render";
 import { buildJudgeSchema, toJudgeResult } from "@/lib/eval/judge-dimensions";
 import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResult } from "@/lib/eval/types";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
@@ -102,6 +102,7 @@ export async function POST(
   const evalVersionId = evalAgentId ? await resolveEditingVersionId(evalAgentId) : undefined;
   const templateData = await gatherTemplateData(evalAgentId, evalVersionId);
 
+  try {
   const start = Date.now();
   let result: EvalResult;
 
@@ -426,4 +427,7 @@ export async function POST(
   });
 
   return Response.json({ result } satisfies RunCaseResponse);
+  } finally {
+    disposeTemplateData(templateData);
+  }
 }

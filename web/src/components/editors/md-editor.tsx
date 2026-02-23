@@ -11,6 +11,7 @@ import {
   type CompletionDocument,
   type CompletionTool,
   type CompletionOntologyType,
+  type CompletionFunction,
   registerEditorConfig,
   ensureCompletionProvider,
 } from "./completions";
@@ -37,6 +38,7 @@ interface MdEditorProps {
   documents?: CompletionDocument[];
   tools?: CompletionTool[];
   ontologyTypes?: CompletionOntologyType[];
+  functions?: CompletionFunction[];
   placeholder?: string;
   className?: string;
   height?: string;
@@ -53,6 +55,7 @@ function MdEditor({
   documents = [],
   tools = [],
   ontologyTypes,
+  functions,
   placeholder = "",
   className,
   height,
@@ -71,8 +74,8 @@ function MdEditor({
 
   // Keep configRef up to date
   React.useEffect(() => {
-    configRef.current = { variables, variableMap, documents, tools, ontologyTypes };
-  }, [variables, variableMap, documents, tools, ontologyTypes]);
+    configRef.current = { variables, variableMap, documents, tools, ontologyTypes, functions };
+  }, [variables, variableMap, documents, tools, ontologyTypes, functions]);
 
   const handleMount: OnMount = (editor, monaco) => {
     // Register singleton provider (idempotent)
@@ -171,4 +174,5 @@ export type {
   CompletionDocument,
   CompletionTool,
   CompletionOntologyType,
+  CompletionFunction,
 };

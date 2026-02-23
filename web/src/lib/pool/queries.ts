@@ -311,6 +311,42 @@ export async function getAgentSchemas(
 }
 
 // ---------------------------------------------------------------------------
+// Function helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Get all functions for a version (private + pool refs) — lightweight fields for sandbox.
+ */
+export async function getAgentFunctions(
+  agentId: string,
+  versionId: string,
+): Promise<Array<{ key: string; code: string; parametersSchema: unknown }>> {
+  const privateRows = await db
+    .select({ key: functions.key, code: functions.code, parametersSchema: functions.parametersSchema })
+    .from(functions)
+    .where(and(eq(functions.versionId, versionId), isNull(functions.deletedAt)));
+
+  const poolRows = await db
+    .select({
+      key: functions.key,
+      code: functions.code,
+      parametersSchema: functions.parametersSchema,
+    })
+    .from(agentResourceRefs)
+    .innerJoin(functions, eq(functions.id, agentResourceRefs.resourceId))
+    .where(
+      and(
+        eq(agentResourceRefs.versionId, versionId),
+        eq(agentResourceRefs.resourceType, "function"),
+        isNull(functions.agentId),
+        isNull(functions.deletedAt),
+      )
+    );
+
+  return [...privateRows, ...poolRows];
+}
+
+// ---------------------------------------------------------------------------
 // Builtin function helpers
 // ---------------------------------------------------------------------------
 

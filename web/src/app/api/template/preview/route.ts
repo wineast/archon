@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { renderSystemPrompt } from "@/lib/template/render";
+import { gatherTemplateData, renderTemplate, disposeTemplateData } from "@/lib/template/render";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { getDatasets, resolveDatasets, renderField, renderObjectField } from "@/lib/datasets/queries";
@@ -37,6 +37,11 @@ export async function POST(req: Request) {
   }
 
   const versionId = await resolveEditingVersionId(agentId);
-  const rendered = await renderSystemPrompt(text, agentId, undefined, versionId);
-  return NextResponse.json({ rendered });
+  const data = await gatherTemplateData(agentId, versionId);
+  try {
+    const rendered = await renderTemplate(text, data);
+    return NextResponse.json({ rendered });
+  } finally {
+    disposeTemplateData(data);
+  }
 }

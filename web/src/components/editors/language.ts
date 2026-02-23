@@ -27,7 +27,7 @@ const liquidOutputState: monacoNs.languages.IMonarchLanguageRule[] = [
 const liquidTagState: monacoNs.languages.IMonarchLanguageRule[] = [
   [/%\}/, { token: "delimiter.liquid", next: "@pop" }],
   [
-    /\b(?:if|elsif|else|endif|for|endfor|unless|endunless|include|comment|endcomment|assign|capture|endcapture|in)\b/,
+    /\b(?:if|elsif|else|endif|for|endfor|unless|endunless|include|comment|endcomment|assign|capture|endcapture|in|fn)\b/,
     "keyword.liquid",
   ],
   [/\b(?:==|!=|<=|>=|<|>|and|or|not|contains)\b/, "keyword.liquid"],

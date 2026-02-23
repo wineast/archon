@@ -15,6 +15,12 @@ export interface CompletionOntologyType {
   name: string;
 }
 
+export interface CompletionFunction {
+  key: string;
+  name: string;
+  description?: string;
+}
+
 export interface CompletionConfig {
   variables: string[];
   /** When provided, object-typed values expand to {{key.field}} completions */
@@ -22,6 +28,7 @@ export interface CompletionConfig {
   documents: CompletionDocument[];
   tools: CompletionTool[];
   ontologyTypes?: CompletionOntologyType[];
+  functions?: CompletionFunction[];
 }
 
 export interface CompletionOption {
@@ -43,7 +50,8 @@ export function generateCompletions(
   documents: CompletionDocument[],
   tools: CompletionTool[] = [],
   variableMap?: Record<string, unknown>,
-  ontologyTypes?: CompletionOntologyType[]
+  ontologyTypes?: CompletionOntologyType[],
+  functions?: CompletionFunction[]
 ): { from: number; items: CompletionOption[] } | null {
   const lastOutputOpen = textBeforeCursor.lastIndexOf("{{");
   const lastTagOpen = textBeforeCursor.lastIndexOf("{%");
@@ -185,6 +193,30 @@ export function generateCompletions(
         ]
       : []),
 
+    // Function filter completions ({{ value | fn_key }}) in {{ context
+    ...(!isTagContext && functions
+      ? functions.map((f, i) => ({
+          label: `{{ value | ${f.key} }}`,
+          type: "function" as const,
+          detail: f.description || f.name,
+          boost: 6.2 - i * 0.01,
+          apply: `{{ \${1:value} | ${f.key} }}`,
+          insertTextRules: 4, // InsertAsSnippet
+        }))
+      : []),
+
+    // Function tag completions ({% fn key input %}) in {% context
+    ...(isTagContext && functions
+      ? functions.map((f, i) => ({
+          label: `{% fn ${f.key} %}`,
+          type: "function" as const,
+          detail: f.description || f.name,
+          boost: 6.2 - i * 0.01,
+          apply: `{% fn ${f.key} \${1:input} %}`,
+          insertTextRules: 4, // InsertAsSnippet
+        }))
+      : []),
+
     // Keywords with snippets
     {
       label: "{% if ... %}",
@@ -304,7 +336,8 @@ export function ensureCompletionProvider(
         config.documents,
         config.tools,
         config.variableMap,
-        config.ontologyTypes
+        config.ontologyTypes,
+        config.functions
       );
 
       if (!result) return { suggestions: [] };

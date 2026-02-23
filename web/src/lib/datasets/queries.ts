@@ -2,25 +2,11 @@ import { db } from "@/db";
 import { datasets } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { Liquid } from "liquidjs";
+import { registerBuiltinFilters } from "@/lib/template/filters";
 
 // Shared Liquid instance for simple variable substitution (no custom tags).
 const simpleLiquid = new Liquid({ jsTruthy: true });
-
-// ── Custom filters ──
-
-simpleLiquid.registerFilter("json", (value: unknown) => JSON.stringify(value));
-
-simpleLiquid.registerFilter("keys", (value: unknown) =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-    ? Object.keys(value)
-    : value
-);
-
-simpleLiquid.registerFilter("values", (value: unknown) =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-    ? Object.values(value)
-    : value
-);
+registerBuiltinFilters(simpleLiquid);
 
 /**
  * Render a LiquidJS expression in a string field.
@@ -58,6 +44,11 @@ const LIQUID_BUILTINS = new Set([
   "forloop", "tablerowloop",
   "nil", "null", "true", "false", "blank", "empty",
   "now", "today",
+]);
+
+/** Dataset key names that are reserved by the template engine and cannot be used. */
+export const RESERVED_DATASET_KEYS = new Set([
+  "tool", "tool_entries", "fn",
 ]);
 
 /**

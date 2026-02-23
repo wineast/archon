@@ -66,6 +66,7 @@ const mockGatherTemplateData = vi.fn().mockResolvedValue({
 vi.mock("@/lib/template/render", () => ({
   renderTemplate: (...args: unknown[]) => mockRenderTemplate(...args),
   gatherTemplateData: (...args: unknown[]) => mockGatherTemplateData(...args),
+  disposeTemplateData: vi.fn(),
 }));
 
 vi.mock("@/lib/versions/resolve", () => ({

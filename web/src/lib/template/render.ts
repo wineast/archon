@@ -13,7 +13,11 @@ import {
   getAgentWikiDocs,
   getAgentSchemas,
   getAgentDatasets,
+  getAgentFunctions,
+  getReferencedBuiltinFunctionKeys,
 } from "@/lib/pool/queries";
+import { resolveAndCompileFunctions, buildBaseDeps } from "@/lib/functions/compile";
+import type { FunctionsSandbox } from "@/lib/functions/sandbox";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,6 +53,8 @@ export interface TemplateData {
   defsMap: Record<string, JsonSchema7>;
   datasetEntries: Record<string, Array<{ value: string }>>;
   ontologyTypes: OntologyTypeTemplateItem[];
+  /** QuickJS sandbox with compiled agent functions (for template filters/tags). */
+  fnSandbox?: FunctionsSandbox;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +149,19 @@ export function buildToolNamespace(
 }
 
 // ---------------------------------------------------------------------------
+// Dispose helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Dispose resources held by TemplateData (currently: QuickJS sandbox).
+ * Safe to call multiple times or on data without a sandbox.
+ */
+export function disposeTemplateData(data: TemplateData): void {
+  data.fnSandbox?.dispose();
+  data.fnSandbox = undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Internal render (no DB calls)
 // ---------------------------------------------------------------------------
 
@@ -172,6 +191,7 @@ async function renderWithData(
     documents: data.docs,
     currentDoc,
     variables,
+    fnSandbox: data.fnSandbox,
   });
 }
 
@@ -192,13 +212,15 @@ export async function gatherTemplateData(
     return { resolvedVars: {}, docs: [], toolRows: [], defsMap: {}, datasetEntries: {}, ontologyTypes: [] };
   }
 
-  const [datasetRows, docs, toolRows, allSchemaRows, objTypeRows, objRelRows] = await Promise.all([
+  const [datasetRows, docs, toolRows, allSchemaRows, objTypeRows, objRelRows, fnRows, builtinFnKeys] = await Promise.all([
     getAgentDatasets(agentId, versionId),
     getWikiDocs(agentId, versionId),
     getEnabledTools(agentId, versionId),
     getAgentSchemas(agentId, versionId),
     db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))).orderBy(objectTypes.order),
     db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
+    getAgentFunctions(agentId, versionId),
+    getReferencedBuiltinFunctionKeys(agentId),
   ]);
 
   const { resolvedVars, datasetEntries } = resolveDatasets(datasetRows);
@@ -250,7 +272,24 @@ export async function gatherTemplateData(
     };
   });
 
-  return { resolvedVars, docs, toolRows, defsMap, datasetEntries, ontologyTypes };
+  // Compile functions sandbox (silently degrade on failure)
+  let fnSandbox: FunctionsSandbox | undefined;
+  if (fnRows.length > 0) {
+    try {
+      const baseDeps = buildBaseDeps(builtinFnKeys);
+      const records = fnRows.map((r) => ({
+        key: r.key,
+        code: r.code,
+        parameters: (r.parametersSchema ?? {}) as JsonSchema7,
+      }));
+      const { sandbox } = await resolveAndCompileFunctions(records, defsMap, baseDeps);
+      fnSandbox = sandbox;
+    } catch (e) {
+      console.error("[gatherTemplateData] function sandbox compilation failed:", e);
+    }
+  }
+
+  return { resolvedVars, docs, toolRows, defsMap, datasetEntries, ontologyTypes, fnSandbox };
 }
 
 /**
@@ -294,12 +333,15 @@ export async function renderSystemPrompt(
 ): Promise<string> {
   if (!systemPrompt) return systemPrompt;
 
+  let data: TemplateData | undefined;
   try {
-    const data = await gatherTemplateData(agentId, versionId);
+    data = await gatherTemplateData(agentId, versionId);
     return await renderTemplate(systemPrompt, data, extraVars);
   } catch (e) {
     console.error("[renderSystemPrompt] template rendering failed:", e);
     return systemPrompt;
+  } finally {
+    if (data) disposeTemplateData(data);
   }
 }
 
@@ -315,8 +357,9 @@ export async function renderWikiContent(
 ): Promise<string> {
   if (!content) return content;
 
+  let data: TemplateData | undefined;
   try {
-    const data = await gatherTemplateData(agentId, versionId);
+    data = await gatherTemplateData(agentId, versionId);
     const strippedContent = stripFrontmatter(content);
 
     const currentDoc = data.docs.find((d) => d.id === currentDocId) ?? {
@@ -334,5 +377,7 @@ export async function renderWikiContent(
   } catch (e) {
     console.error("[renderWikiContent] template rendering failed:", e);
     return content;
+  } finally {
+    if (data) disposeTemplateData(data);
   }
 }

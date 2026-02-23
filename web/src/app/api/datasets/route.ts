@@ -4,7 +4,7 @@ import { datasets } from "@/db/schema";
 import type { DatasetRow } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
-import { validateNoCycle } from "@/lib/datasets/queries";
+import { validateNoCycle, RESERVED_DATASET_KEYS } from "@/lib/datasets/queries";
 import { logAudit } from "@/lib/audit/log";
 import { getAgentResources } from "@/lib/pool/queries";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
@@ -34,6 +34,14 @@ export async function POST(req: Request) {
   if (ctx instanceof NextResponse) return ctx;
 
   const versionId = await resolveEditingVersionId(agentId);
+
+  // Validate reserved keys
+  if (body.key && RESERVED_DATASET_KEYS.has(body.key)) {
+    return NextResponse.json(
+      { error: `"${body.key}" is a reserved key and cannot be used as a dataset key` },
+      { status: 400 }
+    );
+  }
 
   const newRow = {
     agentId: body.agentId ?? null,
