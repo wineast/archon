@@ -31,14 +31,14 @@ CREATE TABLE "agent_resource_refs" (
 	CONSTRAINT "agent_resource_refs_uniq" UNIQUE("version_id","resource_type","resource_id")
 );
 --> statement-breakpoint
-CREATE TABLE "agent_slot_overrides" (
+CREATE TABLE "agent_slots" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"agent_id" uuid NOT NULL,
 	"slot_key" text NOT NULL,
 	"target_agent_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "agent_slot_overrides_agent_id_slot_key_idx" UNIQUE("agent_id","slot_key")
+	CONSTRAINT "agent_slots_agent_id_slot_key_idx" UNIQUE("agent_id","slot_key")
 );
 --> statement-breakpoint
 CREATE TABLE "agent_versions" (
@@ -109,6 +109,7 @@ CREATE TABLE "chat_sessions" (
 	"system_prompt" text,
 	"message_count" integer DEFAULT 0 NOT NULL,
 	"metadata" jsonb,
+	"source" text DEFAULT 'chat' NOT NULL,
 	"share_id" text,
 	"shared_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -518,7 +519,7 @@ CREATE TABLE "org_slots" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"org_id" uuid NOT NULL,
 	"slot_key" text NOT NULL,
-	"agent_id" uuid NOT NULL,
+	"target_agent_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "org_slots_org_id_slot_key_idx" UNIQUE("org_id","slot_key")
@@ -658,6 +659,7 @@ CREATE TABLE "tool_test_cases" (
 	"input" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"expected_output" jsonb,
 	"tags" text[] DEFAULT '{}' NOT NULL,
+	"assertions" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"show_as_example" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -673,6 +675,7 @@ CREATE TABLE "tool_test_run_results" (
 	"output" jsonb,
 	"passed" boolean NOT NULL,
 	"error" text,
+	"assertion_results" jsonb,
 	"duration_ms" integer NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -699,6 +702,7 @@ CREATE TABLE "tools" (
 	"url" text,
 	"component_id" uuid,
 	"enabled" boolean DEFAULT true NOT NULL,
+	"ui_hidden" boolean DEFAULT false NOT NULL,
 	"execution_target" text DEFAULT 'server' NOT NULL,
 	"sandbox_mode" text DEFAULT 'light' NOT NULL,
 	"origin" text DEFAULT 'user' NOT NULL,
@@ -759,8 +763,8 @@ ALTER TABLE "agent_members" ADD CONSTRAINT "agent_members_agent_id_agents_id_fk"
 ALTER TABLE "agent_members" ADD CONSTRAINT "agent_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_resource_refs" ADD CONSTRAINT "agent_resource_refs_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_resource_refs" ADD CONSTRAINT "agent_resource_refs_version_id_agent_versions_id_fk" FOREIGN KEY ("version_id") REFERENCES "public"."agent_versions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent_slot_overrides" ADD CONSTRAINT "agent_slot_overrides_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent_slot_overrides" ADD CONSTRAINT "agent_slot_overrides_target_agent_id_agents_id_fk" FOREIGN KEY ("target_agent_id") REFERENCES "public"."agents"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agent_slots" ADD CONSTRAINT "agent_slots_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agent_slots" ADD CONSTRAINT "agent_slots_target_agent_id_agents_id_fk" FOREIGN KEY ("target_agent_id") REFERENCES "public"."agents"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_versions" ADD CONSTRAINT "agent_versions_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_versions" ADD CONSTRAINT "agent_versions_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agents" ADD CONSTRAINT "agents_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -822,7 +826,7 @@ ALTER TABLE "org_credit_transactions" ADD CONSTRAINT "org_credit_transactions_cr
 ALTER TABLE "org_members" ADD CONSTRAINT "org_members_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "org_members" ADD CONSTRAINT "org_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "org_slots" ADD CONSTRAINT "org_slots_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "org_slots" ADD CONSTRAINT "org_slots_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "org_slots" ADD CONSTRAINT "org_slots_target_agent_id_agents_id_fk" FOREIGN KEY ("target_agent_id") REFERENCES "public"."agents"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rag_chunks" ADD CONSTRAINT "rag_chunks_document_id_rag_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."rag_documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rag_chunks" ADD CONSTRAINT "rag_chunks_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rag_configs" ADD CONSTRAINT "rag_configs_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
