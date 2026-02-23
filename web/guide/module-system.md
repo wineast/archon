@@ -76,7 +76,7 @@ export default function({ tool, isLoading }) {
 
 ### archon:react 可用导出
 
-`React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment`
+`React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment`、`useAgentId`
 
 ### archon:ui 可用导出
 

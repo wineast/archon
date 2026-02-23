@@ -39,13 +39,13 @@ import {
   clearCompiledRegistry,
   compileComponentGraph,
   registerUiHiddenTool,
+  AgentIdProvider,
   type ComponentRecord,
 } from "@/tool-ui";
 import type { WelcomeIconKey } from "@/lib/config/types";
-import { PaperclipIcon, SearchCodeIcon } from "lucide-react";
+import { PaperclipIcon } from "lucide-react";
 import { toast } from "sonner";
 import { RequestInspectorModal } from "@/components/request-inspector-modal";
-import { Button } from "@/components/ui/button";
 
 /* ─── Types ─── */
 
@@ -521,6 +521,7 @@ function EmbedChat({
   const isDev = process.env.NODE_ENV === "development";
 
   return (
+    <AgentIdProvider agentId={agentId}>
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
       {showHeader && (
@@ -622,6 +623,7 @@ function EmbedChat({
         </div>
       </div>
     </div>
+    </AgentIdProvider>
   );
 }
 

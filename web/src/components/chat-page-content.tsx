@@ -54,6 +54,7 @@ import {
   clearCompiledRegistry,
   compileComponentGraph,
   registerUiHiddenTool,
+  AgentIdProvider,
   type ComponentRecord,
 } from "@/tool-ui";
 import { SessionHistory } from "@/components/session-history";
@@ -568,6 +569,7 @@ export function ChatPageContent({
   /* ─────────── Render ─────────── */
 
   return (
+    <AgentIdProvider agentId={agent.id}>
     <SidebarProvider className="h-svh">
       <SessionHistory
         sessions={sessions}
@@ -747,5 +749,6 @@ export function ChatPageContent({
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </AgentIdProvider>
   );
 }

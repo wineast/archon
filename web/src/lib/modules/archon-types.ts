@@ -65,6 +65,7 @@ declare module "archon:react" {
   export const useEffect: typeof React.useEffect;
   export const useRef: typeof React.useRef;
   export const Fragment: typeof React.Fragment;
+  export function useAgentId(): string | null;
 }
 `;
 
