@@ -50,7 +50,7 @@ data = { name, input, output }
 | 模块 | 可用导出 |
 |------|---------|
 | `archon:react` | `React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment` |
-| `archon:ui` | `Badge`、`Spinner`、`Table`、`TableBody`、`TableCell`、`TableHead`、`TableHeader`、`TableRow`、`Tooltip`、`TooltipContent`、`TooltipTrigger`、`CollapsibleSection`、`ResultHeader`、`ResultSection`、`RateSheetLinks`、`RateSheetPanel`、`SourceDocumentViewer` |
+| `archon:ui` | `Badge`、`Spinner`、`Table`、`TableBody`、`TableCell`、`TableHead`、`TableHeader`、`TableRow`、`Tooltip`、`TooltipContent`、`TooltipTrigger`、`CollapsibleSection`、`Sheet`、`SheetContent`、`SheetHeader`、`SheetTitle`、`Popover`、`PopoverContent`、`PopoverTrigger` |
 | `archon:icons` | `ChevronRight`、`ChevronDownIcon`、`FileText`、`WrenchIcon`、`CheckCircleIcon`、`ClockIcon`、`XCircleIcon`、`CircleIcon` |
 | `archon:component/<key>` | 引用同 Agent 下的其他组件 |
 

@@ -52,6 +52,22 @@
     }
   },
   {
+    "key": "collapsible-section",
+    "name": "CollapsibleSection",
+    "description": "Generic collapsible/expandable section with optional badge, supports bordered and borderless modes.",
+    "componentInputSchema": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Section title" },
+        "defaultOpen": { "type": "boolean", "description": "Whether section starts expanded", "default": false },
+        "badge": { "type": ["string", "number"], "description": "Optional badge text shown on the right" },
+        "borderless": { "type": "boolean", "description": "Borderless mode for embedding in divide-y containers", "default": false },
+        "children": { "type": "string", "description": "Section content" }
+      },
+      "required": ["title"]
+    }
+  },
+  {
     "key": "tool-call-default",
     "name": "ToolCallDefault",
     "description": "Default tool call display with collapsible PARAMETERS and RESULT sections.",
