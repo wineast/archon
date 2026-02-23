@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import { validateExportData } from "../types";
 import type {
   AgentExportData,
+  AgentFileSnapshotItem,
   AgentSnapshot,
   ChatConfigSnapshotItem,
+  EmbedTokenSnapshotItem,
   MemoryConfigSnapshotItem,
 } from "../types";
 
@@ -118,6 +120,27 @@ describe("validateExportData", () => {
   it("rejects versions as non-array", () => {
     expect(validateExportData({ ...makeValidExport(), versions: "not-array" })).toBe(false);
   });
+
+  it("accepts export without files field", () => {
+    const data = makeValidExport();
+    expect(data.files).toBeUndefined();
+    expect(validateExportData(data)).toBe(true);
+  });
+
+  it("accepts export with valid files array", () => {
+    const files: AgentFileSnapshotItem[] = [
+      { name: "rate-sheet.pdf", contentType: "application/pdf", size: 1024, zipPath: "files/rate-sheet.pdf" },
+    ];
+    expect(validateExportData(makeValidExport({ files }))).toBe(true);
+  });
+
+  it("accepts export with empty files array", () => {
+    expect(validateExportData(makeValidExport({ files: [] }))).toBe(true);
+  });
+
+  it("rejects files as non-array", () => {
+    expect(validateExportData({ ...makeValidExport(), files: "not-array" })).toBe(false);
+  });
 });
 
 describe("AgentExportData — agent metadata fields", () => {
@@ -204,5 +227,36 @@ describe("MemoryConfigSnapshotItem", () => {
 
   it("snapshot with null memoryConfig is valid", () => {
     expect(MINIMAL_SNAPSHOT.memoryConfig).toBeNull();
+  });
+});
+
+describe("EmbedTokenSnapshotItem", () => {
+  it("accepts export with embedTokens", () => {
+    const tokens: EmbedTokenSnapshotItem[] = [
+      { name: "Dev Token", allowedOrigins: ["http://localhost:3000"], isActive: true },
+    ];
+    const data = makeValidExport({ embedTokens: tokens });
+    expect(validateExportData(data)).toBe(true);
+    expect(data.embedTokens).toHaveLength(1);
+    expect(data.embedTokens![0].name).toBe("Dev Token");
+  });
+
+  it("accepts export without embedTokens (backward compatible)", () => {
+    const data = makeValidExport();
+    expect(data.embedTokens).toBeUndefined();
+    expect(validateExportData(data)).toBe(true);
+  });
+
+  it("preserves embedTokens via JSON round-trip", () => {
+    const tokens: EmbedTokenSnapshotItem[] = [
+      { name: "Token A", allowedOrigins: [], isActive: true },
+      { name: "Token B", allowedOrigins: ["https://example.com"], isActive: false },
+    ];
+    const data = makeValidExport({ embedTokens: tokens });
+    const parsed = JSON.parse(JSON.stringify(data)) as AgentExportData;
+    expect(parsed.embedTokens).toHaveLength(2);
+    expect(parsed.embedTokens![0].name).toBe("Token A");
+    expect(parsed.embedTokens![1].allowedOrigins).toEqual(["https://example.com"]);
+    expect(parsed.embedTokens![1].isActive).toBe(false);
   });
 });

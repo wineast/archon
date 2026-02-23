@@ -63,15 +63,15 @@ Sidebar → Datasets 之后，图标为 `VariableIcon`。
 
 ### AI 助手上下文变量（仅 Assist Agent 系统提示词）
 
-Assist Agent 的系统提示词通过 LiquidJS 渲染，额外注入以下变量用于区分编辑场景：
+Assist Agent 的系统提示词通过 LiquidJS 渲染，额外注入以下变量用于区分编辑场景。这些变量统一放在 `host` 命名空间下，与 embed agent 的宿主上下文保持一致：
 
 | 变量 | 说明 |
 |------|------|
-| `{{ fieldContext }}` | 编辑场景标识（如 `wiki-content`、`system-prompt`、`tool-handler` 等） |
-| `{{ currentContent }}` | 当前编辑器内容 |
-| `{{ entity }}` | 实体类型标识（如 `content`、`prompt`、`code`） |
+| `{{ host.fieldContext }}` | 编辑场景标识（如 `wiki-content`、`system-prompt`、`tool-handler` 等） |
+| `{{ host.currentContent }}` | 当前编辑器内容 |
+| `{{ host.entity }}` | 实体类型标识（如 `content`、`prompt`、`code`） |
 
-`fieldContext` 取值：`wiki-content`、`system-prompt`、`tool-handler`、`function-code`、`component-jsx`、`dataset-data`、`schema`
+`host.fieldContext` 取值：`wiki-content`、`system-prompt`、`tool-handler`、`function-code`、`component-jsx`、`dataset-data`、`schema`
 
 ## 交互
 

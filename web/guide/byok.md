@@ -143,12 +143,6 @@ ModelCombobox 组件支持 `disabledProviders` prop，禁用未配置 API Key �
 
 - Agent Chat（`web/src/lib/chat/execute-stream.ts`）
 - Build Chat（`web/src/lib/build-chat/execute-stream.ts`）
-- Prompt Assist（`web/src/app/api/prompt-assist/route.ts`）
-- Function Code Assist（`web/src/app/api/function-code-assist/route.ts`）
-- Schema Code Assist（`web/src/app/api/schema-code-assist/route.ts`）
-- JSX Assist（`web/src/app/api/jsx-assist/route.ts`）
-- Tool Code Assist（`web/src/app/api/tool-code-assist/route.ts`）
-- Dataset Assist（`web/src/app/api/dataset-assist/route.ts`）
-- Wiki Assist（`web/src/app/api/wiki-assist/route.ts`）
+- AI 辅助编辑（通过 Embed Agent iframe，复用 `web/src/app/api/embed/chat/route.ts`）
 - Memory Extract（`web/src/lib/memory/extract.ts`）
 - Eval（`web/src/app/api/eval/run/[runId]/case/route.ts`）

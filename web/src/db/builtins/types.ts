@@ -30,6 +30,10 @@ export interface BuiltinComponentDef {
   name: string;
   description: string;
   componentInputSchema?: JsonSchema7;
+  /** Path to JSX source file (relative to component-sources/). Loaded at runtime. */
+  sourceFile?: string;
+  /** Populated at load time from sourceFile contents. */
+  componentSource?: string;
 }
 
 /** Entry in the wiki manifest (content loaded from guide/ at runtime). */

@@ -30,6 +30,7 @@ import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
 import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
 import { WikiAssistDialog } from "@/components/wiki/wiki-assist-dialog";
 import { GuideDialog } from "@/components/ui/guide-dialog";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import { KeyField } from "@/components/ui/key-field";
 import wikiContentGuide from "../../../guide/wiki-content.md";
 
@@ -53,6 +54,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [assistOpen, setAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
 
   const { tools: allTools } = useTools(agentId);
   const { functions: allFunctions } = useFunctions(agentId);
@@ -264,6 +266,7 @@ export function WikiEditor({ doc, documents, agentId, onUpdate, onDelete, readOn
         content={content}
         documentName={name}
         agentId={agentId}
+        orgId={orgId}
         onApply={setContent}
       />
     </>

@@ -48,10 +48,11 @@ export default async function(args) {
 
 ### 运行环境
 
-代码在 **QuickJS WASM 沙盒**中执行，完全隔离：
+代码通过 **直接执行 + 静态代码扫描** 运行：
 
-- 无法访问 Node.js API（`fs`、`path`、`http` 等）
-- 无法访问文件系统、网络、环境变量
+- 代码执行前经过 `acorn` AST 静态扫描，禁止危险模式
+- 禁止访问 Node.js 全局变量（`process`、`global`、`Buffer` 等）
+- 禁止 `require()`、`eval()`、`new Function()` 调用
 - 可使用标准 JavaScript 内置对象（`Math`、`Date`、`JSON`、`RegExp`、`Promise` 等）
 - 支持 `async/await`
 

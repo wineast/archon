@@ -15,6 +15,7 @@ import {
   BracesIcon,
   CodeIcon,
   DatabaseIcon,
+  EyeIcon,
   FileIcon,
   FlaskConicalIcon,
   FunctionSquareIcon,
@@ -23,7 +24,6 @@ import {
   MessageSquareIcon,
   NetworkIcon,
   PlugIcon,
-  PlugZapIcon,
   PuzzleIcon,
   SearchIcon,
   SettingsIcon,
@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { ChatConfigPanel } from "@/components/chat-config/chat-config-panel";
 import { ToolsPanel } from "@/components/tools/tools-panel";
@@ -77,7 +78,6 @@ import type { AgentRow } from "@/db/schema";
 import { TrashSheet } from "@/components/trash/trash-sheet";
 import { useTrash } from "@/lib/trash/hooks";
 import { toggleSkillsFeature } from "@/lib/skills/hooks";
-import { AgentSlotsPanel } from "@/components/slots/agent-slots-panel";
 import { JudgeConfigPanel } from "@/components/judge-config/judge-config-panel";
 import { EnvVarsPanel } from "@/components/env-vars/env-vars-panel";
 import { SupportBubble } from "@/components/support-bubble/support-bubble";
@@ -111,7 +111,6 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "memory", label: "memory", icon: BrainIcon },
   { value: "rag", label: "rag", icon: SearchIcon },
   { value: "mcp", label: "mcp", icon: PlugIcon },
-  { value: "slots", label: "slots", icon: PlugZapIcon },
   // ── Runtime & operations ──
   { value: "files", label: "files", icon: FileIcon },
   { value: "sessions", label: "sessions", icon: MessageSquareIcon },
@@ -339,8 +338,6 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return canManageMembers ? <UsagePanel agentId={agent.id} /> : null;
       case "runtime":
         return canManageMembers ? <RuntimeEventsPanel agentId={agent.id} /> : null;
-      case "slots":
-        return <AgentSlotsPanel agentId={agent.id} orgId={agent.orgId} />;
       case "members":
         return canManageMembers ? (
           <MembersPanel agentId={agent.id} isPublic={agent.isPublic} />
@@ -364,6 +361,11 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
           <span className="text-muted-foreground"> {t("titleSuffix")}</span>
         </span>
         <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="size-8" asChild>
+            <Link href={`/${orgSlug}/${agent.slug}/preview`} target="_blank">
+              <EyeIcon className="size-4" />
+            </Link>
+          </Button>
           <Button
             variant={chatOpen ? "secondary" : "ghost"}
             size="icon"
@@ -381,7 +383,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         {/* Build Chat panel — far left, toggleable */}
         {chatOpen && (
           <div className="hidden shrink-0 sm:block">
-            <BuildChatPanel agentId={agent.id} />
+            <BuildChatPanel agentId={agent.id} orgId={agent.orgId} />
           </div>
         )}
 
@@ -399,33 +401,38 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
               onPublish={handlePublish}
               onRollback={() => {}}
               onDelete={handleDelete}
+              onChat={(v) => {
+                window.open(`/${orgSlug}/${agent.slug}/v/${v.version}/chat`, "_blank");
+              }}
             />
           </div>
         )}
 
         {/* Desktop settings nav */}
-        <nav className="hidden w-48 shrink-0 flex-col border-r p-2 sm:flex">
-          {visibleTabs.map((tab) => {
-            const isActive = tab.value === activeTab;
-            const showOff = (tab.value === "mcp" && currentAgent.mcpEnabled === false) || (tab.value === "memory" && !currentAgent.memoryEnabled) || (tab.value === "rag" && !currentAgent.ragEnabled) || (tab.value === "skills" && !currentAgent.skillsEnabled);
-            return (
-              <button
-                key={tab.value}
-                onClick={() => handleTabChange(tab.value)}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                  isActive && "bg-accent text-foreground font-medium"
-                )}
-              >
-                <tab.icon className="size-4" />
-                {t(tab.label)}
-                {showOff && (
-                  <span className="ml-auto text-[10px] text-muted-foreground/60">{t("disabledBadge")}</span>
-                )}
-              </button>
-            );
-          })}
-          <div className="flex-1" />
+        <nav className="hidden w-48 shrink-0 flex-col border-r sm:flex">
+          <ScrollArea className="min-h-0 flex-1 p-2">
+            {visibleTabs.map((tab) => {
+              const isActive = tab.value === activeTab;
+              const showOff = (tab.value === "mcp" && currentAgent.mcpEnabled === false) || (tab.value === "memory" && !currentAgent.memoryEnabled) || (tab.value === "rag" && !currentAgent.ragEnabled) || (tab.value === "skills" && !currentAgent.skillsEnabled);
+              return (
+                <button
+                  key={tab.value}
+                  onClick={() => handleTabChange(tab.value)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                    isActive && "bg-accent text-foreground font-medium"
+                  )}
+                >
+                  <tab.icon className="size-4" />
+                  {t(tab.label)}
+                  {showOff && (
+                    <span className="ml-auto text-[10px] text-muted-foreground/60">{t("disabledBadge")}</span>
+                  )}
+                </button>
+              );
+            })}
+          </ScrollArea>
+          <div className="shrink-0 border-t p-2">
           <button
             onClick={() => setTrashOpen(true)}
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -445,6 +452,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
             <HistoryIcon className="size-4" />
             {t("auditLog")}
           </button>
+          </div>
         </nav>
 
         {/* Mobile horizontal tabs */}
@@ -535,7 +543,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         onOpenChange={setAuditLogOpen}
       />
 
-      <SupportBubble orgId={agent.orgId} />
+      <SupportBubble agentId={agent.id} />
     </div>
   );
 }

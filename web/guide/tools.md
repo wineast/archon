@@ -25,8 +25,9 @@
 | returnParametersSchema | jsonb | 返回值 Schema（内联 JsonSchema7 或 `$ref`，根类型必须为 object） |
 | handler | text | JavaScript handler 代码 |
 | url | text | 外部 API 地址（与 handler 二选一） |
-| componentId | uuid | 关联的 UI 组件 |
+| componentId | uuid | 关联的 UI 组件（null 时自动使用 `tool-call-default` 兜底） |
 | enabled | boolean | 是否启用 |
+| uiHidden | boolean | 是否隐藏工具 UI（默认 false，设为 true 时聊天中不渲染任何 UI） |
 | executionTarget | text | 执行位置：`server` / `client` / `host` |
 | sandboxMode | text | 沙盒模式：`light`（QuickJS）/ `full`（Vercel Sandbox） |
 
@@ -98,3 +99,10 @@ export default async function(args) {
 
 - 左侧侧栏：工具列表，支持搜索和创建
 - 右侧详情：工具编辑（基本信息、参数 Schema、Handler、组件绑定、测试用例）
+
+## 相关文档
+
+- [Handler 编写指南](tool-handler.md)
+- [沙盒模式](tool-sandbox.md)
+- [工具 Examples 功能](tool-examples.md)
+- [测试用例断言](tool-test-assertions.md)

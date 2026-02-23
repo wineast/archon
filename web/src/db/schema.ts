@@ -40,8 +40,14 @@ import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeR
 
 /* ─────────── Slot Key Constants ─────────── */
 
-export const SLOT_KEYS = ["builder", "assist", "evaluator", "support"] as const;
-export type SlotKey = (typeof SLOT_KEYS)[number];
+export const AGENT_SLOT_KEYS = ["builder", "assist", "evaluator"] as const;
+export type AgentSlotKey = (typeof AGENT_SLOT_KEYS)[number];
+
+export const ORG_SLOT_KEYS = ["support"] as const;
+export type OrgSlotKey = (typeof ORG_SLOT_KEYS)[number];
+
+export const SLOT_KEYS = [...AGENT_SLOT_KEYS, ...ORG_SLOT_KEYS] as const;
+export type SlotKey = AgentSlotKey | OrgSlotKey;
 
 /* ─────────── Resource Origin Constants ─────────── */
 
@@ -229,6 +235,8 @@ export const chatSessions = pgTable(
     systemPrompt: text("system_prompt"),
     messageCount: integer("message_count").default(0).notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    /** Session origin: "chat" (main chat page) or "preview" (draft preview). */
+    source: text("source").notNull().default("chat"),
     shareId: text("share_id").unique(),
     sharedAt: timestamp("shared_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -491,6 +499,7 @@ export const tools = pgTable(
     url: text("url"),
     componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),
     enabled: boolean("enabled").notNull().default(true),
+    uiHidden: boolean("ui_hidden").notNull().default(false),
     executionTarget: text("execution_target").notNull().default("server").$type<"server" | "client" | "host">(),
     sandboxMode: text("sandbox_mode").notNull().default("light").$type<"light" | "full">(),
     origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
@@ -811,6 +820,7 @@ export const toolTestCases = pgTable(
     input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
     expectedOutput: jsonb("expected_output").$type<unknown>(),
     tags: text("tags").array().notNull().default([]),
+    assertions: jsonb("assertions").$type<Assertion[]>().notNull().default([]),
     showAsExample: boolean("show_as_example").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -860,6 +870,7 @@ export const toolTestRunResults = pgTable(
     output: jsonb("output").$type<unknown>(),
     passed: boolean("passed").notNull(),
     error: text("error"),
+    assertionResults: jsonb("assertion_results").$type<AssertionResult[]>(),
     durationMs: integer("duration_ms").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -1579,7 +1590,36 @@ export const memories = pgTable(
 export type MemoryRow = typeof memories.$inferSelect;
 export type NewMemoryRow = typeof memories.$inferInsert;
 
-/* ─────────── Org Slots (org-level default slot bindings) ─────────── */
+/* ─────────── Agent Slots (agent-level slot bindings) ─────────── */
+
+export const agentSlots = pgTable(
+  "agent_slots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    slotKey: text("slot_key").notNull().$type<AgentSlotKey>(),
+    targetAgentId: uuid("target_agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("agent_slots_agent_id_slot_key_idx").on(t.agentId, t.slotKey),
+  ]
+);
+
+export type AgentSlotRow = typeof agentSlots.$inferSelect;
+export type NewAgentSlotRow = typeof agentSlots.$inferInsert;
+
+/* ─────────── Org Slots (org-level slot bindings) ─────────── */
 
 export const orgSlots = pgTable(
   "org_slots",
@@ -1588,8 +1628,8 @@ export const orgSlots = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
-    slotKey: text("slot_key").notNull().$type<SlotKey>(),
-    agentId: uuid("agent_id")
+    slotKey: text("slot_key").notNull().$type<OrgSlotKey>(),
+    targetAgentId: uuid("target_agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1607,35 +1647,6 @@ export const orgSlots = pgTable(
 
 export type OrgSlotRow = typeof orgSlots.$inferSelect;
 export type NewOrgSlotRow = typeof orgSlots.$inferInsert;
-
-/* ─────────── Agent Slot Overrides (agent-level slot overrides) ─────────── */
-
-export const agentSlotOverrides = pgTable(
-  "agent_slot_overrides",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    agentId: uuid("agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "cascade" }),
-    slotKey: text("slot_key").notNull().$type<SlotKey>(),
-    targetAgentId: uuid("target_agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "restrict" }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (t) => [
-    unique("agent_slot_overrides_agent_id_slot_key_idx").on(t.agentId, t.slotKey),
-  ]
-);
-
-export type AgentSlotOverrideRow = typeof agentSlotOverrides.$inferSelect;
-export type NewAgentSlotOverrideRow = typeof agentSlotOverrides.$inferInsert;
 
 /* ─────────── Agent Resource Refs (pool resource references) ─────────── */
 

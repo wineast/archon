@@ -146,6 +146,50 @@ import { executeChatStream } from "../execute-stream";
 import { db } from "@/db";
 import type { UIMessage } from "ai";
 
+describe("executeChatStream – no model config error", () => {
+  beforeEach(() => {
+    // Setup DB: agent row exists but no active model config
+    let callCount = 0;
+    const mockLimit = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve([{
+          orgId: "org-1",
+          mcpEnabled: false,
+          skillsEnabled: false,
+          memoryEnabled: false,
+          ragEnabled: false,
+          contextCompressionEnabled: false,
+        }]);
+      }
+      // No active model config
+      return Promise.resolve([]);
+    });
+    const mockWhere = vi.fn().mockReturnValue({ limit: mockLimit });
+    const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
+    vi.mocked(db.select).mockReturnValue({ from: mockFrom } as never);
+  });
+
+  it("returns 400 with structured error code no_model_config", async () => {
+    const messages: UIMessage[] = [{
+      id: "msg-0",
+      role: "user",
+      parts: [{ type: "text", text: "hello" }],
+    }] as UIMessage[];
+
+    const response = await executeChatStream({
+      messages,
+      agentId: "agent-1",
+      userId: "user-1",
+      sessionId: "sess-1",
+    });
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("no_model_config");
+  });
+});
+
 describe("executeChatStream persistence", () => {
   beforeEach(() => {
     capturedOnFinish = null;

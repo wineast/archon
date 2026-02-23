@@ -55,6 +55,10 @@ export interface ExecuteChatStreamOptions {
   hostContext?: Record<string, unknown>;
   /** Tool names registered by the host page via ArchonEmbed.registerTools(). */
   registeredHostTools?: string[];
+  /** Override version ID. If omitted, resolves to editingVersionId. */
+  versionId?: string;
+  /** Session source for isolation: "chat" (default) or "preview". */
+  source?: string;
 }
 
 /**
@@ -74,18 +78,20 @@ export async function executeChatStream(
     .limit(1);
   const orgId = agentRow?.orgId ?? null;
 
-  // Validate hostContext size (10KB limit)
+  // Validate hostContext size: 512KB for authenticated users, 10KB for anonymous embed
   if (hostContext) {
+    const maxSize = userId !== null ? 524288 : 10240;
     const contextSize = new TextEncoder().encode(JSON.stringify(hostContext)).length;
-    if (contextSize > 10240) {
+    if (contextSize > maxSize) {
+      const limitLabel = userId !== null ? "512KB" : "10KB";
       return new Response(
-        JSON.stringify({ error: "hostContext exceeds 10KB limit" }),
+        JSON.stringify({ error: `hostContext exceeds ${limitLabel} limit` }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
   }
 
-  const versionId = await resolveEditingVersionId(agentId);
+  const versionId = opts.versionId ?? await resolveEditingVersionId(agentId);
 
   // Read active model config from DB (scoped to agent)
   const [activeConfig] = await db
@@ -98,7 +104,7 @@ export async function executeChatStream(
 
   if (!activeConfig?.modelId) {
     return new Response(
-      JSON.stringify({ error: "No active model config or modelId is empty" }),
+      JSON.stringify({ error: "no_model_config", message: "No active model config or modelId is empty" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
@@ -377,6 +383,7 @@ export async function executeChatStream(
             systemPrompt: activeConfig.systemPrompt,
             agentId,
             userId: userId ?? undefined,
+            source: opts.source,
           });
         }
         await saveMessage({
@@ -495,7 +502,7 @@ export async function executeChatStream(
           });
         }
 
-        // Dispose function sandbox after stream completes
+        // Dispose function exec context after stream completes
         after(() => { disposeTemplateData(templateData); });
       },
     });

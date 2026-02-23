@@ -69,6 +69,12 @@ Makefile 命令速查与使用指南。项目所有操作统一通过 `make` 执
 | `make wt-init` | worktree 数据初始化（db-push + seed） |
 | `make wt-fini` | worktree 数据清理 |
 
+### Fixtures
+
+| 命令 | 说明 |
+|------|------|
+| `make fixture-zip NAME=xxx` | 将 `data/fixtures/<name>/` 文件夹打包为 ZIP，用于导入 |
+
 ## 常用操作流程
 
 ### 日常开发

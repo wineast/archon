@@ -2,7 +2,6 @@ import { db as appDb } from "@/db";
 import { orgs, orgMembers } from "@/db/schema";
 import type { User } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
-import { ensureOrgDefaults } from "@/lib/slots";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "@/db/schema";
@@ -26,7 +25,6 @@ export async function ensurePersonalOrg(user: User, database?: DbLike): Promise<
     .limit(1);
 
   if (existing) {
-    await ensureOrgDefaults(existing.orgId, db);
     return existing.orgId;
   }
 
@@ -50,8 +48,6 @@ export async function ensurePersonalOrg(user: User, database?: DbLike): Promise<
     userId: user.id,
     role: "owner",
   });
-
-  await ensureOrgDefaults(org.id, db);
 
   return org.id;
 }

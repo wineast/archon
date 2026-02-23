@@ -61,6 +61,7 @@ const baseTool: ToolRow = {
   url: null,
   componentId: null,
   enabled: true,
+  uiHidden: false,
   executionTarget: "server",
   sandboxMode: "light",
   origin: "user",
@@ -202,7 +203,7 @@ describe("ToolDetail — pool ref mode", () => {
     expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
   });
 
-  it("shows Edit/Parameters tabs for schema in pool ref mode", () => {
+  it("shows parameters directly (no Edit/Parameters tabs) for schema in pool ref mode", () => {
     const toolWithSchema: ToolRow = {
       ...baseTool,
       parametersSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
@@ -217,10 +218,8 @@ describe("ToolDetail — pool ref mode", () => {
         poolMeta={poolMeta}
       />
     );
-    // Should have Edit and Parameters tabs for both Input and Output schemas
-    const editTabs = screen.getAllByRole("tab", { name: "Edit" });
-    const parametersTabs = screen.getAllByRole("tab", { name: "Parameters" });
-    expect(editTabs.length).toBeGreaterThanOrEqual(2);
-    expect(parametersTabs.length).toBeGreaterThanOrEqual(2);
+    // Should show parameter names directly without Edit/Parameters tabs
+    expect(screen.getByText("query")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Edit" })).not.toBeInTheDocument();
   });
 });

@@ -3,20 +3,35 @@
 import useSWR from "swr";
 import { toast } from "sonner";
 import type { ModelConfigRow } from "@/db/schema";
+import type { VersionMode } from "@/lib/versions/mode";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function modelConfigsApiKey(agentId?: string) {
-  return agentId ? `/api/model-configs?agentId=${agentId}` : null;
+export function modelConfigsApiKey(agentId?: string, mode?: VersionMode) {
+  if (!agentId) return null;
+  const params = new URLSearchParams({ agentId });
+  if (mode === "published") {
+    params.set("mode", "published");
+  } else if (mode && typeof mode === "object") {
+    params.set("versionId", mode.versionId);
+  }
+  return `/api/model-configs?${params}`;
 }
 
-export function activeModelConfigApiKey(agentId?: string) {
-  return agentId ? `/api/model-configs/active?agentId=${agentId}` : null;
+export function activeModelConfigApiKey(agentId?: string, mode?: VersionMode) {
+  if (!agentId) return null;
+  const params = new URLSearchParams({ agentId });
+  if (mode === "published") {
+    params.set("mode", "published");
+  } else if (mode && typeof mode === "object") {
+    params.set("versionId", mode.versionId);
+  }
+  return `/api/model-configs/active?${params}`;
 }
 
-export function useModelConfigs(agentId?: string) {
+export function useModelConfigs(agentId?: string, mode?: VersionMode) {
   const { data, error, isLoading, mutate } = useSWR<ModelConfigRow[]>(
-    modelConfigsApiKey(agentId),
+    modelConfigsApiKey(agentId, mode),
     fetcher
   );
 
@@ -28,9 +43,9 @@ export function useModelConfigs(agentId?: string) {
   };
 }
 
-export function useActiveModelConfig(agentId?: string) {
+export function useActiveModelConfig(agentId?: string, mode?: VersionMode) {
   const { data, error, isLoading, mutate } = useSWR<ModelConfigRow | null>(
-    activeModelConfigApiKey(agentId),
+    activeModelConfigApiKey(agentId, mode),
     fetcher
   );
 

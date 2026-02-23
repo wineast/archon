@@ -23,17 +23,22 @@ export interface RequestInspectorModalProps {
   messages: UIMessage[];
   temperature: number;
   agentId?: string;
+  hostContext?: Record<string, unknown>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 1500);
     });
   }, [text]);
 
@@ -57,6 +62,7 @@ export function RequestInspectorModal({
   messages,
   temperature,
   agentId,
+  hostContext,
   open: controlledOpen,
   onOpenChange,
 }: RequestInspectorModalProps) {
@@ -87,7 +93,7 @@ export function RequestInspectorModal({
     fetch("/api/template/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: systemPrompt, agentId }),
+      body: JSON.stringify({ text: systemPrompt, agentId, hostContext }),
     })
       .then((res) => res.json())
       .then((data) => {

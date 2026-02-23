@@ -1,13 +1,13 @@
 import { db as appDb } from "@/db";
-import { agents, agentSlotOverrides, orgSlots, modelConfigs } from "@/db/schema";
-import type { SlotKey } from "@/db/schema";
+import { agentSlots, orgSlots, modelConfigs } from "@/db/schema";
+import type { AgentSlotKey, OrgSlotKey } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { SLOT_DEFS } from "./constants";
 
 /* ─────────── Types ─────────── */
 
 export interface ResolvedSlot {
-  agentId: string;
+  agentId: string | null;
   model: string;
   temperature: number;
 }
@@ -23,10 +23,6 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-function cacheKey(agentId: string, slotKey: SlotKey): string {
-  return `${agentId}:${slotKey}`;
-}
-
 /* ─────────── Internal helpers ─────────── */
 
 async function getActiveModelConfig(agentId: string): Promise<{ model: string; temperature: number } | null> {
@@ -40,92 +36,105 @@ async function getActiveModelConfig(agentId: string): Promise<{ model: string; t
   return { model: config.modelId, temperature: config.temperature };
 }
 
-/* ─────────── Public API ─────────── */
-
-/**
- * Resolve a slot for a given agent.
- *
- * Resolution order:
- * 1. agentSlotOverrides (agent-level override)
- * 2. orgSlots (org-level default)
- * 3. Hardcoded defaults from SLOT_DEFS
- *
- * Returns the resolved agent's active model config, or hardcoded defaults.
- * Results are cached for 60s.
- */
-export async function resolveSlot(
-  agentId: string,
-  slotKey: SlotKey
-): Promise<ResolvedSlot> {
-  const key = cacheKey(agentId, slotKey);
+function getCached(key: string): ResolvedSlot | null {
   const now = Date.now();
   const cached = cache.get(key);
   if (cached && now - cached.at < TTL_MS) return cached.value;
+  return null;
+}
+
+function setCache(key: string, value: ResolvedSlot): void {
+  cache.set(key, { value, at: Date.now() });
+}
+
+/* ─────────── Public API ─────────── */
+
+/**
+ * Resolve an agent-level slot.
+ *
+ * Looks up agentSlots(agentId, slotKey) for a binding.
+ * Returns the resolved agent's active model config, or null agentId if not configured.
+ * Results are cached for 60s.
+ */
+export async function resolveAgentSlot(
+  agentId: string,
+  slotKey: AgentSlotKey
+): Promise<ResolvedSlot> {
+  const key = `agent:${agentId}:${slotKey}`;
+  const cached = getCached(key);
+  if (cached) return cached;
 
   const def = SLOT_DEFS[slotKey];
 
-  // 1. Check agent-level override
-  const [override] = await appDb
-    .select({ targetAgentId: agentSlotOverrides.targetAgentId })
-    .from(agentSlotOverrides)
-    .where(and(eq(agentSlotOverrides.agentId, agentId), eq(agentSlotOverrides.slotKey, slotKey)))
+  const [binding] = await appDb
+    .select({ targetAgentId: agentSlots.targetAgentId })
+    .from(agentSlots)
+    .where(and(eq(agentSlots.agentId, agentId), eq(agentSlots.slotKey, slotKey)))
     .limit(1);
 
-  if (override) {
-    const mc = await getActiveModelConfig(override.targetAgentId);
+  if (binding) {
+    const mc = await getActiveModelConfig(binding.targetAgentId);
     const value: ResolvedSlot = {
-      agentId: override.targetAgentId,
+      agentId: binding.targetAgentId,
       model: mc?.model || def.defaultModel,
       temperature: mc?.temperature ?? def.defaultTemperature,
     };
-    cache.set(key, { value, at: now });
+    setCache(key, value);
     return value;
   }
 
-  // 2. Check org-level default
-  const [agent] = await appDb
-    .select({ orgId: agents.orgId })
-    .from(agents)
-    .where(eq(agents.id, agentId))
+  const value: ResolvedSlot = { agentId: null, model: "", temperature: 0 };
+  setCache(key, value);
+  return value;
+}
+
+/**
+ * Resolve an org-level slot.
+ *
+ * Looks up orgSlots(orgId, slotKey) for a binding.
+ * Returns the resolved agent's active model config, or null agentId if not configured.
+ * Results are cached for 60s.
+ */
+export async function resolveOrgSlot(
+  orgId: string,
+  slotKey: OrgSlotKey
+): Promise<ResolvedSlot> {
+  const key = `org:${orgId}:${slotKey}`;
+  const cached = getCached(key);
+  if (cached) return cached;
+
+  const def = SLOT_DEFS[slotKey];
+
+  const [binding] = await appDb
+    .select({ targetAgentId: orgSlots.targetAgentId })
+    .from(orgSlots)
+    .where(and(eq(orgSlots.orgId, orgId), eq(orgSlots.slotKey, slotKey)))
     .limit(1);
 
-  if (agent) {
-    const [orgSlot] = await appDb
-      .select({ agentId: orgSlots.agentId })
-      .from(orgSlots)
-      .where(and(eq(orgSlots.orgId, agent.orgId), eq(orgSlots.slotKey, slotKey)))
-      .limit(1);
-
-    if (orgSlot) {
-      const mc = await getActiveModelConfig(orgSlot.agentId);
-      const value: ResolvedSlot = {
-        agentId: orgSlot.agentId,
-        model: mc?.model || def.defaultModel,
-        temperature: mc?.temperature ?? def.defaultTemperature,
-      };
-      cache.set(key, { value, at: now });
-      return value;
-    }
+  if (binding) {
+    const mc = await getActiveModelConfig(binding.targetAgentId);
+    const value: ResolvedSlot = {
+      agentId: binding.targetAgentId,
+      model: mc?.model || def.defaultModel,
+      temperature: mc?.temperature ?? def.defaultTemperature,
+    };
+    setCache(key, value);
+    return value;
   }
 
-  // 3. Hardcoded defaults
-  const value: ResolvedSlot = {
-    agentId: "",
-    model: def.defaultModel,
-    temperature: def.defaultTemperature,
-  };
-  cache.set(key, { value, at: now });
+  const value: ResolvedSlot = { agentId: null, model: "", temperature: 0 };
+  setCache(key, value);
   return value;
 }
 
 /**
  * Invalidate slot resolution caches.
- * Call without args to clear all, or with agentId to clear specific agent's caches.
+ * Call without args to clear all, or with id to clear specific caches (matches by id prefix).
  */
-export function invalidateSlotCache(agentId?: string): void {
-  if (agentId) {
+export function invalidateSlotCache(id?: string): void {
+  if (id) {
     for (const key of cache.keys()) {
-      if (key.startsWith(`${agentId}:`)) cache.delete(key);
+      if (key.includes(`:${id}:`)) cache.delete(key);
     }
   } else {
     cache.clear();

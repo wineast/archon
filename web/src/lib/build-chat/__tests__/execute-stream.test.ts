@@ -29,28 +29,35 @@ vi.mock("@/db/chat-persistence", () => ({
   responseMessagesToUIParts: () => [{ type: "text", text: "response" }],
 }));
 
-vi.mock("@/db", () => ({
-  db: {
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([
-            { skillsEnabled: true, orgId: "org-1" },
-          ]),
-        }),
-      }),
+vi.mock("@/db", () => {
+  const chainResult = {
+    where: vi.fn().mockReturnValue({
+      limit: vi.fn().mockResolvedValue([
+        { skillsEnabled: true, orgId: "org-1" },
+      ]),
     }),
-  },
-}));
+    innerJoin: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue([]),
+    }),
+  };
+  return {
+    db: {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue(chainResult),
+      }),
+    },
+  };
+});
 
 vi.mock("@/db/schema", () => ({
   agents: { id: "id", skillsEnabled: "skillsEnabled", orgId: "orgId" },
-  tools: { key: "key", enabled: "enabled", agentId: "agentId" },
+  tools: { id: "id", key: "key", enabled: "enabled", agentId: "agentId", origin: "origin" },
+  agentResourceRefs: { agentId: "agentId", resourceId: "resourceId", resourceType: "resourceType", enabled: "enabled" },
 }));
 
 vi.mock("@/lib/slots", () => ({
-  resolveSlot: vi.fn().mockResolvedValue({
-    agentId: "",
+  resolveAgentSlot: vi.fn().mockResolvedValue({
+    agentId: "builder-agent-1",
     model: "anthropic/claude-sonnet-4",
     temperature: 0.3,
   }),
@@ -233,5 +240,21 @@ describe("executeBuildChatStream monitoring", () => {
 
     // Assistant also saved
     expect(mockSaveMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns 422 when builder slot is not configured", async () => {
+    const { resolveAgentSlot } = await import("@/lib/slots");
+    vi.mocked(resolveAgentSlot).mockResolvedValueOnce({
+      agentId: null,
+      model: "",
+      temperature: 0,
+    });
+
+    const messages = makeMessages(1);
+    const response = await executeBuildChatStream({ messages, agentId: "agent-1", userId: "user-1" });
+
+    expect(response.status).toBe(422);
+    const body = await response.json();
+    expect(body.error).toBe("slot_not_configured");
   });
 });

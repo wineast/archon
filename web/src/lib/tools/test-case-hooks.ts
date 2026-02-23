@@ -7,6 +7,7 @@ import type {
   ToolTestRunRow,
   ToolTestRunResultRow,
 } from "@/db/schema";
+import type { Assertion, AssertionResult } from "@/lib/eval/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -106,17 +107,19 @@ export interface RunTestCaseResult {
   error?: string;
   durationMs: number;
   passed: boolean;
+  assertionResults?: AssertionResult[];
 }
 
 export async function runToolTestCase(
   toolId: string,
   input: Record<string, unknown>,
-  expectedOutput?: unknown
+  expectedOutput?: unknown,
+  assertions?: Assertion[]
 ): Promise<RunTestCaseResult> {
   const res = await fetch(`${apiBase(toolId)}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input, expectedOutput }),
+    body: JSON.stringify({ input, expectedOutput, assertions }),
   });
   return res.json();
 }

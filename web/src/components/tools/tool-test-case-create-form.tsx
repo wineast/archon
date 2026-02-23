@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { SaveIcon, XIcon } from "lucide-react";
+import { PlusIcon, SaveIcon, XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { JsonEditor } from "@/components/editors/json-editor";
 import { Spinner } from "@/components/ui/spinner";
+import { AssertionRow } from "@/components/eval/assertion-row";
+import type { Assertion } from "@/lib/eval/types";
+import { nanoid } from "nanoid";
 
 interface ToolTestCaseCreateFormProps {
   onCreate: (data: {
@@ -14,6 +17,7 @@ interface ToolTestCaseCreateFormProps {
     input: Record<string, unknown>;
     expectedOutput: unknown;
     tags: string[];
+    assertions: Assertion[];
   }) => Promise<void>;
   onCancel: () => void;
 }
@@ -27,6 +31,7 @@ export function ToolTestCaseCreateForm({
   const [expectedOutputValue, setExpectedOutputValue] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [assertions, setAssertions] = useState<Assertion[]>([]);
   const [saving, setSaving] = useState(false);
 
   const handleSave = useCallback(async () => {
@@ -47,11 +52,11 @@ export function ToolTestCaseCreateForm({
     }
     setSaving(true);
     try {
-      await onCreate({ name: name.trim(), input: parsed, expectedOutput, tags });
+      await onCreate({ name: name.trim(), input: parsed, expectedOutput, tags, assertions });
     } finally {
       setSaving(false);
     }
-  }, [name, inputValue, expectedOutputValue, tags, onCreate]);
+  }, [name, inputValue, expectedOutputValue, tags, assertions, onCreate]);
 
   const handleAddTag = useCallback(
     (value: string) => {
@@ -139,6 +144,47 @@ export function ToolTestCaseCreateForm({
           height="100px"
           className="mt-1"
         />
+      </div>
+
+      {/* Assertions */}
+      <div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-muted-foreground">
+            Assertions
+          </label>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 px-1.5 text-xs"
+            onClick={() =>
+              setAssertions([
+                ...assertions,
+                { id: nanoid(), type: "contains", value: "" },
+              ])
+            }
+          >
+            <PlusIcon className="mr-0.5 size-3" />
+            Add
+          </Button>
+        </div>
+        {assertions.length > 0 && (
+          <div className="mt-1 space-y-1.5">
+            {assertions.map((a, i) => (
+              <AssertionRow
+                key={a.id}
+                assertion={a}
+                onChange={(updated) => {
+                  const next = [...assertions];
+                  next[i] = updated;
+                  setAssertions(next);
+                }}
+                onDelete={() =>
+                  setAssertions(assertions.filter((_, j) => j !== i))
+                }
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Actions */}

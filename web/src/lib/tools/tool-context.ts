@@ -9,7 +9,7 @@ import {
   objectInstances,
   objectLinks,
 } from "@/db/schema";
-import { eq, and, like, ilike, inArray, or, sql } from "drizzle-orm";
+import { eq, and, like, ilike, inArray, or, sql, isNull } from "drizzle-orm";
 import { renderWikiContent } from "@/lib/template/render";
 import { parseWikiContent } from "@/lib/wiki/frontmatter";
 import {
@@ -25,6 +25,7 @@ import {
   type FunctionRecord,
 } from "@/lib/functions/compile";
 import { getReferencedBuiltinFunctionKeys } from "@/lib/pool/queries";
+import { agentResourceRefs } from "@/db/schema";
 import { extractLabel } from "@/lib/ontology/utils";
 import { proxyToExternal } from "@/lib/ontology/external-proxy";
 import { getDefsMap } from "@/lib/schemas/resolve-inline";
@@ -134,8 +135,8 @@ export function createToolContext(agentId?: string): ToolContext {
     const cached = getCachedFunctions(agentId);
     if (cached) return cached;
 
-    // Load from DB and compile — parametersSchema is stored inline
-    const rows = await db
+    // Load agent-owned functions from DB
+    const agentRows = await db
       .select({
         key: functions.key,
         code: functions.code,
@@ -144,7 +145,35 @@ export function createToolContext(agentId?: string): ToolContext {
       .from(functions)
       .where(eq(functions.agentId, agentId));
 
-    const fnRecords: FunctionRecord[] = rows.map((r) => ({
+    // Also get pool/builtin function records referenced by this agent
+    const poolRows = await db
+      .select({
+        key: functions.key,
+        code: functions.code,
+        parametersSchema: functions.parametersSchema,
+      })
+      .from(agentResourceRefs)
+      .innerJoin(functions, eq(functions.id, agentResourceRefs.resourceId))
+      .where(
+        and(
+          eq(agentResourceRefs.agentId, agentId),
+          eq(agentResourceRefs.resourceType, "function"),
+          isNull(functions.agentId),
+          isNull(functions.deletedAt),
+        )
+      );
+
+    // Merge, deduplicating by key
+    const seenKeys = new Set(agentRows.map((r) => r.key));
+    const allRows = [...agentRows];
+    for (const pr of poolRows) {
+      if (!seenKeys.has(pr.key)) {
+        allRows.push(pr);
+        seenKeys.add(pr.key);
+      }
+    }
+
+    const fnRecords: FunctionRecord[] = allRows.map((r) => ({
       key: r.key,
       code: r.code,
       parameters: r.parametersSchema ?? {},
@@ -153,25 +182,30 @@ export function createToolContext(agentId?: string): ToolContext {
     const defsMap = await getDefsMap(agentId);
     const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId);
     const baseDeps = buildBaseDeps(enabledBuiltinKeys);
-    const { fns, sandbox } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
-    setCachedFunctions(agentId, fns, sandbox);
+
+    const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
+    setCachedFunctions(agentId, fns, exec);
     return fns;
   }
 
   return {
     wiki: {
       async get(id: string) {
-        // Try by id first
-        let row = await db
-          .select({
-            id: wikiDocuments.id,
-            content: wikiDocuments.content,
-            agentId: wikiDocuments.agentId,
-          })
-          .from(wikiDocuments)
-          .where(eq(wikiDocuments.id, id))
-          .limit(1)
-          .then((rows) => rows[0]);
+        // Try by UUID id first (only if it looks like a valid UUID)
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        let row: { id: string; content: string; agentId: string | null } | undefined;
+        if (isUuid) {
+          row = await db
+            .select({
+              id: wikiDocuments.id,
+              content: wikiDocuments.content,
+              agentId: wikiDocuments.agentId,
+            })
+            .from(wikiDocuments)
+            .where(eq(wikiDocuments.id, id))
+            .limit(1)
+            .then((rows) => rows[0]);
+        }
         // Fallback: try by key
         if (!row && agentId) {
           row = await db

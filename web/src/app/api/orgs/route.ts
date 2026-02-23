@@ -4,7 +4,6 @@ import { orgs, orgMembers, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-agent-role";
 import { toSlug } from "@/lib/agents/slug";
-import { ensureOrgDefaults } from "@/lib/slots";
 
 /**
  * Ensure the slug is unique across all orgs.
@@ -80,8 +79,6 @@ export async function POST(req: Request) {
     userId: user.id,
     role: "owner",
   });
-
-  await ensureOrgDefaults(org.id);
 
   return NextResponse.json(
     { ...org, myRole: "owner" as const },

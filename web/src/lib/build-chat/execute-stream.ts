@@ -8,7 +8,7 @@ import { after } from "next/server";
 import { gatherResourceSummary } from "./resource-summary";
 import { buildSystemPrompt } from "./system-prompt";
 import { buildAllTools } from "./tools";
-import { resolveSlot } from "@/lib/slots";
+import { resolveAgentSlot } from "@/lib/slots";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { db } from "@/db";
 import { agents, tools as toolsTable, agentResourceRefs } from "@/db/schema";
@@ -51,7 +51,14 @@ export async function executeBuildChatStream(
   const orgId = agentRow?.orgId ?? null;
 
   // Get model config via slot resolution
-  const config = await resolveSlot(agentId, "builder");
+  const config = await resolveAgentSlot(agentId, "builder");
+
+  if (!config.agentId) {
+    return new Response(
+      JSON.stringify({ error: "slot_not_configured", message: "Builder Agent 未配置" }),
+      { status: 422, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   const systemPrompt = buildSystemPrompt(summary);
   const codeTools = buildAllTools(agentId, { skillsEnabled });

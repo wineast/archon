@@ -6,6 +6,8 @@ import deepEqual from "fast-deep-equal";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
 import { createToolContext } from "@/lib/tools/tool-context";
 import { executeToolHandler } from "@/lib/tools/execute-handler";
+import { runAllAssertions } from "@/lib/eval/assertions";
+import type { Assertion, AssertionResult } from "@/lib/eval/types";
 
 export const maxDuration = 120;
 
@@ -14,6 +16,7 @@ interface RunCaseBody {
   caseName: string;
   input: Record<string, unknown>;
   expectedOutput?: unknown;
+  assertions?: Assertion[];
 }
 
 export async function POST(
@@ -22,7 +25,7 @@ export async function POST(
 ) {
   const { id, runId } = await params;
   const body: RunCaseBody = await req.json();
-  const { caseId, caseName, input, expectedOutput } = body;
+  const { caseId, caseName, input, expectedOutput, assertions } = body;
 
   // Verify run exists
   const [run] = await db
@@ -48,6 +51,7 @@ export async function POST(
   let output: unknown = null;
   let error: string | null = null;
   let passed = false;
+  let assertionResults: AssertionResult[] = [];
 
   try {
     if (!tool.handler?.trim() && !tool.url?.trim()) {
@@ -78,13 +82,18 @@ export async function POST(
       output = await res.json();
     } else {
       const context = createToolContext(tool.agentId ?? undefined);
-      output = await executeToolHandler(tool.handler!, validatedInput, context, tool.sandboxMode);
+      output = await executeToolHandler(tool.handler!, validatedInput, context);
     }
 
-    // Exact match comparison
-    passed =
-      expectedOutput == null ||
-      deepEqual(output, expectedOutput);
+    // Judgment: expectedOutput exact match + assertions
+    passed = true;
+    if (expectedOutput != null) {
+      passed = passed && deepEqual(output, expectedOutput);
+    }
+    if (assertions && assertions.length > 0) {
+      assertionResults = runAllAssertions(assertions, JSON.stringify(output));
+      passed = passed && assertionResults.every((r) => r.passed);
+    }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
     passed = false;
@@ -104,6 +113,7 @@ export async function POST(
       output: output ?? null,
       passed,
       error,
+      assertionResults: assertionResults.length > 0 ? assertionResults : null,
       durationMs,
     })
     .returning();

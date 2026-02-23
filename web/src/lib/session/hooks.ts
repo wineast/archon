@@ -6,16 +6,17 @@ import type { ChatSession } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function sessionsKey(agentId?: string, showAll?: boolean) {
+export function sessionsKey(agentId?: string, showAll?: boolean, source?: string) {
   if (!agentId) return "/api/sessions";
   const params = new URLSearchParams({ agentId });
   if (showAll) params.set("all", "true");
+  if (source) params.set("source", source);
   return `/api/sessions?${params}`;
 }
 
-export function useSessions(agentId?: string, showAll?: boolean) {
+export function useSessions(agentId?: string, showAll?: boolean, source?: string) {
   const { data, error, isLoading, mutate } = useSWR<ChatSession[]>(
-    sessionsKey(agentId, showAll),
+    sessionsKey(agentId, showAll, source),
     fetcher
   );
 

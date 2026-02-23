@@ -4,6 +4,8 @@ export {
   registerCompiledComponent,
   getCompiledComponent,
   clearCompiledRegistry,
+  registerUiHiddenTool,
+  isToolUiHidden,
 } from "./_registry";
 export type { ComponentRendererProps } from "./_registry";
 export { DynamicComponentRenderer } from "./_dynamic-renderer";
@@ -14,3 +16,4 @@ export {
   keyToPascal,
 } from "./_compose";
 export type { ComponentRecord } from "./_compose";
+export { AgentIdProvider } from "./_agent-context";

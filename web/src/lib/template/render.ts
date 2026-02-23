@@ -17,7 +17,7 @@ import {
   getReferencedBuiltinFunctionKeys,
 } from "@/lib/pool/queries";
 import { resolveAndCompileFunctions, buildBaseDeps } from "@/lib/functions/compile";
-import type { FunctionsSandbox } from "@/lib/functions/sandbox";
+import type { FunctionsExec } from "@/lib/functions/exec";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,8 +53,8 @@ export interface TemplateData {
   defsMap: Record<string, JsonSchema7>;
   datasetEntries: Record<string, Array<{ value: string }>>;
   ontologyTypes: OntologyTypeTemplateItem[];
-  /** QuickJS sandbox with compiled agent functions (for template filters/tags). */
-  fnSandbox?: FunctionsSandbox;
+  /** Compiled agent functions (for template filters/tags). */
+  fnExec?: FunctionsExec;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,12 +153,12 @@ export function buildToolNamespace(
 // ---------------------------------------------------------------------------
 
 /**
- * Dispose resources held by TemplateData (currently: QuickJS sandbox).
- * Safe to call multiple times or on data without a sandbox.
+ * Dispose resources held by TemplateData (currently: function exec context).
+ * Safe to call multiple times or on data without an exec context.
  */
 export function disposeTemplateData(data: TemplateData): void {
-  data.fnSandbox?.dispose();
-  data.fnSandbox = undefined;
+  data.fnExec?.dispose();
+  data.fnExec = undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -191,7 +191,7 @@ async function renderWithData(
     documents: data.docs,
     currentDoc,
     variables,
-    fnSandbox: data.fnSandbox,
+    fnExec: data.fnExec,
   });
 }
 
@@ -272,8 +272,8 @@ export async function gatherTemplateData(
     };
   });
 
-  // Compile functions sandbox (silently degrade on failure)
-  let fnSandbox: FunctionsSandbox | undefined;
+  // Compile functions (silently degrade on failure)
+  let fnExec: FunctionsExec | undefined;
   if (fnRows.length > 0) {
     try {
       const baseDeps = buildBaseDeps(builtinFnKeys);
@@ -282,14 +282,14 @@ export async function gatherTemplateData(
         code: r.code,
         parameters: (r.parametersSchema ?? {}) as JsonSchema7,
       }));
-      const { sandbox } = await resolveAndCompileFunctions(records, defsMap, baseDeps);
-      fnSandbox = sandbox;
+      const { exec } = await resolveAndCompileFunctions(records, defsMap, baseDeps);
+      fnExec = exec;
     } catch (e) {
-      console.error("[gatherTemplateData] function sandbox compilation failed:", e);
+      console.error("[gatherTemplateData] function compilation failed:", e);
     }
   }
 
-  return { resolvedVars, docs, toolRows, defsMap, datasetEntries, ontologyTypes, fnSandbox };
+  return { resolvedVars, docs, toolRows, defsMap, datasetEntries, ontologyTypes, fnExec };
 }
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDownIcon } from "lucide-react";
+import { CheckCircle2Icon, ChevronDownIcon, XCircleIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ToolTestRunResultRow } from "@/db/schema";
 
@@ -84,6 +84,29 @@ export function ToolRunResultCard({
               }`}>
                 {JSON.stringify(result.output, null, 2)}
               </pre>
+            </div>
+          )}
+
+          {result.assertionResults && result.assertionResults.length > 0 && (
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-medium text-muted-foreground">
+                Assertions
+              </p>
+              {result.assertionResults.map((ar, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-1.5 text-xs ${
+                    ar.passed ? "text-green-600" : "text-destructive"
+                  }`}
+                >
+                  {ar.passed ? (
+                    <CheckCircle2Icon className="size-3 shrink-0" />
+                  ) : (
+                    <XCircleIcon className="size-3 shrink-0" />
+                  )}
+                  <span>{ar.message}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

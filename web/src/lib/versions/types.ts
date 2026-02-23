@@ -14,6 +14,7 @@ export interface ToolSnapshotItem {
   url: string | null;
   componentKey: string | null;
   enabled: boolean;
+  uiHidden?: boolean;
   executionTarget: "server" | "client" | "host";
   testCases: ToolTestCaseSnapshotItem[];
 }
@@ -117,6 +118,7 @@ export interface ToolTestCaseSnapshotItem {
   input: Record<string, unknown>;
   expectedOutput: unknown;
   tags: string[];
+  assertions?: Assertion[];
 }
 
 export interface FunctionTestCaseSnapshotItem {
@@ -237,6 +239,24 @@ export interface VersionDetail extends VersionListItem {
   snapshot: AgentSnapshot;
 }
 
+/* ─────────── Agent File Snapshot ─────────── */
+
+export interface AgentFileSnapshotItem {
+  name: string;
+  contentType: string;
+  size: number;
+  /** Relative path inside the ZIP, e.g. "files/foo.pdf" */
+  zipPath: string;
+}
+
+/* ─────────── Embed Token Snapshot ─────────── */
+
+export interface EmbedTokenSnapshotItem {
+  name: string;
+  allowedOrigins: string[];
+  isActive: boolean;
+}
+
 /* ─────────── Agent Export/Import ─────────── */
 
 export interface AgentExportVersion {
@@ -263,6 +283,8 @@ export interface AgentExportData {
     contextCompressionEnabled: boolean;
   };
   versions: AgentExportVersion[];
+  files?: AgentFileSnapshotItem[];
+  embedTokens?: EmbedTokenSnapshotItem[];
 }
 
 /** Validate that the given value is a valid AgentExportData shape. */
@@ -276,5 +298,6 @@ export function validateExportData(
   const agent = d.agent as Record<string, unknown>;
   if (typeof agent.name !== "string" || !agent.name.trim()) return false;
   if (!Array.isArray(d.versions) || d.versions.length === 0) return false;
+  if (d.files !== undefined && !Array.isArray(d.files)) return false;
   return true;
 }

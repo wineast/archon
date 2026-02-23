@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Track DB call results
-let overrideResult: unknown[] = [];
-let agentResult: unknown[] = [];
-let orgSlotResult: unknown[] = [];
+// resolveAgentSlot/resolveOrgSlot makes at most 2 DB calls:
+//   idx 0 = agentSlots/orgSlots query
+//   idx 1 = modelConfigs query (only if binding found)
+let bindingResult: unknown[] = [];
 let modelConfigResult: unknown[] = [];
 let callIndex = 0;
 
@@ -14,11 +15,9 @@ vi.mock("@/db", () => ({
         where: () => ({
           limit: () => {
             const idx = callIndex++;
-            // Call order depends on path:
-            // resolveSlot: 0=override, 1=agent, 2=orgSlot, 3=modelConfig
-            // or: 0=override, 1=modelConfig (if override found)
-            const results = [overrideResult, agentResult, orgSlotResult, modelConfigResult];
-            return results[idx] ?? [];
+            if (idx === 0) return bindingResult;
+            if (idx === 1) return modelConfigResult;
+            return [];
           },
         }),
       }),
@@ -27,96 +26,135 @@ vi.mock("@/db", () => ({
 }));
 
 vi.mock("@/db/schema", () => ({
-  agents: { id: "id", orgId: "orgId" },
-  agentSlotOverrides: { agentId: "agentId", slotKey: "slotKey", targetAgentId: "targetAgentId" },
-  orgSlots: { orgId: "orgId", slotKey: "slotKey", agentId: "agentId" },
+  agentSlots: { agentId: "agentId", slotKey: "slotKey", targetAgentId: "targetAgentId" },
+  orgSlots: { orgId: "orgId", slotKey: "slotKey", targetAgentId: "targetAgentId" },
   modelConfigs: { agentId: "agentId", modelId: "modelId", temperature: "temperature", isActive: "isActive" },
 }));
 
-import { resolveSlot, invalidateSlotCache } from "../resolve-slot";
+import { resolveAgentSlot, resolveOrgSlot, invalidateSlotCache } from "../resolve-slot";
 
-describe("resolveSlot", () => {
+describe("resolveAgentSlot", () => {
   beforeEach(() => {
     invalidateSlotCache();
-    overrideResult = [];
-    agentResult = [];
-    orgSlotResult = [];
+    bindingResult = [];
     modelConfigResult = [];
     callIndex = 0;
   });
 
-  it("returns agent override when found", async () => {
-    overrideResult = [{ targetAgentId: "override-agent" }];
-    // Next call is getActiveModelConfig for the override target
-    agentResult = [{ modelId: "openai/gpt-4o", temperature: 0.5 }]; // reused as modelConfig result at idx=1
+  it("returns agent binding when found", async () => {
+    bindingResult = [{ targetAgentId: "override-agent" }];
+    modelConfigResult = [{ modelId: "openai/gpt-4o", temperature: 0.5 }];
 
-    const result = await resolveSlot("my-agent", "builder");
+    const result = await resolveAgentSlot("my-agent", "builder");
     expect(result.agentId).toBe("override-agent");
     expect(result.model).toBe("openai/gpt-4o");
     expect(result.temperature).toBe(0.5);
   });
 
-  it("falls back to org slot when no override", async () => {
-    overrideResult = []; // no override
-    agentResult = [{ orgId: "org-1" }]; // agent row
-    orgSlotResult = [{ agentId: "org-slot-agent" }]; // org slot
-    modelConfigResult = [{ modelId: "anthropic/claude-sonnet-4", temperature: 0.3 }];
+  it("falls back to null agentId when nothing configured", async () => {
+    bindingResult = [];
 
-    const result = await resolveSlot("my-agent", "builder");
-    expect(result.agentId).toBe("org-slot-agent");
-    expect(result.model).toBe("anthropic/claude-sonnet-4");
-  });
-
-  it("falls back to hardcoded defaults when nothing configured", async () => {
-    overrideResult = [];
-    agentResult = [{ orgId: "org-1" }];
-    orgSlotResult = [];
-    // No modelConfig call needed
-
-    const result = await resolveSlot("my-agent", "builder");
-    expect(result.agentId).toBe("");
+    const result = await resolveAgentSlot("my-agent", "builder");
+    expect(result.agentId).toBeNull();
     expect(result.model).toBe("");
-    expect(result.temperature).toBe(0.3);
+    expect(result.temperature).toBe(0);
   });
 
-  it("uses default model when modelConfig not found for override", async () => {
-    overrideResult = [{ targetAgentId: "override-agent" }];
-    agentResult = []; // no modelConfig found
+  it("uses default model when modelConfig not found for binding", async () => {
+    bindingResult = [{ targetAgentId: "override-agent" }];
+    modelConfigResult = [];
 
-    const result = await resolveSlot("my-agent", "assist");
+    const result = await resolveAgentSlot("my-agent", "assist");
     expect(result.agentId).toBe("override-agent");
     expect(result.model).toBe("");
     expect(result.temperature).toBe(0.7);
   });
 
   it("caches results within TTL", async () => {
-    overrideResult = [{ targetAgentId: "override-agent" }];
-    agentResult = [{ modelId: "openai/gpt-4o", temperature: 0.5 }];
+    bindingResult = [{ targetAgentId: "override-agent" }];
+    modelConfigResult = [{ modelId: "openai/gpt-4o", temperature: 0.5 }];
 
-    const result1 = await resolveSlot("cached-agent", "builder");
+    const result1 = await resolveAgentSlot("cached-agent", "builder");
     const savedCallIndex = callIndex;
 
-    // Change results - should not affect cached result
-    overrideResult = [];
-    callIndex = savedCallIndex; // don't reset
+    bindingResult = [];
+    callIndex = savedCallIndex;
 
-    const result2 = await resolveSlot("cached-agent", "builder");
+    const result2 = await resolveAgentSlot("cached-agent", "builder");
     expect(result2.agentId).toBe(result1.agentId);
-    expect(callIndex).toBe(savedCallIndex); // no new DB calls
+    expect(callIndex).toBe(savedCallIndex);
   });
 
   it("invalidates cache for specific agent", async () => {
-    overrideResult = [{ targetAgentId: "override-agent" }];
-    agentResult = [{ modelId: "openai/gpt-4o", temperature: 0.5 }];
+    bindingResult = [{ targetAgentId: "override-agent" }];
+    modelConfigResult = [{ modelId: "openai/gpt-4o", temperature: 0.5 }];
 
-    await resolveSlot("agent-x", "builder");
+    await resolveAgentSlot("agent-x", "builder");
     invalidateSlotCache("agent-x");
 
     callIndex = 0;
-    overrideResult = [{ targetAgentId: "new-override" }];
-    agentResult = [{ modelId: "new-model", temperature: 0.9 }];
+    bindingResult = [{ targetAgentId: "new-override" }];
+    modelConfigResult = [{ modelId: "new-model", temperature: 0.9 }];
 
-    const result = await resolveSlot("agent-x", "builder");
+    const result = await resolveAgentSlot("agent-x", "builder");
     expect(result.agentId).toBe("new-override");
+  });
+});
+
+describe("resolveOrgSlot", () => {
+  beforeEach(() => {
+    invalidateSlotCache();
+    bindingResult = [];
+    modelConfigResult = [];
+    callIndex = 0;
+  });
+
+  it("returns org binding when found", async () => {
+    bindingResult = [{ targetAgentId: "support-agent" }];
+    modelConfigResult = [{ modelId: "anthropic/claude-sonnet-4", temperature: 0.7 }];
+
+    const result = await resolveOrgSlot("my-org", "support");
+    expect(result.agentId).toBe("support-agent");
+    expect(result.model).toBe("anthropic/claude-sonnet-4");
+    expect(result.temperature).toBe(0.7);
+  });
+
+  it("falls back to null agentId when nothing configured", async () => {
+    bindingResult = [];
+
+    const result = await resolveOrgSlot("my-org", "support");
+    expect(result.agentId).toBeNull();
+    expect(result.model).toBe("");
+    expect(result.temperature).toBe(0);
+  });
+
+  it("caches results within TTL", async () => {
+    bindingResult = [{ targetAgentId: "support-agent" }];
+    modelConfigResult = [{ modelId: "anthropic/claude-sonnet-4", temperature: 0.7 }];
+
+    const result1 = await resolveOrgSlot("cached-org", "support");
+    const savedCallIndex = callIndex;
+
+    bindingResult = [];
+    callIndex = savedCallIndex;
+
+    const result2 = await resolveOrgSlot("cached-org", "support");
+    expect(result2.agentId).toBe(result1.agentId);
+    expect(callIndex).toBe(savedCallIndex);
+  });
+
+  it("invalidates cache for specific org", async () => {
+    bindingResult = [{ targetAgentId: "support-agent" }];
+    modelConfigResult = [{ modelId: "old-model", temperature: 0.5 }];
+
+    await resolveOrgSlot("org-x", "support");
+    invalidateSlotCache("org-x");
+
+    callIndex = 0;
+    bindingResult = [{ targetAgentId: "new-support" }];
+    modelConfigResult = [{ modelId: "new-model", temperature: 0.9 }];
+
+    const result = await resolveOrgSlot("org-x", "support");
+    expect(result.agentId).toBe("new-support");
   });
 });

@@ -49,10 +49,37 @@ data = { name, input, output }
 
 | 模块 | 可用导出 |
 |------|---------|
-| `archon:react` | `React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment` |
-| `archon:ui` | `Badge`、`Spinner`、`Table`、`TableBody`、`TableCell`、`TableHead`、`TableHeader`、`TableRow`、`Tooltip`、`TooltipContent`、`TooltipTrigger`、`CollapsibleSection`、`ResultHeader`、`ResultSection`、`RateSheetLinks`、`RateSheetPanel`、`SourceDocumentViewer` |
-| `archon:icons` | `ChevronRight`、`FileText` |
+| `archon:react` | `React`、`useState`、`useMemo`、`useCallback`、`useEffect`、`useRef`、`Fragment`、`useAgentId` |
+| `archon:ui` | `Badge`、`Spinner`、`Table`、`TableBody`、`TableCell`、`TableHead`、`TableHeader`、`TableRow`、`Tooltip`、`TooltipContent`、`TooltipTrigger`、`CollapsibleSection`、`Sheet`、`SheetContent`、`SheetHeader`、`SheetTitle`、`Popover`、`PopoverContent`、`PopoverTrigger` |
+| `archon:icons` | `ChevronRight`、`ChevronDownIcon`、`FileText`、`WrenchIcon`、`CheckCircleIcon`、`ClockIcon`、`XCircleIcon`、`CircleIcon` |
 | `archon:component/<key>` | 引用同 Agent 下的其他组件 |
+
+---
+
+## 获取当前 Agent ID
+
+通过 `useAgentId()` hook 获取当前运行的 Agent ID，常用于构造文件代理 URL：
+
+```jsx
+import { useAgentId } from "archon:react";
+
+export default function({ data }) {
+  var agentId = useAgentId();
+
+  var url = data.output.fileUrl;
+  if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+    var fileName = url.split("/").pop();
+    if (agentId && fileName) {
+      url = "/api/agents/" + agentId + "/files/serve?name=" + encodeURIComponent(fileName);
+    }
+  }
+
+  return <iframe src={url} className="w-full h-full" />;
+}
+```
+
+- 在 chat / embed 页面中，平台通过 `AgentIdProvider` 注入 agentId
+- 相对路径文件通过 `/api/agents/{id}/files/serve?name=xxx` 代理，自动 302 到 Blob Storage URL
 
 ---
 

@@ -5,10 +5,11 @@ import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { getDatasets, resolveDatasets, renderField, renderObjectField } from "@/lib/datasets/queries";
 
 export async function POST(req: Request) {
-  const { text, agentId, mode } = (await req.json()) as {
+  const { text, agentId, mode, hostContext } = (await req.json()) as {
     text: string;
     agentId: string;
     mode?: "dataset";
+    hostContext?: Record<string, unknown>;
   };
 
   if (!agentId) {
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
   const versionId = await resolveEditingVersionId(agentId);
   const data = await gatherTemplateData(agentId, versionId);
   try {
-    const rendered = await renderTemplate(text, data);
+    const rendered = await renderTemplate(text, data, hostContext ? { host: hostContext } : undefined);
     return NextResponse.json({ rendered });
   } finally {
     disposeTemplateData(data);

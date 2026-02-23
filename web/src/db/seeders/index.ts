@@ -9,7 +9,7 @@ import { seedModels } from "./seed-models";
 import { seedBuiltinPool } from "./seed-builtin-pool";
 import { seedUsers } from "./seed-users";
 
-/** Seed pipeline — models first, then builtin pool resources, then users (which auto-create personal orgs + slot agents). */
+/** Seed pipeline — models first, then builtin pool resources, then users (which auto-create personal orgs). */
 export const pipeline: Seeder[] = [
   seedModels,
   seedBuiltinPool,

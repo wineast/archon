@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SchemaParameterPreview } from "./schema-parameter-preview";
 import { SchemaCodeAssistDialog } from "./schema-code-assist-dialog";
 import { useDatasetVarsMap } from "@/lib/datasets/hooks";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import { isObjectSchema } from "@/lib/schemas/json-schema-utils";
 import schemaGuideContent from "../../../guide/schema.md";
@@ -51,6 +52,7 @@ export function InlineSchemaEditor({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewJsonError, setPreviewJsonError] = useState<string | null>(null);
   const [schemaAssistOpen, setSchemaAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
 
   // Dataset variables for template completions
   const { datasetVars } = useDatasetVarsMap(agentId);
@@ -151,22 +153,7 @@ export function InlineSchemaEditor({
         <label className="text-xs font-medium text-muted-foreground">
           {label}
         </label>
-        <Tabs defaultValue="edit" className="mt-1">
-          <TabsList className="h-7">
-            <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
-            <TabsTrigger value="parameters" className="text-xs">Parameters</TabsTrigger>
-          </TabsList>
-          <TabsContent value="edit">
-            <JsonEditor
-              value={JSON.stringify(schema, null, 2)}
-              height="300px"
-              readOnly
-            />
-          </TabsContent>
-          <TabsContent value="parameters">
-            <SchemaParameterPreview schema={schema} />
-          </TabsContent>
-        </Tabs>
+        <SchemaParameterPreview schema={schema} />
       </div>
     );
   }
@@ -194,6 +181,7 @@ export function InlineSchemaEditor({
         onOpenChange={setSchemaAssistOpen}
         schema={customJson}
         agentId={agentId}
+        orgId={orgId}
         onApply={handleAssistApply}
       />
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-1">

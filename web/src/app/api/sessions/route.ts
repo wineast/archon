@@ -7,6 +7,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const agentId = url.searchParams.get("agentId");
   const showAll = url.searchParams.get("all") === "true";
+  const source = url.searchParams.get("source") ?? "chat";
 
   if (!agentId) {
     return NextResponse.json({ error: "agentId is required" }, { status: 400 });
@@ -17,11 +18,11 @@ export async function GET(req: Request) {
 
   // Admin+ can see all sessions if requested
   if (showAll && AGENT_ROLE_LEVELS[ctx.role] >= AGENT_ROLE_LEVELS["admin"]) {
-    const sessions = await listSessions(50, agentId);
+    const sessions = await listSessions(50, agentId, source);
     return NextResponse.json(sessions);
   }
 
   // Default: user's own sessions only
-  const sessions = await listSessionsByUser(50, agentId, ctx.user.id);
+  const sessions = await listSessionsByUser(50, agentId, ctx.user.id, source);
   return NextResponse.json(sessions);
 }

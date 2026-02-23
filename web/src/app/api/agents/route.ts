@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { agents, agentMembers, agentVersions, orgMembers, orgs } from "@/db/schema";
+import { ensureBuiltinComponentRefs } from "@/lib/pool/builtin-refs";
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
@@ -125,16 +126,19 @@ export async function POST(req: Request) {
     role: "owner",
   });
 
-  // Auto-create initial version 0.1.0
+  // Auto-create initial version 0.0.0
   const [initialVersion] = await db
     .insert(agentVersions)
     .values({
       agentId: agent.id,
-      version: "0.1.0",
+      version: "0.0.0",
       changelog: "Initial version",
       createdBy: user.id,
     })
     .returning();
+
+  // Seed builtin component refs
+  await ensureBuiltinComponentRefs(db, agent.id, initialVersion.id);
 
   const updatedAgent = await db
     .update(agents)

@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
 
 # ============================================================
 # Setup
@@ -54,8 +54,15 @@ up: db-up
 		lsof -ti :$$DEV_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$SB_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$STUDIO_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
-		echo "🚀 启动服务 (dev=$$DEV_PORT, storybook=$$SB_PORT, studio=$$STUDIO_PORT)" && \
+		echo "" && \
+		echo "🚀 启动服务..." && \
 		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio}.log" && \
+		echo "" && \
+		echo "  Dev Server   → http://localhost:$$DEV_PORT" && \
+		echo "  Storybook    → http://localhost:$$SB_PORT" && \
+		echo "  DB Studio    → https://local.drizzle.studio?port=$$STUDIO_PORT" && \
+		echo "  Embed Test   → http://localhost:$$DEV_PORT/embed/test.html" && \
+		echo "" && \
 		(cd web && npm run dev -- --port $$DEV_PORT) > $(LOG_DIR)/dev.log 2>&1 & \
 		(cd web && npm run storybook -- -p $$SB_PORT) > $(LOG_DIR)/storybook.log 2>&1 & \
 		(cd web && npx drizzle-kit studio --port $$STUDIO_PORT) > $(LOG_DIR)/studio.log 2>&1 & \
@@ -64,8 +71,15 @@ up: db-up
 		lsof -ti :3000 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :4983 2>/dev/null | xargs kill 2>/dev/null || true; \
-		echo "🚀 启动服务 (dev=3000, storybook=6006, studio=4983)" && \
+		echo "" && \
+		echo "🚀 启动服务..." && \
 		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio}.log" && \
+		echo "" && \
+		echo "  Dev Server   → http://localhost:3000" && \
+		echo "  Storybook    → http://localhost:6006" && \
+		echo "  DB Studio    → https://local.drizzle.studio" && \
+		echo "  Embed Test   → http://localhost:3000/embed/test.html" && \
+		echo "" && \
 		(cd web && npm run dev) > $(LOG_DIR)/dev.log 2>&1 & \
 		(cd web && npm run storybook) > $(LOG_DIR)/storybook.log 2>&1 & \
 		(cd web && npm run db:studio) > $(LOG_DIR)/studio.log 2>&1 & \
@@ -238,4 +252,22 @@ wt-init:
 ## 工作区数据清理（wt-init 的反向）
 wt-fini:
 	@./scripts/wt-fini.sh $(or $(DIR),.)
+
+# ============================================================
+# Fixtures
+# ============================================================
+
+## 将 data/fixtures/ 下的文件夹打包为 ZIP（用法: make fixture-zip NAME=gmcc-advisor）
+fixture-zip:
+	@if [ -z "$(NAME)" ]; then echo "用法: make fixture-zip NAME=<folder-name>"; exit 1; fi
+	@DIR="data/fixtures/$(NAME)"; \
+	if [ ! -d "$$DIR" ]; then echo "❌ $$DIR 不存在"; exit 1; fi; \
+	OUT="data/fixtures/$(NAME).zip"; \
+	if [ -f "$$OUT" ]; then \
+		V=1; while [ -f "data/fixtures/$(NAME).v$$V.zip" ]; do V=$$((V+1)); done; \
+		mv "$$OUT" "data/fixtures/$(NAME).v$$V.zip"; \
+		echo "📦 已有 zip 重命名为 $(NAME).v$$V.zip"; \
+	fi; \
+	(cd "$$DIR" && zip -r "../$(NAME).zip" .) && \
+	echo "✅ $$OUT ($$(du -h "$$OUT" | cut -f1))"
 

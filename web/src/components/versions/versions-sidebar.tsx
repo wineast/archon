@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   EllipsisVerticalIcon,
   EyeIcon,
+  MessageSquareIcon,
   PlusIcon,
   RocketIcon,
   TagIcon,
@@ -35,6 +36,7 @@ interface VersionsSidebarProps {
   onPublish: (id: string) => void;
   onRollback: (id: string) => void;
   onDelete: (id: string) => void;
+  onChat?: (version: VersionListItem) => void;
 }
 
 function formatDate(dateStr: string) {
@@ -55,6 +57,7 @@ export function VersionsSidebar({
   onPublish,
   onRollback,
   onDelete,
+  onChat,
 }: VersionsSidebarProps) {
   const t = useTranslations("build");
   const [deleteTarget, setDeleteTarget] = useState<VersionListItem | null>(
@@ -135,6 +138,12 @@ export function VersionsSidebar({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-36">
+                        {onChat && (
+                          <DropdownMenuItem onClick={() => onChat(v)}>
+                            <MessageSquareIcon className="mr-2 size-3.5" />
+                            {t("chat")}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => onViewDetail(v.id)}>
                           <EyeIcon className="mr-2 size-3.5" />
                           {t("detail")}

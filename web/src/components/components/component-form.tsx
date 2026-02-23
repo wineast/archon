@@ -18,6 +18,7 @@ import {
 import deepEqual from "fast-deep-equal";
 import { Button } from "@/components/ui/button";
 import { ComponentHelpButton } from "./component-help-dialog";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import { JsxAssistDialog } from "./jsx-assist-dialog";
 
 export interface ComponentFormHandle {
@@ -43,6 +44,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
   const originalRef = useRef<ComponentDefinition>({ ...component });
   const currentSource = form.watch("componentSource");
   const [jsxAssistOpen, setJsxAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
 
   // Infer referenced components from JSX source
   const referencedComponents = useMemo(() => {
@@ -155,6 +157,7 @@ export function ComponentForm({ component, agentId, allComponents, onDraftRef, o
               jsxSource={currentSource}
               onApply={(src) => form.setValue("componentSource", src, { shouldDirty: true })}
               agentId={agentId}
+              orgId={orgId}
             />
             <Controller
               name="componentSource"

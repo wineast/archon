@@ -103,6 +103,7 @@ export function ToolsPanel({ agentId, skillsEnabled = true }: { agentId: string;
           handler: updated.handler,
           url: updated.url,
           componentId: updated.componentId,
+          uiHidden: updated.uiHidden,
           sandboxMode: updated.sandboxMode,
         },
         mutate

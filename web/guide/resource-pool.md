@@ -223,7 +223,6 @@ seedModels → seedBuiltinPool → seedUsers
 ### 设计原则
 
 - **池资源 seed** 在 pipeline 中集中完成，早于用户/org 创建
-- **`ensureOrgDefaults()`** 只做 org 级别的事：创建 agent、refs、configs，不负责池资源创建
 - **Ref 函数**（`web/src/lib/pool/builtin-refs.ts`）只查询 + 创建引用，不触碰池资源本身
 
 ### Ref 创建
@@ -232,11 +231,11 @@ seedModels → seedBuiltinPool → seedUsers
 
 #### `ensureBuiltinToolRefs(db, buildChatAgentId, versionId)`
 
-为 builder slot agent 创建对所有 builtin 池工具的引用。在 `ensureOrgDefaults()` 中调用。
+为 builder slot agent 创建对所有 builtin 池工具的引用。在创建用户 Agent 时调用（`ensureBuiltinComponentRefs` 同理）。
 
 #### `ensureBuiltinWikiRefs(db, agentId, versionId)`
 
-为 assist slot agent 创建对所有 builtin 池 wiki 的引用。在 `ensureOrgDefaults()` 中调用。
+为 assist slot agent 创建对所有 builtin 池 wiki 的引用。
 
 ---
 
@@ -274,17 +273,21 @@ Agent 必须从共享池添加 builtin 函数引用，运行时才会注入对�
 
 ### AI 辅助编辑集成
 
-assist agent 的系统提示词是一个 LiquidJS 模板，通过 `{% if fieldContext == "xxx" %}{% include 'yyy' %}{% endif %}` 条件引用不同的 guide wiki。`fieldContext` 作为 `extraVars` 在模板渲染时注入，由各 assist 路由传入。
+assist agent 通过 embed iframe 提供 AI 辅助编辑能力。AssistDialog 作为 host，通过 postMessage 通信协议与 embed iframe 交互：
 
-| 路由 | fieldContext | entity |
-|------|-------------|--------|
-| prompt-assist | `system-prompt` | `prompt` |
-| tool-code-assist | `tool-handler` | `code` |
-| jsx-assist | `component-jsx` | `jsx` |
-| function-code-assist | `function-code` | `code` |
-| wiki-assist | `wiki-content` | `content` |
-| dataset-assist | `dataset-data` | `data` |
-| schema-code-assist | `schema` | `schema` |
+1. **系统提示词**：assist agent 的系统提示词是 LiquidJS 模板，通过 `host.fieldContext` 条件分支提供场景特定指引
+2. **Host 工具**：`update_content`（整体替换）和 `edit_content`（局部编辑）通过 postMessage 在 dialog 宿主中执行
+3. **上下文注入**：`fieldContext` 和 `currentContent` 通过 `archon:context` postMessage 传递给 iframe
+
+| fieldContext | 场景 |
+|---|---|
+| `system-prompt` | 系统提示词编辑 |
+| `tool-handler` | 工具 Handler 代码 |
+| `component-jsx` | JSX 组件代码 |
+| `function-code` | 函数代码 |
+| `wiki-content` | Wiki 文档 |
+| `dataset-data` | 数据集 |
+| `schema` | JSON Schema |
 
 ---
 

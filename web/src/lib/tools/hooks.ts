@@ -3,16 +3,24 @@
 import useSWR from "swr";
 import { toast } from "sonner";
 import type { ToolRow } from "@/db/schema";
+import type { VersionMode } from "@/lib/versions/mode";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function toolsApiKey(agentId?: string) {
-  return agentId ? `/api/tools?agentId=${agentId}` : null;
+export function toolsApiKey(agentId?: string, mode?: VersionMode) {
+  if (!agentId) return null;
+  const params = new URLSearchParams({ agentId });
+  if (mode === "published") {
+    params.set("mode", "published");
+  } else if (mode && typeof mode === "object") {
+    params.set("versionId", mode.versionId);
+  }
+  return `/api/tools?${params}`;
 }
 
-export function useTools(agentId?: string) {
+export function useTools(agentId?: string, mode?: VersionMode) {
   const { data, error, isLoading, mutate } = useSWR<ToolRow[]>(
-    toolsApiKey(agentId),
+    toolsApiKey(agentId, mode),
     fetcher
   );
 
@@ -33,6 +41,7 @@ export async function createTool(
     handler?: string | null;
     url?: string | null;
     enabled?: boolean;
+    componentId?: string;
   },
   mutate: () => void
 ) {

@@ -1,5 +1,5 @@
 {
-  "id": "bf9bd8d7-f70c-479f-bccd-1cfda3e439dc",
+  "id": "933151df-6efe-4c5e-a543-411a47b5b96c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -321,8 +321,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.agent_slot_overrides": {
-      "name": "agent_slot_overrides",
+    "public.agent_slots": {
+      "name": "agent_slots",
       "schema": "",
       "columns": {
         "id": {
@@ -367,9 +367,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "agent_slot_overrides_agent_id_agents_id_fk": {
-          "name": "agent_slot_overrides_agent_id_agents_id_fk",
-          "tableFrom": "agent_slot_overrides",
+        "agent_slots_agent_id_agents_id_fk": {
+          "name": "agent_slots_agent_id_agents_id_fk",
+          "tableFrom": "agent_slots",
           "tableTo": "agents",
           "columnsFrom": [
             "agent_id"
@@ -380,9 +380,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "agent_slot_overrides_target_agent_id_agents_id_fk": {
-          "name": "agent_slot_overrides_target_agent_id_agents_id_fk",
-          "tableFrom": "agent_slot_overrides",
+        "agent_slots_target_agent_id_agents_id_fk": {
+          "name": "agent_slots_target_agent_id_agents_id_fk",
+          "tableFrom": "agent_slots",
           "tableTo": "agents",
           "columnsFrom": [
             "target_agent_id"
@@ -396,8 +396,8 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "agent_slot_overrides_agent_id_slot_key_idx": {
-          "name": "agent_slot_overrides_agent_id_slot_key_idx",
+        "agent_slots_agent_id_slot_key_idx": {
+          "name": "agent_slots_agent_id_slot_key_idx",
           "nullsNotDistinct": false,
           "columns": [
             "agent_id",
@@ -1053,6 +1053,13 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'chat'"
         },
         "share_id": {
           "name": "share_id",
@@ -4993,8 +5000,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "agent_id": {
-          "name": "agent_id",
+        "target_agent_id": {
+          "name": "target_agent_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -5029,12 +5036,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "org_slots_agent_id_agents_id_fk": {
-          "name": "org_slots_agent_id_agents_id_fk",
+        "org_slots_target_agent_id_agents_id_fk": {
+          "name": "org_slots_target_agent_id_agents_id_fk",
           "tableFrom": "org_slots",
           "tableTo": "agents",
           "columnsFrom": [
-            "agent_id"
+            "target_agent_id"
           ],
           "columnsTo": [
             "id"
@@ -6285,6 +6292,13 @@
           "notNull": true,
           "default": "'{}'"
         },
+        "assertions": {
+          "name": "assertions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
         "show_as_example": {
           "name": "show_as_example",
           "type": "boolean",
@@ -6401,6 +6415,12 @@
         "error": {
           "name": "error",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assertion_results": {
+          "name": "assertion_results",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -6600,6 +6620,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "ui_hidden": {
+          "name": "ui_hidden",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "execution_target": {
           "name": "execution_target",

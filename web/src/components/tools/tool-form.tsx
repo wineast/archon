@@ -22,8 +22,10 @@ import {
   useWatch,
 } from "react-hook-form";
 import deepEqual from "fast-deep-equal";
-import { BoxIcon, CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, SparklesIcon, ZapIcon } from "lucide-react";
+import { CodeIcon, GlobeIcon, MonitorIcon, ServerIcon, SparklesIcon, EyeOffIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { GuideDialog } from "@/components/ui/guide-dialog";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import { ToolCodeAssistDialog } from "./tool-code-assist-dialog";
 import { Button } from "@/components/ui/button";
 import toolHandlerDoc from "../../../guide/tool-handler.md";
@@ -60,12 +62,12 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange, readOnly, h
     detectHandlerTab(tool)
   );
   const [codeAssistOpen, setCodeAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
   const originalRef = useRef<ToolDefinition>({ ...tool });
 
   // Watch only fields needed for validation / conditional rendering
   const name = useWatch({ control: form.control, name: "name" });
   const executionTarget = useWatch({ control: form.control, name: "executionTarget" });
-  const sandboxMode = useWatch({ control: form.control, name: "sandboxMode" });
 
   // Fetch components for component selector
   const { components: componentsList } = useComponents(agentId);
@@ -280,41 +282,9 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange, readOnly, h
                   toolName={name}
                   toolDescription={form.getValues("description")}
                   agentId={agentId}
+                  orgId={orgId}
                   onApply={(src) => form.setValue("handler", src, { shouldDirty: true })}
                 />
-                {executionTarget === "server" && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      沙盒
-                    </label>
-                    <div className="flex items-center rounded-md border border-border p-0.5">
-                      <button
-                        type="button"
-                        onClick={() => form.setValue("sandboxMode", "light", { shouldDirty: true })}
-                        className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                          sandboxMode === "light"
-                            ? "bg-muted text-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <ZapIcon className="size-3" />
-                        轻量
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => form.setValue("sandboxMode", "full", { shouldDirty: true })}
-                        className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors ${
-                          sandboxMode === "full"
-                            ? "bg-muted text-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <BoxIcon className="size-3" />
-                        完整
-                      </button>
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>
@@ -334,6 +304,24 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange, readOnly, h
             />
           )}
         />
+        <div className="flex items-center gap-2">
+          <Controller
+            name="uiHidden"
+            control={form.control}
+            render={({ field }) => (
+              <Switch
+                className="scale-75"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                disabled={readOnly}
+              />
+            )}
+          />
+          <EyeOffIcon className="size-3.5 text-muted-foreground" />
+          <label className="text-xs font-medium text-muted-foreground">
+            隐藏工具 UI
+          </label>
+        </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">
             UI Component

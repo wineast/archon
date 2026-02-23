@@ -1,12 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
+import JSZip from "jszip";
 import { db } from "@/db";
-import { agents, agentVersions } from "@/db/schema";
+import { agents, agentFiles, agentVersions, embedTokens } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { buildSnapshot } from "@/lib/versions/snapshot";
-import type { AgentExportData } from "@/lib/versions/types";
+import type {
+  AgentExportData,
+  AgentFileSnapshotItem,
+  EmbedTokenSnapshotItem,
+} from "@/lib/versions/types";
 
-/** GET — export agent as JSON (all versions + metadata) */
+/** GET — export agent as ZIP (manifest.json + files/) */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,13 +20,21 @@ export async function GET(
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const [[agent], versionRows] = await Promise.all([
+  const [[agent], versionRows, fileRows, tokenRows] = await Promise.all([
     db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
     db
       .select()
       .from(agentVersions)
       .where(eq(agentVersions.agentId, agentId))
       .orderBy(asc(agentVersions.createdAt)),
+    db
+      .select()
+      .from(agentFiles)
+      .where(eq(agentFiles.agentId, agentId)),
+    db
+      .select()
+      .from(embedTokens)
+      .where(eq(embedTokens.agentId, agentId)),
   ]);
 
   if (!agent) {
@@ -39,6 +52,33 @@ export async function GET(
     }))
   );
 
+  // Download file binaries and build file metadata
+  const zip = new JSZip();
+  const filesMetadata: AgentFileSnapshotItem[] = [];
+
+  await Promise.all(
+    fileRows.map(async (f) => {
+      const zipPath = `files/${f.name}`;
+      filesMetadata.push({
+        name: f.name,
+        contentType: f.contentType,
+        size: f.size,
+        zipPath,
+      });
+      const res = await fetch(f.url);
+      if (res.ok) {
+        zip.file(zipPath, await res.arrayBuffer());
+      }
+    })
+  );
+
+  // Map embed tokens (token value excluded for security)
+  const embedTokensSnapshot: EmbedTokenSnapshotItem[] = tokenRows.map((t) => ({
+    name: t.name,
+    allowedOrigins: t.allowedOrigins,
+    isActive: t.isActive,
+  }));
+
   const exportData: AgentExportData = {
     exportVersion: 1,
     exportedAt: new Date().toISOString(),
@@ -55,12 +95,18 @@ export async function GET(
       contextCompressionEnabled: agent.contextCompressionEnabled,
     },
     versions,
+    ...(filesMetadata.length > 0 ? { files: filesMetadata } : {}),
+    ...(embedTokensSnapshot.length > 0 ? { embedTokens: embedTokensSnapshot } : {}),
   };
 
-  return new NextResponse(JSON.stringify(exportData, null, 2), {
+  zip.file("manifest.json", JSON.stringify(exportData, null, 2));
+
+  const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });
+
+  return new NextResponse(zipBuffer, {
     headers: {
-      "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="${agent.slug}.json"`,
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${agent.slug}.zip"`,
     },
   });
 }

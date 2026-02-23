@@ -1,4 +1,4 @@
-import { tools, wikiDocuments, agentResourceRefs } from "@/db/schema";
+import { tools, components, wikiDocuments, agentResourceRefs } from "@/db/schema";
 import { and, isNull, eq } from "drizzle-orm";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -28,6 +28,34 @@ export async function ensureBuiltinToolRefs(
         versionId,
         resourceType: "tool",
         resourceId: pt.id,
+        enabled: true,
+      })
+      .onConflictDoNothing();
+  }
+}
+
+/**
+ * Ensure an agent has references to all builtin pool components.
+ * Called when creating any agent (slot or user-created).
+ */
+export async function ensureBuiltinComponentRefs(
+  db: DbLike,
+  agentId: string,
+  versionId: string,
+): Promise<void> {
+  const poolComponents = await db
+    .select({ id: components.id })
+    .from(components)
+    .where(and(isNull(components.agentId), eq(components.origin, "builtin")));
+
+  for (const pc of poolComponents) {
+    await db
+      .insert(agentResourceRefs)
+      .values({
+        agentId,
+        versionId,
+        resourceType: "component",
+        resourceId: pc.id,
         enabled: true,
       })
       .onConflictDoNothing();

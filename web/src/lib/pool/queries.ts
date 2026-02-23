@@ -315,7 +315,7 @@ export async function getAgentSchemas(
 // ---------------------------------------------------------------------------
 
 /**
- * Get all functions for a version (private + pool refs) — lightweight fields for sandbox.
+ * Get all functions for a version (private + pool refs) — lightweight fields for exec.
  */
 export async function getAgentFunctions(
   agentId: string,
@@ -373,3 +373,4 @@ export async function getReferencedBuiltinFunctionKeys(
 
   return new Set(rows.map((r) => r.key));
 }
+
