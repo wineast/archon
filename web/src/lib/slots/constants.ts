@@ -1,4 +1,5 @@
 import type { SlotKey } from "@/db/schema";
+// SLOT_DEFS is keyed by SlotKey (union of AgentSlotKey | OrgSlotKey)
 
 export interface SlotDef {
   label: string;

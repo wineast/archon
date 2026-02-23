@@ -23,7 +23,6 @@ import {
   MessageSquareIcon,
   NetworkIcon,
   PlugIcon,
-  PlugZapIcon,
   PuzzleIcon,
   SearchIcon,
   SettingsIcon,
@@ -77,7 +76,6 @@ import type { AgentRow } from "@/db/schema";
 import { TrashSheet } from "@/components/trash/trash-sheet";
 import { useTrash } from "@/lib/trash/hooks";
 import { toggleSkillsFeature } from "@/lib/skills/hooks";
-import { AgentSlotsPanel } from "@/components/slots/agent-slots-panel";
 import { JudgeConfigPanel } from "@/components/judge-config/judge-config-panel";
 import { EnvVarsPanel } from "@/components/env-vars/env-vars-panel";
 import { SupportBubble } from "@/components/support-bubble/support-bubble";
@@ -111,7 +109,6 @@ const SETTINGS_TABS: SettingsTab[] = [
   { value: "memory", label: "memory", icon: BrainIcon },
   { value: "rag", label: "rag", icon: SearchIcon },
   { value: "mcp", label: "mcp", icon: PlugIcon },
-  { value: "slots", label: "slots", icon: PlugZapIcon },
   // ── Runtime & operations ──
   { value: "files", label: "files", icon: FileIcon },
   { value: "sessions", label: "sessions", icon: MessageSquareIcon },
@@ -339,8 +336,6 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return canManageMembers ? <UsagePanel agentId={agent.id} /> : null;
       case "runtime":
         return canManageMembers ? <RuntimeEventsPanel agentId={agent.id} /> : null;
-      case "slots":
-        return <AgentSlotsPanel agentId={agent.id} orgId={agent.orgId} />;
       case "members":
         return canManageMembers ? (
           <MembersPanel agentId={agent.id} isPublic={agent.isPublic} />
@@ -381,7 +376,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         {/* Build Chat panel — far left, toggleable */}
         {chatOpen && (
           <div className="hidden shrink-0 sm:block">
-            <BuildChatPanel agentId={agent.id} />
+            <BuildChatPanel agentId={agent.id} orgId={agent.orgId} />
           </div>
         )}
 
@@ -535,7 +530,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         onOpenChange={setAuditLogOpen}
       />
 
-      <SupportBubble orgId={agent.orgId} />
+      <SupportBubble agentId={agent.id} />
     </div>
   );
 }

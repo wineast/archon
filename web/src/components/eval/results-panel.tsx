@@ -43,7 +43,6 @@ import {
   ChevronRightIcon,
   ClockIcon,
   BookmarkIcon,
-  ExternalLinkIcon,
   AlertTriangleIcon,
 } from "lucide-react";
 import {
@@ -54,7 +53,8 @@ import {
 } from "@/lib/eval/benchmark-hooks";
 import { useSWRConfig } from "swr";
 import type { AssertionFailConfig } from "@/lib/eval/types";
-import { Link } from "@/i18n/navigation";
+import { SlotAgentSelect } from "@/components/slots/slot-agent-select";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 
 interface ResultsPanelProps {
   agentId?: string;
@@ -74,8 +74,9 @@ export function ResultsPanel({
     allDbTools.filter((t) => t.enabled).map((t) => t.name);
 
   // Resolve evaluator slot
-  const { evaluator } = useResolvedEvaluator(agentId);
+  const { evaluator, mutate: mutateEvaluator } = useResolvedEvaluator(agentId);
   const judgeAgentId = evaluator?.judgeAgentId ?? undefined;
+  const orgId = useAgentOrgId(agentId);
 
   // Judge Agent's model configs and judge configs
   const { configs: judgeModelConfigs } = useModelConfigs(judgeAgentId);
@@ -336,18 +337,18 @@ export function ResultsPanel({
 
         {/* Area 2: Judge Configuration */}
         <div className="rounded-md border p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
               Judge Agent
             </span>
-            {evaluator?.judgeAgentSlug && (
-              <Link
-                href={`/../${evaluator.judgeAgentSlug}/build?tab=judge`}
-                className="flex items-center gap-1 text-[10px] text-primary hover:underline"
-              >
-                {evaluator.judgeAgentName}
-                <ExternalLinkIcon className="size-2.5" />
-              </Link>
+            {agentId && orgId && (
+              <SlotAgentSelect
+                agentId={agentId}
+                orgId={orgId}
+                slotKey="evaluator"
+                className="flex-1"
+                onChanged={mutateEvaluator}
+              />
             )}
           </div>
 
@@ -355,7 +356,7 @@ export function ResultsPanel({
             <div className="flex items-start gap-2 rounded-md bg-amber-50 p-2 dark:bg-amber-950/20">
               <AlertTriangleIcon className="mt-0.5 size-3 shrink-0 text-amber-500" />
               <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                Evaluator slot not configured. Go to Slots tab to assign a Judge Agent.
+                请选择一个 Judge Agent
               </p>
             </div>
           )}

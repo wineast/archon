@@ -40,8 +40,14 @@ import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeR
 
 /* ─────────── Slot Key Constants ─────────── */
 
-export const SLOT_KEYS = ["builder", "assist", "evaluator", "support"] as const;
-export type SlotKey = (typeof SLOT_KEYS)[number];
+export const AGENT_SLOT_KEYS = ["builder", "assist", "evaluator"] as const;
+export type AgentSlotKey = (typeof AGENT_SLOT_KEYS)[number];
+
+export const ORG_SLOT_KEYS = ["support"] as const;
+export type OrgSlotKey = (typeof ORG_SLOT_KEYS)[number];
+
+export const SLOT_KEYS = [...AGENT_SLOT_KEYS, ...ORG_SLOT_KEYS] as const;
+export type SlotKey = AgentSlotKey | OrgSlotKey;
 
 /* ─────────── Resource Origin Constants ─────────── */
 
@@ -1579,7 +1585,36 @@ export const memories = pgTable(
 export type MemoryRow = typeof memories.$inferSelect;
 export type NewMemoryRow = typeof memories.$inferInsert;
 
-/* ─────────── Org Slots (org-level default slot bindings) ─────────── */
+/* ─────────── Agent Slots (agent-level slot bindings) ─────────── */
+
+export const agentSlots = pgTable(
+  "agent_slots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    slotKey: text("slot_key").notNull().$type<AgentSlotKey>(),
+    targetAgentId: uuid("target_agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("agent_slots_agent_id_slot_key_idx").on(t.agentId, t.slotKey),
+  ]
+);
+
+export type AgentSlotRow = typeof agentSlots.$inferSelect;
+export type NewAgentSlotRow = typeof agentSlots.$inferInsert;
+
+/* ─────────── Org Slots (org-level slot bindings) ─────────── */
 
 export const orgSlots = pgTable(
   "org_slots",
@@ -1588,8 +1623,8 @@ export const orgSlots = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
-    slotKey: text("slot_key").notNull().$type<SlotKey>(),
-    agentId: uuid("agent_id")
+    slotKey: text("slot_key").notNull().$type<OrgSlotKey>(),
+    targetAgentId: uuid("target_agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1607,35 +1642,6 @@ export const orgSlots = pgTable(
 
 export type OrgSlotRow = typeof orgSlots.$inferSelect;
 export type NewOrgSlotRow = typeof orgSlots.$inferInsert;
-
-/* ─────────── Agent Slot Overrides (agent-level slot overrides) ─────────── */
-
-export const agentSlotOverrides = pgTable(
-  "agent_slot_overrides",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    agentId: uuid("agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "cascade" }),
-    slotKey: text("slot_key").notNull().$type<SlotKey>(),
-    targetAgentId: uuid("target_agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "restrict" }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (t) => [
-    unique("agent_slot_overrides_agent_id_slot_key_idx").on(t.agentId, t.slotKey),
-  ]
-);
-
-export type AgentSlotOverrideRow = typeof agentSlotOverrides.$inferSelect;
-export type NewAgentSlotOverrideRow = typeof agentSlotOverrides.$inferInsert;
 
 /* ─────────── Agent Resource Refs (pool resource references) ─────────── */
 

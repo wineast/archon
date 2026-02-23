@@ -17,6 +17,7 @@ import { JsEditor } from "@/components/editors/js-editor";
 import { InlineSchemaEditor } from "@/components/schemas/inline-schema-editor";
 import { FunctionCodeAssistDialog } from "./function-code-assist-dialog";
 import { GuideDialog } from "@/components/ui/guide-dialog";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import functionCodeGuide from "../../../guide/function-code.md";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 
@@ -78,6 +79,7 @@ export function FunctionForm({
   const returnParametersSchema = useWatch({ control: form.control, name: "returnParametersSchema" });
   const currentCode = useWatch({ control: form.control, name: "code" });
   const [codeAssistOpen, setCodeAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
 
   const codeAssistContext = useMemo(() => {
     const parts: string[] = [];
@@ -202,6 +204,7 @@ export function FunctionForm({
               context={codeAssistContext}
               onApply={(newCode) => form.setValue("code", newCode, { shouldDirty: true })}
               agentId={agentId}
+              orgId={orgId}
             />
           )}
           <div className="mt-1">

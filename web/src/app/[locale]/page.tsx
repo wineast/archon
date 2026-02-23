@@ -19,8 +19,6 @@ import { useOrgs, useOrgParam } from "@/lib/orgs/hooks";
 import type { AgentRow } from "@/db/schema";
 import { useCurrentUser, useOrgRole } from "@/lib/auth/hooks";
 import { useOrgStore } from "@/stores/org-store";
-import { SupportBubble } from "@/components/support-bubble/support-bubble";
-
 export default function AgentsPage() {
   return (
     <Suspense fallback={<div className="flex min-h-svh items-center justify-center"><Spinner className="size-6" /></div>}>
@@ -198,7 +196,6 @@ function AgentsPageContent() {
         agentsMutate={mutate}
       />
 
-      {currentOrgId && <SupportBubble orgId={currentOrgId} />}
     </div>
   );
 }

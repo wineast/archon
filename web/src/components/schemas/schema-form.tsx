@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import { JsonEditor } from "@/components/editors/json-editor";
 import { SchemaCodeAssistDialog } from "./schema-code-assist-dialog";
+import { useAgentOrgId } from "@/lib/agents/hooks";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
 import schemaGuideContent from "../../../guide/schema.md";
@@ -77,6 +78,7 @@ export function SchemaForm({
   const form = useForm<SchemaFormValues>({ defaultValues: { ...schema } });
   const originalRef = useRef<SchemaFormValues>({ ...schema });
   const [schemaAssistOpen, setSchemaAssistOpen] = useState(false);
+  const orgId = useAgentOrgId(agentId);
 
   // Sync form when schema prop changes (after save + SWR refetch, or switching schemas)
   useEffect(() => {
@@ -164,6 +166,7 @@ export function SchemaForm({
           schema={JSON.stringify(form.getValues("parameters") ?? EMPTY_OBJECT_SCHEMA, null, 2)}
           context={context}
           agentId={agentId}
+          orgId={orgId}
           onApply={(newSchemaText) => {
             try {
               form.setValue("parameters", JSON.parse(newSchemaText), { shouldDirty: true });

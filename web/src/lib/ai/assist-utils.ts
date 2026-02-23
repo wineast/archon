@@ -18,7 +18,7 @@ import {
 } from "@/db/chat-persistence";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
-import { resolveSlot } from "@/lib/slots";
+import { resolveAgentSlot } from "@/lib/slots";
 import { QuotaExceededError } from "@/lib/credits/errors";
 import { gatherTemplateData, renderTemplate, disposeTemplateData } from "@/lib/template/render";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
@@ -97,8 +97,16 @@ export function createAssistHandler(config: AssistConfig) {
     const currentUserId = authResult.id;
     const orgId = await getOrgIdByAgentId(agentId);
     const assistConfig = agentId
-      ? await resolveSlot(agentId, "assist")
+      ? await resolveAgentSlot(agentId, "assist")
       : null;
+
+    if (assistConfig && !assistConfig.agentId) {
+      return Response.json(
+        { error: "slot_not_configured", message: "Assist Agent 未配置" },
+        { status: 422 },
+      );
+    }
+
     const modelId = assistConfig?.model ?? "anthropic/claude-sonnet-4";
 
     let model;

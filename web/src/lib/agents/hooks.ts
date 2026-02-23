@@ -11,6 +11,19 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export type AgentWithRole = AgentRow & { myRole: AgentRole | null; orgSlug?: string };
 
+/**
+ * Derive orgId from agentId via SWR cache.
+ * Shares the same `/api/agents/:id` key used by the build page,
+ * so it usually hits the cache without an extra fetch.
+ */
+export function useAgentOrgId(agentId: string | undefined | null): string | undefined {
+  const { data } = useSWR<{ orgId: string }>(
+    agentId ? `/api/agents/${agentId}` : null,
+    fetcher
+  );
+  return data?.orgId;
+}
+
 export function useAgents(orgId?: string) {
   const key = orgId ? `/api/agents?orgId=${orgId}` : "/api/agents";
   const { data, error, isLoading, mutate } = useSWR<AgentWithRole[]>(

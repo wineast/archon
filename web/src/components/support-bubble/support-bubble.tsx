@@ -11,12 +11,12 @@ interface SupportBubbleConfig {
 }
 
 interface SupportBubbleProps {
-  orgId: string;
+  agentId: string;
 }
 
-export function SupportBubble({ orgId }: SupportBubbleProps) {
+export function SupportBubble({ agentId }: SupportBubbleProps) {
   const { data } = useSWR<SupportBubbleConfig | null>(
-    `/api/orgs/${orgId}/support-bubble`,
+    `/api/agents/${agentId}/support-bubble`,
     fetcher
   );
 

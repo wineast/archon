@@ -45,8 +45,8 @@ vi.mock("@/db/schema", () => ({
   judgeConfigs: { agentId: "agentId" },
   tools: { agentId: "agentId" },
   components: Symbol("components"),
-  orgSlots: { orgId: "orgId", slotKey: "slotKey", agentId: "agentId" },
   embedTokens: Symbol("embedTokens"),
+  orgSlots: Symbol("orgSlots"),
   SLOT_KEYS: ["builder", "assist", "evaluator", "support"],
 }));
 
@@ -71,13 +71,14 @@ describe("ensureOrgDefaults", () => {
     selectLimitResult = [];
   });
 
-  it("creates 4 agents + modelConfigs + orgSlots when none exist", async () => {
+  it("creates 4 agents + modelConfigs + orgSlot binding when none exist", async () => {
     await ensureOrgDefaults("org-1");
 
-    // For each of 4 slots: agent insert + agentVersion insert + modelConfig insert + orgSlot insert = 16
-    // Plus 1 judgeConfig insert for evaluator slot = 17
-    // Plus 1 embedToken insert for support slot = 18
-    expect(mockInsert).toHaveBeenCalledTimes(18);
+    // For each of 4 slots: agent insert + agentVersion insert + modelConfig insert = 12
+    // Plus 1 judgeConfig insert for evaluator slot = 13
+    // Plus 1 embedToken insert for support slot = 14
+    // Plus 1 orgSlots insert for support slot = 15
+    expect(mockInsert).toHaveBeenCalledTimes(15);
   });
 
   it("seeds builtin tool refs only for builder slot", async () => {
@@ -85,7 +86,6 @@ describe("ensureOrgDefaults", () => {
 
     // ensureBuiltinToolRefs called once for builder slot
     expect(mockEnsureBuiltinToolRefs).toHaveBeenCalledTimes(1);
-    // Second argument is the builder agent ID, third is the version ID
     expect(mockEnsureBuiltinToolRefs).toHaveBeenCalledWith(
       expect.anything(),
       "new-agent-id",
@@ -96,14 +96,12 @@ describe("ensureOrgDefaults", () => {
   it("seeds embed token only for support slot", async () => {
     await ensureOrgDefaults("org-1");
 
-    // Check that embedTokens symbol was passed to insert for the support slot
     const embedTokensSymbol = (await import("@/db/schema")).embedTokens;
     const embedInsertCalls = mockInsert.mock.calls.filter(
       (call: unknown[]) => call[0] === embedTokensSymbol
     );
     expect(embedInsertCalls).toHaveLength(1);
 
-    // Verify the embed token values
     const embedValuesCalls = mockValues.mock.calls;
     const embedCall = embedValuesCalls.find(
       (call: unknown[]) => {
@@ -122,6 +120,25 @@ describe("ensureOrgDefaults", () => {
     expect(mockEnsureBuiltinComponentRefs).toHaveBeenCalledTimes(4);
   });
 
+  it("auto-binds support slot to orgSlots", async () => {
+    await ensureOrgDefaults("org-1");
+
+    const orgSlotsSymbol = (await import("@/db/schema")).orgSlots;
+    const orgSlotInsertCalls = mockInsert.mock.calls.filter(
+      (call: unknown[]) => call[0] === orgSlotsSymbol
+    );
+    expect(orgSlotInsertCalls).toHaveLength(1);
+
+    // Verify the orgSlot values
+    const orgSlotValues = mockValues.mock.calls.find(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return val.slotKey === "support" && val.orgId === "org-1";
+      }
+    );
+    expect(orgSlotValues).toBeDefined();
+  });
+
   it("seeds builtin wiki refs only for assist slot", async () => {
     await ensureOrgDefaults("org-1");
 
@@ -133,12 +150,16 @@ describe("ensureOrgDefaults", () => {
     );
   });
 
-  it("skips agent creation if agent already exists, but still ensures orgSlot", async () => {
+  it("skips agent creation if agent already exists, still binds orgSlot", async () => {
     selectLimitResult = [{ id: "existing-agent" }];
     await ensureOrgDefaults("org-1");
 
-    // Only orgSlot inserts for 4 slots = 4
-    expect(mockInsert).toHaveBeenCalledTimes(4);
+    // Only 1 insert: orgSlots for the existing support agent (onConflictDoNothing)
+    const orgSlotsSymbol = (await import("@/db/schema")).orgSlots;
+    const orgSlotInsertCalls = mockInsert.mock.calls.filter(
+      (call: unknown[]) => call[0] === orgSlotsSymbol
+    );
+    expect(orgSlotInsertCalls).toHaveLength(1);
   });
 
   it("sets modelId to empty string for all slots", async () => {
@@ -172,8 +193,6 @@ describe("ensureOrgDefaults", () => {
       }
     );
 
-    // Find support slot's model config (4th slot, so 4th model config value call)
-    // We verify by checking that at least one has a support-related prompt
     const supportConfig = modelConfigValues.find(
       (call: unknown[]) => {
         const val = call[0] as Record<string, unknown>;

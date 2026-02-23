@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DefaultChatTransport, isTextUIPart, isToolUIPart, getToolName } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage, UIDataTypes } from "ai";
-import { CheckIcon, CopyIcon, InfoIcon } from "lucide-react";
+import { CheckIcon, CopyIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,12 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog as SubDialog,
-  DialogContent as SubDialogContent,
-  DialogHeader as SubDialogHeader,
-  DialogTitle as SubDialogTitle,
-} from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Conversation,
@@ -44,6 +38,7 @@ import {
   ToolInput,
 } from "@/components/ai-elements/tool";
 import { MdEditor } from "@/components/editors/md-editor";
+import { SlotAgentSelect } from "@/components/slots/slot-agent-select";
 
 type PromptAssistTools = {
   update_prompt: { input: { content: string }; output: string };
@@ -58,6 +53,7 @@ interface PromptAssistDialogProps {
   systemPrompt: string;
   onApply: (newPrompt: string) => void;
   agentId?: string;
+  orgId?: string;
 }
 
 function buildSystemPrompt(currentPrompt: string): string {
@@ -150,6 +146,7 @@ export function PromptAssistDialog({
   systemPrompt,
   onApply,
   agentId,
+  orgId,
 }: PromptAssistDialogProps) {
   const [draftPrompt, setDraftPrompt] = useState(systemPrompt);
   const [originalPrompt, setOriginalPrompt] = useState(systemPrompt);
@@ -263,8 +260,6 @@ export function PromptAssistDialog({
     setTimeout(() => setCopied(false), 1500);
   }, [messages]);
 
-  const [sysPromptOpen, setSysPromptOpen] = useState(false);
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
@@ -272,32 +267,17 @@ export function PromptAssistDialog({
         showCloseButton={false}
       >
         <DialogHeader className="border-b px-4 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <DialogTitle>AI 辅助编辑提示词</DialogTitle>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setSysPromptOpen(true)}>
-                <InfoIcon className="size-3" />
-                系统提示词
+            {agentId && orgId && (
+              <SlotAgentSelect agentId={agentId} orgId={orgId} slotKey="assist" className="w-40" />
+            )}
+            {messages.length > 0 && (
+              <Button variant="ghost" size="sm" className="ml-auto h-7 gap-1 text-xs" onClick={handleCopyMessages}>
+                {copied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
+                {copied ? "已复制" : "复制对话"}
               </Button>
-              <SubDialog open={sysPromptOpen} onOpenChange={setSysPromptOpen}>
-                <SubDialogContent className="max-w-2xl max-h-[80vh] flex flex-col gap-0 p-0">
-                  <SubDialogHeader className="border-b px-4 py-3">
-                    <SubDialogTitle>系统提示词</SubDialogTitle>
-                  </SubDialogHeader>
-                  <div className="flex-1 min-h-0 overflow-y-auto">
-                    <pre className="whitespace-pre-wrap break-words p-4 text-xs font-mono leading-relaxed">
-                      {buildSystemPrompt(draftPrompt)}
-                    </pre>
-                  </div>
-                </SubDialogContent>
-              </SubDialog>
-              {messages.length > 0 && (
-                <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={handleCopyMessages}>
-                  {copied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-                  {copied ? "已复制" : "复制对话"}
-                </Button>
-              )}
-            </div>
+            )}
           </div>
         </DialogHeader>
 
