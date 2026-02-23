@@ -357,6 +357,9 @@ export async function createFunctionsSandbox(
 
   const compiledKeys: string[] = [];
 
+  // Build set of baseDep keys to avoid overwriting them with function default exports
+  const baseDepKeys = new Set(deps ? Object.keys(deps) : []);
+
   // Compile each function as ES module
   for (const rec of records) {
     moduleSourceMap.set(rec.key, rec.code);
@@ -385,7 +388,12 @@ export async function createFunctionsSandbox(
     }
 
     vm.setProp(vm.global, `__fn_${rec.key}`, defaultExport);
-    vm.setProp(vm.global, rec.key, defaultExport);
+    // Only set the global alias if it doesn't conflict with injected baseDeps
+    // (e.g. builtin function key "compileExpression" must not overwrite the
+    // filtrex compileExpression global that the builtin function code relies on)
+    if (!baseDepKeys.has(rec.key)) {
+      vm.setProp(vm.global, rec.key, defaultExport);
+    }
     defaultExport.dispose();
 
     compiledKeys.push(rec.key);

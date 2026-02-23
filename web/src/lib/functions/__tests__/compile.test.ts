@@ -153,3 +153,52 @@ describe("resolveAndCompileFunctions", () => {
     }
   });
 });
+
+describe("builtin function as importable module", () => {
+  it("compiles user function that imports builtin compileExpression module", async () => {
+    const { compileExpression } = await import("filtrex");
+    const rows: FunctionRecord[] = [
+      {
+        key: "compileExpression",
+        code: `export default function(input) {\n  const expr = compileExpression(input.expression);\n  return expr(input.data);\n}`,
+        parameters: {
+          type: "object",
+          properties: {
+            expression: { type: "string" },
+            data: { type: "object" },
+          },
+          required: ["expression", "data"],
+        },
+      },
+      {
+        key: "pricing_engine",
+        code: `import compileExpression from "archon:fn/compileExpression";
+export default function(input) {
+  return compileExpression({ expression: input.formula, data: input.vars });
+}`,
+        parameters: {
+          type: "object",
+          properties: {
+            formula: { type: "string" },
+            vars: { type: "object" },
+          },
+          required: ["formula", "vars"],
+        },
+      },
+    ];
+
+    const { fns, sandbox } = await resolveAndCompileFunctions(
+      rows,
+      undefined,
+      { compileExpression }
+    );
+    try {
+      const pricingFn = fns.get("pricing_engine") as (input: unknown) => unknown;
+      expect(pricingFn).toBeDefined();
+      const result = pricingFn({ formula: "x + y * 2", vars: { x: 10, y: 5 } });
+      expect(result).toBe(20);
+    } finally {
+      sandbox.dispose();
+    }
+  });
+});
