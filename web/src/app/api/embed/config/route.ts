@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { requireEmbedToken } from "@/lib/auth/require-embed-token";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { db } from "@/db";
-import { agents, chatConfigs, tools, components } from "@/db/schema";
+import { agents, chatConfigs, tools, components, modelConfigs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 
 export async function GET(req: Request) {
@@ -49,11 +49,21 @@ export async function GET(req: Request) {
   }
 
   // Fetch chatConfig, tools, and components in parallel
-  const [chatConfig, toolRows, componentRows] = await Promise.all([
+  const [chatConfig, activeModelConfig, toolRows, componentRows] = await Promise.all([
     db
       .select()
       .from(chatConfigs)
       .where(eq(chatConfigs.agentId, agentId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    db
+      .select({
+        modelId: modelConfigs.modelId,
+        systemPrompt: modelConfigs.systemPrompt,
+        temperature: modelConfigs.temperature,
+      })
+      .from(modelConfigs)
+      .where(and(eq(modelConfigs.agentId, agentId), eq(modelConfigs.isActive, true)))
       .limit(1)
       .then((rows) => rows[0] ?? null),
     db
@@ -88,6 +98,13 @@ export async function GET(req: Request) {
           suggestions: chatConfig.suggestions,
           enableVoice: chatConfig.enableVoice,
           enableAttachment: chatConfig.enableAttachment,
+        }
+      : null,
+    modelConfig: activeModelConfig
+      ? {
+          modelId: activeModelConfig.modelId,
+          systemPrompt: activeModelConfig.systemPrompt,
+          temperature: activeModelConfig.temperature,
         }
       : null,
     tools: toolRows,

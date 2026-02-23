@@ -35,8 +35,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { executeClientTool } from "@/lib/tools/client-executor";
 import { registerDynamicComponentSource } from "@/tool-ui";
 import type { WelcomeIconKey } from "@/lib/config/types";
-import { PaperclipIcon } from "lucide-react";
+import { PaperclipIcon, SearchCodeIcon } from "lucide-react";
 import { toast } from "sonner";
+import { RequestInspectorModal } from "@/components/request-inspector-modal";
+import { Button } from "@/components/ui/button";
 
 /* ─── Types ─── */
 
@@ -51,6 +53,11 @@ interface EmbedConfig {
     suggestions: string[];
     enableVoice: boolean;
     enableAttachment: boolean;
+  } | null;
+  modelConfig: {
+    modelId: string;
+    systemPrompt: string;
+    temperature: number;
   } | null;
   tools: Array<{
     name: string;
@@ -466,6 +473,7 @@ function EmbedChat({
   const placeholder = chatConfig?.placeholder ?? (internalMode ? "描述你想要的修改..." : "");
   const enableVoice = !internalMode && (chatConfig?.enableVoice ?? false);
   const enableAttachment = !internalMode && (chatConfig?.enableAttachment ?? false);
+  const isDev = process.env.NODE_ENV === "development";
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -473,6 +481,17 @@ function EmbedChat({
       {showHeader && (
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <span className="text-sm font-medium">{title}</span>
+          {isDev && config.modelConfig && (
+            <div className="ml-auto">
+              <RequestInspectorModal
+                model={config.modelConfig.modelId}
+                systemPrompt={config.modelConfig.systemPrompt}
+                messages={messages}
+                temperature={config.modelConfig.temperature}
+                agentId={agentId}
+              />
+            </div>
+          )}
         </header>
       )}
 
