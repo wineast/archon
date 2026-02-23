@@ -817,6 +817,7 @@ export const toolTestCases = pgTable(
     input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
     expectedOutput: jsonb("expected_output").$type<unknown>(),
     tags: text("tags").array().notNull().default([]),
+    assertions: jsonb("assertions").$type<Assertion[]>().notNull().default([]),
     showAsExample: boolean("show_as_example").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -866,6 +867,7 @@ export const toolTestRunResults = pgTable(
     output: jsonb("output").$type<unknown>(),
     passed: boolean("passed").notNull(),
     error: text("error"),
+    assertionResults: jsonb("assertion_results").$type<AssertionResult[]>(),
     durationMs: integer("duration_ms").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

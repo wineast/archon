@@ -117,6 +117,7 @@ export interface ToolTestCaseSnapshotItem {
   input: Record<string, unknown>;
   expectedOutput: unknown;
   tags: string[];
+  assertions?: Assertion[];
 }
 
 export interface FunctionTestCaseSnapshotItem {

@@ -5,6 +5,7 @@ import {
   CheckCircle2Icon,
   ChevronDownIcon,
   PlayIcon,
+  PlusIcon,
   SaveIcon,
   Trash2Icon,
   XCircleIcon,
@@ -23,8 +24,11 @@ import { JsonEditor } from "@/components/editors/json-editor";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { AssertionRow } from "@/components/eval/assertion-row";
 import type { ToolTestCaseRow } from "@/db/schema";
 import type { RunTestCaseResult } from "@/lib/tools/test-case-hooks";
+import type { Assertion } from "@/lib/eval/types";
+import { nanoid } from "nanoid";
 
 export interface ToolTestCaseItemProps {
   testCase: ToolTestCaseRow;
@@ -35,13 +39,15 @@ export interface ToolTestCaseItemProps {
       input?: Record<string, unknown>;
       expectedOutput?: unknown;
       tags?: string[];
+      assertions?: Assertion[];
       showAsExample?: boolean;
     }
   ) => Promise<void>;
   onDelete: (caseId: string) => Promise<void>;
   onRun: (
     input: Record<string, unknown>,
-    expectedOutput?: unknown
+    expectedOutput?: unknown,
+    assertions?: Assertion[]
   ) => Promise<RunTestCaseResult>;
   runResult?: RunTestCaseResult;
   busy: boolean;
@@ -67,6 +73,7 @@ export function ToolTestCaseItem({
   );
   const [tags, setTags] = useState<string[]>(testCase.tags);
   const [tagInput, setTagInput] = useState("");
+  const [assertions, setAssertions] = useState<Assertion[]>(testCase.assertions ?? []);
   const [showAsExample, setShowAsExample] = useState(testCase.showAsExample);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -100,12 +107,13 @@ export function ToolTestCaseItem({
         input: parsed,
         expectedOutput,
         tags,
+        assertions,
         showAsExample,
       });
     } finally {
       setSaving(false);
     }
-  }, [testCase.id, name, inputValue, expectedOutputValue, tags, showAsExample, onSave]);
+  }, [testCase.id, name, inputValue, expectedOutputValue, tags, assertions, showAsExample, onSave]);
 
   const handleDelete = useCallback(async () => {
     setDeleting(true);
@@ -133,12 +141,12 @@ export function ToolTestCaseItem({
     }
     setRunning(true);
     try {
-      const r = await onRun(parsed, expectedOutput);
+      const r = await onRun(parsed, expectedOutput, assertions.length > 0 ? assertions : undefined);
       setLocalResult(r);
     } finally {
       setRunning(false);
     }
-  }, [inputValue, expectedOutputValue, onRun]);
+  }, [inputValue, expectedOutputValue, assertions, onRun]);
 
   const handleAddTag = useCallback(
     (value: string) => {
@@ -333,6 +341,47 @@ export function ToolTestCaseItem({
               />
             </div>
 
+            {/* Assertions */}
+            <div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Assertions
+                </label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-1.5 text-xs"
+                  onClick={() =>
+                    setAssertions([
+                      ...assertions,
+                      { id: nanoid(), type: "contains", value: "" },
+                    ])
+                  }
+                >
+                  <PlusIcon className="mr-0.5 size-3" />
+                  Add
+                </Button>
+              </div>
+              {assertions.length > 0 && (
+                <div className="mt-1 space-y-1.5">
+                  {assertions.map((a, i) => (
+                    <AssertionRow
+                      key={a.id}
+                      assertion={a}
+                      onChange={(updated) => {
+                        const next = [...assertions];
+                        next[i] = updated;
+                        setAssertions(next);
+                      }}
+                      onDelete={() =>
+                        setAssertions(assertions.filter((_, j) => j !== i))
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Save button */}
             <Button
               size="sm"
@@ -376,6 +425,28 @@ export function ToolTestCaseItem({
                     readOnly
                     height="80px"
                   />
+                )}
+                {result.assertionResults && result.assertionResults.length > 0 && (
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-medium text-muted-foreground">
+                      Assertions
+                    </p>
+                    {result.assertionResults.map((ar, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-1.5 text-xs ${
+                          ar.passed ? "text-green-600" : "text-destructive"
+                        }`}
+                      >
+                        {ar.passed ? (
+                          <CheckCircle2Icon className="size-3 shrink-0" />
+                        ) : (
+                          <XCircleIcon className="size-3 shrink-0" />
+                        )}
+                        <span>{ar.message}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
