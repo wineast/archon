@@ -37,7 +37,15 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 
 ## 组织初始化
 
-创建组织时**不再**自动创建默认 slot agent。如需初始化，通过 fixture JSON 手动导入（`data/fixtures/` 目录下有预置配置文件）。
+创建组织时 `ensureOrgDefaults(orgId)` 幂等创建：
+- 4 个 agent（build-chat、assist、evaluator、support）
+- 每个 agent 的默认 modelConfig（assist 带 `host.fieldContext` 分支的 LiquidJS 系统提示词模板）
+- 4 条 orgSlots 记录
+- builder agent 的系统工具引用
+- assist agent 的内置 wiki 引用（guide 文档）+ 两个 host 工具（`update_content`、`edit_content`）
+- evaluator agent 的默认 judgeConfig
+- support agent 的默认 embed token
+- 已有组织升级：assist 的空系统提示词会被自动回填，缺少的 host 工具会被补充
 
 ## 删除保护
 
@@ -46,10 +54,21 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 - 有引用则返回 409 Conflict
 - 用户需先解除引用再删除
 
+## Assist Agent Host 工具
+
+Assist agent 通过两个 `executionTarget: "host"` 工具与宿主（AssistDialog）通信：
+
+| 工具 | 描述 | 参数 |
+|------|------|------|
+| `update_content` | 整体替换编辑器内容 | `content: string` |
+| `edit_content` | 局部编辑（查找替换） | `old_text: string, new_text: string` |
+
+这两个工具在 `ensureOrgDefaults()` 中自动创建，`origin: "builtin"`。工具通过 embed iframe 的 postMessage 协议在 AssistDialog 宿主中执行。
+
 ## 消费端
 
 - **Build Chat**（`execute-stream.ts`）：使用 `resolveSlot(agentId, "builder")` 获取模型和温度
-- **AI 辅助编辑**（`assist-utils.ts`）：使用 `resolveSlot(agentId, "assist")` 获取模型
+- **AI 辅助编辑**（`assist-dialog.tsx`）：embed iframe 加载 assist agent，通过 postMessage 通信
 - **Support Bubble**（`support-bubble.tsx`）：通过 org API 获取 support agent 的 embed token
 
 ## UI
@@ -71,6 +90,7 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 | `web/src/db/schema.ts` | SLOT_KEYS、orgSlots、agentSlotOverrides 表定义 |
 | `web/src/lib/slots/constants.ts` | SLOT_DEFS 槽位定义 |
 | `web/src/lib/slots/resolve-slot.ts` | resolveSlot() 解析 + 缓存 |
+| `web/src/lib/slots/ensure-org-defaults.ts` | ensureOrgDefaults() 组织初始化 |
 | `web/src/lib/slots/hooks.ts` | 前端 SWR hooks |
 | `web/src/app/api/orgs/[id]/slots/route.ts` | Org 槽位 API |
 | `web/src/app/api/agents/[id]/slots/route.ts` | Agent 槽位覆盖 API |

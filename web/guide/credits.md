@@ -132,10 +132,7 @@ Memory 提取（后台任务）遇到额度不足时静默跳过，不影响主�
 - `web/src/lib/usage/record.ts` — 使用后扣减额度
 - `web/src/lib/chat/execute-stream.ts` — 捕获 QuotaExceededError → 402
 - `web/src/lib/build-chat/execute-stream.ts` — 同上
-- `web/src/app/api/prompt-assist/route.ts` — 同上
-- `web/src/app/api/function-code-assist/route.ts` — 同上
-- `web/src/app/api/schema-code-assist/route.ts` — 同上
-- `web/src/app/api/jsx-assist/route.ts` — 同上
+- `web/src/app/api/embed/chat/route.ts` — AI 辅助编辑统一走 embed chat 路由
 - `web/src/app/api/eval/run/[runId]/case/route.ts` — 同上
 - `web/src/lib/memory/extract.ts` — 静默降级
 - `web/src/app/[orgSlug]/settings/page.tsx` — 新增"额度"tab
