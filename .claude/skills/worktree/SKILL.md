@@ -174,6 +174,13 @@ make wt-list
 3. 确认后只创建能独立运行的工作区
 4. 对延后的功能，告知用户何时可以创建
 
+## 数据库管理
+
+- **工作区内只用 `make db-push`**，不生成迁移文件——多个工作区并行开发时迁移生成顺序不固定，会产生冲突
+- **合并回上游后统一生成迁移**：工作区合并到 dev/main 后，在上游分支执行 `make db-generate` 生成迁移文件并提交
+- 工作区共享同一个 Docker PostgreSQL 容器，各自通过 `db-push` 同步 schema 到本地库即可
+- 详见 `web/guide/production-database.md`
+
 ## 其他注意事项
 
 - 只需传入 worktree 名称，不需要完整路径

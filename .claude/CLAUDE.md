@@ -110,8 +110,11 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 
 ### Database
 - schema 见 `web/src/db/schema.ts`
-- 当前为开发阶段，schema 变更直接用 `make db-push`，不要生成迁移文件
+- **工作区（worktree）开发**：只用 `make db-push` 快速迭代，不生成迁移文件——因为工作区并行导致迁移生成顺序不固定
+- **上游分支（dev/main）**：schema 变更从工作区合并后，统一 `make db-generate` 生成迁移文件并提交
+- **生产部署**：只用 `make db-migrate`，禁止 `db-push`——迁移文件是上线唯一通道
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
+- 详见 `web/guide/production-database.md`
 
 ### 资源共享池
 - **所有资源都必须存在于数据库中**，禁止前端硬编码资源列表（如 `BUILTIN_FUNCTIONS`、`BUILTIN_COMPONENTS` 常量）

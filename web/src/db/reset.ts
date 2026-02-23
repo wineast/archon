@@ -15,6 +15,9 @@ async function main() {
     END $$;
   `;
 
+  // Also drop drizzle migration journal so migrations can be re-applied
+  await sql`DROP SCHEMA IF EXISTS drizzle CASCADE`;
+
   console.log("All tables dropped.");
   await sql.end();
 }

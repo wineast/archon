@@ -17,7 +17,7 @@
     "db:reset": "tsx src/db/reset.ts && tsx src/db/ensure-extensions.ts && drizzle-kit push --force && tsx src/db/ensure-extensions.ts && tsx src/db/seed.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "vercel-build": "npm run db:migrate && next build"
+    "vercel-build": "npm run db:migrate && npm run db:seed && next build"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.46",
