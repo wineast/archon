@@ -1,13 +1,26 @@
+import JSZip from "jszip";
+import { put } from "@vercel/blob";
 import { db } from "@/db";
-import { agents, agentMembers, agentVersions, orgs } from "@/db/schema";
+import { agents, agentFiles, agentMembers, agentVersions, orgs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireOrgRole } from "@/lib/auth/require-org-role";
 import { restoreSnapshot } from "@/lib/versions/snapshot";
-import { validateExportData } from "@/lib/versions/types";
+import { validateExportData, type AgentExportData } from "@/lib/versions/types";
 
-/** POST — import agent from exported JSON */
+/** Parse ZIP body → manifest + zip handle */
+async function parseZipBody(
+  raw: ArrayBuffer
+): Promise<{ data: AgentExportData; zip: JSZip }> {
+  const zip = await JSZip.loadAsync(raw);
+  const manifestFile = zip.file("manifest.json");
+  if (!manifestFile) throw new Error("ZIP missing manifest.json");
+  const manifestText = await manifestFile.async("text");
+  return { data: JSON.parse(manifestText), zip };
+}
+
+/** POST — import agent from exported ZIP */
 export async function POST(req: Request) {
   const url = new URL(req.url);
   const orgId = url.searchParams.get("orgId");
@@ -18,7 +31,17 @@ export async function POST(req: Request) {
   const orgCtx = await requireOrgRole(orgId, "member");
   if (orgCtx instanceof NextResponse) return orgCtx;
 
-  const body: unknown = await req.json();
+  let body: AgentExportData;
+  let zip: JSZip;
+  try {
+    const raw = await req.arrayBuffer();
+    ({ data: body, zip } = await parseZipBody(raw));
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid export file format" },
+      { status: 400 }
+    );
+  }
 
   if (!validateExportData(body)) {
     return NextResponse.json(
@@ -109,6 +132,31 @@ export async function POST(req: Request) {
       .update(agents)
       .set({ editingVersionId, publishedVersionId })
       .where(eq(agents.id, agent.id));
+
+    // 5. Restore files from ZIP
+    if (body.files?.length) {
+      await Promise.all(
+        body.files.map(async (fileMeta) => {
+          const zipEntry = zip.file(fileMeta.zipPath);
+          if (!zipEntry) return;
+
+          const fileData = await zipEntry.async("nodebuffer");
+          const blob = await put(
+            `agents/${agent.id}/${fileMeta.name}`,
+            fileData,
+            { access: "public", contentType: fileMeta.contentType }
+          );
+
+          await tx.insert(agentFiles).values({
+            agentId: agent.id,
+            name: fileMeta.name,
+            url: blob.url,
+            size: fileMeta.size,
+            contentType: fileMeta.contentType,
+          });
+        })
+      );
+    }
 
     return agent;
   });

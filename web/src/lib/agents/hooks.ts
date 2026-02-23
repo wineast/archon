@@ -169,7 +169,7 @@ export async function exportAgent(
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${agent.slug}.json`;
+    a.download = `${agent.slug}.zip`;
     a.click();
     URL.revokeObjectURL(url);
   } catch (e) {
@@ -185,25 +185,12 @@ export async function importAgent(
   t: (key: string) => string
 ) {
   try {
-    const text = await file.text();
-    let data: unknown;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      toast.error(t("importInvalidFormat"));
-      return null;
-    }
-
-    const d = data as Record<string, unknown>;
-    if (d.exportVersion !== 1 || !d.agent || !Array.isArray(d.versions)) {
-      toast.error(t("importInvalidFormat"));
-      return null;
-    }
+    const body = await file.arrayBuffer();
 
     const res = await fetch(`/api/agents/import?orgId=${orgId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: text,
+      headers: { "Content-Type": "application/octet-stream" },
+      body,
     });
 
     if (!res.ok) {

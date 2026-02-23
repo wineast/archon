@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
 
 # ============================================================
 # Setup
@@ -252,4 +252,18 @@ wt-init:
 ## 工作区数据清理（wt-init 的反向）
 wt-fini:
 	@./scripts/wt-fini.sh $(or $(DIR),.)
+
+# ============================================================
+# Fixtures
+# ============================================================
+
+## 将 data/fixtures/ 下的文件夹打包为 ZIP（用法: make fixture-zip NAME=gmcc-advisor）
+fixture-zip:
+	@if [ -z "$(NAME)" ]; then echo "用法: make fixture-zip NAME=<folder-name>"; exit 1; fi
+	@DIR="data/fixtures/$(NAME)"; \
+	if [ ! -d "$$DIR" ]; then echo "❌ $$DIR 不存在"; exit 1; fi; \
+	OUT="data/fixtures/$(NAME).zip"; \
+	rm -f "$$OUT"; \
+	(cd "$$DIR" && zip -r "../$(NAME).zip" .) && \
+	echo "✅ $$OUT ($$(du -h "$$OUT" | cut -f1))"
 

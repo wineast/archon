@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { validateExportData } from "../types";
 import type {
   AgentExportData,
+  AgentFileSnapshotItem,
   AgentSnapshot,
   ChatConfigSnapshotItem,
   MemoryConfigSnapshotItem,
@@ -117,6 +118,27 @@ describe("validateExportData", () => {
 
   it("rejects versions as non-array", () => {
     expect(validateExportData({ ...makeValidExport(), versions: "not-array" })).toBe(false);
+  });
+
+  it("accepts export without files field", () => {
+    const data = makeValidExport();
+    expect(data.files).toBeUndefined();
+    expect(validateExportData(data)).toBe(true);
+  });
+
+  it("accepts export with valid files array", () => {
+    const files: AgentFileSnapshotItem[] = [
+      { name: "rate-sheet.pdf", contentType: "application/pdf", size: 1024, zipPath: "files/rate-sheet.pdf" },
+    ];
+    expect(validateExportData(makeValidExport({ files }))).toBe(true);
+  });
+
+  it("accepts export with empty files array", () => {
+    expect(validateExportData(makeValidExport({ files: [] }))).toBe(true);
+  });
+
+  it("rejects files as non-array", () => {
+    expect(validateExportData({ ...makeValidExport(), files: "not-array" })).toBe(false);
   });
 });
 
