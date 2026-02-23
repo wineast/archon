@@ -349,7 +349,45 @@ export async function executeToolInSandbox(
       throw classifySandboxError(errDump);
     }
 
-    const result = resolveIfPromise(vm, runtime, evalResult.value);
+    // Check if the result is a Promise (thenable).
+    // Async handlers return Promises that may contain pending asyncified work.
+    // `resolveIfPromise` uses synchronous `executePendingJobs` which cannot
+    // handle asyncified calls. Instead, we re-enter `evalCodeAsync` with
+    // `await` to properly drive the asyncify machinery.
+    const typeStr = vm.typeof(evalResult.value);
+    let isPromise = false;
+    if (typeStr === "object") {
+      const thenProp = vm.getProp(evalResult.value, "then");
+      isPromise = vm.typeof(thenProp) === "function";
+      thenProp.dispose();
+    }
+
+    if (isPromise) {
+      // Store the pending Promise as a global, then await it via evalCodeAsync.
+      // evalCodeAsync properly supports asyncified host function calls during
+      // the await, unlike executePendingJobs which is purely synchronous.
+      vm.setProp(vm.global, "__pending", evalResult.value);
+      evalResult.value.dispose();
+
+      const awaitResult = await vm.evalCodeAsync(
+        "(async function(){ return await __pending; })()"
+      );
+
+      if (awaitResult.error) {
+        const errDump = vm.dump(awaitResult.error);
+        awaitResult.error.dispose();
+        throw classifySandboxError(errDump);
+      }
+
+      // The inner async wrapper also returns a Promise, but at this point
+      // all asyncified work is done. Use resolveIfPromise for the final step
+      // (only microtask processing, no asyncified calls needed).
+      const result = resolveIfPromise(vm, runtime, awaitResult.value);
+      awaitResult.value.dispose();
+      return result;
+    }
+
+    const result = vm.dump(evalResult.value);
     evalResult.value.dispose();
     return result;
   } finally {

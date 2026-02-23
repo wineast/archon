@@ -30,11 +30,11 @@ export default function(input) {
 
 | 模块 | 说明 |
 |------|------|
-| `archon:fn/<key>` | 导入同 Agent 下的其他函数 |
+| `archon:fn/<key>` | 导入同 Agent 下的其他函数，包括内置（builtin）函数 |
 
 ### archon:fn/<key>
 
-导入的函数是**同步调用**的（不需要 `await`）：
+导入的函数是**同步调用**的（不需要 `await`）。支持导入内置函数（如 `compileExpression`）——系统会自动检测代码中的 `import` 语句，从数据库获取缺失的 builtin 函数并注入沙箱：
 
 ```js
 import other_fn from "archon:fn/other_fn";

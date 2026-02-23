@@ -373,3 +373,4 @@ export async function getReferencedBuiltinFunctionKeys(
 
   return new Set(rows.map((r) => r.key));
 }
+
