@@ -520,6 +520,36 @@ Dashboard 工具定义：
 
 ---
 
+## 内部 Assist 模式
+
+Embed page 支持**内部模式**，用于 AI 辅助编辑对话框（AssistDialog）。与外部 embed widget 的区别：
+
+| | 外部 Embed | 内部 Assist |
+|---|---|---|
+| 认证方式 | Bearer embed token (`et_...`) | Clerk session cookie（同源自动携带） |
+| URL 参数 | `?token=et_xxx` | 无 `token` 参数 |
+| Header bar | 显示 | 隐藏 |
+| Welcome/Suggestions | 显示 | 隐藏（直接显示空聊天） |
+| Voice/Attachment | 由 chatConfig 控制 | 禁用 |
+| Session 持久化 | localStorage | 不持久化（每次打开新 session） |
+| hostContext 大小限制 | 10KB | 512KB（代码内容可较大） |
+
+### 工作原理
+
+1. AssistDialog 渲染 `<iframe src="/embed/{assistAgentId}" />`（无 `?token=` 参数）
+2. Embed page 检测到无 token → 进入内部模式，API 请求使用 Clerk cookie
+3. AssistDialog 监听 `archon:ready` → 发送 `archon:context`（fieldContext + currentContent）+ `archon:tools-register`
+4. AI 调用 `update_content`/`edit_content` → iframe 发送 `archon:tool-call` → dialog 执行工具 → 返回 `archon:tool-result`
+5. iframe 发送 `archon:streaming` 通知 → dialog 控制 diff editor 加载遮罩
+
+### 新增 postMessage 类型
+
+| type | 方向 | payload | 说明 |
+|------|------|---------|------|
+| `archon:streaming` | iframe → 宿主 | `boolean` | 流式响应状态变化通知 |
+
+---
+
 ## 安全与限制
 
 ### Origin 验证

@@ -143,14 +143,18 @@ function EmbedInputSubmit({ input, isStreaming }: { input: string; isStreaming: 
 function EmbedChat({
   agentId,
   token,
+  internalMode,
 }: {
   agentId: string;
-  token: string;
+  token: string | null;
+  internalMode: boolean;
 }) {
   const [config, setConfig] = useState<EmbedConfig | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   const [input, setInput] = useState("");
-  const sessionIdRef = useRef<string | null>(getPersistedSessionId(agentId));
+  const sessionIdRef = useRef<string | null>(
+    internalMode ? null : getPersistedSessionId(agentId)
+  );
 
   // Host communication state
   const hostContextRef = useRef<Record<string, unknown>>({});
@@ -214,16 +218,22 @@ function EmbedChat({
 
   // Fetch embed config
   useEffect(() => {
-    fetch("/api/embed/config", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const configUrl = internalMode
+      ? `/api/embed/config?agentId=${agentId}`
+      : "/api/embed/config";
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    fetch(configUrl, { headers })
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json();
       })
       .then(setConfig)
       .catch((e) => setConfigError(e.message));
-  }, [token]);
+  }, [token, internalMode, agentId]);
 
   // Register dynamic tool components + inject CSS
   useMemo(() => {
@@ -258,20 +268,23 @@ function EmbedChat({
     () =>
       new DefaultChatTransport({
         api: "/api/embed/chat",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: () => {
           if (!sessionIdRef.current) {
             sessionIdRef.current = crypto.randomUUID();
-            persistSessionId(agentId, sessionIdRef.current);
+            if (!internalMode) {
+              persistSessionId(agentId, sessionIdRef.current);
+            }
           }
           return {
             sessionId: sessionIdRef.current,
             hostContext: hostContextRef.current,
             registeredHostTools: registeredHostToolsRef.current,
+            ...(internalMode ? { agentId } : {}),
           };
         },
       }),
-    [agentId, token]
+    [agentId, token, internalMode]
   );
 
   const { messages, sendMessage, status, addToolOutput } = useChat({
@@ -362,6 +375,18 @@ function EmbedChat({
 
   const isStreaming = status === "streaming" || status === "submitted";
 
+  // Notify parent of streaming state changes (for assist dialog loading overlay)
+  const prevStreamingRef = useRef(isStreaming);
+  useEffect(() => {
+    if (prevStreamingRef.current !== isStreaming && window.parent !== window) {
+      window.parent.postMessage(
+        { type: "archon:streaming", payload: isStreaming },
+        "*"
+      );
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming]);
+
   const handleTextChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInput(event.target.value);
@@ -418,31 +443,39 @@ function EmbedChat({
   }
 
   const chatConfig = config.chatConfig;
+  const showHeader = !internalMode;
+  const showWelcome = !internalMode;
   const title = chatConfig?.title || config.agent.name;
   const welcomeTitle = chatConfig?.welcomeTitle ?? "";
   const welcomeIcon = (chatConfig?.welcomeIcon ?? "") as WelcomeIconKey;
   const quickActions = chatConfig?.quickActions ?? [];
-  const suggestions = chatConfig?.suggestions ?? [];
-  const placeholder = chatConfig?.placeholder ?? "";
-  const enableVoice = chatConfig?.enableVoice ?? false;
-  const enableAttachment = chatConfig?.enableAttachment ?? false;
+  const suggestions = showWelcome ? (chatConfig?.suggestions ?? []) : [];
+  const placeholder = chatConfig?.placeholder ?? (internalMode ? "描述你想要的修改..." : "");
+  const enableVoice = !internalMode && (chatConfig?.enableVoice ?? false);
+  const enableAttachment = !internalMode && (chatConfig?.enableAttachment ?? false);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-        <span className="text-sm font-medium">{title}</span>
-      </header>
+      {showHeader && (
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+          <span className="text-sm font-medium">{title}</span>
+        </header>
+      )}
 
       {/* Chat */}
       <div className="relative flex min-h-0 flex-1 flex-col divide-y overflow-hidden">
-        {messages.length === 0 ? (
+        {messages.length === 0 && showWelcome ? (
           <ChatWelcome
             title={welcomeTitle}
             iconKey={welcomeIcon}
             quickActions={quickActions}
             onQuickAction={handleSuggestionClick}
           />
+        ) : messages.length === 0 && internalMode ? (
+          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+            描述你想要的修改，AI 会帮你更新左侧内容
+          </div>
         ) : (
           <Conversation>
             <ConversationContent>
@@ -526,17 +559,16 @@ export default function EmbedChatPage({
   const { agentId } = use(params);
   const { token } = use(searchParams);
 
-  if (!token) {
-    return (
-      <div className="flex h-svh items-center justify-center p-4 text-sm text-destructive">
-        Missing token parameter
-      </div>
-    );
-  }
+  // Internal mode: no token parameter → use Clerk session cookies
+  const internalMode = !token;
 
   return (
     <div className="h-svh">
-      <EmbedChat agentId={agentId} token={token} />
+      <EmbedChat
+        agentId={agentId}
+        token={token ?? null}
+        internalMode={internalMode}
+      />
     </div>
   );
 }

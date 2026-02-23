@@ -20,7 +20,7 @@
 | cachedInputTokens | INTEGER | 缓存命中 token 数 |
 | reasoningTokens | INTEGER | 推理 token 数 |
 | costUSD | NUMERIC | 费用（美元），由 tokenlens 计算 |
-| source | TEXT | 来源：chat / embed / build-chat / prompt-assist / jsx-assist / function-code-assist / schema-code-assist / tool-code-assist / wiki-assist / dataset-assist / eval |
+| source | TEXT | 来源：chat / embed / build-chat / eval |
 | createdAt | TIMESTAMP | 记录时间 |
 
 ### 存储统计

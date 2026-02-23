@@ -75,7 +75,8 @@ describe("ensureOrgDefaults", () => {
     // For each of 4 slots: agent insert + agentVersion insert + modelConfig insert + orgSlot insert = 16
     // Plus 1 judgeConfig insert for evaluator slot = 17
     // Plus 1 embedToken insert for support slot = 18
-    expect(mockInsert).toHaveBeenCalledTimes(18);
+    // Plus 2 assist host tools (update_content, edit_content) = 20
+    expect(mockInsert).toHaveBeenCalledTimes(20);
   });
 
   it("seeds builtin tool refs only for builder slot", async () => {
@@ -220,5 +221,41 @@ describe("ensureOrgDefaults", () => {
 
     // Should call update for the assist slot's empty system prompt
     expect(mockUpdate).toHaveBeenCalled();
+  });
+
+  it("seeds assist host tools (update_content, edit_content) for new assist agent", async () => {
+    await ensureOrgDefaults("org-1");
+
+    const toolsTable = (await import("@/db/schema")).tools;
+    const toolInsertCalls = mockInsert.mock.calls.filter(
+      (call: unknown[]) => call[0] === toolsTable
+    );
+    expect(toolInsertCalls).toHaveLength(2);
+
+    const toolValueCalls = mockValues.mock.calls.filter(
+      (call: unknown[]) => {
+        const val = call[0] as Record<string, unknown>;
+        return val.executionTarget === "host" && val.origin === "builtin";
+      }
+    );
+    expect(toolValueCalls).toHaveLength(2);
+
+    const toolKeys = toolValueCalls.map(
+      (call: unknown[]) => (call[0] as Record<string, unknown>).key
+    );
+    expect(toolKeys).toContain("update_content");
+    expect(toolKeys).toContain("edit_content");
+  });
+
+  it("backfills assist host tools for existing agents with editingVersionId", async () => {
+    selectLimitResult = [{ id: "existing-agent", editingVersionId: "version-1" }];
+    await ensureOrgDefaults("org-1");
+
+    const toolsTable = (await import("@/db/schema")).tools;
+    const toolInsertCalls = mockInsert.mock.calls.filter(
+      (call: unknown[]) => call[0] === toolsTable
+    );
+    // 2 host tools for assist slot backfill
+    expect(toolInsertCalls).toHaveLength(2);
   });
 });

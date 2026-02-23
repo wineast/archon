@@ -1,14 +1,52 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { requireEmbedToken } from "@/lib/auth/require-embed-token";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { db } from "@/db";
-import { chatConfigs, tools, components } from "@/db/schema";
+import { agents, chatConfigs, tools, components } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 
 export async function GET(req: Request) {
-  const ctx = await requireEmbedToken(req);
-  if (ctx instanceof NextResponse) return ctx;
+  let agentId: string;
+  let agentRow: { id: string; name: string; icon: string };
 
-  const agentId = ctx.agent.id;
+  // Dual auth: try embed token first, then Clerk session
+  const authHeader = req.headers.get("authorization");
+  const hasEmbedToken = authHeader?.startsWith("Bearer et_");
+
+  if (hasEmbedToken) {
+    // Embed token path
+    const ctx = await requireEmbedToken(req);
+    if (ctx instanceof NextResponse) return ctx;
+    agentId = ctx.agent.id;
+    agentRow = { id: ctx.agent.id, name: ctx.agent.name, icon: ctx.agent.icon };
+  } else {
+    // Clerk session path (for internal assist mode)
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const url = new URL(req.url);
+    const queryAgentId = url.searchParams.get("agentId");
+    if (!queryAgentId) {
+      return NextResponse.json({ error: "agentId is required" }, { status: 400 });
+    }
+    // Verify user has viewer access to this agent
+    const roleResult = await requireAgentRole(queryAgentId, "viewer");
+    if (roleResult instanceof NextResponse) return roleResult;
+    agentId = queryAgentId;
+
+    // Load agent name/icon
+    const [agent] = await db
+      .select({ id: agents.id, name: agents.name, icon: agents.icon })
+      .from(agents)
+      .where(and(eq(agents.id, agentId), isNull(agents.deletedAt)))
+      .limit(1);
+    if (!agent) {
+      return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+    }
+    agentRow = agent;
+  }
 
   // Fetch chatConfig, tools, and components in parallel
   const [chatConfig, toolRows, componentRows] = await Promise.all([
@@ -39,11 +77,7 @@ export async function GET(req: Request) {
   ]);
 
   return NextResponse.json({
-    agent: {
-      id: ctx.agent.id,
-      name: ctx.agent.name,
-      icon: ctx.agent.icon,
-    },
+    agent: agentRow,
     chatConfig: chatConfig
       ? {
           title: chatConfig.title,
