@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { Suspense, useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { UserMenu } from "@/components/auth/user-menu";
@@ -22,6 +22,14 @@ import { useOrgStore } from "@/stores/org-store";
 import { SupportBubble } from "@/components/support-bubble/support-bubble";
 
 export default function AgentsPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-svh items-center justify-center"><Spinner className="size-6" /></div>}>
+      <AgentsPageContent />
+    </Suspense>
+  );
+}
+
+function AgentsPageContent() {
   const t = useTranslations("agent");
   const tn = useTranslations("nav");
   const { currentOrgId } = useOrgStore();
