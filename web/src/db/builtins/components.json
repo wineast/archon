@@ -50,5 +50,11 @@
         "delayDuration": { "type": "number", "description": "Delay before showing (ms)", "default": 200 }
       }
     }
+  },
+  {
+    "key": "tool-call-default",
+    "name": "ToolCallDefault",
+    "description": "Default tool call display with collapsible PARAMETERS and RESULT sections.",
+    "sourceFile": "tool-call-default.jsx"
   }
 ]

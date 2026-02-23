@@ -177,6 +177,12 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
         // Fallback: look up source from componentsList
         const comp = componentsList.find((c) => c.key === compKey);
         if (comp?.componentSource) registerDynamicComponentSource(t.name, comp.componentSource);
+      } else {
+        // No component assigned — use tool-call-default as fallback
+        const fallback = compiled.get("tool-call-default");
+        if (fallback) {
+          registerCompiledComponent(t.name, fallback);
+        }
       }
     }
   }, [toolsList, componentsList]);

@@ -80,13 +80,23 @@ describe("loadBuiltinComponentDefs", () => {
     }
   });
 
-  it("includes badge, spinner, table, tooltip", () => {
+  it("includes badge, spinner, table, tooltip, tool-call-default", () => {
     const defs = loadBuiltinComponentDefs();
     const keys = defs.map((d) => d.key);
     expect(keys).toContain("badge");
     expect(keys).toContain("spinner");
     expect(keys).toContain("table");
     expect(keys).toContain("tooltip");
+    expect(keys).toContain("tool-call-default");
+  });
+
+  it("populates componentSource from sourceFile", () => {
+    const defs = loadBuiltinComponentDefs();
+    const toolCallDefault = defs.find((d) => d.key === "tool-call-default");
+    expect(toolCallDefault).toBeDefined();
+    expect(toolCallDefault!.sourceFile).toBe("tool-call-default.jsx");
+    expect(toolCallDefault!.componentSource).toBeTruthy();
+    expect(toolCallDefault!.componentSource).toContain("ToolCallDefault");
   });
 });
 

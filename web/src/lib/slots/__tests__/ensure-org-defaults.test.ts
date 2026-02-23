@@ -55,9 +55,11 @@ vi.mock("nanoid", () => ({
 }));
 
 const mockEnsureBuiltinToolRefs = vi.fn();
+const mockEnsureBuiltinComponentRefs = vi.fn();
 const mockEnsureBuiltinWikiRefs = vi.fn();
 vi.mock("@/lib/pool/builtin-refs", () => ({
   ensureBuiltinToolRefs: (...args: unknown[]) => mockEnsureBuiltinToolRefs(...args),
+  ensureBuiltinComponentRefs: (...args: unknown[]) => mockEnsureBuiltinComponentRefs(...args),
   ensureBuiltinWikiRefs: (...args: unknown[]) => mockEnsureBuiltinWikiRefs(...args),
 }));
 
@@ -111,6 +113,13 @@ describe("ensureOrgDefaults", () => {
     );
     expect(embedCall).toBeDefined();
     expect((embedCall![0] as Record<string, unknown>).token).toMatch(/^et_/);
+  });
+
+  it("seeds builtin component refs for all slots", async () => {
+    await ensureOrgDefaults("org-1");
+
+    // ensureBuiltinComponentRefs called once per slot (4 slots)
+    expect(mockEnsureBuiltinComponentRefs).toHaveBeenCalledTimes(4);
   });
 
   it("seeds builtin wiki refs only for assist slot", async () => {

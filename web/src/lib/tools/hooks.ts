@@ -33,6 +33,7 @@ export async function createTool(
     handler?: string | null;
     url?: string | null;
     enabled?: boolean;
+    componentId?: string;
   },
   mutate: () => void
 ) {

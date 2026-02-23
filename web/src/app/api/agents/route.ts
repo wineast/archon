@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { agents, agentMembers, agentVersions, orgMembers, orgs } from "@/db/schema";
+import { ensureBuiltinComponentRefs } from "@/lib/pool/builtin-refs";
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { toSlug, ensureUniqueSlug } from "@/lib/agents/slug";
@@ -135,6 +136,9 @@ export async function POST(req: Request) {
       createdBy: user.id,
     })
     .returning();
+
+  // Seed builtin component refs
+  await ensureBuiltinComponentRefs(db, agent.id, initialVersion.id);
 
   const updatedAgent = await db
     .update(agents)

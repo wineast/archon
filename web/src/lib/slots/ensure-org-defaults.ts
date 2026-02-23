@@ -1,10 +1,10 @@
 import { db as appDb } from "@/db";
-import { agents, agentVersions, modelConfigs, judgeConfigs, orgSlots, embedTokens } from "@/db/schema";
+import { agents, agentVersions, modelConfigs, judgeConfigs, embedTokens } from "@/db/schema";
 import { SLOT_KEYS } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { SLOT_DEFS } from "./constants";
-import { ensureBuiltinToolRefs, ensureBuiltinWikiRefs } from "@/lib/pool/builtin-refs";
+import { ensureBuiltinToolRefs, ensureBuiltinComponentRefs, ensureBuiltinWikiRefs } from "@/lib/pool/builtin-refs";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type * as schema from "@/db/schema";
@@ -12,10 +12,8 @@ import type * as schema from "@/db/schema";
 type DbLike = PostgresJsDatabase<typeof schema>;
 
 /**
- * Idempotently ensure all default slot agents and orgSlot records exist for the given org.
- * Creates builder, assist, and evaluator agents with default model configs,
- * and links them in the orgSlots table.
- * Builder slot also seeds system tools.
+ * Idempotently ensure all default slot agents exist for the given org.
+ * Creates builder, assist, evaluator and support agents with default model configs.
  *
  * @param orgId - The org to create defaults for
  * @param database - Optional DB instance (used by seeders that have their own connection)
@@ -94,6 +92,9 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
         isActive: true,
       });
 
+      // Seed builtin component refs for all slot agents
+      await ensureBuiltinComponentRefs(db, agentId, version.id);
+
       // Seed builtin tool refs for builder slot
       if (slotKey === "builder") {
         await ensureBuiltinToolRefs(db, agentId, version.id);
@@ -131,15 +132,5 @@ export async function ensureOrgDefaults(orgId: string, database?: DbLike): Promi
         });
       }
     }
-
-    // Ensure orgSlot record exists
-    await db
-      .insert(orgSlots)
-      .values({
-        orgId,
-        slotKey,
-        agentId,
-      })
-      .onConflictDoNothing();
   }
 }

@@ -93,21 +93,39 @@ async function upsertFunctions(db: SeedDb): Promise<void> {
 }
 
 async function upsertComponents(db: SeedDb): Promise<void> {
+  const { compileCssForComponent } = await import("@/lib/components/compile-css");
   const defs = loadBuiltinComponentDefs();
   if (defs.length === 0) return;
 
-  const rows = defs.map((def) => ({
-    agentId: null as unknown as undefined,
-    key: def.key,
-    name: def.name,
-    description: def.description,
-    componentSource: "",
-    generatedCss: "",
-    componentInputSchema: def.componentInputSchema ?? null,
-    origin: "builtin" as const,
-  }));
+  const rows = await Promise.all(
+    defs.map(async (def) => {
+      const componentSource = def.componentSource ?? "";
+      const generatedCss = componentSource ? await compileCssForComponent(componentSource) : "";
+      return {
+        agentId: null as unknown as undefined,
+        key: def.key,
+        name: def.name,
+        description: def.description,
+        componentSource,
+        generatedCss,
+        componentInputSchema: def.componentInputSchema ?? null,
+        origin: "builtin" as const,
+      };
+    }),
+  );
 
-  await db.insert(components).values(rows).onConflictDoNothing();
+  await db
+    .insert(components)
+    .values(rows)
+    .onConflictDoUpdate({
+      target: [components.key],
+      targetWhere: and(isNull(components.agentId), isNull(components.deletedAt)) as SQL,
+      set: {
+        description: sql`excluded.description`,
+        componentSource: sql`excluded.component_source`,
+        generatedCss: sql`excluded.generated_css`,
+      },
+    });
 }
 
 async function upsertWiki(db: SeedDb): Promise<void> {

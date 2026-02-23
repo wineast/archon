@@ -1,5 +1,14 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef, Fragment } from "react";
-import { ChevronRight, FileText } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronDownIcon,
+  FileText,
+  WrenchIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  XCircleIcon,
+  CircleIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -58,6 +67,12 @@ export const INJECTED_DEPS_BY_MODULE: Record<string, Record<string, unknown>> = 
   },
   "archon:icons": {
     ChevronRight,
+    ChevronDownIcon,
     FileText,
+    WrenchIcon,
+    CheckCircleIcon,
+    ClockIcon,
+    XCircleIcon,
+    CircleIcon,
   },
 };

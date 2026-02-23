@@ -107,11 +107,7 @@ export function MessageParts({
             );
           }
 
-          // 2) Default tool UI (only in dev mode)
-          if (process.env.NODE_ENV !== "development") {
-            return null;
-          }
-
+          // 2) Default tool UI (safety net — all environments)
           return (
             <Tool key={`tool-${i}`}>
               {isDynamic ? (

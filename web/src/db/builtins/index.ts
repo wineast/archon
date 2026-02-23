@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import type { BuiltinFunctionDef, BuiltinComponentDef, BuiltinWikiEntry } from "./types";
 
@@ -15,9 +16,17 @@ export function loadBuiltinFunctionDefs(): BuiltinFunctionDef[] {
   return require("./functions.json") as BuiltinFunctionDef[];
 }
 
-/** Load builtin component definitions from static JSON. */
+/** Load builtin component definitions from static JSON, populating source from files. */
 export function loadBuiltinComponentDefs(): BuiltinComponentDef[] {
-  return require("./components.json") as BuiltinComponentDef[];
+  const defs = require("./components.json") as BuiltinComponentDef[];
+  const sourcesDir = path.resolve(__dirname, "component-sources");
+  for (const def of defs) {
+    if (def.sourceFile) {
+      const filePath = path.join(sourcesDir, def.sourceFile);
+      def.componentSource = fs.readFileSync(filePath, "utf-8");
+    }
+  }
+  return defs;
 }
 
 /** Load the wiki manifest (key → file mapping). Content is read from guide/ separately. */

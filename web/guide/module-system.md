@@ -84,7 +84,7 @@ export default function({ tool, isLoading }) {
 
 ### archon:icons 可用导出
 
-`ChevronRight`、`FileText`
+`ChevronRight`、`ChevronDownIcon`、`FileText`、`WrenchIcon`、`CheckCircleIcon`、`ClockIcon`、`XCircleIcon`、`CircleIcon`
 
 ---
 
