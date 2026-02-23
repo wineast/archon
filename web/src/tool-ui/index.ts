@@ -14,3 +14,4 @@ export {
   keyToPascal,
 } from "./_compose";
 export type { ComponentRecord } from "./_compose";
+export { AgentIdProvider } from "./_agent-context";

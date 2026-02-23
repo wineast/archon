@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef, Fragment } from "react";
+import { useAgentId } from "./_agent-context";
 import {
   ChevronRight,
   ChevronDownIcon,
@@ -49,6 +50,7 @@ export const INJECTED_DEPS_BY_MODULE: Record<string, Record<string, unknown>> = 
     useEffect,
     useRef,
     Fragment,
+    useAgentId,
   },
   "archon:ui": {
     Badge,

@@ -33,7 +33,7 @@ import { MessageParts, UserMessageContent } from "@/components/message-parts";
 import { ChatWelcome } from "@/components/chat-welcome";
 import { Spinner } from "@/components/ui/spinner";
 import { executeClientTool } from "@/lib/tools/client-executor";
-import { registerDynamicComponentSource } from "@/tool-ui";
+import { registerDynamicComponentSource, AgentIdProvider } from "@/tool-ui";
 import type { WelcomeIconKey } from "@/lib/config/types";
 import { PaperclipIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -441,6 +441,7 @@ function EmbedChat({
   const enableAttachment = chatConfig?.enableAttachment ?? false;
 
   return (
+    <AgentIdProvider agentId={agentId}>
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
@@ -524,6 +525,7 @@ function EmbedChat({
         </div>
       </div>
     </div>
+    </AgentIdProvider>
   );
 }
 

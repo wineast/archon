@@ -56,6 +56,7 @@ import {
   registerCompiledComponent,
   clearCompiledRegistry,
   compileComponentGraph,
+  AgentIdProvider,
   type ComponentRecord,
 } from "@/tool-ui";
 import { SessionHistory } from "@/components/session-history";
@@ -523,6 +524,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
   /* ─────────── Render ─────────── */
 
   return (
+    <AgentIdProvider agentId={agent.id}>
     <SidebarProvider className="h-svh">
       <SessionHistory
         sessions={sessions}
@@ -691,6 +693,7 @@ function AgentChatContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </AgentIdProvider>
   );
 }
 
