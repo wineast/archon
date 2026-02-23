@@ -5,6 +5,7 @@ import type {
   AgentFileSnapshotItem,
   AgentSnapshot,
   ChatConfigSnapshotItem,
+  EmbedTokenSnapshotItem,
   MemoryConfigSnapshotItem,
 } from "../types";
 
@@ -226,5 +227,36 @@ describe("MemoryConfigSnapshotItem", () => {
 
   it("snapshot with null memoryConfig is valid", () => {
     expect(MINIMAL_SNAPSHOT.memoryConfig).toBeNull();
+  });
+});
+
+describe("EmbedTokenSnapshotItem", () => {
+  it("accepts export with embedTokens", () => {
+    const tokens: EmbedTokenSnapshotItem[] = [
+      { name: "Dev Token", allowedOrigins: ["http://localhost:3000"], isActive: true },
+    ];
+    const data = makeValidExport({ embedTokens: tokens });
+    expect(validateExportData(data)).toBe(true);
+    expect(data.embedTokens).toHaveLength(1);
+    expect(data.embedTokens![0].name).toBe("Dev Token");
+  });
+
+  it("accepts export without embedTokens (backward compatible)", () => {
+    const data = makeValidExport();
+    expect(data.embedTokens).toBeUndefined();
+    expect(validateExportData(data)).toBe(true);
+  });
+
+  it("preserves embedTokens via JSON round-trip", () => {
+    const tokens: EmbedTokenSnapshotItem[] = [
+      { name: "Token A", allowedOrigins: [], isActive: true },
+      { name: "Token B", allowedOrigins: ["https://example.com"], isActive: false },
+    ];
+    const data = makeValidExport({ embedTokens: tokens });
+    const parsed = JSON.parse(JSON.stringify(data)) as AgentExportData;
+    expect(parsed.embedTokens).toHaveLength(2);
+    expect(parsed.embedTokens![0].name).toBe("Token A");
+    expect(parsed.embedTokens![1].allowedOrigins).toEqual(["https://example.com"]);
+    expect(parsed.embedTokens![1].isActive).toBe(false);
   });
 });

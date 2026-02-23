@@ -248,6 +248,14 @@ export interface AgentFileSnapshotItem {
   zipPath: string;
 }
 
+/* ─────────── Embed Token Snapshot ─────────── */
+
+export interface EmbedTokenSnapshotItem {
+  name: string;
+  allowedOrigins: string[];
+  isActive: boolean;
+}
+
 /* ─────────── Agent Export/Import ─────────── */
 
 export interface AgentExportVersion {
@@ -275,6 +283,7 @@ export interface AgentExportData {
   };
   versions: AgentExportVersion[];
   files?: AgentFileSnapshotItem[];
+  embedTokens?: EmbedTokenSnapshotItem[];
 }
 
 /** Validate that the given value is a valid AgentExportData shape. */

@@ -263,7 +263,11 @@ fixture-zip:
 	@DIR="data/fixtures/$(NAME)"; \
 	if [ ! -d "$$DIR" ]; then echo "❌ $$DIR 不存在"; exit 1; fi; \
 	OUT="data/fixtures/$(NAME).zip"; \
-	rm -f "$$OUT"; \
+	if [ -f "$$OUT" ]; then \
+		V=1; while [ -f "data/fixtures/$(NAME).v$$V.zip" ]; do V=$$((V+1)); done; \
+		mv "$$OUT" "data/fixtures/$(NAME).v$$V.zip"; \
+		echo "📦 已有 zip 重命名为 $(NAME).v$$V.zip"; \
+	fi; \
 	(cd "$$DIR" && zip -r "../$(NAME).zip" .) && \
 	echo "✅ $$OUT ($$(du -h "$$OUT" | cut -f1))"
 

@@ -223,7 +223,6 @@ seedModels → seedBuiltinPool → seedUsers
 ### 设计原则
 
 - **池资源 seed** 在 pipeline 中集中完成，早于用户/org 创建
-- **`ensureOrgDefaults()`** 只做 org 级别的事：创建 agent、refs、configs，不负责池资源创建
 - **Ref 函数**（`web/src/lib/pool/builtin-refs.ts`）只查询 + 创建引用，不触碰池资源本身
 
 ### Ref 创建
@@ -232,11 +231,11 @@ seedModels → seedBuiltinPool → seedUsers
 
 #### `ensureBuiltinToolRefs(db, buildChatAgentId, versionId)`
 
-为 builder slot agent 创建对所有 builtin 池工具的引用。在 `ensureOrgDefaults()` 中调用。
+为 builder slot agent 创建对所有 builtin 池工具的引用。在创建用户 Agent 时调用（`ensureBuiltinComponentRefs` 同理）。
 
 #### `ensureBuiltinWikiRefs(db, agentId, versionId)`
 
-为 assist slot agent 创建对所有 builtin 池 wiki 的引用。在 `ensureOrgDefaults()` 中调用。
+为 assist slot agent 创建对所有 builtin 池 wiki 的引用。
 
 ---
 

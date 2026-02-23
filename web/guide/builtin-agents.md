@@ -37,15 +37,7 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 
 ## 组织初始化
 
-创建组织时 `ensureOrgDefaults(orgId)` 幂等创建：
-- 4 个 agent（build-chat、assist、evaluator、support）
-- 每个 agent 的默认 modelConfig（assist 带 fieldContext 分支的 LiquidJS 系统提示词模板）
-- 4 条 orgSlots 记录
-- builder agent 的系统工具引用
-- assist agent 的内置 wiki 引用（guide 文档）
-- evaluator agent 的默认 judgeConfig
-- support agent 的默认 embed token
-- 已有组织升级：assist 的空系统提示词会被自动回填
+创建组织时**不再**自动创建默认 slot agent。如需初始化，通过 fixture JSON 手动导入（`data/fixtures/` 目录下有预置配置文件）。
 
 ## 删除保护
 
@@ -79,7 +71,6 @@ Agent 级槽位覆盖，唯一约束 `(agentId, slotKey)`。无记录时继承 o
 | `web/src/db/schema.ts` | SLOT_KEYS、orgSlots、agentSlotOverrides 表定义 |
 | `web/src/lib/slots/constants.ts` | SLOT_DEFS 槽位定义 |
 | `web/src/lib/slots/resolve-slot.ts` | resolveSlot() 解析 + 缓存 |
-| `web/src/lib/slots/ensure-org-defaults.ts` | ensureOrgDefaults() 组织初始化 |
 | `web/src/lib/slots/hooks.ts` | 前端 SWR hooks |
 | `web/src/app/api/orgs/[id]/slots/route.ts` | Org 槽位 API |
 | `web/src/app/api/agents/[id]/slots/route.ts` | Agent 槽位覆盖 API |

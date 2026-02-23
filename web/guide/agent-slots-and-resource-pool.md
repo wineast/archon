@@ -146,7 +146,7 @@ Props:
 
 ### 组织初始化
 
-`ensureOrgDefaults(orgId)` 创建 4 个默认 agent（builder、assist、evaluator、support），但 agent 级槽位不自动绑定。support 槽位自动绑定到 `orgSlots` 表（`onConflictDoNothing`）。
+创建组织时不再自动创建默认 slot agent。如需初始化，通过 fixture JSON 手动导入。
 
 ### API
 

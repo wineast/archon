@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import JSZip from "jszip";
 import { db } from "@/db";
-import { agents, agentFiles, agentVersions } from "@/db/schema";
+import { agents, agentFiles, agentVersions, embedTokens } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { buildSnapshot } from "@/lib/versions/snapshot";
 import type {
   AgentExportData,
   AgentFileSnapshotItem,
+  EmbedTokenSnapshotItem,
 } from "@/lib/versions/types";
 
 /** GET — export agent as ZIP (manifest.json + files/) */
@@ -19,7 +20,7 @@ export async function GET(
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const [[agent], versionRows, fileRows] = await Promise.all([
+  const [[agent], versionRows, fileRows, tokenRows] = await Promise.all([
     db.select().from(agents).where(eq(agents.id, agentId)).limit(1),
     db
       .select()
@@ -30,6 +31,10 @@ export async function GET(
       .select()
       .from(agentFiles)
       .where(eq(agentFiles.agentId, agentId)),
+    db
+      .select()
+      .from(embedTokens)
+      .where(eq(embedTokens.agentId, agentId)),
   ]);
 
   if (!agent) {
@@ -67,6 +72,13 @@ export async function GET(
     })
   );
 
+  // Map embed tokens (token value excluded for security)
+  const embedTokensSnapshot: EmbedTokenSnapshotItem[] = tokenRows.map((t) => ({
+    name: t.name,
+    allowedOrigins: t.allowedOrigins,
+    isActive: t.isActive,
+  }));
+
   const exportData: AgentExportData = {
     exportVersion: 1,
     exportedAt: new Date().toISOString(),
@@ -84,6 +96,7 @@ export async function GET(
     },
     versions,
     ...(filesMetadata.length > 0 ? { files: filesMetadata } : {}),
+    ...(embedTokensSnapshot.length > 0 ? { embedTokens: embedTokensSnapshot } : {}),
   };
 
   zip.file("manifest.json", JSON.stringify(exportData, null, 2));

@@ -1,7 +1,8 @@
 import JSZip from "jszip";
 import { put } from "@vercel/blob";
+import { nanoid } from "nanoid";
 import { db } from "@/db";
-import { agents, agentFiles, agentMembers, agentVersions, orgs } from "@/db/schema";
+import { agents, agentFiles, agentMembers, agentVersions, embedTokens, orgs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { ensureUniqueSlug } from "@/lib/agents/slug";
@@ -133,7 +134,20 @@ export async function POST(req: Request) {
       .set({ editingVersionId, publishedVersionId })
       .where(eq(agents.id, agent.id));
 
-    // 5. Restore files from ZIP
+    // 5. Restore embed tokens (generate new token values)
+    if (body.embedTokens?.length) {
+      await tx.insert(embedTokens).values(
+        body.embedTokens.map((et) => ({
+          agentId: agent.id,
+          name: et.name,
+          token: `et_${nanoid(32)}`,
+          allowedOrigins: et.allowedOrigins ?? [],
+          isActive: et.isActive ?? true,
+        }))
+      );
+    }
+
+    // 6. Restore files from ZIP
     if (body.files?.length) {
       await Promise.all(
         body.files.map(async (fileMeta) => {

@@ -11,6 +11,7 @@
   - 所有版本（version、changelog、snapshot），每个版本含完整快照（包括 chatConfig、memoryConfig 等）
   - `isEditing` / `isPublished` 标记标识当前编辑版本和已发布版本
   - Agent 关联的文件（如 PDF），以二进制打包在 ZIP 内
+  - Embed Tokens（名称、允许来源、激活状态；不含 token 值，导入时重新生成）
 
 ## ZIP 结构
 
@@ -37,6 +38,7 @@
   - 导入所有版本，恢复 editingVersionId 和 publishedVersionId 的指向
   - 每个版本的资源通过 `restoreSnapshot` 恢复为带 versionId 的行
   - ZIP 格式：自动从 ZIP 中提取文件并上传到 Vercel Blob，创建 `agentFiles` 记录
+  - 如有 `embedTokens`，为每条记录生成新 token 值（`et_` + nanoid(32)）并插入数据库
 
 ## manifest.json 格式
 
@@ -72,6 +74,13 @@
       "size": 102400,
       "zipPath": "files/rate-sheet.pdf"
     }
+  ],
+  "embedTokens": [              // 可选，有 embed token 时才出现
+    {
+      "name": "Dev Token",
+      "allowedOrigins": ["http://localhost:3000"],
+      "isActive": true
+    }
   ]
 }
 ```
@@ -87,4 +96,5 @@
 
 - 不导出聊天会话、审计日志、使用量统计等运行时数据
 - 不导出组织级配置（如 API Keys）
+- Embed token 的 token 值不导出（安全考虑），导入时自动生成新 token
 - 导入后 Agent 的 owner 为执行导入的用户
