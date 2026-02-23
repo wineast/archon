@@ -55,6 +55,16 @@ if [ "$db_name" != "$DEFAULT_DB" ]; then
 fi
 
 printf 'DATABASE_URL=%s\nDATABASE_URL_UNPOOLED=%s\n' "$db_url" "$db_url" > "$target_dir/web/.env.development.local"
+
+# 从主仓库继承非 DB 相关的环境变量（如 API_KEY_ENCRYPTION_SECRET）
+project_root="$(cd "$(dirname "$0")/.." && pwd)"
+source_env="$project_root/web/.env.development.local"
+target_env="$target_dir/web/.env.development.local"
+if [ -f "$source_env" ] && [ "$(realpath "$source_env")" != "$(realpath "$target_env")" ]; then
+    grep -v -E '^(DATABASE_URL|DATABASE_URL_UNPOOLED)=' "$source_env" | grep -v '^[[:space:]]*$' >> "$target_env" || true
+    echo "  Inherited extra env vars from main repo"
+fi
+
 echo "  Created web/.env.development.local → local DB ($db_name)"
 
 # ---- deps ----

@@ -43,6 +43,7 @@ function AgentsPageContent() {
   const [trashOpen, setTrashOpen] = useState(false);
   const [orgDialogOpen, setOrgDialogOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
   const currentOrg = orgs.find((o) => o.id === currentOrgId);
 
@@ -73,9 +74,14 @@ function AgentsPageContent() {
   );
 
   const handleImportFile = useCallback(
-    (file: File) => {
+    async (file: File) => {
       if (!currentOrgId) return;
-      importAgent(file, currentOrgId, mutate, t);
+      setImporting(true);
+      try {
+        await importAgent(file, currentOrgId, mutate, t);
+      } finally {
+        setImporting(false);
+      }
     },
     [currentOrgId, mutate, t]
   );
@@ -121,8 +127,8 @@ function AgentsPageContent() {
                   e.target.value = "";
                 }}
               />
-              <Button size="sm" variant="outline" onClick={() => importInputRef.current?.click()}>
-                <UploadIcon className="size-4" />
+              <Button size="sm" variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>
+                {importing ? <Spinner className="size-4" /> : <UploadIcon className="size-4" />}
                 {t("importAgent")}
               </Button>
               <Button size="sm" onClick={handleCreate}>
