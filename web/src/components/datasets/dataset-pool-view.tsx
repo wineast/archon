@@ -1,7 +1,7 @@
 "use client";
 
 import { JsonEditor } from "@/components/editors/json-editor";
-import { KeyField } from "@/components/ui/key-field";
+import { KeyDisplay } from "@/components/ui/key-display";
 import type { DatasetRow } from "@/db/schema";
 import type { PoolMeta } from "@/components/pool/types";
 import { PoolRefBadge } from "@/components/pool/pool-ref-badge";
@@ -15,7 +15,7 @@ export function DatasetPoolView({ dataset, poolMeta }: DatasetPoolViewProps) {
   return (
     <div className="space-y-3">
       <PoolRefBadge origin={poolMeta.origin} />
-      <KeyField value={dataset.key} />
+      <KeyDisplay value={dataset.key} />
       <div>
         <p className="text-xs font-medium text-muted-foreground">Name</p>
         <p className="mt-0.5 text-sm">{dataset.name || "—"}</p>

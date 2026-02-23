@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { JsEditor } from "@/components/editors/js-editor";
-import { KeyField } from "@/components/ui/key-field";
+import { KeyDisplay } from "@/components/ui/key-display";
 import { InlineSchemaEditor } from "@/components/schemas/inline-schema-editor";
 import { inferComponentDeps, keyToPascal, type ComponentRecord } from "@/tool-ui";
 import type { ComponentRow } from "@/db/schema";
@@ -28,7 +28,7 @@ export function ComponentPoolView({ component, allComponents, poolMeta }: Compon
   return (
     <div className="space-y-3 min-w-0">
       <PoolRefBadge origin={poolMeta.origin} />
-      <KeyField value={component.key} />
+      <KeyDisplay value={component.key} />
       <div>
         <p className="text-xs font-medium text-muted-foreground">Name</p>
         <p className="mt-0.5 text-sm">{component.name || "\u2014"}</p>
