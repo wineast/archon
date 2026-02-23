@@ -83,9 +83,14 @@ declare module "archon:ui" {
   export const Tooltip: ComponentType<{ children?: ReactNode }>;
   export const TooltipContent: ComponentType<{ children?: ReactNode }>;
   export const TooltipTrigger: ComponentType<{ asChild?: boolean; children?: ReactNode }>;
-  export const CollapsibleSection: ComponentType<{ title: string; children?: ReactNode; defaultOpen?: boolean }>;
-  export const ResultHeader: ComponentType<{ title: string; children?: ReactNode }>;
-  export const ResultSection: ComponentType<{ children?: ReactNode }>;
+  export const CollapsibleSection: ComponentType<{ title: string; children?: ReactNode; defaultOpen?: boolean; badge?: string | number; borderless?: boolean }>;
+  export const Sheet: ComponentType<{ open?: boolean; onOpenChange?: (open: boolean) => void; children?: ReactNode }>;
+  export const SheetContent: ComponentType<{ side?: "top" | "right" | "bottom" | "left"; className?: string; children?: ReactNode }>;
+  export const SheetHeader: ComponentType<{ className?: string; children?: ReactNode }>;
+  export const SheetTitle: ComponentType<{ className?: string; children?: ReactNode }>;
+  export const Popover: ComponentType<{ open?: boolean; onOpenChange?: (open: boolean) => void; children?: ReactNode }>;
+  export const PopoverContent: ComponentType<{ align?: "start" | "center" | "end"; className?: string; children?: ReactNode }>;
+  export const PopoverTrigger: ComponentType<{ asChild?: boolean; children?: ReactNode }>;
 }
 `;
 

@@ -79,7 +79,7 @@ export default function ({ tool, state, isLoading, isComplete, isError }) {
 
 ### 可用模块
 - \`archon:react\`：React, useState, useMemo, useCallback, useEffect, useRef, Fragment
-- \`archon:ui\`：Badge, Spinner, Table/TableBody/TableCell/TableHead/TableHeader/TableRow, Tooltip/TooltipContent/TooltipTrigger, CollapsibleSection, ResultHeader, ResultSection, RateSheetLinks, RateSheetPanel, SourceDocumentViewer
+- \`archon:ui\`：Badge, Spinner, Table/TableBody/TableCell/TableHead/TableHeader/TableRow, Tooltip/TooltipContent/TooltipTrigger, CollapsibleSection, Sheet/SheetContent/SheetHeader/SheetTitle, Popover/PopoverContent/PopoverTrigger
 - \`archon:icons\`：ChevronRight, FileText
 - \`archon:component/<key>\`：同 Agent 下其他组件（default export）
 

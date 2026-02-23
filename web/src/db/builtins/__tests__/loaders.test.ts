@@ -72,7 +72,7 @@ describe("loadBuiltinFunctionDefs", () => {
 describe("loadBuiltinComponentDefs", () => {
   it("returns an array of component definitions with required fields", () => {
     const defs = loadBuiltinComponentDefs();
-    expect(defs.length).toBeGreaterThanOrEqual(4);
+    expect(defs.length).toBeGreaterThanOrEqual(5);
     for (const def of defs) {
       expect(def).toHaveProperty("key");
       expect(def).toHaveProperty("name");
@@ -80,13 +80,14 @@ describe("loadBuiltinComponentDefs", () => {
     }
   });
 
-  it("includes badge, spinner, table, tooltip, tool-call-default", () => {
+  it("includes badge, spinner, table, tooltip, collapsible-section, tool-call-default", () => {
     const defs = loadBuiltinComponentDefs();
     const keys = defs.map((d) => d.key);
     expect(keys).toContain("badge");
     expect(keys).toContain("spinner");
     expect(keys).toContain("table");
     expect(keys).toContain("tooltip");
+    expect(keys).toContain("collapsible-section");
     expect(keys).toContain("tool-call-default");
   });
 

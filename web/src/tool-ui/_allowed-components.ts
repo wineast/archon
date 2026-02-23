@@ -24,14 +24,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import {
-  CollapsibleSection,
-  RateSheetLinks,
-  RateSheetPanel,
-  SourceDocumentViewer,
-  ResultHeader,
-  ResultSection,
-} from "@/components/tool-result";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // Module-keyed dependency registry for ES module format components.
 // Maps `archon:*` module specifiers to their export objects.
@@ -59,11 +63,13 @@ export const INJECTED_DEPS_BY_MODULE: Record<string, Record<string, unknown>> = 
     TooltipContent,
     TooltipTrigger,
     CollapsibleSection,
-    ResultHeader,
-    ResultSection,
-    RateSheetLinks,
-    RateSheetPanel,
-    SourceDocumentViewer,
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
   },
   "archon:icons": {
     ChevronRight,
