@@ -6,6 +6,8 @@
 
 ## 项目初始化（clone 后执行一次）
 setup:
+	@echo "🔗 [git-hooks] 配置 git hooks..."
+	@git config core.hooksPath .githooks
 	@echo "🔍 [vercel-check] 检查 Vercel 配置..."
 	@if [ ! -d web/.vercel ]; then \
 		echo ""; \
