@@ -1,34 +1,38 @@
 /**
  * Unified entry point for executing tool handler code.
  *
- * Dispatches to QuickJS sandbox (light) or Vercel Sandbox (full).
- * Replaces all `new Function()` patterns across the codebase.
+ * Uses direct `new Function()` execution with static code scanning.
  */
 
 import type { ToolContext } from "./tool-context";
-import { executeToolInSandbox } from "./sandbox";
+import { scanCode } from "@/lib/code-scanner";
+import { transformToolHandlerImports } from "@/lib/modules/transform-tool-handler";
 
-export type SandboxMode = "light" | "full";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (...args: string[]) => (...args: any[]) => Promise<any>;
 
 /**
- * Execute a tool handler in a sandboxed environment.
+ * Execute a tool handler using direct execution with static code scanning.
  *
  * @param handlerCode - ES module code string with `export default` function
  * @param args - Input arguments
  * @param context - ToolContext with wiki/dataset/fn/ontology
- * @param sandboxMode - "light" (QuickJS) or "full" (Vercel Sandbox, P2)
  */
 export async function executeToolHandler(
   handlerCode: string,
   args: unknown,
   context: ToolContext,
-  sandboxMode: SandboxMode = "light"
 ): Promise<unknown> {
-  if (sandboxMode === "full") {
-    // P2: dynamic import to avoid bundling Vercel Sandbox unless needed
-    const { executeToolInFullSandbox } = await import("./sandbox-full");
-    return executeToolInFullSandbox(handlerCode, args, context);
+  // Static scan
+  const scan = scanCode(handlerCode);
+  if (!scan.ok) {
+    throw new Error(`Code scan failed:\n${scan.errors.join("\n")}`);
   }
 
-  return executeToolInSandbox(handlerCode, args, context);
+  // Transform ES module imports into IIFE
+  const transformed = transformToolHandlerImports(handlerCode);
+
+  // Execute using AsyncFunction (supports await in handler code)
+  const fn = new AsyncFunction("__args", "__context", `return ${transformed}`);
+  return await fn(args, context);
 }

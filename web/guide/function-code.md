@@ -17,12 +17,13 @@ export default function(input) {
 
 ## 运行环境
 
-函数在 **QuickJS WASM 沙盒**中执行，完全隔离：
+函数通过 **直接执行 + 静态代码扫描** 运行：
 
-- 无法访问 Node.js API（`fs`、`path`、`http` 等）
-- 无法访问文件系统、网络、环境变量
+- 代码提交前经过 `acorn` AST 静态扫描，禁止危险模式
+- 禁止访问 Node.js 全局变量（`process`、`global`、`Buffer` 等）
+- 禁止 `require()`、`eval()`、`new Function()` 调用
 - 可使用标准 JavaScript 内置对象（`Math`、`Date`、`JSON`、`RegExp` 等）
-- **只支持** `archon:*` 虚拟模块，其他 import 路径会报错
+- **只支持** `archon:*` 虚拟模块，其他 import 路径会被静态扫描阻止
 
 ---
 
@@ -34,7 +35,7 @@ export default function(input) {
 
 ### archon:fn/<key>
 
-导入的函数是**同步调用**的（不需要 `await`）。支持导入内置函数（如 `compileExpression`）——系统会自动检测代码中的 `import` 语句，从数据库获取缺失的 builtin 函数并注入沙箱：
+导入的函数是**同步调用**的（不需要 `await`）。支持导入内置函数（如 `compileExpression`）——系统会自动检测代码中的 `import` 语句，从数据库获取缺失的 builtin 函数并注入运行时：
 
 ```js
 import other_fn from "archon:fn/other_fn";

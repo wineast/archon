@@ -78,7 +78,7 @@ export async function POST(
       output = await res.json();
     } else {
       const context = createToolContext(tool.agentId ?? undefined);
-      output = await executeToolHandler(tool.handler!, validatedInput, context, tool.sandboxMode);
+      output = await executeToolHandler(tool.handler!, validatedInput, context);
     }
 
     // Exact match comparison

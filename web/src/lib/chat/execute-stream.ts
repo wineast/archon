@@ -495,7 +495,7 @@ export async function executeChatStream(
           });
         }
 
-        // Dispose function sandbox after stream completes
+        // Dispose function exec context after stream completes
         after(() => { disposeTemplateData(templateData); });
       },
     });

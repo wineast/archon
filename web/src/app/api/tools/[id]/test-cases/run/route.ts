@@ -91,7 +91,7 @@ export async function POST(
       result = await res.json();
     } else {
       const context = createToolContext(tool.agentId ?? undefined);
-      result = await executeToolHandler(tool.handler!, validatedInput, context, tool.sandboxMode);
+      result = await executeToolHandler(tool.handler!, validatedInput, context);
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -115,6 +115,5 @@ export async function POST(
     result,
     durationMs,
     passed,
-    sandboxMode: tool.sandboxMode,
   });
 }

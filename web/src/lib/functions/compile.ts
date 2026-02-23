@@ -6,17 +6,16 @@
  * Base dependencies (e.g. compileExpression) are injected as globals.
  * Compilation order is determined by topological sort of the inferred dependency graph.
  *
- * Execution uses QuickJS WASM sandbox for isolation — user code cannot access
- * Node.js APIs, filesystem, network, or process globals.
+ * Execution uses direct `new Function()` with static code scanning for safety.
  */
 
 import { compileExpression } from "filtrex";
 import { buildInputSchema, type BuildSchemaOptions } from "@/lib/tools/schema-builder";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import {
-  createFunctionsSandbox,
-  type FunctionsSandbox,
-} from "./sandbox";
+  createFunctionsExec,
+  type FunctionsExec,
+} from "./exec";
 import { inferDepsFromImports } from "@/lib/modules/detect";
 
 /**
@@ -125,23 +124,22 @@ function topoSort(records: FunctionRecord[]): FunctionRecord[] {
 }
 
 /**
- * Resolve and compile a set of function records into a shared sandbox.
- * Returns a map of key → sync wrapper function, plus the sandbox for lifecycle management.
+ * Resolve and compile a set of function records into a shared exec context.
+ * Returns a map of key → sync wrapper function, plus the exec context for lifecycle management.
  */
 export async function resolveAndCompileFunctions(
   rows: FunctionRecord[],
   defsMap?: Record<string, JsonSchema7>,
   baseDeps?: Record<string, unknown>,
-): Promise<{ fns: Map<string, unknown>; sandbox: FunctionsSandbox }> {
+): Promise<{ fns: Map<string, unknown>; exec: FunctionsExec }> {
   const sorted = topoSort(rows);
-  const knownKeys = new Set(rows.map((r) => r.key));
 
   const records = sorted.map((row) => ({
     key: row.key,
     code: row.code,
   }));
 
-  const sandbox = await createFunctionsSandbox(records, baseDeps ?? ALL_BASE_DEPS);
+  const exec = await createFunctionsExec(records, baseDeps ?? ALL_BASE_DEPS);
 
   // Build map of key → sync wrapper with Zod validation
   const fns = new Map<string, unknown>();
@@ -150,23 +148,23 @@ export async function resolveAndCompileFunctions(
       const schema = buildInputSchema(row.parameters, undefined, defsMap ? { defsMap } : undefined);
       fns.set(row.key, function validatedFn(input: unknown) {
         const parsed = schema.parse(input);
-        return sandbox.call(row.key, parsed);
+        return exec.call(row.key, parsed);
       });
     } else {
       fns.set(row.key, function (input: unknown) {
-        return sandbox.call(row.key, input);
+        return exec.call(row.key, input);
       });
     }
   }
 
-  return { fns, sandbox };
+  return { fns, exec };
 }
 
 // ── Agent-scoped cache ──
 
 interface CacheEntry {
   fns: Map<string, unknown>;
-  sandbox: FunctionsSandbox;
+  exec: FunctionsExec;
 }
 
 const agentCache = new Map<string, CacheEntry>();
@@ -178,26 +176,26 @@ export function getCachedFunctions(agentId: string): Map<string, unknown> | unde
 export function setCachedFunctions(
   agentId: string,
   fns: Map<string, unknown>,
-  sandbox: FunctionsSandbox
+  exec: FunctionsExec
 ) {
-  // Dispose previous sandbox if replacing
+  // Dispose previous exec context if replacing
   const prev = agentCache.get(agentId);
   if (prev) {
-    prev.sandbox.dispose();
+    prev.exec.dispose();
   }
-  agentCache.set(agentId, { fns, sandbox });
+  agentCache.set(agentId, { fns, exec });
 }
 
 export function clearFunctionCache(agentId?: string) {
   if (agentId) {
     const entry = agentCache.get(agentId);
     if (entry) {
-      entry.sandbox.dispose();
+      entry.exec.dispose();
       agentCache.delete(agentId);
     }
   } else {
     for (const entry of agentCache.values()) {
-      entry.sandbox.dispose();
+      entry.exec.dispose();
     }
     agentCache.clear();
   }
