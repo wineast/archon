@@ -471,10 +471,9 @@ test.describe("Eval Full E2E", () => {
     // Wait for all cases to complete — expect at least one "Failed" badge too
     await expect(page.getByTestId("badge-failed").first()).toBeVisible({ timeout: 300_000 })
 
-    // Verify pass rate — should be "5/6" (fail_case fails)
-    // Note: due to LLM non-determinism, we check for a reasonable rate
+    // Wait for the run to fully complete — pass rate appears only after all cases finish
     const passRate = page.getByTestId("run-pass-rate").first()
-    await expect(passRate).toBeVisible()
+    await expect(passRate).toBeVisible({ timeout: 300_000 })
     const passRateText = await passRate.textContent()
     // Should show x/6 where x >= 4 (at least the deterministic cases pass)
     expect(passRateText).toMatch(/[4-5]\/6/)
