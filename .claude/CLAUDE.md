@@ -159,7 +159,8 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - **Monaco 编辑器不能用 `.fill()` / `.type()`**：Playwright 的标准输入方法对 Monaco 无效（Monaco 用自定义 input 机制，不响应标准 DOM 事件）。必须通过 `page.evaluate()` 调用 Monaco API：`monaco.editor.getModels()` 遍历找到目标 model，调用 `model.setValue(code)` 写入内容。识别目标 model 可通过内容判断（如空内容 `!model.getValue().trim()` 表示未填写的 handler）
 - **Eval Run 结果验证不要依赖 `badge-passed` / `badge-failed`**：运行完成后展开的 detail 可能只有部分 ResultCard（auto-refresh 在 run 状态变为 completed 时停止，最后一次 fetch 可能拿到的是不完整的结果）。应直接验证 `run-pass-rate`（显示在 History 行标题上，run 完成后立即可见）
 - **Eval E2E 中 `getByRole("button", { name })` 注意 sidebar case 名干扰**：sidebar 中 case 按钮的文本（如 "Import Test"）会匹配 `/Import/i`，导致 strict mode violation。需用 `{ name: "Import", exact: true }` 精确匹配
-- **运行调试技巧——不要傻等**：E2E 测试用 `Bash(run_in_background=true)` 后台执行，返回的 `output_file` 有实时日志。通过 `Read(output_file)` 定期查看日志判断进度（哪个 step 在跑、是否卡住）。如果日志长时间无更新或明显卡住，用 `TaskStop` 终止任务，再用 Playwright MCP（`browser_snapshot` / `browser_take_screenshot`）主动检查浏览器当前状态，定位卡在哪一步。根据日志和浏览器截图审视测试代码、修复后重跑。禁止盲等 600s 超时返回
+- **测试日志约定**：每个 spec 文件定义 `const TAG = "[spec名]"` + `const log = (...args: unknown[]) => console.log(TAG, ...args)`，在关键操作前后打印日志（创建资源、导航、填表单、等待完成、验证结果）。`printSteps: true` 配合 `console.log` 可在终端实时看到 step 进度和操作细节。新增/修改 E2E 测试时必须包含充分的 log 输出
+- **运行调试技巧**：E2E 测试用 `Bash(run_in_background=true)` 后台执行，返回的 `output_file` 有实时日志。通过 `Read(output_file)` 定期查看日志判断进度（哪个 step 在跑、`[tag]` 日志到哪一步了）。如果日志长时间无更新或明显卡住，用 `TaskStop` 终止任务，再用 Playwright MCP（`browser_snapshot` / `browser_take_screenshot`）主动检查浏览器当前状态，定位卡在哪一步。根据日志和浏览器截图审视测试代码、修复后重跑。禁止盲等 600s 超时返回
 
 ### Chat Persistence
 - 分层持久化：session 创建 + 用户消息在 `streamText()` 前 `await` 保存（~10-50ms）；AI 响应消息保留在 `onFinish → after()` 中异步保存
