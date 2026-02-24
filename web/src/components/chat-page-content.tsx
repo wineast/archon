@@ -60,7 +60,7 @@ import {
 import { SessionHistory } from "@/components/session-history";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { useSessions, deleteSession } from "@/lib/session/hooks";
+import { useSessions, deleteSession, renameSession } from "@/lib/session/hooks";
 import { useAgentRole } from "@/lib/auth/hooks";
 import {
   DownloadIcon,
@@ -354,6 +354,13 @@ export function ChatPageContent({
     [mutateSessions, activeSessionId, setMessages, setSessionParam]
   );
 
+  const handleRenameSession = useCallback(
+    async (id: string, title: string) => {
+      await renameSession(id, title, mutateSessions);
+    },
+    [mutateSessions]
+  );
+
   /* ── URL ↔ state sync ── */
 
   const mountValidatedRef = useRef(false);
@@ -576,6 +583,7 @@ export function ChatPageContent({
         activeSessionId={activeSessionId}
         onLoadSession={handleLoadSession}
         onDeleteSession={handleDeleteSession}
+        onRenameSession={handleRenameSession}
         onNewChat={handleNewChat}
         canViewAllSessions={canViewAllSessions}
         showAll={showAllSessions}

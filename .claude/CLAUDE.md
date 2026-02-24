@@ -131,6 +131,11 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
   - Builtin 资源额外隐藏不适用的编辑区域（Tool 隐藏 handler/执行环境，Function 隐藏 code 编辑器，Component 隐藏 JSX/CSS 编辑器）
   - 顶部显示来源 badge（`系统内置` / `共享池`）说明为何不可编辑
 
+### Tailwind CSS 4 响应式变体陷阱
+- Next.js dev 模式会将 CSS 拆成多个 chunk（外部 CSS + inline `<style>` 块），导致同一个 utility class（如 `.text-center`）被重复生成在不同的 style 块中，后出现的会覆盖前面的响应式变体（如 `sm:text-left`），破坏层叠顺序
+- Production build 不受影响（单文件，无重复）
+- **修复方式**：响应式覆盖需加 `!important`，如 `sm:!text-left`，确保 dev/prod 两种模式都能正确工作
+
 ### Template Engine（LiquidJS）
 - 使用文档见 `web/guide/template-engine.md`
 - 数据源：数据集（2 层 JSON）+ 工具定义
