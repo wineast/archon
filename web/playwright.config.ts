@@ -45,7 +45,7 @@ export default defineConfig({
     {
       name: "authenticated",
       dependencies: ["setup"],
-      testIgnore: /eval-(flow|full)\.spec\.ts/,
+      testIgnore: /eval-(flow|full|judge-skip)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: ".clerk/user.json",
@@ -54,7 +54,7 @@ export default defineConfig({
     {
       name: "eval",
       dependencies: ["setup"],
-      testMatch: /eval-(flow|full)\.spec\.ts/,
+      testMatch: /eval-(flow|full|judge-skip)\.spec\.ts/,
       timeout: 600_000,
       use: {
         ...devices["Desktop Chrome"],

@@ -20,10 +20,10 @@ export function ResultCard({ result }: ResultCardProps) {
   const isMultiTurn = result.mode !== "single" && result.chatMessages.length > 0;
 
   return (
-    <Card className="gap-3 py-4">
+    <Card className="gap-3 py-4" data-testid="result-card">
       <CardHeader className="px-4 py-0">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">{result.caseName}</CardTitle>
+          <CardTitle className="text-sm" data-testid="result-case-name">{result.caseName}</CardTitle>
           <div className="flex items-center gap-2">
             {result.mode !== "single" && (
               <Badge variant="outline" className="text-[10px]">
@@ -211,7 +211,7 @@ export function ResultCard({ result }: ResultCardProps) {
         )}
 
         {result.judgeResult && (
-          <div>
+          <div data-testid="judge-score-section">
             <p className="text-xs font-medium text-muted-foreground">
               Judge Score
             </p>
@@ -246,9 +246,9 @@ export function ResultCard({ result }: ResultCardProps) {
           </div>
         )}
 
-        {!result.judgeResult && !result.error && !result.allAssertionsPassed && (
-          <p className="text-xs text-muted-foreground italic">
-            Judge skipped (assertions failed)
+        {!result.judgeResult && !result.error && (
+          <p className="text-xs text-muted-foreground italic" data-testid="judge-skipped">
+            Judge skipped
           </p>
         )}
       </CardContent>

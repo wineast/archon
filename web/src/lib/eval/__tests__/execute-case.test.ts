@@ -172,6 +172,59 @@ describe("executeCase", () => {
     expect(mockGenerateText).toHaveBeenCalledTimes(1);
   });
 
+  it("skips judge when no expectedOutput", async () => {
+    mockGenerateText.mockResolvedValueOnce({
+      text: "Some response",
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+    mockRunAllAssertions.mockReturnValue([
+      { assertion: { id: "a1", type: "contains", value: "world" }, passed: true, message: "ok" },
+    ]);
+
+    const caseNoExpected = { ...baseCase, expectedOutput: "" };
+
+    const { result } = await executeCase({
+      run: baseRun,
+      evalCase: caseNoExpected,
+      templateVars: {},
+      toolNames: [],
+      orgId: "org-1",
+    });
+
+    expect(result.allAssertionsPassed).toBe(true);
+    expect(result.judgeResult).toBeNull();
+    // Only 1 call (chat), no judge call
+    expect(mockGenerateText).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips judge when no expectedOutput even with judgeOnFail", async () => {
+    mockGenerateText.mockResolvedValueOnce({
+      text: "No match",
+      usage: { inputTokens: 80, outputTokens: 30 },
+    });
+    mockRunAllAssertions.mockReturnValue([
+      { assertion: { id: "a1", type: "contains", value: "world" }, passed: false, message: "fail" },
+    ]);
+
+    const runWithJudgeOnFail = {
+      ...baseRun,
+      assertionFailConfig: { judgeOnFail: true },
+    };
+    const caseNoExpected = { ...baseCase, expectedOutput: "" };
+
+    const { result } = await executeCase({
+      run: runWithJudgeOnFail,
+      evalCase: caseNoExpected,
+      templateVars: {},
+      toolNames: [],
+      orgId: "org-1",
+    });
+
+    expect(result.allAssertionsPassed).toBe(false);
+    expect(result.judgeResult).toBeNull();
+    expect(mockGenerateText).toHaveBeenCalledTimes(1);
+  });
+
   it("runs judge when assertions fail and judgeOnFail is true", async () => {
     mockGenerateText
       .mockResolvedValueOnce({ text: "No match", usage: { inputTokens: 80, outputTokens: 30 } })
@@ -196,6 +249,79 @@ describe("executeCase", () => {
     expect(result.allAssertionsPassed).toBe(false);
     expect(result.judgeResult).toBeTruthy();
     expect(mockGenerateText).toHaveBeenCalledTimes(2);
+  });
+
+  it("sequential mode: skips per-turn judge when no expectedOutput", async () => {
+    // Two user turns, assistant responds to each
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "Response 1", usage: { inputTokens: 50, outputTokens: 20 } })
+      .mockResolvedValueOnce({ text: "Response 2", usage: { inputTokens: 60, outputTokens: 25 } });
+    mockRunAllAssertions
+      .mockReturnValueOnce([]) // per-turn assertions for turn 0
+      .mockReturnValue([       // case-level assertions
+        { assertion: { id: "a1", type: "contains", value: "Response" }, passed: true, message: "ok" },
+      ]);
+
+    const sequentialCase = {
+      ...baseCase,
+      mode: "sequential" as const,
+      expectedOutput: "",  // no case-level expected output
+      turns: [
+        { id: "t1", role: "user" as const, content: "Hello", judge: true, expectedOutput: "" },
+        { id: "t2", role: "user" as const, content: "Follow up", judge: true },
+      ],
+    };
+
+    const { result } = await executeCase({
+      run: baseRun,
+      evalCase: sequentialCase,
+      templateVars: {},
+      toolNames: [],
+      orgId: "org-1",
+    });
+
+    // 2 chat calls, 0 judge calls
+    expect(mockGenerateText).toHaveBeenCalledTimes(2);
+    expect(result.judgeResult).toBeNull();
+    // No per-turn judge results
+    const turnJudges = result.turnResults.filter((tr) => tr.judgeResult);
+    expect(turnJudges).toHaveLength(0);
+  });
+
+  it("sequential mode: runs per-turn judge when turn has expectedOutput", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "Response 1", usage: { inputTokens: 50, outputTokens: 20 } })
+      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } }, usage: { inputTokens: 200, outputTokens: 40 } })
+      .mockResolvedValueOnce({ text: "Response 2", usage: { inputTokens: 60, outputTokens: 25 } });
+    mockRunAllAssertions
+      .mockReturnValueOnce([]) // per-turn assertions for turn 0
+      .mockReturnValue([       // case-level assertions
+        { assertion: { id: "a1", type: "contains", value: "Response" }, passed: true, message: "ok" },
+      ]);
+
+    const sequentialCase = {
+      ...baseCase,
+      mode: "sequential" as const,
+      expectedOutput: "",  // no case-level expected output
+      turns: [
+        { id: "t1", role: "user" as const, content: "Hello", judge: true, expectedOutput: "Expected response 1" },
+        { id: "t2", role: "user" as const, content: "Follow up", judge: true },  // no turn expectedOutput, no case expectedOutput → skip
+      ],
+    };
+
+    const { result } = await executeCase({
+      run: baseRun,
+      evalCase: sequentialCase,
+      templateVars: {},
+      toolNames: [],
+      orgId: "org-1",
+    });
+
+    // 2 chat calls + 1 judge call (only for turn 0 which has expectedOutput)
+    expect(mockGenerateText).toHaveBeenCalledTimes(3);
+    expect(result.judgeResult).toBeNull(); // no case-level judge (no case expectedOutput)
+    const turnJudges = result.turnResults.filter((tr) => tr.judgeResult);
+    expect(turnJudges).toHaveLength(1);
   });
 });
 

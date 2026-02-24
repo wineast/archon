@@ -310,12 +310,12 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
 
             if (!perTurnAssertionsPassed && stopOnTurnFail) break;
 
-            // Per-turn judge
-            if (turn.judge && (perTurnAssertionsPassed || judgeTurnOnFail) && dimensions.length > 0) {
+            // Per-turn judge (skip if no expected output to evaluate against)
+            const turnExpected = turn.expectedOutput || evalCase.expectedOutput;
+            if (turn.judge && (perTurnAssertionsPassed || judgeTurnOnFail) && dimensions.length > 0 && turnExpected) {
               const conversationLog = chatMessages
                 .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.content}`)
                 .join("\n");
-              const turnExpected = turn.expectedOutput || evalCase.expectedOutput;
               const judgePrompt = [
                 `Conversation:\n${conversationLog}`,
                 turnExpected ? `Expected Output: ${turnExpected}` : null,
@@ -358,9 +358,9 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
       const assertionResults = runAllAssertions(evalCase.assertions, chatResponse, allToolCalls);
       const allAssertionsPassed = assertionResults.every((r) => r.passed);
 
-      // Case-level judge
+      // Case-level judge (skip if no expected output to evaluate against)
       let judgeResult = null;
-      if ((allAssertionsPassed || judgeOnFail) && dimensions.length > 0) {
+      if ((allAssertionsPassed || judgeOnFail) && dimensions.length > 0 && evalCase.expectedOutput) {
         const conversationLog = chatMessages
           .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.content}`)
           .join("\n");
