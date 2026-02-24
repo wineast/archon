@@ -28,13 +28,18 @@ import {
 } from "@/lib/tools/test-case-hooks";
 import type { ToolTestRunResultRow } from "@/db/schema";
 import type { Assertion } from "@/lib/eval/types";
+import type { ToolComponentPreviewData } from "./tool-component-preview";
 
 interface ToolTestCasesPanelProps {
   toolId: string;
+  toolName?: string;
+  componentPreview?: ToolComponentPreviewData | null;
 }
 
 export function ToolTestCasesPanel({
   toolId,
+  toolName,
+  componentPreview,
 }: ToolTestCasesPanelProps) {
   const { testCases, isLoading, mutate } = useToolTestCases(toolId);
   const { runs, mutate: mutateRuns } = useToolTestRuns(toolId);
@@ -342,6 +347,8 @@ export function ToolTestCasesPanel({
                   onDelete={handleDelete}
                   onRun={handleRun}
                   busy={runAllRunning}
+                  toolName={toolName}
+                  componentPreview={componentPreview}
                 />
               ))
             )}
@@ -399,7 +406,7 @@ export function ToolTestCasesPanel({
                     {currentRunOpen && (
                       <div className="space-y-1 border-t px-3 py-2">
                         {currentRunResults.map((r) => (
-                          <ToolRunResultCard key={r.id} result={r} />
+                          <ToolRunResultCard key={r.id} result={r} toolName={toolName} componentPreview={componentPreview} />
                         ))}
                       </div>
                     )}
@@ -418,6 +425,8 @@ export function ToolTestCasesPanel({
                   deletingRun={deletingRunId === run.id}
                   onToggle={() => handleToggleRunDetail(run.id)}
                   onDelete={() => handleDeleteRun(run.id)}
+                  toolName={toolName}
+                  componentPreview={componentPreview}
                 />
               ))}
             </div>

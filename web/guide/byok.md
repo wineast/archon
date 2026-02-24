@@ -62,6 +62,19 @@ resolveModel(modelId, orgId)
 │  └─ 有 key → 创建直连 provider 实例
 ```
 
+### BYOK 模型名映射
+
+部分 Provider 的 Gateway 模型名与实际 API 模型名不同。`BYOK_MODEL_NAME_MAPPING` 在直连时自动转换：
+
+| Provider | Gateway 名 | API 名 |
+|----------|-----------|--------|
+| DeepSeek | `deepseek-v3.2` / `deepseek-v3.1` / `deepseek-v3` | `deepseek-chat` |
+| DeepSeek | `deepseek-v3.2-thinking` / `deepseek-r1` | `deepseek-reasoner` |
+
+无映射的 Provider（如 OpenAI、Anthropic）直接使用 Gateway 名，因为它们的 SDK 已内部处理名称解析。
+
+新增 Provider 映射时，在 `resolve-model.ts` 的 `BYOK_MODEL_NAME_MAPPING` 中添加对应条目。
+
 ### 缓存
 
 - `web/src/lib/ai/org-api-keys.ts`：60 秒 TTL 内存缓存

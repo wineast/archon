@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test clean storybook db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test e2e e2e-ui e2e-eval clean storybook deps db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
 
 # ============================================================
 # Setup
@@ -113,6 +113,10 @@ dev:
 		cd web && npm run dev; \
 	fi
 
+## 安装依赖
+deps:
+	cd web && npm install
+
 build:
 	cd web && npm run build
 
@@ -124,6 +128,15 @@ typecheck:
 
 test:
 	cd web && npm test
+
+e2e:
+	cd web && npx playwright test
+
+e2e-ui:
+	cd web && npx playwright test --ui
+
+e2e-eval:
+	cd web && npx playwright test --project=eval
 
 storybook:
 	@if [ -f .worktree/meta.json ]; then \

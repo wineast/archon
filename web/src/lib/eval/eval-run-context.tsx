@@ -1,44 +1,61 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
+import type { EvalRunRow } from "@/db/schema";
+import type { KeyedMutator } from "swr";
+import { toast } from "sonner";
 
 interface EvalRunState {
   isRunning: boolean;
-  runningCaseId: string | null;
+  activeRun: EvalRunRow | null;
   progress: number;
-  setRunning: (running: boolean) => void;
-  setRunningCaseId: (id: string | null) => void;
-  setProgress: (progress: number) => void;
+  cancelRun: () => Promise<void>;
 }
 
 const EvalRunContext = createContext<EvalRunState | null>(null);
 
-export function EvalRunProvider({ children }: { children: ReactNode }) {
-  const [isRunning, setIsRunning] = useState(false);
-  const [runningCaseId, setRunningCaseIdState] = useState<string | null>(null);
-  const [progress, setProgressState] = useState(0);
+interface EvalRunProviderProps {
+  runs: EvalRunRow[];
+  mutateRuns: KeyedMutator<EvalRunRow[]>;
+  children: ReactNode;
+}
 
-  const setRunning = useCallback((running: boolean) => {
-    setIsRunning(running);
-  }, []);
+export function EvalRunProvider({ runs, mutateRuns, children }: EvalRunProviderProps) {
+  const activeRun = useMemo(
+    () => runs.find((r) => r.status === "running") ?? null,
+    [runs]
+  );
 
-  const setRunningCaseId = useCallback((id: string | null) => {
-    setRunningCaseIdState(id);
-  }, []);
+  const isRunning = activeRun !== null;
 
-  const setProgress = useCallback((p: number) => {
-    setProgressState(p);
-  }, []);
+  const progress = useMemo(() => {
+    if (!activeRun || activeRun.totalCases === 0) return 0;
+    return (activeRun.completedCases / activeRun.totalCases) * 100;
+  }, [activeRun]);
+
+  const cancelRun = useCallback(async () => {
+    if (!activeRun) return;
+    try {
+      const res = await fetch(`/api/eval/run/${activeRun.id}/cancel`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      mutateRuns();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  }, [activeRun, mutateRuns]);
 
   return (
     <EvalRunContext value={{
       isRunning,
-      runningCaseId,
+      activeRun,
       progress,
-      setRunning,
-      setRunningCaseId,
-      setProgress,
+      cancelRun,
     }}>
       {children}
     </EvalRunContext>

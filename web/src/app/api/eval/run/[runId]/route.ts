@@ -43,9 +43,18 @@ export async function PATCH(
       ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
       : null;
 
+  // If the run was still in "running" state (e.g. single-case run via CaseDetail),
+  // mark it as completed during finalize
+  const statusUpdate = run.status === "running" ? "completed" as const : undefined;
+
   await db
     .update(evalRuns)
-    .set({ totalCases, passedAssertions, averageScore })
+    .set({
+      totalCases,
+      passedAssertions,
+      averageScore,
+      ...(statusUpdate ? { status: statusUpdate } : {}),
+    })
     .where(eq(evalRuns.id, runId));
 
   return Response.json({

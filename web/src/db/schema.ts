@@ -676,6 +676,9 @@ export const judgeConfigs = pgTable(
 export type JudgeConfigRow = typeof judgeConfigs.$inferSelect;
 export type NewJudgeConfigRow = typeof judgeConfigs.$inferInsert;
 
+export const EVAL_RUN_STATUSES = ["pending", "running", "completed", "cancelled", "failed"] as const;
+export type EvalRunStatus = (typeof EVAL_RUN_STATUSES)[number];
+
 export const evalRuns = pgTable("eval_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
   agentId: uuid("agent_id").references(() => agents.id, {
@@ -683,6 +686,7 @@ export const evalRuns = pgTable("eval_runs", {
   }),
   chatModel: text("chat_model").notNull(),
   chatSystemPrompt: text("chat_system_prompt").notNull(),
+  chatTemperature: real("chat_temperature").notNull().default(0.7),
   judgeAgentId: uuid("judge_agent_id"),
   judgeModelConfigSnapshot: jsonb("judge_model_config_snapshot"),
   judgeConfigSnapshot: jsonb("judge_config_snapshot"),
@@ -692,6 +696,9 @@ export const evalRuns = pgTable("eval_runs", {
   passedAssertions: integer("passed_assertions").notNull(),
   averageScore: real("average_score"),
   isBaseline: boolean("is_baseline").notNull().default(false),
+  status: text("status").notNull().default("pending").$type<EvalRunStatus>(),
+  completedCases: integer("completed_cases").notNull().default(0),
+  error: text("error"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

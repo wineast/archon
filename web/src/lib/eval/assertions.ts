@@ -1,6 +1,24 @@
-import type { Assertion, AssertionResult } from "./types";
+import equal from "fast-deep-equal";
+import type { Assertion, AssertionResult, ToolCallRecord } from "./types";
 
-function runAssertion(assertion: Assertion, response: string): AssertionResult {
+function isSubset(subset: Record<string, unknown>, full: Record<string, unknown>): boolean {
+  for (const [key, value] of Object.entries(subset)) {
+    if (!(key in full)) return false;
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      if (typeof full[key] !== "object" || full[key] === null || Array.isArray(full[key])) return false;
+      if (!isSubset(value as Record<string, unknown>, full[key] as Record<string, unknown>)) return false;
+    } else {
+      if (!equal(value, full[key])) return false;
+    }
+  }
+  return true;
+}
+
+function runAssertion(
+  assertion: Assertion,
+  response: string,
+  toolCalls?: ToolCallRecord[]
+): AssertionResult {
   switch (assertion.type) {
     case "contains": {
       const passed = response.toLowerCase().includes(assertion.value.toLowerCase());
@@ -71,12 +89,75 @@ function runAssertion(assertion: Assertion, response: string): AssertionResult {
         return { assertion, passed: false, message: "Response is not valid JSON" };
       }
     }
+    case "tool-called": {
+      const tcs = toolCalls ?? [];
+      const passed = tcs.some((tc) => tc.toolName === assertion.value);
+      return {
+        assertion,
+        passed,
+        message: passed
+          ? `Tool "${assertion.value}" was called`
+          : `Tool "${assertion.value}" was not called`,
+      };
+    }
+    case "tool-not-called": {
+      const tcs = toolCalls ?? [];
+      const passed = !tcs.some((tc) => tc.toolName === assertion.value);
+      return {
+        assertion,
+        passed,
+        message: passed
+          ? `Tool "${assertion.value}" was not called (as expected)`
+          : `Tool "${assertion.value}" was called (unexpected)`,
+      };
+    }
+    case "tool-called-with-contains": {
+      const tcs = toolCalls ?? [];
+      try {
+        const { tool, args } = JSON.parse(assertion.value) as { tool: string; args: Record<string, unknown> };
+        const match = tcs.find((tc) => tc.toolName === tool && isSubset(args, tc.args));
+        return {
+          assertion,
+          passed: !!match,
+          message: match
+            ? `Tool "${tool}" was called with args containing ${JSON.stringify(args)}`
+            : `Tool "${tool}" was not called with args containing ${JSON.stringify(args)}`,
+        };
+      } catch {
+        return {
+          assertion,
+          passed: false,
+          message: `Invalid JSON value for tool-called-with-contains: ${assertion.value}`,
+        };
+      }
+    }
+    case "tool-called-with-exact": {
+      const tcs = toolCalls ?? [];
+      try {
+        const { tool, args } = JSON.parse(assertion.value) as { tool: string; args: Record<string, unknown> };
+        const match = tcs.find((tc) => tc.toolName === tool && equal(tc.args, args));
+        return {
+          assertion,
+          passed: !!match,
+          message: match
+            ? `Tool "${tool}" was called with exact args ${JSON.stringify(args)}`
+            : `Tool "${tool}" was not called with exact args ${JSON.stringify(args)}`,
+        };
+      } catch {
+        return {
+          assertion,
+          passed: false,
+          message: `Invalid JSON value for tool-called-with-exact: ${assertion.value}`,
+        };
+      }
+    }
   }
 }
 
 export function runAllAssertions(
   assertions: Assertion[],
-  response: string
+  response: string,
+  toolCalls?: ToolCallRecord[]
 ): AssertionResult[] {
-  return assertions.map((a) => runAssertion(a, response));
+  return assertions.map((a) => runAssertion(a, response, toolCalls));
 }

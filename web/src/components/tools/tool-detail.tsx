@@ -17,6 +17,7 @@ import type { ToolRow } from "@/db/schema";
 import type { ToolDefinition } from "@/lib/tools/types";
 import type { PoolMeta } from "@/components/pool/types";
 import { PoolRefBottomBar } from "@/components/pool/pool-ref-bottom-bar";
+import { useToolComponentPreview } from "@/lib/tools/use-tool-component-preview";
 
 interface ToolDetailProps {
   tool: ToolRow;
@@ -39,6 +40,8 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle, poolMeta
   const [dirty, setDirty] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const busy = saving || deleting || toggling;
+
+  const componentPreview = useToolComponentPreview(tool.componentId, agentId);
 
   const handleSave = useCallback(async () => {
     if (!draftRef.current) return;
@@ -193,11 +196,11 @@ export function ToolDetail({ tool, agentId, onSave, onDelete, onToggle, poolMeta
       </TabsContent>
 
       <TabsContent value="playground" className="flex min-h-0 flex-1 flex-col">
-        <ToolPlayground toolId={tool.id} />
+        <ToolPlayground toolId={tool.id} toolName={tool.name} componentPreview={componentPreview} />
       </TabsContent>
 
       <TabsContent value="test-cases" className="flex min-h-0 flex-1 flex-col">
-        <ToolTestCasesPanel toolId={tool.id} />
+        <ToolTestCasesPanel toolId={tool.id} toolName={tool.name} componentPreview={componentPreview} />
       </TabsContent>
     </Tabs>
   );

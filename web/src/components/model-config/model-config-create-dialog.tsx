@@ -134,7 +134,7 @@ export function ModelConfigCreateDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={!canSubmit}>
+          <Button onClick={handleCreate} disabled={!canSubmit} data-testid="btn-create-config">
             {creating && <Spinner className="mr-1.5 size-3" />}
             Create
           </Button>

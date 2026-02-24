@@ -1,6 +1,6 @@
 ---
 name: worktree
-description: 管理 git worktree（创建、列出、同步、合并、删除工作区）。当用户说"创建工作区"、"同步上游"、"合并工作区"、"删除工作区"等类似表述时，应调用此技能。
+description: 管理 git worktree（创建、列出、合并、删除工作区）。当用户说"创建工作区"、"新建工作区"、"合并工作区"、"删除工作区"、"列出工作区"等类似表述时，应调用此技能。
 allowed-tools: Bash, Write, Edit, Read, Grep, Glob, Task, AskUserQuestion, Skill
 ---
 
@@ -12,7 +12,6 @@ allowed-tools: Bash, Write, Edit, Read, Grep, Glob, Task, AskUserQuestion, Skill
 - "创建工作区"、"新建工作区"
 - "列出工作区"、"查看工作区"
 - "删除工作区"
-- "同步上游"、"sync 上游"、"拉取上游更新"
 - "合并工作区"、"合并到上游"、"merge 工作区"
 
 ## 调用方式
@@ -20,7 +19,6 @@ allowed-tools: Bash, Write, Edit, Read, Grep, Glob, Task, AskUserQuestion, Skill
 ```
 /worktree                    # 列出所有 worktree
 /worktree create <name>      # 创建工作区
-/worktree sync               # 同步上游分支到当前工作区
 /worktree merge <name>       # 合并工作区分支回 base 分支
 /worktree delete <name>      # 删除 worktree
 /worktree clean              # 清空所有 worktree（强制清理）
@@ -68,22 +66,6 @@ make wt-list
 5. **提示用户**：
    - worktree 路径：`.worktrees/<name>`
    - 启动方式：`cd .worktrees/<name> && ./start.sh`
-
-### 同步上游（`sync`）
-
-将本地上游分支（主工作区的 base 分支）的最新变更合并到当前工作区。在工作区内执行。
-
-**重要**：这里的"上游"是指本地 git 分支（worktree 共享同一个 git 仓库），**不是远程分支**。不要执行 `git fetch`，直接 `git merge <baseBranch>` 即可。
-
-- 自动读取 `.worktree/meta.json` 中的 `baseBranch` 字段
-- 如果上游工作区有未提交修改，提醒用户先去上游提交，确认后才继续
-- 如果当前工作区有未提交变更，自动 stash → merge → stash pop
-- 如果合并有冲突，分析冲突内容，向用户说明解决方案，等待用户确认后再执行解决
-- 合并后自动检测 `package.json` / `package-lock.json` 是否有变更，有则自动执行 `npm install` 安装新依赖
-
-```bash
-make wt-sync
-```
 
 ### 合并工作区（`merge`）
 

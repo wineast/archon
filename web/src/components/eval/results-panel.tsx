@@ -1,16 +1,10 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import {
   useEvalCases,
@@ -21,29 +15,25 @@ import {
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useEvalRun } from "@/lib/eval/eval-run-context";
 import { useTools } from "@/lib/tools/hooks";
-import { useModelConfigs, useActiveModelConfig } from "@/lib/model-config/hooks";
-import { useJudgeConfigs, useActiveJudgeConfig } from "@/lib/judge-config/hooks";
-import { useResolvedEvaluator } from "@/lib/eval/use-resolved-evaluator";
 import { toEvalCase, toEvalResult } from "@/lib/eval/types";
 import type {
-  EvalResult,
   CreateEvalRunResponse,
-  RunCaseResponse,
   EvalRunDetail,
+  AssertionFailConfig,
 } from "@/lib/eval/types";
 import type { EvalRunRow } from "@/db/schema";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ResultCard } from "./result-card";
+import { RunEvalDialog } from "./run-eval-dialog";
 import {
   PlayIcon,
+  SquareIcon,
   Trash2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
   ClockIcon,
   BookmarkIcon,
-  AlertTriangleIcon,
 } from "lucide-react";
 import {
   setBaseline,
@@ -52,9 +42,6 @@ import {
   benchmarkModelsKey,
 } from "@/lib/eval/benchmark-hooks";
 import { useSWRConfig } from "swr";
-import type { AssertionFailConfig } from "@/lib/eval/types";
-import { SlotAgentSelect } from "@/components/slots/slot-agent-select";
-import { useAgentOrgId } from "@/lib/agents/hooks";
 
 interface ResultsPanelProps {
   agentId?: string;
@@ -68,37 +55,18 @@ export function ResultsPanel({
   const { cases: caseRows } = useEvalCases(agentId);
   const { templateVars } = useTemplateVars(agentId);
   const { tools: allDbTools } = useTools(agentId);
-  const { configs: modelConfigs } = useModelConfigs(agentId);
-  const { activeConfig: activeModelConfig } = useActiveModelConfig(agentId);
   const getEnabledToolNames = () =>
     allDbTools.filter((t) => t.enabled).map((t) => t.name);
-
-  // Resolve evaluator slot
-  const { evaluator, mutate: mutateEvaluator } = useResolvedEvaluator(agentId);
-  const judgeAgentId = evaluator?.judgeAgentId ?? undefined;
-  const orgId = useAgentOrgId(agentId);
-
-  // Judge Agent's model configs and judge configs
-  const { configs: judgeModelConfigs } = useModelConfigs(judgeAgentId);
-  const { configs: judgeJudgeConfigs } = useJudgeConfigs(judgeAgentId);
-  const { activeConfig: activeJudgeModelConfig } = useActiveModelConfig(judgeAgentId);
-  const { activeConfig: activeJudgeConfig } = useActiveJudgeConfig(judgeAgentId);
 
   const { runs, mutate: mutateRuns } = useEvalRuns(agentId);
   const {
     isRunning,
+    activeRun,
     progress,
-    runningCaseId,
-    setRunning,
-    setRunningCaseId,
-    setProgress,
+    cancelRun,
   } = useEvalRun();
 
-  const [currentResults, setCurrentResults] = useState<EvalResult[]>([]);
-  const [selectedConfigId, setSelectedConfigId] = useState<string>("");
-  const [selectedJudgeModelConfigId, setSelectedJudgeModelConfigId] = useState<string>("");
-  const [selectedJudgeConfigId, setSelectedJudgeConfigId] = useState<string>("");
-  const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>({});
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
 
   // Run detail expansion
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
@@ -108,158 +76,78 @@ export function ResultsPanel({
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
 
-  // Resolve selected IDs (fallback to active)
-  const resolvedConfigId = selectedConfigId || activeModelConfig?.id || "";
-  const resolvedJudgeModelConfigId = selectedJudgeModelConfigId || activeJudgeModelConfig?.id || "";
-  const resolvedJudgeConfigId = selectedJudgeConfigId || activeJudgeConfig?.id || "";
-
   const allCases = caseRows.map(toEvalCase);
   const cases =
     selectedTags.length > 0
       ? allCases.filter((c) => selectedTags.some((t) => c.tags?.includes(t)))
       : allCases;
 
-  const canRun = !!judgeAgentId && !!resolvedConfigId && !!resolvedJudgeModelConfigId && !!resolvedJudgeConfigId && cases.length > 0;
+  const canRun = cases.length > 0;
 
-  const handleRunAll = useCallback(async () => {
-    if (!canRun || !judgeAgentId) return;
+  // Auto-expand running run
+  useEffect(() => {
+    if (activeRun) {
+      setExpandedRunId(activeRun.id);
+    }
+  }, [activeRun?.id]);
 
-    setRunning(true);
-    setProgress(0);
-    setCurrentResults([]);
-    const allResults: EvalResult[] = [];
+  // Auto-refresh detail for running/expanded run
+  useEffect(() => {
+    if (!expandedRunId) return;
+    const run = runs.find((r) => r.id === expandedRunId);
+    if (run?.status !== "running") return;
 
-    // Step 1: Create a single run record
-    let runId: string;
+    const interval = setInterval(async () => {
+      const detail = await fetchEvalRunDetail(expandedRunId);
+      if (detail) {
+        setRunDetailCache((prev) => ({ ...prev, [expandedRunId]: detail }));
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [expandedRunId, runs]);
+
+  const handleRunAllConfirm = useCallback(async (params: {
+    judgeAgentId: string;
+    assertionFailConfig: AssertionFailConfig;
+  }) => {
+    if (!agentId) return;
+    const { judgeAgentId, assertionFailConfig } = params;
+
+    setRunDialogOpen(false);
+
     try {
       const createRes = await fetch("/api/eval/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          modelConfigId: resolvedConfigId,
+          agentId,
           judgeAgentId,
-          judgeModelConfigId: resolvedJudgeModelConfigId,
-          judgeConfigId: resolvedJudgeConfigId,
           filterTags: selectedTags.length > 0 ? selectedTags : undefined,
           assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
           totalCases: cases.length,
+          cases,
+          templateVars,
+          toolNames: getEnabledToolNames(),
         }),
       });
       if (!createRes.ok) {
-        const errText = await createRes.text();
-        throw new Error(`Failed to create run: HTTP ${createRes.status}: ${errText}`);
+        const errData = await createRes.json().catch(() => null);
+        const errMsg = errData?.error || `HTTP ${createRes.status}`;
+        throw new Error(errMsg);
       }
-      const { runId: id }: CreateEvalRunResponse = await createRes.json();
-      runId = id;
+      const { runId }: CreateEvalRunResponse = await createRes.json();
+      mutateRuns();
+      // Auto-expand the new run
+      setExpandedRunId(runId);
     } catch (err) {
-      setRunning(false);
-      setProgress(0);
-      setCurrentResults(
-        cases.map((c) => ({
-          caseId: c.id,
-          caseName: c.name,
-          mode: c.mode,
-          turns: c.turns,
-          chatMessages: [],
-          turnResults: [],
-          chatResponse: "",
-          assertionResults: [],
-          allAssertionsPassed: false,
-          judgeResult: null,
-          timestamp: Date.now(),
-          durationMs: 0,
-          error: err instanceof Error ? err.message : String(err),
-        }))
-      );
-      return;
+      toast.error(err instanceof Error ? err.message : String(err));
     }
-
-    // Step 2: Execute each case against the run
-    for (let i = 0; i < cases.length; i++) {
-      const c = cases[i];
-      setRunningCaseId(c.id);
-      setProgress((i / cases.length) * 100);
-
-      try {
-        const res = await fetch(`/api/eval/run/${runId}/case`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            case: c,
-            judgeModelConfigId: resolvedJudgeModelConfigId,
-            judgeConfigId: resolvedJudgeConfigId,
-            modelConfigId: resolvedConfigId,
-            templateVars,
-            toolNames: getEnabledToolNames(),
-          }),
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          allResults.push({
-            caseId: c.id,
-            caseName: c.name,
-            mode: c.mode,
-            turns: c.turns,
-            chatMessages: [],
-            turnResults: [],
-            chatResponse: "",
-            assertionResults: [],
-            allAssertionsPassed: false,
-            judgeResult: null,
-            timestamp: Date.now(),
-            durationMs: 0,
-            error: `HTTP ${res.status}: ${errText}`,
-          });
-        } else {
-          const data: RunCaseResponse = await res.json();
-          allResults.push(data.result);
-        }
-      } catch (err) {
-        allResults.push({
-          caseId: c.id,
-          caseName: c.name,
-          mode: c.mode,
-          turns: c.turns,
-          chatMessages: [],
-          turnResults: [],
-          chatResponse: "",
-          assertionResults: [],
-          allAssertionsPassed: false,
-          judgeResult: null,
-          timestamp: Date.now(),
-          durationMs: 0,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-
-      setCurrentResults([...allResults]);
-    }
-
-    // Step 3: Finalize the run with aggregated stats
-    try {
-      await fetch(`/api/eval/run/${runId}`, { method: "PATCH" });
-    } catch {
-      // Non-critical: stats may be stale but results are saved
-    }
-
-    setProgress(100);
-    setRunningCaseId(null);
-    setRunning(false);
-    mutateRuns();
   }, [
-    canRun,
-    judgeAgentId,
+    agentId,
     cases,
-    resolvedConfigId,
-    resolvedJudgeModelConfigId,
-    resolvedJudgeConfigId,
     templateVars,
     selectedTags,
-    assertionFailConfig,
-    setRunning,
-    setProgress,
-    setRunningCaseId,
     mutateRuns,
   ]);
 
@@ -296,163 +184,31 @@ export function ResultsPanel({
     [mutateRuns, expandedRunId]
   );
 
-  const displayResults = currentResults;
-  const passedCount = displayResults.filter(
-    (r) => r.allAssertionsPassed
-  ).length;
-  const scores = displayResults
-    .map((r) => r.judgeResult?.overallScore)
-    .filter((s): s is number => s != null);
-  const avgScore =
-    scores.length > 0
-      ? Math.round(
-          (scores.reduce((a, b) => a + b, 0) / scores.length) * 10
-        ) / 10
-      : null;
-
-  const runningCaseName = cases.find((c) => c.id === runningCaseId)?.name;
-
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-3 border-b px-4 py-3">
-        {/* Area 1: Agent Model Config */}
-        <div>
-          <label className="text-[10px] font-medium text-muted-foreground">
-            Agent Model Config
-          </label>
-          <Select value={resolvedConfigId} onValueChange={setSelectedConfigId}>
-            <SelectTrigger className="mt-0.5 h-8 text-xs">
-              <SelectValue placeholder="Select config..." />
-            </SelectTrigger>
-            <SelectContent>
-              {modelConfigs.map((mc) => (
-                <SelectItem key={mc.id} value={mc.id} className="text-xs">
-                  {mc.name}
-                  {mc.isActive ? " (Active)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Area 2: Judge Configuration */}
-        <div className="rounded-md border p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
-              Judge Agent
-            </span>
-            {agentId && orgId && (
-              <SlotAgentSelect
-                agentId={agentId}
-                orgId={orgId}
-                slotKey="evaluator"
-                className="flex-1"
-                onChanged={mutateEvaluator}
-              />
-            )}
-          </div>
-
-          {!judgeAgentId && (
-            <div className="flex items-start gap-2 rounded-md bg-amber-50 p-2 dark:bg-amber-950/20">
-              <AlertTriangleIcon className="mt-0.5 size-3 shrink-0 text-amber-500" />
-              <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                请选择一个 Judge Agent
-              </p>
-            </div>
-          )}
-
-          {judgeAgentId && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-medium text-muted-foreground">
-                  Judge Model
-                </label>
-                <Select value={resolvedJudgeModelConfigId} onValueChange={setSelectedJudgeModelConfigId}>
-                  <SelectTrigger className="mt-0.5 h-8 text-xs">
-                    <SelectValue placeholder="Select model..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {judgeModelConfigs.map((mc) => (
-                      <SelectItem key={mc.id} value={mc.id} className="text-xs">
-                        {mc.name}
-                        {mc.isActive ? " (Active)" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-[10px] font-medium text-muted-foreground">
-                  Judge Config
-                </label>
-                <Select value={resolvedJudgeConfigId} onValueChange={setSelectedJudgeConfigId}>
-                  <SelectTrigger className="mt-0.5 h-8 text-xs">
-                    <SelectValue placeholder="Select config..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {judgeJudgeConfigs.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="text-xs">
-                        {c.name}
-                        {c.isActive ? " (Active)" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Area 3: Run settings */}
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="judgeOnFail"
-              checked={!!assertionFailConfig.judgeOnFail}
-              onCheckedChange={(v) =>
-                setAssertionFailConfig((prev) => ({ ...prev, judgeOnFail: v }))
-              }
-            />
-            <Label htmlFor="judgeOnFail" className="text-xs">
-              断言失败仍执行评估
-            </Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="judgeTurnOnFail"
-              checked={!!assertionFailConfig.judgeTurnOnFail}
-              onCheckedChange={(v) =>
-                setAssertionFailConfig((prev) => ({ ...prev, judgeTurnOnFail: v }))
-              }
-            />
-            <Label htmlFor="judgeTurnOnFail" className="text-xs">
-              单轮断言失败仍评估该轮
-            </Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="stopOnTurnFail"
-              checked={!!assertionFailConfig.stopOnTurnFail}
-              onCheckedChange={(v) =>
-                setAssertionFailConfig((prev) => ({ ...prev, stopOnTurnFail: v }))
-              }
-            />
-            <Label htmlFor="stopOnTurnFail" className="text-xs">
-              单轮断言失败停止后续轮
-            </Label>
-          </div>
-        </div>
-
-        {/* Area 4: Run action */}
+        {/* Run action */}
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleRunAll}
-            disabled={isRunning || !canRun}
-          >
-            <PlayIcon className="mr-1 size-3" />
-            {isRunning ? "Running..." : `Run All (${cases.length})`}
-          </Button>
+          {isRunning ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={cancelRun}
+            >
+              <SquareIcon className="mr-1 size-3" />
+              Stop
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setRunDialogOpen(true)}
+              disabled={!canRun}
+              data-testid="btn-run-all"
+            >
+              <PlayIcon className="mr-1 size-3" />
+              Run All ({cases.length})
+            </Button>
+          )}
           {selectedTags.length > 0 && (
             <span className="text-[10px] text-muted-foreground">
               Filtered: {selectedTags.join(", ")}
@@ -460,13 +216,11 @@ export function ResultsPanel({
           )}
         </div>
 
-        {isRunning && (
+        {isRunning && activeRun && (
           <div className="space-y-1">
             <Progress value={progress} />
             <p className="text-xs text-muted-foreground">
-              {runningCaseName
-                ? `Running: ${runningCaseName}`
-                : "Starting..."}
+              Running {activeRun.completedCases}/{activeRun.totalCases}
             </p>
           </div>
         )}
@@ -474,45 +228,9 @@ export function ResultsPanel({
 
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-4">
-          {/* Current run results */}
-          {displayResults.length > 0 && (
-            <>
-              <h3 className="mb-2 text-xs font-semibold text-muted-foreground">
-                Current Run
-              </h3>
-              <div className="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
-                <span>
-                  Total:{" "}
-                  <strong className="text-foreground">
-                    {displayResults.length}
-                  </strong>
-                </span>
-                <span>
-                  Assertions Passed:{" "}
-                  <strong className="text-foreground">
-                    {passedCount}/{displayResults.length}
-                  </strong>
-                </span>
-                {avgScore !== null && (
-                  <span>
-                    Avg Score:{" "}
-                    <strong className="text-foreground">
-                      {avgScore}/10
-                    </strong>
-                  </span>
-                )}
-              </div>
-              <div className="space-y-3">
-                {displayResults.map((r) => (
-                  <ResultCard key={r.caseId} result={r} />
-                ))}
-              </div>
-            </>
-          )}
-
           {/* Run history */}
           {runs.length > 0 && (
-            <div className={displayResults.length > 0 ? "mt-6" : ""}>
+            <div>
               <h3 className="mb-2 text-xs font-semibold text-muted-foreground">
                 History
               </h3>
@@ -535,13 +253,24 @@ export function ResultsPanel({
             </div>
           )}
 
-          {!isRunning && displayResults.length === 0 && runs.length === 0 && (
+          {!isRunning && runs.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No results yet. Click &quot;Run All&quot; to evaluate.
             </p>
           )}
         </div>
       </ScrollArea>
+
+      {agentId && (
+        <RunEvalDialog
+          open={runDialogOpen}
+          onOpenChange={setRunDialogOpen}
+          agentId={agentId}
+          mode="all"
+          caseCount={cases.length}
+          onConfirm={handleRunAllConfirm}
+        />
+      )}
     </div>
   );
 }
@@ -569,6 +298,8 @@ function RunHistoryItem({
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { mutate: globalMutate } = useSWRConfig();
+  const isRunning = run.status === "running";
+
   const passRate =
     run.totalCases > 0
       ? `${run.passedAssertions}/${run.totalCases}`
@@ -585,6 +316,31 @@ function RunHistoryItem({
       }
     });
   };
+
+  function renderStatusBadge() {
+    switch (run.status) {
+      case "running":
+        return (
+          <Badge variant="secondary" className="text-[10px]">
+            Running {run.completedCases}/{run.totalCases}
+          </Badge>
+        );
+      case "cancelled":
+        return (
+          <Badge variant="outline" className="border-amber-500 text-amber-600 text-[10px] dark:text-amber-400">
+            Cancelled
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge variant="destructive" className="text-[10px]">
+            Failed
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div className="rounded-md border">
@@ -609,20 +365,26 @@ function RunHistoryItem({
         <span className="flex-1 truncate">
           {new Date(run.createdAt).toLocaleString()}
         </span>
+        {renderStatusBadge()}
         <span className="shrink-0 text-muted-foreground">
           {run.chatModel.split("/").pop()}
         </span>
-        <span className="shrink-0 font-medium">{passRate}</span>
-        {run.averageScore != null && (
-          <span className="shrink-0 text-muted-foreground">
-            {run.averageScore}/10
-          </span>
+        {!isRunning && (
+          <>
+            <span className="shrink-0 font-medium" data-testid="run-pass-rate">{passRate}</span>
+            {run.averageScore != null && (
+              <span className="shrink-0 text-muted-foreground" data-testid="run-score">
+                {run.averageScore}/10
+              </span>
+            )}
+          </>
         )}
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={handleToggleBaseline}
           title={run.isBaseline ? "Remove baseline" : "Set as baseline"}
+          disabled={isRunning}
         >
           <BookmarkIcon
             className={`size-3 ${run.isBaseline ? "fill-primary text-primary" : ""}`}
@@ -635,7 +397,7 @@ function RunHistoryItem({
             e.stopPropagation();
             setConfirmOpen(true);
           }}
-          disabled={deletingRun}
+          disabled={deletingRun || isRunning}
         >
           {deletingRun ? (
             <Spinner className="size-3" />
@@ -666,6 +428,12 @@ function RunHistoryItem({
               {detail.results.map((r) => (
                 <ResultCard key={r.id} result={toEvalResult(r)} />
               ))}
+              {detail.results.length === 0 && isRunning && (
+                <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground">
+                  <Spinner className="size-3" />
+                  Waiting for results...
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -184,6 +184,7 @@ export function JudgeConfigDetail({
               size="sm"
               className="mt-2"
               onClick={addDimension}
+              data-testid="btn-add-dimension"
             >
               <PlusIcon className="mr-1 size-3" />
               Add Dimension
@@ -202,12 +203,13 @@ export function JudgeConfigDetail({
               if (checked) handleActivate();
             }}
             disabled={busy || config.isActive}
+            data-testid="switch-activate"
           />
           <span className="text-xs text-muted-foreground">
             {config.isActive ? "Active" : "Inactive"}
           </span>
         </div>
-        <Button size="sm" onClick={handleSave} disabled={busy || !isDirty}>
+        <Button size="sm" onClick={handleSave} disabled={busy || !isDirty} data-testid="btn-save">
           {saving ? (
             <Spinner className="mr-1 size-3" />
           ) : (

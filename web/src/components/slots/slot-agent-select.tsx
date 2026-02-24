@@ -51,7 +51,7 @@ export function SlotAgentSelect({ agentId, orgId, slotKey, className, onChanged 
       onValueChange={handleChange}
       disabled={busy}
     >
-      <SelectTrigger className={cn("h-7 text-xs", className)}>
+      <SelectTrigger className={cn("h-7 text-xs", className)} data-testid="select-judge-agent">
         <SelectValue placeholder="未配置" />
       </SelectTrigger>
       <SelectContent>

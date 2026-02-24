@@ -60,7 +60,7 @@ import {
 import { SessionHistory } from "@/components/session-history";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { useSessions, deleteSession } from "@/lib/session/hooks";
+import { useSessions, deleteSession, renameSession } from "@/lib/session/hooks";
 import { useAgentRole } from "@/lib/auth/hooks";
 import {
   DownloadIcon,
@@ -222,7 +222,10 @@ export function ChatPageContent({
     if (cssBlocks.length === 0) return;
     const style = document.createElement("style");
     style.setAttribute("data-dynamic-components", "true");
-    style.textContent = cssBlocks.join("\n");
+    // Wrap in @layer components — lower priority than global @layer utilities,
+    // so duplicate standard utilities are harmless while component-specific
+    // classes (e.g. arbitrary values) still work.
+    style.textContent = `@layer components {\n${cssBlocks.join("\n")}\n}`;
     document.head.appendChild(style);
     return () => { style.remove(); };
   }, [componentsList]);
@@ -352,6 +355,13 @@ export function ChatPageContent({
       }
     },
     [mutateSessions, activeSessionId, setMessages, setSessionParam]
+  );
+
+  const handleRenameSession = useCallback(
+    async (id: string, title: string) => {
+      await renameSession(id, title, mutateSessions);
+    },
+    [mutateSessions]
   );
 
   /* ── URL ↔ state sync ── */
@@ -576,6 +586,7 @@ export function ChatPageContent({
         activeSessionId={activeSessionId}
         onLoadSession={handleLoadSession}
         onDeleteSession={handleDeleteSession}
+        onRenameSession={handleRenameSession}
         onNewChat={handleNewChat}
         canViewAllSessions={canViewAllSessions}
         showAll={showAllSessions}

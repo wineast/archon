@@ -86,11 +86,12 @@ export default function SharePage({
             registerDynamicComponentSource(name, source as string);
           }
         }
-        // Inject dynamic component CSS
+        // Inject dynamic component CSS wrapped in @layer components — lower
+        // priority than global @layer utilities to avoid cascade conflicts.
         if (data.dynamicComponentCss?.length) {
           const style = document.createElement("style");
           style.setAttribute("data-dynamic-components", "true");
-          style.textContent = data.dynamicComponentCss.join("\n");
+          style.textContent = `@layer components {\n${data.dynamicComponentCss.join("\n")}\n}`;
           document.head.appendChild(style);
         }
         setSession(data);

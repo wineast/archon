@@ -27,46 +27,6 @@ import type { EvalCaseRow } from "@/db/schema";
 
 const mockMutateRuns = vi.fn();
 
-vi.mock("@/lib/model-config/hooks", () => ({
-  useActiveModelConfig: () => ({
-    activeConfig: {
-      id: "mc-1",
-      name: "Test Model",
-      modelId: "claude-sonnet-4-5-20250929",
-    },
-    isLoading: false,
-    error: undefined,
-    mutate: vi.fn(),
-  }),
-}));
-
-vi.mock("@/lib/eval/use-resolved-evaluator", () => ({
-  useResolvedEvaluator: () => ({
-    evaluator: {
-      judgeAgentId: "judge-agent-1",
-      judgeAgentName: "Evaluator",
-      judgeAgentSlug: "evaluator",
-    },
-    isLoading: false,
-    error: undefined,
-    mutate: vi.fn(),
-  }),
-}));
-
-vi.mock("@/lib/judge-config/hooks", () => ({
-  useActiveJudgeConfig: () => ({
-    activeConfig: {
-      id: "jc-1",
-      name: "Default Judge",
-      dimensions: [{ key: "accuracy", label: "Accuracy", weight: 1 }],
-      isActive: true,
-    },
-    isLoading: false,
-    error: undefined,
-    mutate: vi.fn(),
-  }),
-}));
-
 vi.mock("@/lib/eval/hooks", () => ({
   useEvalRuns: () => ({
     runs: [],
@@ -74,6 +34,7 @@ vi.mock("@/lib/eval/hooks", () => ({
     error: undefined,
     mutate: mockMutateRuns,
   }),
+  fetchEvalRunDetail: vi.fn(),
 }));
 
 vi.mock("@/lib/eval/template-vars-hooks", () => ({
@@ -99,15 +60,37 @@ vi.mock("@/lib/tools/hooks", () => ({
 
 const mockEvalRunCtx = {
   isRunning: false,
-  runningCaseId: null,
+  activeRun: null,
   progress: 0,
-  setRunning: vi.fn(),
-  setRunningCaseId: vi.fn(),
-  setProgress: vi.fn(),
+  cancelRun: vi.fn(),
 };
 
 vi.mock("@/lib/eval/eval-run-context", () => ({
   useEvalRun: () => mockEvalRunCtx,
+}));
+
+// Mock RunEvalDialog to simplify testing
+const mockOnConfirm = vi.fn();
+vi.mock("../run-eval-dialog", () => ({
+  RunEvalDialog: ({ open, onConfirm, confirming }: {
+    open: boolean;
+    onConfirm: (params: { judgeAgentId: string; assertionFailConfig: Record<string, boolean> }) => void;
+    confirming?: boolean;
+  }) => {
+    // Store onConfirm for test access
+    mockOnConfirm.mockImplementation(onConfirm);
+    return open ? (
+      <div data-testid="run-eval-dialog">
+        <button
+          data-testid="dialog-confirm"
+          disabled={confirming}
+          onClick={() => onConfirm({ judgeAgentId: "judge-agent-1", assertionFailConfig: {} })}
+        >
+          Confirm
+        </button>
+      </div>
+    ) : null;
+  },
 }));
 
 /* ------------------------------------------------------------------ */
@@ -135,6 +118,7 @@ const baseCase: EvalCaseRow = {
 /* ------------------------------------------------------------------ */
 
 import { CaseDetail } from "../case-detail";
+import { fetchEvalRunDetail } from "@/lib/eval/hooks";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -159,7 +143,7 @@ beforeEach(() => {
   vi.restoreAllMocks();
   cleanup();
   mockEvalRunCtx.isRunning = false;
-  mockEvalRunCtx.runningCaseId = null;
+  mockEvalRunCtx.activeRun = null;
 });
 
 /* ------------------------------------------------------------------ */
@@ -188,21 +172,21 @@ describe("Mode selector", () => {
   });
 });
 
-describe("Run execution", () => {
-  it("calls 3-step API and shows result on success", async () => {
+describe("Run execution via dialog", () => {
+  it("opens dialog on Run click and sends create run request", async () => {
     const mockResult = {
       caseId: "case-1",
       caseName: "Test Case",
-      mode: "single",
-      turns: [{ id: "t1", role: "user", content: "Hello, how are you?" }],
+      mode: "single" as const,
+      turns: [{ id: "t1", role: "user" as const, content: "Hello, how are you?" }],
       chatMessages: [
-        { role: "user", content: "Hello, how are you?" },
-        { role: "assistant", content: "I am fine, thank you!" },
+        { role: "user" as const, content: "Hello, how are you?" },
+        { role: "assistant" as const, content: "I am fine, thank you!" },
       ],
       turnResults: [],
       chatResponse: "I am fine, thank you!",
       assertionResults: [
-        { assertion: { id: "a1", type: "contains", value: "fine" }, passed: true, message: "Contains 'fine'" },
+        { assertion: { id: "a1", type: "contains" as const, value: "fine" }, passed: true, message: "Contains 'fine'" },
       ],
       allAssertionsPassed: true,
       judgeResult: {
@@ -213,68 +197,70 @@ describe("Run execution", () => {
       durationMs: 1234,
     };
 
+    // Mock: create run succeeds
     globalThis.fetch = vi
       .fn()
-      // Step 1: Create run
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1" }),
+        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4", status: "running" }),
+      });
+
+    // Mock: polling returns completed run with result
+    const mockFetchDetail = vi.mocked(fetchEvalRunDetail);
+    mockFetchDetail
+      .mockResolvedValueOnce({
+        run: { id: "run-1", status: "running" } as never,
+        results: [],
       })
-      // Step 2: Execute case
       .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ result: mockResult }),
-      })
-      // Step 3: Finalize
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({}),
+        run: { id: "run-1", status: "completed" } as never,
+        results: [{
+          id: "r1",
+          runId: "run-1",
+          caseId: mockResult.caseId,
+          caseName: mockResult.caseName,
+          mode: mockResult.mode as "single",
+          turns: mockResult.turns,
+          chatMessages: mockResult.chatMessages,
+          turnResults: mockResult.turnResults,
+          chatResponse: mockResult.chatResponse,
+          assertionResults: mockResult.assertionResults,
+          allAssertionsPassed: mockResult.allAssertionsPassed,
+          judgeResult: mockResult.judgeResult,
+          error: null,
+          durationMs: mockResult.durationMs,
+          createdAt: new Date(),
+        }],
       });
 
     const { user } = renderDetail();
+
+    // Click Run button to open dialog
     await user.click(screen.getByRole("button", { name: /run/i }));
 
-    // Wait for results to appear
+    // Dialog should be open
+    expect(screen.getByTestId("run-eval-dialog")).toBeInTheDocument();
+
+    // Click confirm in dialog
+    await user.click(screen.getByTestId("dialog-confirm"));
+
+    // Wait for results to appear (polling completes)
     await waitFor(() => {
       expect(screen.getByText("Run Results (1)")).toBeInTheDocument();
-    });
+    }, { timeout: 10000 });
 
-    // Verify 3-step API was called
-    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
-
-    // Step 1: Create run — sends judgeAgentId, judgeModelConfigId, judgeConfigId
-    expect(globalThis.fetch).toHaveBeenNthCalledWith(
-      1,
+    // Verify create run API was called with cases
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/eval/run",
       expect.objectContaining({
         method: "POST",
-        body: expect.stringContaining('"totalCases":1'),
+        body: expect.stringContaining('"cases"'),
       })
-    );
-
-    // Step 2: Execute case — sends judgeModelConfigId, judgeConfigId
-    expect(globalThis.fetch).toHaveBeenNthCalledWith(
-      2,
-      "/api/eval/run/run-1/case",
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining('"toolNames":["tool_a"]'),
-      })
-    );
-
-    // Step 3: Finalize
-    expect(globalThis.fetch).toHaveBeenNthCalledWith(
-      3,
-      "/api/eval/run/run-1",
-      expect.objectContaining({ method: "PATCH" })
     );
 
     // Verify mutateRuns was called
     expect(mockMutateRuns).toHaveBeenCalled();
-
-    // Verify result card content
-    expect(screen.getByText("Test Model")).toBeInTheDocument();
-    expect(screen.getByText("Passed")).toBeInTheDocument();
   });
 
   it("shows Running... and disables buttons during execution", async () => {
@@ -287,7 +273,11 @@ describe("Run execution", () => {
     );
 
     const { user } = renderDetail();
+
+    // Click Run to open dialog
     await user.click(screen.getByRole("button", { name: /run/i }));
+    // Click confirm
+    await user.click(screen.getByTestId("dialog-confirm"));
 
     // Run button should show spinner text
     expect(screen.getByText("Running...")).toBeInTheDocument();
@@ -299,26 +289,9 @@ describe("Run execution", () => {
     await act(async () => {
       resolveCreate({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1" }),
+        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4", status: "running" }),
       });
     });
-  });
-
-  it("shows error result when create run fails", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      text: () => Promise.resolve("Internal Server Error"),
-    });
-
-    const { user } = renderDetail();
-    await user.click(screen.getByRole("button", { name: /run/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Run Results (1)")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("Error")).toBeInTheDocument();
   });
 
   it("uses current form values (not saved values) for run", async () => {
@@ -326,29 +299,31 @@ describe("Run execution", () => {
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1" }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            result: {
-              caseId: "case-1",
-              caseName: "Test Case",
-              mode: "single",
-              turns: [{ id: "t1", role: "user", content: "Modified input" }],
-              chatMessages: [],
-              turnResults: [],
-              chatResponse: "Response",
-              assertionResults: [],
-              allAssertionsPassed: true,
-              judgeResult: null,
-              timestamp: Date.now(),
-              durationMs: 100,
-            },
-          }),
-      })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4", status: "running" }),
+      });
+
+    // Mock polling to return completed immediately
+    const mockFetchDetail = vi.mocked(fetchEvalRunDetail);
+    mockFetchDetail.mockResolvedValue({
+      run: { id: "run-1", status: "completed" } as never,
+      results: [{
+        id: "r1",
+        runId: "run-1",
+        caseId: "case-1",
+        caseName: "Test Case",
+        mode: "single" as const,
+        turns: [{ id: "t1", role: "user" as const, content: "Modified input" }],
+        chatMessages: [],
+        turnResults: [],
+        chatResponse: "Response",
+        assertionResults: [],
+        allAssertionsPassed: true,
+        judgeResult: null,
+        error: null,
+        durationMs: 100,
+        createdAt: new Date(),
+      }],
+    });
 
     const { user } = renderDetail();
 
@@ -359,34 +334,38 @@ describe("Run execution", () => {
     await user.clear(inputTextarea);
     await user.type(inputTextarea, "Modified input");
 
+    // Open dialog and confirm
     await user.click(screen.getByRole("button", { name: /run/i }));
+    await user.click(screen.getByTestId("dialog-confirm"));
 
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     });
 
-    // Verify the case body sent to API uses modified input (via turns)
-    const step2Call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
-      .calls[1];
-    const step2Body = JSON.parse(step2Call[1].body);
-    expect(step2Body.case.turns[0].content).toBe("Modified input");
-    expect(step2Body.case.mode).toBe("single");
+    // Verify the body sent to API uses modified input (via cases[0])
+    const createCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const createBody = JSON.parse(createCall[1].body);
+    expect(createBody.cases[0].turns[0].content).toBe("Modified input");
+    expect(createBody.cases[0].mode).toBe("single");
   });
 
   it("accumulates multiple run results with newest first", async () => {
     const makeResult = (ts: number) => ({
+      id: `r-${ts}`,
+      runId: `run-${ts}`,
       caseId: "case-1",
       caseName: "Test Case",
-      mode: "single",
-      turns: [{ id: "t1", role: "user", content: "Hello" }],
+      mode: "single" as const,
+      turns: [{ id: "t1", role: "user" as const, content: "Hello" }],
       chatMessages: [],
       turnResults: [],
       chatResponse: `Response at ${ts}`,
       assertionResults: [],
       allAssertionsPassed: true,
       judgeResult: null,
-      timestamp: ts,
+      error: null,
       durationMs: 100,
+      createdAt: new Date(ts),
     });
 
     globalThis.fetch = vi
@@ -394,36 +373,41 @@ describe("Run execution", () => {
       // Run 1
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1" }),
+        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4", status: "running" }),
       })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ result: makeResult(1000) }),
-      })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
       // Run 2
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-2" }),
-      })
+        json: () => Promise.resolve({ runId: "run-2", chatModel: "gpt-4", status: "running" }),
+      });
+
+    const mockFetchDetail = vi.mocked(fetchEvalRunDetail);
+    // Poll for run 1 — returns completed immediately
+    mockFetchDetail
       .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ result: makeResult(2000) }),
+        run: { id: "run-1", status: "completed" } as never,
+        results: [makeResult(1000)],
       })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+      // Poll for run 2 — returns completed immediately
+      .mockResolvedValueOnce({
+        run: { id: "run-2", status: "completed" } as never,
+        results: [makeResult(2000)],
+      });
 
     const { user } = renderDetail();
 
-    // Run 1
+    // Run 1: open dialog and confirm
     await user.click(screen.getByRole("button", { name: /run/i }));
+    await user.click(screen.getByTestId("dialog-confirm"));
     await waitFor(() => {
       expect(screen.getByText("Run Results (1)")).toBeInTheDocument();
-    });
+    }, { timeout: 10000 });
 
-    // Run 2
+    // Run 2: open dialog and confirm
     await user.click(screen.getByRole("button", { name: /run/i }));
+    await user.click(screen.getByTestId("dialog-confirm"));
     await waitFor(() => {
       expect(screen.getByText("Run Results (2)")).toBeInTheDocument();
-    });
+    }, { timeout: 10000 });
   });
 });

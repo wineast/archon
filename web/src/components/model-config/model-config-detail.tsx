@@ -301,6 +301,7 @@ export function ModelConfigDetail({
               if (checked) handleActivate();
             }}
             disabled={busy || config.isActive}
+            data-testid="switch-activate"
           />
           <span className="text-xs text-muted-foreground">
             {config.isActive ? "Active" : "Inactive"}
@@ -310,6 +311,7 @@ export function ModelConfigDetail({
           size="sm"
           onClick={handleSave}
           disabled={busy || !dirty}
+          data-testid="btn-save"
         >
           {saving ? (
             <Spinner className="mr-1 size-3" />

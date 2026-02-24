@@ -36,12 +36,15 @@ import {
   useToolTestCases,
   createToolTestCase,
 } from "@/lib/tools/test-case-hooks";
+import { ToolComponentPreview, type ToolComponentPreviewData } from "./tool-component-preview";
 
 interface ToolPlaygroundProps {
   toolId: string;
+  toolName?: string;
+  componentPreview?: ToolComponentPreviewData | null;
 }
 
-export function ToolPlayground({ toolId }: ToolPlaygroundProps) {
+export function ToolPlayground({ toolId, toolName, componentPreview }: ToolPlaygroundProps) {
   const [inputValue, setInputValue] = useState("{}");
   const [output, setOutput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -259,6 +262,15 @@ export function ToolPlayground({ toolId }: ToolPlaygroundProps) {
               </div>
             )}
           </div>
+
+          {output && componentPreview && toolName && (
+            <ToolComponentPreview
+              toolName={toolName}
+              input={(() => { try { return JSON.parse(inputValue); } catch { return {}; } })()}
+              output={(() => { try { return JSON.parse(output); } catch { return output; } })()}
+              preview={componentPreview}
+            />
+          )}
         </div>
       </ScrollArea>
 

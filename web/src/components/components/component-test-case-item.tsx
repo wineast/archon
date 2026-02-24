@@ -23,7 +23,12 @@ import { Label } from "@/components/ui/label";
 import { DataCard } from "@/components/components/data-card";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
-import { DynamicComponentRenderer, DynamicComponentErrorBoundary } from "@/tool-ui";
+import {
+  DynamicComponentRenderer,
+  DynamicComponentErrorBoundary,
+  type ComponentRendererProps,
+} from "@/tool-ui";
+import type { ComponentType } from "react";
 import type { ComponentTestCaseRow } from "@/db/schema";
 
 export interface ComponentTestRunResult {
@@ -36,6 +41,7 @@ export interface ComponentTestRunResult {
 export interface ComponentTestCaseItemProps {
   testCase: ComponentTestCaseRow;
   componentSource: string;
+  compiledComponent?: ComponentType<ComponentRendererProps>;
   onSave: (
     caseId: string,
     data: {
@@ -57,6 +63,7 @@ export interface ComponentTestCaseItemProps {
 export function ComponentTestCaseItem({
   testCase,
   componentSource,
+  compiledComponent,
   onSave,
   onDelete,
   onRun,
@@ -364,7 +371,8 @@ export function ComponentTestCaseItem({
                         data={testCase.scenario === "component" ? parsedData : undefined}
                         tool={testCase.scenario === "tool" ? parsedData : undefined}
                         state="output-available"
-                        source={componentSource}
+                        source={compiledComponent ? undefined : componentSource}
+                        compiledComponent={compiledComponent}
                       />
                     </DynamicComponentErrorBoundary>
                   </div>

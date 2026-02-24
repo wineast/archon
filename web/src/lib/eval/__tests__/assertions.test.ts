@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { runAllAssertions } from "../assertions";
-import type { Assertion, AssertionType } from "../types";
+import type { Assertion, AssertionType, ToolCallRecord } from "../types";
 
 function makeAssertion(
   type: AssertionType,
@@ -8,6 +8,11 @@ function makeAssertion(
 ): Assertion {
   return { id: "test-id", type, value };
 }
+
+const sampleToolCalls: ToolCallRecord[] = [
+  { toolName: "getWeather", args: { city: "Tokyo", unit: "celsius" }, result: "25°C" },
+  { toolName: "searchWeb", args: { query: "hello world" }, result: "..." },
+];
 
 describe("assertions", () => {
   describe("contains", () => {
@@ -303,6 +308,193 @@ describe("assertions", () => {
     });
   });
 
+  // ── Tool call assertion tests ──
+
+  describe("tool-called", () => {
+    it("passes when tool was called", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called", "getWeather")],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(true);
+      expect(results[0].message).toBe('Tool "getWeather" was called');
+    });
+
+    it("fails when tool was not called", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called", "sendEmail")],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(false);
+      expect(results[0].message).toBe('Tool "sendEmail" was not called');
+    });
+
+    it("fails with empty toolCalls array", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called", "getWeather")],
+        "any response",
+        []
+      );
+      expect(results[0].passed).toBe(false);
+    });
+
+    it("fails with undefined toolCalls", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called", "getWeather")],
+        "any response"
+      );
+      expect(results[0].passed).toBe(false);
+    });
+  });
+
+  describe("tool-not-called", () => {
+    it("passes when tool was not called", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-not-called", "sendEmail")],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(true);
+      expect(results[0].message).toBe('Tool "sendEmail" was not called (as expected)');
+    });
+
+    it("fails when tool was called", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-not-called", "getWeather")],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(false);
+      expect(results[0].message).toBe('Tool "getWeather" was called (unexpected)');
+    });
+
+    it("passes with empty toolCalls array", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-not-called", "getWeather")],
+        "any response",
+        []
+      );
+      expect(results[0].passed).toBe(true);
+    });
+
+    it("passes with undefined toolCalls", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-not-called", "getWeather")],
+        "any response"
+      );
+      expect(results[0].passed).toBe(true);
+    });
+  });
+
+  describe("tool-called-with-contains", () => {
+    it("passes when tool was called with matching subset of args", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-contains", '{"tool":"getWeather","args":{"city":"Tokyo"}}')],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(true);
+      expect(results[0].message).toContain("was called with args containing");
+    });
+
+    it("fails when args do not match", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-contains", '{"tool":"getWeather","args":{"city":"London"}}')],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(false);
+      expect(results[0].message).toContain("was not called with args containing");
+    });
+
+    it("fails when tool name does not match", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-contains", '{"tool":"unknown","args":{"city":"Tokyo"}}')],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(false);
+    });
+
+    it("fails with invalid JSON value", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-contains", "not json")],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(false);
+      expect(results[0].message).toContain("Invalid JSON value");
+    });
+
+    it("passes with empty args subset", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-contains", '{"tool":"getWeather","args":{}}')],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(true);
+    });
+
+    it("fails with undefined toolCalls", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-contains", '{"tool":"getWeather","args":{"city":"Tokyo"}}')],
+        "any response"
+      );
+      expect(results[0].passed).toBe(false);
+    });
+  });
+
+  describe("tool-called-with-exact", () => {
+    it("passes when tool was called with exact args", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-exact", '{"tool":"getWeather","args":{"city":"Tokyo","unit":"celsius"}}')],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(true);
+      expect(results[0].message).toContain("was called with exact args");
+    });
+
+    it("fails when args have extra fields", () => {
+      // The actual call has {city, unit} but we only specify {city} — exact requires all fields
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-exact", '{"tool":"getWeather","args":{"city":"Tokyo"}}')],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(false);
+    });
+
+    it("fails when args differ", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-exact", '{"tool":"getWeather","args":{"city":"London","unit":"celsius"}}')],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(false);
+    });
+
+    it("fails with invalid JSON value", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-exact", "{bad")],
+        "any response",
+        sampleToolCalls
+      );
+      expect(results[0].passed).toBe(false);
+      expect(results[0].message).toContain("Invalid JSON value");
+    });
+
+    it("fails with undefined toolCalls", () => {
+      const results = runAllAssertions(
+        [makeAssertion("tool-called-with-exact", '{"tool":"getWeather","args":{"city":"Tokyo","unit":"celsius"}}')],
+        "any response"
+      );
+      expect(results[0].passed).toBe(false);
+    });
+  });
+
   describe("runAllAssertions", () => {
     it("returns empty array for no assertions", () => {
       expect(runAllAssertions([], "any response")).toHaveLength(0);
@@ -341,7 +533,7 @@ describe("assertions", () => {
       expect(results[0].assertion).toBe(assertion);
     });
 
-    it("runs all 6 assertion types without error", () => {
+    it("runs all 6 text assertion types without error", () => {
       const assertions: Assertion[] = [
         makeAssertion("contains", "x"),
         makeAssertion("not-contains", "z"),
@@ -362,6 +554,25 @@ describe("assertions", () => {
       const results = runAllAssertions([a1, a2], "a b");
       expect(results[0].assertion.id).toBe("first");
       expect(results[1].assertion.id).toBe("second");
+    });
+
+    it("text assertions work without toolCalls (backward compat)", () => {
+      const results = runAllAssertions(
+        [makeAssertion("contains", "hello")],
+        "hello world"
+      );
+      expect(results[0].passed).toBe(true);
+    });
+
+    it("mixes text and tool assertions", () => {
+      const assertions: Assertion[] = [
+        makeAssertion("contains", "result"),
+        makeAssertion("tool-called", "getWeather"),
+        makeAssertion("tool-not-called", "sendEmail"),
+      ];
+      const results = runAllAssertions(assertions, "here is the result", sampleToolCalls);
+      expect(results).toHaveLength(3);
+      expect(results.every((r) => r.passed)).toBe(true);
     });
   });
 });

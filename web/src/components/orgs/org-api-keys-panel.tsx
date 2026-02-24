@@ -103,7 +103,7 @@ function ProviderRow({ orgId, provider, label, existingKey, mutate }: ProviderRo
   }, [orgId, existingKey, mutate]);
 
   return (
-    <div className="flex items-center gap-3 rounded-md border px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-md border px-3 py-2.5" data-testid={`api-key-row-${provider}`}>
       <KeyIcon className="size-4 shrink-0 text-muted-foreground" />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium">{label}</div>
@@ -116,12 +116,14 @@ function ProviderRow({ orgId, provider, label, existingKey, mutate }: ProviderRo
               value={value}
               onChange={(e) => setValue(e.target.value)}
               autoFocus
+              data-testid="input-api-key"
             />
             <Button
               size="sm"
               className="h-7 shrink-0"
               disabled={busy || !value.trim()}
               onClick={handleSave}
+              data-testid="btn-save-api-key"
             >
               {busy ? <Spinner className="size-3" /> : <CheckIcon className="size-3" />}
             </Button>
@@ -148,6 +150,7 @@ function ProviderRow({ orgId, provider, label, existingKey, mutate }: ProviderRo
             variant="outline"
             className="h-7 text-xs"
             onClick={() => setEditing(true)}
+            data-testid={`btn-configure-${provider}`}
           >
             {existingKey ? "更换" : <><PlusIcon className="size-3 mr-1" />配置</>}
           </Button>

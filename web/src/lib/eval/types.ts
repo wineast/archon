@@ -4,7 +4,11 @@ export type AssertionType =
   | "regex"
   | "length-min"
   | "length-max"
-  | "json-valid";
+  | "json-valid"
+  | "tool-called"
+  | "tool-not-called"
+  | "tool-called-with-contains"
+  | "tool-called-with-exact";
 
 export interface Assertion {
   id: string;
@@ -26,6 +30,20 @@ export interface AssertionFailConfig {
 
 export type EvalCaseMode = "single" | "injected" | "sequential";
 
+/** Tool call attached to an EvalTurn for history injection */
+export interface EvalTurnToolCall {
+  name: string;
+  args: Record<string, unknown>;
+  result: string;
+}
+
+/** Flattened tool call record extracted from generateText steps */
+export interface ToolCallRecord {
+  toolName: string;
+  args: Record<string, unknown>;
+  result?: unknown;
+}
+
 export interface EvalTurn {
   id: string;
   role: "user" | "assistant";
@@ -33,6 +51,7 @@ export interface EvalTurn {
   assertions?: Assertion[];
   judge?: boolean;
   expectedOutput?: string;
+  toolCalls?: EvalTurnToolCall[];
 }
 
 export interface ChatMessage {
@@ -115,6 +134,7 @@ export interface EvalRunSummary {
 // ── DB row → runtime type converters ──
 
 import type { EvalCaseRow, EvalRunRow, EvalRunResultRow } from "@/db/schema";
+export type { EvalRunStatus } from "@/db/schema";
 
 export function toEvalCase(row: EvalCaseRow): EvalCase {
   return {
@@ -147,27 +167,27 @@ export interface EvalRunResponse {
 
 // ── New granular API types ──
 
-/** POST /api/eval/run — create a run record only */
+/** POST /api/eval/run — create a run and start server-side execution */
 export interface CreateEvalRunRequest {
-  modelConfigId: string;
+  agentId: string;
   judgeAgentId: string;
-  judgeModelConfigId: string;
-  judgeConfigId: string;
   filterTags?: string[];
   assertionFailConfig?: AssertionFailConfig;
   totalCases: number;
+  cases: EvalCase[];
+  templateVars?: Record<string, string>;
+  toolNames?: string[];
 }
 
 export interface CreateEvalRunResponse {
   runId: string;
+  chatModel: string;
+  status: string;
 }
 
 /** POST /api/eval/run/[runId]/case — execute a single case */
 export interface RunCaseRequest {
   case: EvalCase;
-  judgeModelConfigId: string;
-  judgeConfigId: string;
-  modelConfigId: string;
   templateVars?: Record<string, string>;
   toolNames?: string[];
 }

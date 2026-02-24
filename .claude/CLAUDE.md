@@ -115,6 +115,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - **生产部署**：只用 `make db-migrate`，禁止 `db-push`——迁移文件是上线唯一通道
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 - 详见 `web/guide/production-database.md`
+- **查询版本化资源（tools、functions、components、datasets、wiki、schemas 等）时必须加 `versionId` 过滤**——这些资源按 version 隔离，缺少 `versionId` 条件会导致跨 Agent/跨版本数据混入。标准模式：`eq(table.versionId, versionId)` + 其他条件（如 `eq(table.enabled, true)`, `isNull(table.deletedAt)`）
 
 ### 资源共享池
 - **所有资源都必须存在于数据库中**，禁止前端硬编码资源列表（如 `BUILTIN_FUNCTIONS`、`BUILTIN_COMPONENTS` 常量）
@@ -131,6 +132,11 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
   - Builtin 资源额外隐藏不适用的编辑区域（Tool 隐藏 handler/执行环境，Function 隐藏 code 编辑器，Component 隐藏 JSX/CSS 编辑器）
   - 顶部显示来源 badge（`系统内置` / `共享池`）说明为何不可编辑
 
+### Tailwind CSS 4 响应式变体陷阱
+- Next.js dev 模式会将 CSS 拆成多个 chunk（外部 CSS + inline `<style>` 块），导致同一个 utility class（如 `.text-center`）被重复生成在不同的 style 块中，后出现的会覆盖前面的响应式变体（如 `sm:text-left`），破坏层叠顺序
+- Production build 不受影响（单文件，无重复）
+- **修复方式**：响应式覆盖需加 `!important`，如 `sm:!text-left`，确保 dev/prod 两种模式都能正确工作
+
 ### Template Engine（LiquidJS）
 - 使用文档见 `web/guide/template-engine.md`
 - 数据源：数据集（2 层 JSON）+ 工具定义
@@ -141,10 +147,29 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - Playwright 截图统一存放到 `screenshots/` 目录（已 gitignore）
 - 不要在项目根目录或其他位置随意放置截图文件
 
+### E2E 测试（Playwright）
+- 选择器统一使用 `data-testid`，不依赖文本内容（因为有中英文 locale 切换）
+- **先手动验证，再写测试**：编写 E2E 测试前，必须先用 Playwright MCP 工具（`mcp__playwright__*`）手动走一遍完整流程，确认每一步的实际 DOM 结构和选择器都能正常工作，跑通后再编写测试代码。测试用例只是程序化兜底
+- **导航必须走真实 UI 路径**：不要用 URL 字符串替换（如 `.replace('/chat', '/build')`）等 hack 方式做页面导航。必须先阅读前端组件代码，了解实际的用户交互路径（如三点菜单 → 构建、侧栏 tab 切换等），然后用 `data-testid` 走正规 UI 操作
+- **用 `test.step()` 结构化步骤**：禁止用注释标记步骤（如 `// Step 1:`），必须用 `test.step("描述", async () => { ... })`——既是文档又能在 Playwright HTML report 中结构化展示
+- **`describe` / `step` 命名用中文**，与 Storybook name 保持一致，报告可读性优先
+- **文件头 JSDoc 保留**：概述该 spec 覆盖的场景和预期结果，相当于行为规范的精简版
+- **公共 helper 提取到 `web/e2e/helpers/`**：如登录、创建 Agent、配置模型等跨 spec 复用的操作，避免每个 spec 文件重复定义
+- **不需要独立的 BDD 文档**：`test.describe` + `test.step` + 文件头 JSDoc 已覆盖行为描述，不维护额外的 `.feature` / BDD `.md` 文件
+- **Monaco 编辑器不能用 `.fill()` / `.type()`**：Playwright 的标准输入方法对 Monaco 无效（Monaco 用自定义 input 机制，不响应标准 DOM 事件）。必须通过 `page.evaluate()` 调用 Monaco API：`monaco.editor.getModels()` 遍历找到目标 model，调用 `model.setValue(code)` 写入内容。识别目标 model 可通过内容判断（如空内容 `!model.getValue().trim()` 表示未填写的 handler）
+- **Eval Run 结果验证不要依赖 `badge-passed` / `badge-failed`**：运行完成后展开的 detail 可能只有部分 ResultCard（auto-refresh 在 run 状态变为 completed 时停止，最后一次 fetch 可能拿到的是不完整的结果）。应直接验证 `run-pass-rate`（显示在 History 行标题上，run 完成后立即可见）
+- **Eval E2E 中 `getByRole("button", { name })` 注意 sidebar case 名干扰**：sidebar 中 case 按钮的文本（如 "Import Test"）会匹配 `/Import/i`，导致 strict mode violation。需用 `{ name: "Import", exact: true }` 精确匹配
+
 ### Chat Persistence
 - 分层持久化：session 创建 + 用户消息在 `streamText()` 前 `await` 保存（~10-50ms）；AI 响应消息保留在 `onFinish → after()` 中异步保存
 - 正确：`Request → await createSession + saveUser → streamText → return → after() { saveAssistant }`
 - 错误：`Request → streamText → return → after() { createSession + saveUser + saveAssistant }`（刷新丢消息 ❌）
+
+### AI 模型调用（resolve-model）
+- `models.json` 中的模型 ID 是 **Vercel AI Gateway** 格式（如 `deepseek/deepseek-v3.2`），通过网关调用时直接使用
+- BYOK（用户自有 Key）模式下，模型名直接传给 Provider API——部分 Provider 的 Gateway 名与 API 名不同（如 DeepSeek 的 `deepseek-v3.2` 对应 API 的 `deepseek-chat`）
+- **不要修改 `models.json` 来适配 Provider API**。正确做法是在 `resolve-model.ts` 的 `BYOK_MODEL_NAME_MAPPING` 中添加映射
+- 新增 Provider 时检查其 API 模型名是否与 Gateway 名一致，不一致则补充映射
 
 ### Debug
 - 服务端错误日志在 `.logs/dev.log`，排查 API 500 等服务端报错时优先查看此文件
@@ -152,6 +177,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 ### 收尾检查
 - 代码修改完成后，必须依次执行 `make typecheck` 和 `make test`，确认类型无报错 + 测试通过后才算任务完成
 - 新增或修改功能必须有对应的测试用例覆盖，不能只让现有测试通过就算完成
+- 涉及用户交互流程的功能变更，运行 `make e2e` 确认端到端测试通过
 - 同步 `web/guide/` 使用指南：根据本次改动内容，对 `web/guide/` 目录下的相关文档执行 CRUD——新增功能写新文档或新章节，修改功能更新对应段落，删除功能移除过时描述，确保文档与代码始终一致
 
 ### 测试账号

@@ -57,6 +57,7 @@ export function AgentCard({ agent, onEdit, onDelete, onExport }: AgentCardProps)
                   size="icon"
                   className="size-7"
                   onClick={(e) => e.preventDefault()}
+                  data-testid="btn-agent-menu"
                 >
                   <EllipsisVerticalIcon className="size-4" />
                 </Button>
@@ -75,7 +76,7 @@ export function AgentCard({ agent, onEdit, onDelete, onExport }: AgentCardProps)
                 )}
                 {canEdit && (
                   <DropdownMenuItem asChild>
-                    <Link href={`/${orgSlug}/${agent.slug}/build`} onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/${orgSlug}/${agent.slug}/build`} onClick={(e) => e.stopPropagation()} data-testid="menu-item-build">
                       <WrenchIcon className="size-4" />
                       {tn("settings")}
                     </Link>

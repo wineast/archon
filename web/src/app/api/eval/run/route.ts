@@ -1,78 +1,125 @@
+import { after } from "next/server";
 import { db } from "@/db";
 import { evalRuns, modelConfigs, judgeConfigs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type { CreateEvalRunRequest, CreateEvalRunResponse } from "@/lib/eval/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
+import { executeEvalRun } from "@/lib/eval/execute-run";
 
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
-  const body: CreateEvalRunRequest & { agentId?: string } = await req.json();
+  const body: CreateEvalRunRequest = await req.json();
   const {
     agentId,
-    modelConfigId,
     judgeAgentId,
-    judgeModelConfigId,
-    judgeConfigId,
     filterTags,
     assertionFailConfig,
     totalCases,
+    cases,
+    templateVars = {},
+    toolNames = [],
   } = body;
 
   if (!agentId) {
     return NextResponse.json({ error: "agentId is required" }, { status: 400 });
   }
 
+  if (!cases || cases.length === 0) {
+    return NextResponse.json({ error: "cases are required" }, { status: 400 });
+  }
+
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
-  // Load model config from DB
+  // Concurrency check: no other running run for this agent
+  const [existingRunning] = await db
+    .select({ id: evalRuns.id })
+    .from(evalRuns)
+    .where(
+      and(
+        eq(evalRuns.agentId, agentId),
+        eq(evalRuns.status, "running"),
+      )
+    )
+    .limit(1);
+
+  if (existingRunning) {
+    return NextResponse.json(
+      { error: "An eval run is already in progress for this agent" },
+      { status: 409 }
+    );
+  }
+
+  // Resolve active model config for the agent
+  const versionId = await resolveEditingVersionId(agentId);
   const [modelConfig] = await db
     .select()
     .from(modelConfigs)
-    .where(and(eq(modelConfigs.id, modelConfigId), isNull(modelConfigs.deletedAt)));
+    .where(
+      and(
+        eq(modelConfigs.versionId, versionId),
+        eq(modelConfigs.isActive, true),
+        isNull(modelConfigs.deletedAt),
+      )
+    );
 
   if (!modelConfig || !modelConfig.modelId) {
     return Response.json(
-      { error: "Model config not found or modelId is empty" },
+      { error: "No active model config found for this agent" },
       { status: 400 }
     );
   }
 
-  // Load judge model config snapshot
+  // Resolve active model config for the judge agent
+  const judgeVersionId = await resolveEditingVersionId(judgeAgentId);
   const [judgeModelConfig] = await db
     .select()
     .from(modelConfigs)
-    .where(and(eq(modelConfigs.id, judgeModelConfigId), isNull(modelConfigs.deletedAt)));
+    .where(
+      and(
+        eq(modelConfigs.versionId, judgeVersionId),
+        eq(modelConfigs.isActive, true),
+        isNull(modelConfigs.deletedAt),
+      )
+    );
 
-  if (!judgeModelConfig) {
+  if (!judgeModelConfig || !judgeModelConfig.modelId) {
     return Response.json(
-      { error: "Judge model config not found" },
+      { error: "No active model config found for the judge agent" },
       { status: 400 }
     );
   }
 
-  // Load judge config snapshot
+  // Resolve active judge config
   const [judgeConfig] = await db
     .select()
     .from(judgeConfigs)
-    .where(and(eq(judgeConfigs.id, judgeConfigId), isNull(judgeConfigs.deletedAt)));
+    .where(
+      and(
+        eq(judgeConfigs.versionId, judgeVersionId),
+        eq(judgeConfigs.isActive, true),
+        isNull(judgeConfigs.deletedAt),
+      )
+    );
 
   if (!judgeConfig) {
     return Response.json(
-      { error: "Judge config not found" },
+      { error: "No active judge config found for the judge agent" },
       { status: 400 }
     );
   }
 
-  // Create the run record with snapshots
+  // Create the run record with snapshots — status: "running"
   const [run] = await db
     .insert(evalRuns)
     .values({
       agentId,
       chatModel: modelConfig.modelId,
       chatSystemPrompt: modelConfig.systemPrompt,
+      chatTemperature: modelConfig.temperature,
       judgeAgentId,
       judgeModelConfigSnapshot: {
         modelId: judgeModelConfig.modelId,
@@ -88,8 +135,26 @@ export async function POST(req: Request) {
       totalCases,
       passedAssertions: 0,
       averageScore: null,
+      status: "running",
+      completedCases: 0,
     })
     .returning();
 
-  return Response.json({ runId: run.id } satisfies CreateEvalRunResponse);
+  // Trigger server-side execution in after()
+  after(async () => {
+    await executeEvalRun({
+      runId: run.id,
+      agentId,
+      cases,
+      templateVars,
+      toolNames,
+      userId: ctx.user.id,
+    });
+  });
+
+  return Response.json({
+    runId: run.id,
+    chatModel: run.chatModel,
+    status: run.status,
+  } satisfies CreateEvalRunResponse);
 }

@@ -28,6 +28,7 @@ export function JudgeConfigSidebar({
           size="icon-xs"
           onClick={onCreate}
           title="New Judge Config"
+          data-testid="btn-new-judge-config"
         >
           <PlusIcon className="size-4" />
         </Button>
