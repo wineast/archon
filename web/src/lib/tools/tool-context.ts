@@ -1,8 +1,6 @@
 import { db } from "@/db";
 import {
   wikiDocuments,
-  datasets,
-  functions,
   schemas,
   objectTypes,
   objectRelations,
@@ -12,11 +10,7 @@ import {
 import { eq, and, like, ilike, inArray, or, sql, isNull } from "drizzle-orm";
 import { renderWikiContent } from "@/lib/template/render";
 import { parseWikiContent } from "@/lib/wiki/frontmatter";
-import {
-  renderField,
-  renderObjectField,
-  resolveDatasets,
-} from "@/lib/datasets/queries";
+import { resolveDatasets } from "@/lib/datasets/queries";
 import {
   resolveAndCompileFunctions,
   getCachedFunctions,
@@ -24,8 +18,11 @@ import {
   buildBaseDeps,
   type FunctionRecord,
 } from "@/lib/functions/compile";
-import { getReferencedBuiltinFunctionKeys } from "@/lib/pool/queries";
-import { agentResourceRefs } from "@/db/schema";
+import {
+  getReferencedBuiltinFunctionKeys,
+  getAgentDatasets,
+  getAgentFunctions,
+} from "@/lib/pool/queries";
 import { extractLabel } from "@/lib/ontology/utils";
 import { proxyToExternal } from "@/lib/ontology/external-proxy";
 import { getDefsMap } from "@/lib/schemas/resolve-inline";
@@ -107,21 +104,15 @@ export interface ToolContext {
   ontology: OntologyContext;
 }
 
-export function createToolContext(agentId?: string): ToolContext {
+export function createToolContext(agentId?: string, versionId?: string): ToolContext {
   let resolvedCache: Record<string, unknown> | null = null;
   let compiledFnsPromise: Promise<Map<string, unknown>> | null = null;
 
   async function getResolved(): Promise<Record<string, unknown>> {
     if (resolvedCache) return resolvedCache;
-    if (!agentId) return {};
+    if (!agentId || !versionId) return {};
 
-    const rows = await db
-      .select({
-        key: datasets.key,
-        data: datasets.data,
-      })
-      .from(datasets)
-      .where(eq(datasets.agentId, agentId));
+    const rows = await getAgentDatasets(agentId, versionId);
 
     const { resolvedVars } = resolveDatasets(rows);
     resolvedCache = resolvedVars;
@@ -129,49 +120,13 @@ export function createToolContext(agentId?: string): ToolContext {
   }
 
   async function getCompiledFunctions(): Promise<Map<string, unknown>> {
-    if (!agentId) return new Map();
+    if (!agentId || !versionId) return new Map();
 
     // Check cache first
     const cached = getCachedFunctions(agentId);
     if (cached) return cached;
 
-    // Load agent-owned functions from DB
-    const agentRows = await db
-      .select({
-        key: functions.key,
-        code: functions.code,
-        parametersSchema: functions.parametersSchema,
-      })
-      .from(functions)
-      .where(eq(functions.agentId, agentId));
-
-    // Also get pool/builtin function records referenced by this agent
-    const poolRows = await db
-      .select({
-        key: functions.key,
-        code: functions.code,
-        parametersSchema: functions.parametersSchema,
-      })
-      .from(agentResourceRefs)
-      .innerJoin(functions, eq(functions.id, agentResourceRefs.resourceId))
-      .where(
-        and(
-          eq(agentResourceRefs.agentId, agentId),
-          eq(agentResourceRefs.resourceType, "function"),
-          isNull(functions.agentId),
-          isNull(functions.deletedAt),
-        )
-      );
-
-    // Merge, deduplicating by key
-    const seenKeys = new Set(agentRows.map((r) => r.key));
-    const allRows = [...agentRows];
-    for (const pr of poolRows) {
-      if (!seenKeys.has(pr.key)) {
-        allRows.push(pr);
-        seenKeys.add(pr.key);
-      }
-    }
+    const allRows = await getAgentFunctions(agentId, versionId);
 
     const fnRecords: FunctionRecord[] = allRows.map((r) => ({
       key: r.key,
@@ -180,7 +135,7 @@ export function createToolContext(agentId?: string): ToolContext {
     }));
 
     const defsMap = await getDefsMap(agentId);
-    const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId);
+    const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId, versionId);
     const baseDeps = buildBaseDeps(enabledBuiltinKeys);
 
     const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);

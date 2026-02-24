@@ -93,7 +93,7 @@ export async function POST(
       }
       result = await res.json();
     } else {
-      const context = createToolContext(tool.agentId ?? undefined);
+      const context = createToolContext(tool.agentId ?? undefined, tool.versionId ?? undefined);
       result = await executeToolHandler(tool.handler!, validatedInput, context);
     }
   } catch (e) {

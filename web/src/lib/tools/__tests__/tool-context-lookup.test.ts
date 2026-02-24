@@ -10,11 +10,6 @@ vi.mock("@/db", () => ({
 }));
 
 vi.mock("@/db/schema", () => ({
-  datasets: {
-    key: "key",
-    data: "data",
-    agentId: "agent_id",
-  },
   wikiDocuments: {
     id: "id",
     title: "title",
@@ -30,8 +25,13 @@ vi.mock("drizzle-orm", () => ({
   ilike: vi.fn((a, b) => ({ op: "ilike", a, b })),
 }));
 
+const mockGetAgentDatasets = vi.fn();
+const mockGetAgentFunctions = vi.fn();
+
 vi.mock("@/lib/pool/queries", () => ({
   getReferencedBuiltinFunctionKeys: vi.fn().mockResolvedValue(new Set()),
+  getAgentDatasets: (...args: unknown[]) => mockGetAgentDatasets(...args),
+  getAgentFunctions: (...args: unknown[]) => mockGetAgentFunctions(...args),
 }));
 
 vi.mock("@/lib/template/render", () => ({
@@ -62,73 +62,123 @@ describe("ToolContext.dataset", () => {
   });
 
   it("get() returns null when no datasets found", async () => {
-    mockDbRows([]);
+    mockGetAgentDatasets.mockResolvedValue([]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext("agent-1");
+    const ctx = createToolContext("agent-1", "version-1");
     const result = await ctx.dataset.get("nonexistent");
     expect(result).toBeNull();
-    expect(mockSelect).toHaveBeenCalledTimes(1);
+    expect(mockGetAgentDatasets).toHaveBeenCalledWith("agent-1", "version-1");
   });
 
   it("get() returns string value for string dataset", async () => {
-    mockDbRows([{ key: "company",data: "Acme Corp" }]);
+    mockGetAgentDatasets.mockResolvedValue([{ key: "company", name: "Company", data: "Acme Corp" }]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext("agent-1");
+    const ctx = createToolContext("agent-1", "version-1");
     const result = await ctx.dataset.get("company");
     expect(result).toBe("Acme Corp");
   });
 
   it("get() returns object for object dataset", async () => {
-    mockDbRows([
+    mockGetAgentDatasets.mockResolvedValue([
       {
         key: "states",
+        name: "States",
         data: { CA: "California", TX: "Texas" },
       },
     ]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext("agent-1");
+    const ctx = createToolContext("agent-1", "version-1");
     const result = await ctx.dataset.get("states");
     expect(result).toEqual({ CA: "California", TX: "Texas" });
   });
 
   it("get() resolves derived data with base dataset references", async () => {
-    mockDbRows([
-      { key: "name",data: "Universe" },
+    mockGetAgentDatasets.mockResolvedValue([
+      { key: "name", name: "Name", data: "Universe" },
       {
         key: "routes",
-       
+        name: "Routes",
         data: { product: { label: "{{name}}" } },
       },
     ]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext("agent-1");
+    const ctx = createToolContext("agent-1", "version-1");
     const result = await ctx.dataset.get("routes");
     expect(result).toEqual({ product: { label: "Universe" } });
   });
 
   it("get() returns null when no agentId provided", async () => {
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext(); // no agentId
+    const ctx = createToolContext(); // no agentId or versionId
     const result = await ctx.dataset.get("anything");
     expect(result).toBeNull();
-    expect(mockSelect).not.toHaveBeenCalled();
+    expect(mockGetAgentDatasets).not.toHaveBeenCalled();
+  });
+
+  it("get() returns null when no versionId provided", async () => {
+    const { createToolContext } = await import("../tool-context");
+    const ctx = createToolContext("agent-1"); // no versionId
+    const result = await ctx.dataset.get("anything");
+    expect(result).toBeNull();
+    expect(mockGetAgentDatasets).not.toHaveBeenCalled();
   });
 
   it("caches resolved data across multiple get() calls", async () => {
-    mockDbRows([
-      { key: "a",data: "value_a" },
-      { key: "b",data: "value_b" },
+    mockGetAgentDatasets.mockResolvedValue([
+      { key: "a", name: "A", data: "value_a" },
+      { key: "b", name: "B", data: "value_b" },
     ]);
 
     const { createToolContext } = await import("../tool-context");
-    const ctx = createToolContext("agent-1");
+    const ctx = createToolContext("agent-1", "version-1");
     expect(await ctx.dataset.get("a")).toBe("value_a");
     expect(await ctx.dataset.get("b")).toBe("value_b");
     // DB should only be queried once (result is cached)
-    expect(mockSelect).toHaveBeenCalledTimes(1);
+    expect(mockGetAgentDatasets).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetches datasets scoped to versionId, not all versions (regression)", async () => {
+    // This is the regression test for the cross-version duplicate key bug.
+    // Before the fix, createToolContext only used agentId, fetching datasets from
+    // ALL versions. After creating a new version, datasets with the same key but
+    // different versionIds would cause a false "Circular dependency" error.
+    mockGetAgentDatasets.mockResolvedValue([
+      { key: "company", name: "Company", data: "Correct Version Data" },
+    ]);
+
+    const { createToolContext } = await import("../tool-context");
+    const ctx = createToolContext("agent-1", "version-2");
+    const result = await ctx.dataset.get("company");
+
+    // Verify it called getAgentDatasets with the correct versionId
+    expect(mockGetAgentDatasets).toHaveBeenCalledWith("agent-1", "version-2");
+    expect(result).toBe("Correct Version Data");
+  });
+});
+
+describe("ToolContext.fn", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("fn() throws when no versionId provided (no functions loaded)", async () => {
+    const { createToolContext } = await import("../tool-context");
+    const ctx = createToolContext("agent-1"); // no versionId
+
+    await expect(ctx.fn("anything")).rejects.toThrow('Function "anything" not found');
+    // getAgentFunctions should NOT be called since versionId is missing
+    expect(mockGetAgentFunctions).not.toHaveBeenCalled();
+  });
+
+  it("fn() throws when no agentId provided (no functions loaded)", async () => {
+    const { createToolContext } = await import("../tool-context");
+    const ctx = createToolContext(); // no agentId or versionId
+
+    await expect(ctx.fn("anything")).rejects.toThrow('Function "anything" not found');
+    expect(mockGetAgentFunctions).not.toHaveBeenCalled();
   });
 });

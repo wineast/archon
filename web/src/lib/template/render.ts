@@ -220,7 +220,7 @@ export async function gatherTemplateData(
     db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))).orderBy(objectTypes.order),
     db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
     getAgentFunctions(agentId, versionId),
-    getReferencedBuiltinFunctionKeys(agentId),
+    getReferencedBuiltinFunctionKeys(agentId, versionId),
   ]);
 
   const { resolvedVars, datasetEntries } = resolveDatasets(datasetRows);

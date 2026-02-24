@@ -16,7 +16,7 @@ import type { RuntimeEventInput } from "@/lib/runtime-events/record";
  *   3. neither         → error
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function resolveExecutor(def: ToolDefinitionPayload, agentId?: string): (args: any) => Promise<any> {
+function resolveExecutor(def: ToolDefinitionPayload, agentId?: string, versionId?: string): (args: any) => Promise<any> {
   const url = def.url?.trim();
   if (url) {
     return async (args) => {
@@ -34,7 +34,7 @@ function resolveExecutor(def: ToolDefinitionPayload, agentId?: string): (args: a
 
   const handler = def.handler?.trim();
   if (handler) {
-    const context = createToolContext(agentId);
+    const context = createToolContext(agentId, versionId);
     return async (args) => {
       try {
         return await executeToolHandler(handler, args, context);
@@ -175,7 +175,8 @@ export function buildDynamicTools(
   definitions: ToolDefinitionPayload[],
   templateData?: TemplateData,
   agentId?: string,
-  collector?: RuntimeEventInput[]
+  collector?: RuntimeEventInput[],
+  versionId?: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, Tool<any, any>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -194,7 +195,7 @@ export function buildDynamicTools(
       // Client tools: schema only, no execute → tool call passes through to frontend
       tools[def.name] = tool({ description: def.description, inputSchema });
     } else {
-      const executor = resolveExecutor(def, agentId);
+      const executor = resolveExecutor(def, agentId, versionId);
       let execute =
         collector && agentId
           ? wrapExecutorWithTiming(executor, def.name, agentId, collector)

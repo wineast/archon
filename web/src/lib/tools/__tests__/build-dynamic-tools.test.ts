@@ -3,6 +3,16 @@ import { buildDynamicTools, wrapWithOutputValidation } from "@/app/api/chat/tool
 import type { ToolDefinitionPayload } from "../types";
 import type { RuntimeEventInput } from "@/lib/runtime-events/record";
 import { z } from "zod";
+import { createToolContext } from "@/lib/tools/tool-context";
+
+vi.mock("@/lib/tools/tool-context", () => ({
+  createToolContext: vi.fn().mockReturnValue({
+    wiki: { get: vi.fn(), findByPrefix: vi.fn(), search: vi.fn() },
+    dataset: { get: vi.fn() },
+    fn: vi.fn(),
+    ontology: {},
+  }),
+}));
 
 const opts = {
   toolCallId: "tc",
@@ -327,5 +337,48 @@ describe("output validation", () => {
     const result = await tools.myTool.execute!({}, opts);
     expect(result._outputValidationWarning).toBeUndefined();
     expect(collector.every((e) => e.eventType !== "tool_output_validation")).toBe(true);
+  });
+});
+
+describe("buildDynamicTools versionId propagation", () => {
+  beforeEach(() => {
+    vi.mocked(createToolContext).mockClear();
+  });
+
+  it("passes versionId to createToolContext for JS handler tools", () => {
+    const payload: ToolDefinitionPayload = {
+      name: "myTool",
+      description: "A tool",
+      parameters: EMPTY_PARAMS,
+      handler: `export default function() { return {}; }`,
+    };
+    buildDynamicTools([payload], undefined, "agent-1", undefined, "version-1");
+
+    expect(createToolContext).toHaveBeenCalledWith("agent-1", "version-1");
+  });
+
+  it("does not call createToolContext for URL-based tools", () => {
+    const payload: ToolDefinitionPayload = {
+      name: "remoteTool",
+      description: "A remote tool",
+      parameters: EMPTY_PARAMS,
+      url: "https://example.com/api",
+    };
+    buildDynamicTools([payload], undefined, "agent-1", undefined, "version-1");
+
+    expect(createToolContext).not.toHaveBeenCalled();
+  });
+
+  it("does not call createToolContext for client execution target tools", () => {
+    const payload: ToolDefinitionPayload = {
+      name: "clientTool",
+      description: "A client tool",
+      parameters: EMPTY_PARAMS,
+      handler: `export default function() { return {}; }`,
+      executionTarget: "client",
+    };
+    buildDynamicTools([payload], undefined, "agent-1", undefined, "version-1");
+
+    expect(createToolContext).not.toHaveBeenCalled();
   });
 });

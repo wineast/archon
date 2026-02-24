@@ -141,7 +141,7 @@ export async function POST(
     }));
 
     const allTools = toolPayloads.length
-      ? buildDynamicTools(toolPayloads, templateData, modelConfig.agentId ?? undefined)
+      ? buildDynamicTools(toolPayloads, templateData, modelConfig.agentId ?? undefined, undefined, evalVersionId)
       : {};
 
     const mode = evalCase.mode ?? "single";

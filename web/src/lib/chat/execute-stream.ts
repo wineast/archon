@@ -140,7 +140,7 @@ export async function executeChatStream(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allTools: Record<string, any> = toolPayloads.length
-    ? buildDynamicTools(toolPayloads, templateData, agentId, eventCollector)
+    ? buildDynamicTools(toolPayloads, templateData, agentId, eventCollector, versionId)
     : {};
 
   // Connect to enabled MCP servers and merge their tools (skip if agent.mcpEnabled is false)
