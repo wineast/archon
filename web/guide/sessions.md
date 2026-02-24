@@ -8,6 +8,9 @@
 - Admin 角色可切换查看所有用户的会话
 - 选择会话后可查看完整对话消息
 - 每条会话显示标题、消息数、创建时间
+- 会话项 hover 显示三点菜单，支持重命名和删除操作
+- 删除操作通过确认弹窗二次确认
+- 重命名通过弹窗修改标题，调用 PATCH API 更新
 
 ## 数据库 Schema
 
@@ -28,7 +31,10 @@
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/sessions?agentId=xxx&all=true` | 列出会话（all=true 需 Admin） |
+| GET | `/api/sessions/[id]` | 获取单个会话详情 |
 | GET | `/api/sessions/[id]/messages` | 获取会话消息 |
+| PATCH | `/api/sessions/[id]` | 更新会话标题（body: `{ title }`) |
+| DELETE | `/api/sessions/[id]` | 删除会话 |
 
 ## 持久化时序
 

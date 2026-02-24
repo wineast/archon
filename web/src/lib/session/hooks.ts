@@ -28,6 +28,23 @@ export function useSessions(agentId?: string, showAll?: boolean, source?: string
   };
 }
 
+export async function renameSession(id: string, title: string, mutate: () => void) {
+  try {
+    const res = await fetch(`/api/sessions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    mutate();
+    return true;
+  } catch (e) {
+    console.warn("renameSession failed:", e);
+    toast.error("重命名会话失败");
+    return false;
+  }
+}
+
 export async function deleteSession(id: string, mutate: () => void, t?: (key: string) => string) {
   try {
     const res = await fetch(`/api/sessions/${id}`, { method: "DELETE" });
