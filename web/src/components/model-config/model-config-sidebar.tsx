@@ -35,6 +35,7 @@ export function ModelConfigSidebar({
           size="icon-xs"
           onClick={onCreate}
           title={t("newModelConfig")}
+          data-testid="btn-new-model-config"
         >
           <PlusIcon className="size-4" />
         </Button>

@@ -53,3 +53,6 @@ storybook-static
 # playwright
 /test-results/
 /playwright-report/
+
+# e2e secrets
+e2e/.env

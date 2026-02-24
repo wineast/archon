@@ -55,6 +55,7 @@ export function ModelCombobox({ value, onChange, className, disabledProviders }:
           role="combobox"
           aria-expanded={open}
           className={cn("h-8 w-full justify-between text-sm font-normal", className)}
+          data-testid="combobox-model"
         >
           {selected ? (
             <span className="flex items-center gap-2 truncate">

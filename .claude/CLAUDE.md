@@ -147,10 +147,26 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - Playwright 截图统一存放到 `screenshots/` 目录（已 gitignore）
 - 不要在项目根目录或其他位置随意放置截图文件
 
+### E2E 测试（Playwright）
+- 选择器统一使用 `data-testid`，不依赖文本内容（因为有中英文 locale 切换）
+- **先手动验证，再写测试**：编写 E2E 测试前，必须先用 Playwright MCP 工具（`mcp__playwright__*`）手动走一遍完整流程，确认每一步的实际 DOM 结构和选择器都能正常工作，跑通后再编写测试代码。测试用例只是程序化兜底
+- **导航必须走真实 UI 路径**：不要用 URL 字符串替换（如 `.replace('/chat', '/build')`）等 hack 方式做页面导航。必须先阅读前端组件代码，了解实际的用户交互路径（如三点菜单 → 构建、侧栏 tab 切换等），然后用 `data-testid` 走正规 UI 操作
+- **用 `test.step()` 结构化步骤**：禁止用注释标记步骤（如 `// Step 1:`），必须用 `test.step("描述", async () => { ... })`——既是文档又能在 Playwright HTML report 中结构化展示
+- **`describe` / `step` 命名用中文**，与 Storybook name 保持一致，报告可读性优先
+- **文件头 JSDoc 保留**：概述该 spec 覆盖的场景和预期结果，相当于行为规范的精简版
+- **公共 helper 提取到 `web/e2e/helpers/`**：如登录、创建 Agent、配置模型等跨 spec 复用的操作，避免每个 spec 文件重复定义
+- **不需要独立的 BDD 文档**：`test.describe` + `test.step` + 文件头 JSDoc 已覆盖行为描述，不维护额外的 `.feature` / BDD `.md` 文件
+
 ### Chat Persistence
 - 分层持久化：session 创建 + 用户消息在 `streamText()` 前 `await` 保存（~10-50ms）；AI 响应消息保留在 `onFinish → after()` 中异步保存
 - 正确：`Request → await createSession + saveUser → streamText → return → after() { saveAssistant }`
 - 错误：`Request → streamText → return → after() { createSession + saveUser + saveAssistant }`（刷新丢消息 ❌）
+
+### AI 模型调用（resolve-model）
+- `models.json` 中的模型 ID 是 **Vercel AI Gateway** 格式（如 `deepseek/deepseek-v3.2`），通过网关调用时直接使用
+- BYOK（用户自有 Key）模式下，模型名直接传给 Provider API——部分 Provider 的 Gateway 名与 API 名不同（如 DeepSeek 的 `deepseek-v3.2` 对应 API 的 `deepseek-chat`）
+- **不要修改 `models.json` 来适配 Provider API**。正确做法是在 `resolve-model.ts` 的 `BYOK_MODEL_NAME_MAPPING` 中添加映射
+- 新增 Provider 时检查其 API 模型名是否与 Gateway 名一致，不一致则补充映射
 
 ### Debug
 - 服务端错误日志在 `.logs/dev.log`，排查 API 500 等服务端报错时优先查看此文件
@@ -158,6 +174,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 ### 收尾检查
 - 代码修改完成后，必须依次执行 `make typecheck` 和 `make test`，确认类型无报错 + 测试通过后才算任务完成
 - 新增或修改功能必须有对应的测试用例覆盖，不能只让现有测试通过就算完成
+- 涉及用户交互流程的功能变更，运行 `make e2e` 确认端到端测试通过
 - 同步 `web/guide/` 使用指南：根据本次改动内容，对 `web/guide/` 目录下的相关文档执行 CRUD——新增功能写新文档或新章节，修改功能更新对应段落，删除功能移除过时描述，确保文档与代码始终一致
 
 ### 测试账号

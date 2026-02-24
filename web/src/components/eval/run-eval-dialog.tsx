@@ -148,7 +148,7 @@ export function RunEvalDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!canConfirm}>
+          <Button onClick={handleConfirm} disabled={!canConfirm} data-testid="btn-confirm-run">
             {confirming && <Spinner className="mr-1.5 size-3" />}
             {buttonLabel}
           </Button>

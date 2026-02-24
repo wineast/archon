@@ -134,6 +134,7 @@ export interface EvalRunSummary {
 // ── DB row → runtime type converters ──
 
 import type { EvalCaseRow, EvalRunRow, EvalRunResultRow } from "@/db/schema";
+export type { EvalRunStatus } from "@/db/schema";
 
 export function toEvalCase(row: EvalCaseRow): EvalCase {
   return {
@@ -166,18 +167,22 @@ export interface EvalRunResponse {
 
 // ── New granular API types ──
 
-/** POST /api/eval/run — create a run record only */
+/** POST /api/eval/run — create a run and start server-side execution */
 export interface CreateEvalRunRequest {
   agentId: string;
   judgeAgentId: string;
   filterTags?: string[];
   assertionFailConfig?: AssertionFailConfig;
   totalCases: number;
+  cases: EvalCase[];
+  templateVars?: Record<string, string>;
+  toolNames?: string[];
 }
 
 export interface CreateEvalRunResponse {
   runId: string;
   chatModel: string;
+  status: string;
 }
 
 /** POST /api/eval/run/[runId]/case — execute a single case */

@@ -4,6 +4,7 @@ import path from "path"
 import fs from "fs"
 
 // Load env files (same order as Next.js)
+dotenv.config({ path: path.resolve(__dirname, "e2e/.env") })
 dotenv.config({ path: path.resolve(__dirname, ".env.local") })
 dotenv.config({ path: path.resolve(__dirname, ".env.development.local") })
 
@@ -44,9 +45,22 @@ export default defineConfig({
     {
       name: "authenticated",
       dependencies: ["setup"],
+      testIgnore: /eval-(flow|full)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: ".clerk/user.json",
+      },
+    },
+    {
+      name: "eval",
+      dependencies: ["setup"],
+      testMatch: /eval-(flow|full)\.spec\.ts/,
+      timeout: 300_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: ".clerk/user.json",
+        video: { mode: "on", size: { width: 1440, height: 900 } },
+        viewport: { width: 1440, height: 900 },
       },
     },
   ],

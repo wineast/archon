@@ -228,6 +228,7 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
         <div
           key={turn.id}
           className="rounded-md border p-3 space-y-2"
+          data-testid="turn-card"
         >
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-muted-foreground font-mono">
@@ -239,7 +240,7 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
                 handleRoleChange(idx, v as "user" | "assistant")
               }
             >
-              <SelectTrigger className="h-7 w-[110px] text-xs">
+              <SelectTrigger className="h-7 w-[110px] text-xs" data-testid="select-turn-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -286,6 +287,7 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
                 ? "User message..."
                 : "Assistant response..."
             }
+            data-testid="textarea-turn-content"
           />
 
           {/* Tool calls section (assistant turns only, injected/sequential modes) */}
@@ -328,6 +330,7 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
                     onCheckedChange={(checked) =>
                       handleJudgeToggle(idx, !!checked)
                     }
+                    data-testid="checkbox-turn-judge"
                   />
                   <label
                     htmlFor={`judge-${turn.id}`}
@@ -341,6 +344,7 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
                   size="sm"
                   className="h-6 text-xs"
                   onClick={() => handleAddAssertion(idx)}
+                  data-testid="btn-add-turn-assertion"
                 >
                   <PlusIcon className="mr-1 size-3" />
                   Assertion
@@ -377,6 +381,7 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
           size="sm"
           className="flex-1"
           onClick={handleAdd}
+          data-testid="btn-add-turn"
         >
           <PlusIcon className="mr-1 size-3" />
           Add Turn

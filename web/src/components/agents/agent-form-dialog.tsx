@@ -182,7 +182,7 @@ export function AgentFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               {tc("cancel")}
             </Button>
-            <Button type="submit" disabled={!nameValue.trim() || busy}>
+            <Button type="submit" disabled={!nameValue.trim() || busy} data-testid="btn-submit-agent">
               {busy && <Spinner className="mr-2" />}
               {isEdit ? tc("save") : tc("create")}
             </Button>

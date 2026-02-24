@@ -65,6 +65,7 @@
     "nanoid": "^5.1.6",
     "next": "16.1.6",
     "next-intl": "^4.8.3",
+    "p-limit": "^7.3.0",
     "papaparse": "^5.5.3",
     "pdf-parse": "^2.4.5",
     "postgres": "^3.4.8",

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { parseModelId } from "../resolve-model";
+import { parseModelId, mapModelName } from "../resolve-model";
 import { BYOK_PROVIDERS } from "@/db/schema";
+import type { ByokProvider } from "@/db/schema";
 
 describe("parseModelId", () => {
   it("parses slash-separated modelId", () => {
@@ -49,5 +50,25 @@ describe("BYOK_PROVIDERS", () => {
 
   it("does NOT include amazon (requires AWS credentials)", () => {
     expect(BYOK_PROVIDERS).not.toContain("amazon");
+  });
+});
+
+describe("mapModelName", () => {
+  it("maps DeepSeek gateway model names to API model names", () => {
+    expect(mapModelName("deepseek" as ByokProvider, "deepseek-v3.2")).toBe("deepseek-chat");
+    expect(mapModelName("deepseek" as ByokProvider, "deepseek-v3.1")).toBe("deepseek-chat");
+    expect(mapModelName("deepseek" as ByokProvider, "deepseek-v3")).toBe("deepseek-chat");
+    expect(mapModelName("deepseek" as ByokProvider, "deepseek-r1")).toBe("deepseek-reasoner");
+    expect(mapModelName("deepseek" as ByokProvider, "deepseek-v3.2-thinking")).toBe("deepseek-reasoner");
+  });
+
+  it("passes through model names that have no mapping", () => {
+    expect(mapModelName("deepseek" as ByokProvider, "deepseek-chat")).toBe("deepseek-chat");
+    expect(mapModelName("deepseek" as ByokProvider, "deepseek-reasoner")).toBe("deepseek-reasoner");
+  });
+
+  it("passes through model names for providers without mapping", () => {
+    expect(mapModelName("openai" as ByokProvider, "gpt-4o")).toBe("gpt-4o");
+    expect(mapModelName("anthropic" as ByokProvider, "claude-sonnet-4")).toBe("claude-sonnet-4");
   });
 });

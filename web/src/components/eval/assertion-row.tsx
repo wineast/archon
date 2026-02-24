@@ -65,7 +65,7 @@ export function AssertionRow({ assertion, onChange, onDelete }: AssertionRowProp
           onChange({ ...assertion, type: value })
         }
       >
-        <SelectTrigger className="w-[160px]" size="sm">
+        <SelectTrigger className="w-[160px]" size="sm" data-testid="select-assertion-type">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -93,6 +93,7 @@ export function AssertionRow({ assertion, onChange, onDelete }: AssertionRowProp
           value={assertion.value}
           onChange={(e) => onChange({ ...assertion, value: e.target.value })}
           placeholder={getPlaceholder(assertion.type)}
+          data-testid="input-assertion-value"
         />
       )}
       {hideValue && <div className="flex-1" />}

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mock DB ──
 
-let selectRunResult: Record<string, unknown>[] = [{ id: "run-1", agentId: "agent-1" }];
+let selectRunResult: Record<string, unknown>[] = [{ id: "run-1", agentId: "agent-1", status: "running" }];
 let selectResultsData: Record<string, unknown>[] = [];
 let updatedValues: Record<string, unknown> = {};
 
@@ -57,7 +57,7 @@ describe("PATCH /api/eval/run/[runId] (finalize)", () => {
     vi.clearAllMocks();
     updatedValues = {};
     fromCallIndex = 0;
-    selectRunResult = [{ id: "run-1", agentId: "agent-1" }];
+    selectRunResult = [{ id: "run-1", agentId: "agent-1", status: "running" }];
     selectResultsData = [];
   });
 
@@ -75,10 +75,11 @@ describe("PATCH /api/eval/run/[runId] (finalize)", () => {
       passedAssertions: 2,
       averageScore: 7,
     });
-    expect(updatedValues).toEqual({
+    expect(updatedValues).toMatchObject({
       totalCases: 2,
       passedAssertions: 2,
       averageScore: 7,
+      status: "completed",
     });
   });
 
@@ -140,5 +141,25 @@ describe("PATCH /api/eval/run/[runId] (finalize)", () => {
 
     // (7 + 8 + 9) / 3 = 8.0
     expect(json.averageScore).toBe(8);
+  });
+
+  it("sets status to completed when current status is running", async () => {
+    selectRunResult = [{ id: "run-1", agentId: "agent-1", status: "running" }];
+    selectResultsData = [
+      { allAssertionsPassed: true, judgeResult: null },
+    ];
+
+    await PATCH(makeRequest(), { params });
+
+    expect(updatedValues).toMatchObject({ status: "completed" });
+  });
+
+  it("does not change status when already completed", async () => {
+    selectRunResult = [{ id: "run-1", agentId: "agent-1", status: "completed" }];
+    selectResultsData = [];
+
+    await PATCH(makeRequest(), { params });
+
+    expect(updatedValues).not.toHaveProperty("status");
   });
 });

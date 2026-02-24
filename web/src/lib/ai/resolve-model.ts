@@ -23,6 +23,27 @@ const OPENAI_COMPAT_BASE_URLS: Partial<Record<ByokProvider, string>> = {
   bytedance: "https://ark.cn-beijing.volces.com/api/v3",
 };
 
+/* ─────────── BYOK Model Name Mapping ─────────── */
+
+/**
+ * Gateway model names → actual provider API model names.
+ * Only needed for providers where gateway IDs differ from API IDs.
+ * e.g. Vercel AI Gateway uses "deepseek-v3.2" but DeepSeek API expects "deepseek-chat".
+ */
+const BYOK_MODEL_NAME_MAPPING: Partial<Record<ByokProvider, Record<string, string>>> = {
+  deepseek: {
+    "deepseek-v3.2": "deepseek-chat",
+    "deepseek-v3.2-thinking": "deepseek-reasoner",
+    "deepseek-v3.1": "deepseek-chat",
+    "deepseek-v3": "deepseek-chat",
+    "deepseek-r1": "deepseek-reasoner",
+  },
+};
+
+export function mapModelName(provider: ByokProvider, modelName: string): string {
+  return BYOK_MODEL_NAME_MAPPING[provider]?.[modelName] ?? modelName;
+}
+
 /* ─────────── Provider Factory Map ─────────── */
 
 type ProviderFactory = (apiKey: string, modelName: string) => LanguageModel;
@@ -95,7 +116,8 @@ export async function resolveModel(
   if (apiKey) {
     // BYOK path — no credit check
     const factory = PROVIDER_FACTORIES[provider as ByokProvider];
-    return factory(apiKey, modelName);
+    const mapped = mapModelName(provider as ByokProvider, modelName);
+    return factory(apiKey, mapped);
   }
 
   // Gateway fallback — check credits

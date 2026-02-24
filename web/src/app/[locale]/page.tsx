@@ -93,7 +93,7 @@ function AgentsPageContent() {
           <OrgSwitcher onCreateOrg={() => setOrgDialogOpen(true)} />
           {currentOrg && canManage && (
             <Button size="sm" variant="ghost" asChild>
-              <Link href={`/${currentOrg.slug}/settings`}>
+              <Link href={`/${currentOrg.slug}/settings`} data-testid="link-org-settings">
                 <SettingsIcon className="size-4" />
               </Link>
             </Button>
@@ -129,7 +129,7 @@ function AgentsPageContent() {
                 {importing ? <Spinner className="size-4" /> : <UploadIcon className="size-4" />}
                 {t("importAgent")}
               </Button>
-              <Button size="sm" onClick={handleCreate}>
+              <Button size="sm" onClick={handleCreate} data-testid="btn-create-agent">
                 <PlusIcon className="size-4" />
                 {t("createNew")}
               </Button>

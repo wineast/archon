@@ -5,6 +5,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useEvalCases,
+  useEvalRuns,
   createEvalCase,
   updateEvalCase,
   deleteEvalCase,
@@ -19,6 +20,7 @@ import { EvalCaseCreateDialog } from "./eval-case-create-dialog";
 
 export function EvalPanel({ agentId }: { agentId: string }) {
   const { cases, mutate: mutateCases } = useEvalCases(agentId, true);
+  const { runs, mutate: mutateRuns } = useEvalRuns(agentId);
   const [activeView, setActiveView] = useState<ActiveView>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">(
     "sidebar"
@@ -119,7 +121,7 @@ export function EvalPanel({ agentId }: { agentId: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <EvalRunProvider>
+      <EvalRunProvider runs={runs} mutateRuns={mutateRuns}>
         {/* Desktop layout */}
         <div className="hidden h-full sm:flex">
           <EvalSidebar

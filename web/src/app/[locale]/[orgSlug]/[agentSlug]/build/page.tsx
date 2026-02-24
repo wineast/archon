@@ -417,6 +417,7 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
               return (
                 <button
                   key={tab.value}
+                  data-testid={`tab-${tab.value}`}
                   onClick={() => handleTabChange(tab.value)}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",

@@ -33,11 +33,11 @@ export function ResultCard({ result }: ResultCardProps) {
             {result.error ? (
               <Badge variant="destructive">Error</Badge>
             ) : result.allAssertionsPassed ? (
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
+              <Badge variant="secondary" className="bg-green-100 text-green-800" data-testid="badge-passed">
                 Passed
               </Badge>
             ) : (
-              <Badge variant="destructive">Failed</Badge>
+              <Badge variant="destructive" data-testid="badge-failed">Failed</Badge>
             )}
             <span className="text-xs text-muted-foreground">
               {result.durationMs}ms

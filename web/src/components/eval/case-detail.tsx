@@ -30,10 +30,11 @@ import { AssertionRow } from "./assertion-row";
 import { TurnsList } from "./turns-list";
 import { ResultCard } from "./result-card";
 import { RunEvalDialog } from "./run-eval-dialog";
-import { useEvalRuns } from "@/lib/eval/hooks";
+import { useEvalRuns, fetchEvalRunDetail } from "@/lib/eval/hooks";
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { useEvalRun } from "@/lib/eval/eval-run-context";
+import { toEvalResult } from "@/lib/eval/types";
 import type { EvalCaseRow } from "@/db/schema";
 import type {
   Assertion,
@@ -42,7 +43,6 @@ import type {
   EvalCaseMode,
   EvalTurn,
   CreateEvalRunResponse,
-  RunCaseResponse,
   AssertionFailConfig,
 } from "@/lib/eval/types";
 
@@ -198,22 +198,6 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     }
   }, [evalCase.id, onDelete]);
 
-  const makeErrorResult = (error: string): EvalResult => ({
-    caseId: evalCase.id,
-    caseName: name,
-    mode,
-    turns,
-    chatMessages: [],
-    turnResults: [],
-    chatResponse: "",
-    assertionResults: [],
-    allAssertionsPassed: false,
-    judgeResult: null,
-    timestamp: Date.now(),
-    durationMs: 0,
-    error,
-  });
-
   const handleRunConfirm = useCallback(async (params: {
     judgeAgentId: string;
     assertionFailConfig: AssertionFailConfig;
@@ -238,9 +222,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     setRunDialogOpen(false);
     setRunning(true);
 
-    // Step 1: Create run record
-    let runId: string;
-    let chatModel: string;
+    // Create run via server — server executes asynchronously
     try {
       const createRes = await fetch("/api/eval/run", {
         method: "POST",
@@ -250,6 +232,9 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           judgeAgentId,
           assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
           totalCases: 1,
+          cases: [currentCase],
+          templateVars,
+          toolNames: enabledToolNames,
         }),
       });
       if (!createRes.ok) {
@@ -258,58 +243,39 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         throw new Error(errMsg);
       }
       const data: CreateEvalRunResponse = await createRes.json();
-      runId = data.runId;
-      chatModel = data.chatModel;
-    } catch (err) {
-      setRunning(false);
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      toast.error(errorMsg);
-      setRunResults((prev) => [
-        {
-          modelName: "unknown",
-          result: makeErrorResult(errorMsg),
-        },
-        ...prev,
-      ]);
-      return;
-    }
+      mutateRuns();
 
-    const modelName = chatModel.split("/").pop() ?? chatModel;
+      // Poll for result completion
+      const chatModel = data.chatModel;
+      const modelName = chatModel.split("/").pop() ?? chatModel;
+      const runId = data.runId;
 
-    // Step 2: Execute the case
-    let result: EvalResult;
-    try {
-      const res = await fetch(`/api/eval/run/${runId}/case`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          case: currentCase,
-          templateVars,
-          toolNames: enabledToolNames,
-        }),
-      });
+      const pollResult = async (): Promise<EvalResult | null> => {
+        for (let i = 0; i < 120; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const detail = await fetchEvalRunDetail(runId);
+          if (!detail) continue;
+          if (detail.run.status === "completed" || detail.run.status === "failed" || detail.run.status === "cancelled") {
+            mutateRuns();
+            if (detail.results.length > 0) {
+              return toEvalResult(detail.results[0]);
+            }
+            return null;
+          }
+        }
+        return null;
+      };
 
-      if (!res.ok) {
-        const errText = await res.text();
-        result = makeErrorResult(`HTTP ${res.status}: ${errText}`);
-      } else {
-        const data: RunCaseResponse = await res.json();
-        result = data.result;
+      const result = await pollResult();
+      if (result) {
+        setRunResults((prev) => [{ result, modelName }, ...prev]);
       }
     } catch (err) {
-      result = makeErrorResult(err instanceof Error ? err.message : String(err));
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      toast.error(errorMsg);
+    } finally {
+      setRunning(false);
     }
-
-    // Step 3: Finalize the run
-    try {
-      await fetch(`/api/eval/run/${runId}`, { method: "PATCH" });
-    } catch {
-      // Non-critical: stats may be stale but results are saved
-    }
-
-    setRunResults((prev) => [{ result, modelName }, ...prev]);
-    setRunning(false);
-    mutateRuns();
   }, [
     evalCase.id,
     evalCase.key,
@@ -386,7 +352,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
               Mode
             </label>
             <Select value={mode} onValueChange={(v) => handleModeChange(v as EvalCaseMode)}>
-              <SelectTrigger className="mt-1 h-8 text-sm">
+              <SelectTrigger className="mt-1 h-8 text-sm" data-testid="select-case-mode">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -413,6 +379,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
                 value={singleInput}
                 onChange={(e) => handleSingleInputChange(e.target.value)}
                 placeholder="User message to send..."
+                data-testid="textarea-case-input"
               />
             </div>
           ) : (
@@ -439,6 +406,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
               value={expectedOutput}
               onChange={(e) => setExpectedOutput(e.target.value)}
               placeholder="Expected output (optional)..."
+              data-testid="textarea-expected-output"
             />
           </div>
           <div>
@@ -450,6 +418,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
                 variant="ghost"
                 size="sm"
                 onClick={handleAddAssertion}
+                data-testid="btn-add-assertion"
               >
                 <PlusIcon className="mr-1 size-3" />
                 Add
@@ -493,6 +462,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           size="sm"
           onClick={handleSave}
           disabled={busy || !dirty}
+          data-testid="btn-save"
         >
           {saving ? (
             <Spinner className="mr-1 size-3" />

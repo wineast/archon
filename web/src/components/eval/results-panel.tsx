@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
@@ -16,19 +17,18 @@ import { useEvalRun } from "@/lib/eval/eval-run-context";
 import { useTools } from "@/lib/tools/hooks";
 import { toEvalCase, toEvalResult } from "@/lib/eval/types";
 import type {
-  EvalResult,
   CreateEvalRunResponse,
-  RunCaseResponse,
   EvalRunDetail,
   AssertionFailConfig,
 } from "@/lib/eval/types";
 import type { EvalRunRow } from "@/db/schema";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ResultCard } from "./result-card";
 import { RunEvalDialog } from "./run-eval-dialog";
 import {
   PlayIcon,
+  SquareIcon,
   Trash2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -61,14 +61,11 @@ export function ResultsPanel({
   const { runs, mutate: mutateRuns } = useEvalRuns(agentId);
   const {
     isRunning,
+    activeRun,
     progress,
-    runningCaseId,
-    setRunning,
-    setRunningCaseId,
-    setProgress,
+    cancelRun,
   } = useEvalRun();
 
-  const [currentResults, setCurrentResults] = useState<EvalResult[]>([]);
   const [runDialogOpen, setRunDialogOpen] = useState(false);
 
   // Run detail expansion
@@ -87,6 +84,29 @@ export function ResultsPanel({
 
   const canRun = cases.length > 0;
 
+  // Auto-expand running run
+  useEffect(() => {
+    if (activeRun) {
+      setExpandedRunId(activeRun.id);
+    }
+  }, [activeRun?.id]);
+
+  // Auto-refresh detail for running/expanded run
+  useEffect(() => {
+    if (!expandedRunId) return;
+    const run = runs.find((r) => r.id === expandedRunId);
+    if (run?.status !== "running") return;
+
+    const interval = setInterval(async () => {
+      const detail = await fetchEvalRunDetail(expandedRunId);
+      if (detail) {
+        setRunDetailCache((prev) => ({ ...prev, [expandedRunId]: detail }));
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [expandedRunId, runs]);
+
   const handleRunAllConfirm = useCallback(async (params: {
     judgeAgentId: string;
     assertionFailConfig: AssertionFailConfig;
@@ -95,13 +115,7 @@ export function ResultsPanel({
     const { judgeAgentId, assertionFailConfig } = params;
 
     setRunDialogOpen(false);
-    setRunning(true);
-    setProgress(0);
-    setCurrentResults([]);
-    const allResults: EvalResult[] = [];
 
-    // Step 1: Create a single run record
-    let runId: string;
     try {
       const createRes = await fetch("/api/eval/run", {
         method: "POST",
@@ -112,6 +126,9 @@ export function ResultsPanel({
           filterTags: selectedTags.length > 0 ? selectedTags : undefined,
           assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
           totalCases: cases.length,
+          cases,
+          templateVars,
+          toolNames: getEnabledToolNames(),
         }),
       });
       if (!createRes.ok) {
@@ -119,93 +136,18 @@ export function ResultsPanel({
         const errMsg = errData?.error || `HTTP ${createRes.status}`;
         throw new Error(errMsg);
       }
-      const { runId: id }: CreateEvalRunResponse = await createRes.json();
-      runId = id;
+      const { runId }: CreateEvalRunResponse = await createRes.json();
+      mutateRuns();
+      // Auto-expand the new run
+      setExpandedRunId(runId);
     } catch (err) {
-      setRunning(false);
-      setProgress(0);
       toast.error(err instanceof Error ? err.message : String(err));
-      return;
     }
-
-    // Step 2: Execute each case against the run
-    for (let i = 0; i < cases.length; i++) {
-      const c = cases[i];
-      setRunningCaseId(c.id);
-      setProgress((i / cases.length) * 100);
-
-      try {
-        const res = await fetch(`/api/eval/run/${runId}/case`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            case: c,
-            templateVars,
-            toolNames: getEnabledToolNames(),
-          }),
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          allResults.push({
-            caseId: c.id,
-            caseName: c.name,
-            mode: c.mode,
-            turns: c.turns,
-            chatMessages: [],
-            turnResults: [],
-            chatResponse: "",
-            assertionResults: [],
-            allAssertionsPassed: false,
-            judgeResult: null,
-            timestamp: Date.now(),
-            durationMs: 0,
-            error: `HTTP ${res.status}: ${errText}`,
-          });
-        } else {
-          const data: RunCaseResponse = await res.json();
-          allResults.push(data.result);
-        }
-      } catch (err) {
-        allResults.push({
-          caseId: c.id,
-          caseName: c.name,
-          mode: c.mode,
-          turns: c.turns,
-          chatMessages: [],
-          turnResults: [],
-          chatResponse: "",
-          assertionResults: [],
-          allAssertionsPassed: false,
-          judgeResult: null,
-          timestamp: Date.now(),
-          durationMs: 0,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-
-      setCurrentResults([...allResults]);
-    }
-
-    // Step 3: Finalize the run with aggregated stats
-    try {
-      await fetch(`/api/eval/run/${runId}`, { method: "PATCH" });
-    } catch {
-      // Non-critical: stats may be stale but results are saved
-    }
-
-    setProgress(100);
-    setRunningCaseId(null);
-    setRunning(false);
-    mutateRuns();
   }, [
     agentId,
     cases,
     templateVars,
     selectedTags,
-    setRunning,
-    setProgress,
-    setRunningCaseId,
     mutateRuns,
   ]);
 
@@ -242,35 +184,31 @@ export function ResultsPanel({
     [mutateRuns, expandedRunId]
   );
 
-  const displayResults = currentResults;
-  const passedCount = displayResults.filter(
-    (r) => r.allAssertionsPassed
-  ).length;
-  const scores = displayResults
-    .map((r) => r.judgeResult?.overallScore)
-    .filter((s): s is number => s != null);
-  const avgScore =
-    scores.length > 0
-      ? Math.round(
-          (scores.reduce((a, b) => a + b, 0) / scores.length) * 10
-        ) / 10
-      : null;
-
-  const runningCaseName = cases.find((c) => c.id === runningCaseId)?.name;
-
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-3 border-b px-4 py-3">
         {/* Run action */}
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={() => setRunDialogOpen(true)}
-            disabled={isRunning || !canRun}
-          >
-            <PlayIcon className="mr-1 size-3" />
-            {isRunning ? "Running..." : `Run All (${cases.length})`}
-          </Button>
+          {isRunning ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={cancelRun}
+            >
+              <SquareIcon className="mr-1 size-3" />
+              Stop
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setRunDialogOpen(true)}
+              disabled={!canRun}
+              data-testid="btn-run-all"
+            >
+              <PlayIcon className="mr-1 size-3" />
+              Run All ({cases.length})
+            </Button>
+          )}
           {selectedTags.length > 0 && (
             <span className="text-[10px] text-muted-foreground">
               Filtered: {selectedTags.join(", ")}
@@ -278,13 +216,11 @@ export function ResultsPanel({
           )}
         </div>
 
-        {isRunning && (
+        {isRunning && activeRun && (
           <div className="space-y-1">
             <Progress value={progress} />
             <p className="text-xs text-muted-foreground">
-              {runningCaseName
-                ? `Running: ${runningCaseName}`
-                : "Starting..."}
+              Running {activeRun.completedCases}/{activeRun.totalCases}
             </p>
           </div>
         )}
@@ -292,45 +228,9 @@ export function ResultsPanel({
 
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-4">
-          {/* Current run results */}
-          {displayResults.length > 0 && (
-            <>
-              <h3 className="mb-2 text-xs font-semibold text-muted-foreground">
-                Current Run
-              </h3>
-              <div className="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
-                <span>
-                  Total:{" "}
-                  <strong className="text-foreground">
-                    {displayResults.length}
-                  </strong>
-                </span>
-                <span>
-                  Assertions Passed:{" "}
-                  <strong className="text-foreground">
-                    {passedCount}/{displayResults.length}
-                  </strong>
-                </span>
-                {avgScore !== null && (
-                  <span>
-                    Avg Score:{" "}
-                    <strong className="text-foreground">
-                      {avgScore}/10
-                    </strong>
-                  </span>
-                )}
-              </div>
-              <div className="space-y-3">
-                {displayResults.map((r) => (
-                  <ResultCard key={r.caseId} result={r} />
-                ))}
-              </div>
-            </>
-          )}
-
           {/* Run history */}
           {runs.length > 0 && (
-            <div className={displayResults.length > 0 ? "mt-6" : ""}>
+            <div>
               <h3 className="mb-2 text-xs font-semibold text-muted-foreground">
                 History
               </h3>
@@ -353,7 +253,7 @@ export function ResultsPanel({
             </div>
           )}
 
-          {!isRunning && displayResults.length === 0 && runs.length === 0 && (
+          {!isRunning && runs.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No results yet. Click &quot;Run All&quot; to evaluate.
             </p>
@@ -398,6 +298,8 @@ function RunHistoryItem({
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { mutate: globalMutate } = useSWRConfig();
+  const isRunning = run.status === "running";
+
   const passRate =
     run.totalCases > 0
       ? `${run.passedAssertions}/${run.totalCases}`
@@ -414,6 +316,31 @@ function RunHistoryItem({
       }
     });
   };
+
+  function renderStatusBadge() {
+    switch (run.status) {
+      case "running":
+        return (
+          <Badge variant="secondary" className="text-[10px]">
+            Running {run.completedCases}/{run.totalCases}
+          </Badge>
+        );
+      case "cancelled":
+        return (
+          <Badge variant="outline" className="border-amber-500 text-amber-600 text-[10px] dark:text-amber-400">
+            Cancelled
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge variant="destructive" className="text-[10px]">
+            Failed
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div className="rounded-md border">
@@ -438,20 +365,26 @@ function RunHistoryItem({
         <span className="flex-1 truncate">
           {new Date(run.createdAt).toLocaleString()}
         </span>
+        {renderStatusBadge()}
         <span className="shrink-0 text-muted-foreground">
           {run.chatModel.split("/").pop()}
         </span>
-        <span className="shrink-0 font-medium">{passRate}</span>
-        {run.averageScore != null && (
-          <span className="shrink-0 text-muted-foreground">
-            {run.averageScore}/10
-          </span>
+        {!isRunning && (
+          <>
+            <span className="shrink-0 font-medium" data-testid="run-pass-rate">{passRate}</span>
+            {run.averageScore != null && (
+              <span className="shrink-0 text-muted-foreground" data-testid="run-score">
+                {run.averageScore}/10
+              </span>
+            )}
+          </>
         )}
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={handleToggleBaseline}
           title={run.isBaseline ? "Remove baseline" : "Set as baseline"}
+          disabled={isRunning}
         >
           <BookmarkIcon
             className={`size-3 ${run.isBaseline ? "fill-primary text-primary" : ""}`}
@@ -464,7 +397,7 @@ function RunHistoryItem({
             e.stopPropagation();
             setConfirmOpen(true);
           }}
-          disabled={deletingRun}
+          disabled={deletingRun || isRunning}
         >
           {deletingRun ? (
             <Spinner className="size-3" />
@@ -495,6 +428,12 @@ function RunHistoryItem({
               {detail.results.map((r) => (
                 <ResultCard key={r.id} result={toEvalResult(r)} />
               ))}
+              {detail.results.length === 0 && isRunning && (
+                <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground">
+                  <Spinner className="size-3" />
+                  Waiting for results...
+                </div>
+              )}
             </div>
           )}
         </div>

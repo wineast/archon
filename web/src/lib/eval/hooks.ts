@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import type { EvalCaseRow, EvalRunRow } from "@/db/schema";
@@ -104,13 +105,22 @@ export async function deleteEvalCase(
 // ── Eval Runs ──
 
 export function useEvalRuns(agentId?: string, shouldFetch?: boolean) {
+  const [hasRunning, setHasRunning] = useState(false);
+
   const { data, error, isLoading, mutate } = useSWR<EvalRunRow[]>(
     shouldFetch !== false ? evalRunsKey(agentId) : null,
-    fetcher
+    fetcher,
+    { refreshInterval: hasRunning ? 2000 : 0 }
   );
 
+  const runs = data ?? [];
+
+  useEffect(() => {
+    setHasRunning(runs.some((r) => r.status === "running"));
+  }, [runs]);
+
   return {
-    runs: data ?? [],
+    runs,
     isLoading,
     error,
     mutate,

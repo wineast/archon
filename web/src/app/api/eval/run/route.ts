@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { db } from "@/db";
 import { evalRuns, modelConfigs, judgeConfigs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
@@ -5,6 +6,7 @@ import { NextResponse } from "next/server";
 import type { CreateEvalRunRequest, CreateEvalRunResponse } from "@/lib/eval/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
+import { executeEvalRun } from "@/lib/eval/execute-run";
 
 export const maxDuration = 120;
 
@@ -16,14 +18,40 @@ export async function POST(req: Request) {
     filterTags,
     assertionFailConfig,
     totalCases,
+    cases,
+    templateVars = {},
+    toolNames = [],
   } = body;
 
   if (!agentId) {
     return NextResponse.json({ error: "agentId is required" }, { status: 400 });
   }
 
+  if (!cases || cases.length === 0) {
+    return NextResponse.json({ error: "cases are required" }, { status: 400 });
+  }
+
   const ctx = await requireAgentRole(agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
+
+  // Concurrency check: no other running run for this agent
+  const [existingRunning] = await db
+    .select({ id: evalRuns.id })
+    .from(evalRuns)
+    .where(
+      and(
+        eq(evalRuns.agentId, agentId),
+        eq(evalRuns.status, "running"),
+      )
+    )
+    .limit(1);
+
+  if (existingRunning) {
+    return NextResponse.json(
+      { error: "An eval run is already in progress for this agent" },
+      { status: 409 }
+    );
+  }
 
   // Resolve active model config for the agent
   const versionId = await resolveEditingVersionId(agentId);
@@ -84,7 +112,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // Create the run record with snapshots
+  // Create the run record with snapshots — status: "running"
   const [run] = await db
     .insert(evalRuns)
     .values({
@@ -107,11 +135,26 @@ export async function POST(req: Request) {
       totalCases,
       passedAssertions: 0,
       averageScore: null,
+      status: "running",
+      completedCases: 0,
     })
     .returning();
+
+  // Trigger server-side execution in after()
+  after(async () => {
+    await executeEvalRun({
+      runId: run.id,
+      agentId,
+      cases,
+      templateVars,
+      toolNames,
+      userId: ctx.user.id,
+    });
+  });
 
   return Response.json({
     runId: run.id,
     chatModel: run.chatModel,
+    status: run.status,
   } satisfies CreateEvalRunResponse);
 }

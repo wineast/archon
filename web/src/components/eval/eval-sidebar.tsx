@@ -68,6 +68,7 @@ export function EvalSidebar({
               size="icon-xs"
               onClick={onCreateCase}
               title={t("newCase")}
+              data-testid="btn-new-case"
             >
               <PlusIcon className="size-4" />
             </Button>
@@ -123,6 +124,7 @@ export function EvalSidebar({
             activeView?.type === "results" ? "bg-accent" : ""
           }`}
           onClick={() => onSelect({ type: "results" })}
+          data-testid="btn-eval-results"
         >
           <BarChart3Icon className="size-4 text-muted-foreground" />
           <span>{t("results")}</span>

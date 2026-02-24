@@ -22,6 +22,23 @@
 
 这种设计让任何 Agent 都能成为 Judge Agent，只需在功能槽位中配置即可。
 
+### 服务端执行引擎
+
+评测运行由**服务端异步执行**，前端仅发起创建请求并通过 SWR 轮询获取进度：
+
+1. 前端 `POST /api/eval/run`，传入 `cases`、`templateVars`、`toolNames`
+2. 服务端创建 `evalRuns` 记录（`status: "running"`），在 `after()` 中启动 `executeEvalRun()`
+3. 执行引擎使用 `p-limit(3)` 并发控制，逐个执行用例（调用 `executeCase()`），每完成一个原子递增 `completedCases`
+4. 每个用例执行前检查 `status === "cancelled"`，如是则跳过
+5. 全部完成后 `finalizeRun()` 聚合统计，设置最终状态（`completed` / `cancelled`）
+6. 前端 `useEvalRuns` 在检测到 running 状态时自动 2s 轮询刷新
+
+**关键好处**：
+- 刷新/离开页面不丢失运行状态——进度持久化在 DB
+- 支持 Cancel——前端调用 `POST /api/eval/run/{runId}/cancel` 设置 `status: "cancelled"`
+- 同一 Agent 不能同时运行两个 Run（409 并发检查）
+- 超过 30 分钟的 running run 自动标记为 `failed`
+
 ## 测试用例模式
 
 | 模式 | 说明 |
@@ -61,6 +78,9 @@
 | totalCases | integer | 总用例数 |
 | passedAssertions | integer | 通过断言数 |
 | averageScore | real | 平均评分 |
+| status | text | 运行状态：`pending` / `running` / `completed` / `cancelled` / `failed` |
+| completedCases | integer | 已完成用例数（用于进度展示） |
+| error | text | 错误信息（仅 `failed` 状态） |
 
 > 运行记录通过快照保存所有配置（含 chatTemperature），确保历史记录不受后续修改影响。
 
@@ -76,10 +96,11 @@
 | POST | `/api/eval/cases` | 创建用例 |
 | PATCH | `/api/eval/cases/[id]` | 更新用例 |
 | DELETE | `/api/eval/cases/[id]` | 删除用例 |
-| POST | `/api/eval/run` | 创建评测运行记录（服务端自动解析 active 配置，请求只需 agentId + judgeAgentId） |
-| POST | `/api/eval/run/[runId]/case` | 执行单个用例（从 run 记录读取配置快照，请求只需 case + templateVars + toolNames） |
-| PATCH | `/api/eval/run/[runId]` | 完成运行（汇总统计） |
-| GET | `/api/eval/runs?agentId=xxx` | 列出运行记录 |
+| POST | `/api/eval/run` | 创建运行并启动服务端异步执行（请求需 agentId + judgeAgentId + cases + templateVars + toolNames） |
+| POST | `/api/eval/run/[runId]/case` | 执行单个用例（保留供调试，从 run 记录读取配置快照） |
+| PATCH | `/api/eval/run/[runId]` | 完成运行（汇总统计，单用例场景使用） |
+| POST | `/api/eval/run/[runId]/cancel` | 取消运行中的 run |
+| GET | `/api/eval/runs?agentId=xxx` | 列出运行记录（自动超时降级 30min+ running → failed） |
 | GET | `/api/eval/resolve-judge?agentId=xxx` | 解析 evaluator 槽位得到 Judge Agent |
 
 ## UI
@@ -90,7 +111,10 @@
 - **Results**：运行评测并查看结果
   - Run All 按钮打开 **RunEvalDialog** 弹窗，选择 Judge Agent 和断言设置后确认执行
   - 被测 Agent 和 Judge Agent 的 Model Config / Judge Config 均自动使用 Active 配置，无需手动选择
-  - 进度条 + 结果展示 + 历史记录
+  - 运行中显示进度条（`completedCases / totalCases`），支持 Stop 按钮取消
+  - 运行中的 run 在 History 列表中带 `Running x/y` badge，自动展开并轮询加载已完成结果
+  - 刷新页面后自动恢复运行状态（DB 驱动）
+  - `cancelled` / `failed` 状态有对应 badge 标识
 - **Benchmark**：趋势追踪、运行对比、跨模型分析（详见 [benchmark.md](./benchmark.md)）
 
 Judge 配置（评分维度）在 Judge Agent 的 Build 页面 **Judge Tab** 中管理，详见 [judge-config.md](./judge-config.md)。
@@ -155,3 +179,66 @@ interface EvalTurnToolCall {
 ### 解析函数
 
 `parseUIMessagesToTurns(messages: UIMessage[]): EvalTurn[]`（位于 `src/lib/eval/import-turns.ts`）
+
+## E2E 测试
+
+评估模块有完整的 Playwright E2E 测试，覆盖从创建 Agent 到运行评估并查看结果的全流程。
+
+### 运行
+
+```bash
+make e2e-eval
+```
+
+### 测试文件
+
+- `web/e2e/eval-flow.spec.ts` — 冒烟测试（single 模式、1 case、contains 断言 + judge）
+- `web/e2e/eval-full.spec.ts` — 综合测试（5 case 批量运行，覆盖 single/sequential/injected 三种模式 + regex 断言 + 断言失败场景）
+
+### 配置
+
+- **Playwright project**: `eval`（独立于 `authenticated` project）
+- **超时**: 300 秒（5 分钟，真实 API 调用较慢）
+- **视频录制**: 默认开启，录制文件保存在 `web/test-results/`
+- **视口**: 1440 x 900
+
+### 环境变量
+
+E2E 测试需要 `web/e2e/.env` 文件（已 gitignore）：
+
+```
+E2E_CLERK_USER_USERNAME=yarnb@foxmail.com
+E2E_CLERK_USER_PASSWORD=archon123456Aa.
+E2E_DEEPSEEK_API_KEY=<your-deepseek-api-key>
+```
+
+### 测试流程
+
+**eval-flow.spec.ts（冒烟测试）**：
+1. 登录 → 进入 Agents 首页
+2. 创建被测 Agent
+3. 到组织设置 → 配置 DeepSeek API Key
+4. 回到被测 Agent → 创建 DeepSeek Model Config
+5. 回到首页 → 创建 Judge Agent
+6. Judge Agent → 创建 DeepSeek Model Config
+7. Judge Agent → Judge Tab → 创建 Judge Config（Accuracy 维度）
+8. 回到被测 Agent → Eval Tab
+9. 创建 Eval Case（"2+2=?" + contains "4" 断言）
+10. 切到 Results → Run All → 选择 Judge Agent → 确认
+11. 等待服务端执行完成
+12. 验证结果（pass rate + score 显示）
+
+**eval-full.spec.ts（综合测试）**：
+1. 环境准备同上（步骤 1-7）
+2. 创建 5 个用例：
+   - `math_basic`（single，contains "4"）— 预期通过
+   - `capital_regex`（single，regex "Paris"）— 预期通过
+   - `fail_case`（single，contains "banana"）— 预期失败
+   - `seq_memory`（sequential，2 轮对话，Turn 2 contains "Alice" + judge）— 预期通过
+   - `injected_ctx`（injected，注入历史 + 最后提问，contains "7890"）— 预期通过
+3. Run All → 选择 Judge Agent → 确认
+4. 验证：至少 3/5 通过、存在 Passed 和 Failed badge、有评分
+
+### 种子数据
+
+测试使用 `yarnb@foxmail.com`（Clerk ID: `user_39qe7YIgMr9IabPpiCxLLmBqUVU`）作为普通测试用户，已添加到 `web/src/db/seed-data/users.json`。运行测试前确保执行过 `make db-seed`。
