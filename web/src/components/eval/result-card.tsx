@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { EvalResult } from "@/lib/eval/types";
-import { CheckCircle2Icon, XCircleIcon, AlertCircleIcon } from "lucide-react";
+import { CheckCircle2Icon, XCircleIcon, AlertCircleIcon, WrenchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function scoreColor(score: number): string {
@@ -57,21 +57,7 @@ export function ResultCard({ result }: ResultCardProps) {
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Conversation</p>
             {result.chatMessages.map((msg, i) => {
-              const turnResult = result.turnResults.find(
-                (tr) => tr.turnIndex === Math.floor(i / 2) * 2 + (msg.role === "assistant" ? 0 : -1)
-              );
               // Find the turnResult for the user turn that triggered this assistant response
-              const associatedTurnResult =
-                msg.role === "assistant"
-                  ? result.turnResults.find((tr) => {
-                      // The previous message was the user turn at index i-1
-                      // The turn index in the original turns array
-                      const userMsgsBefore = result.chatMessages
-                        .slice(0, i)
-                        .filter((m) => m.role === "user").length;
-                      return tr.turnIndex !== undefined && userMsgsBefore > 0;
-                    })
-                  : undefined;
               // Simpler approach: show turnResults after each assistant message
               // by matching the count of user messages before this point
               const userCountBefore = result.chatMessages
@@ -110,6 +96,27 @@ export function ResultCard({ result }: ResultCardProps) {
                       )}
                     </div>
                     {msg.content}
+                    {/* Tool calls display */}
+                    {msg.toolCalls && msg.toolCalls.length > 0 && (
+                      <div className="mt-1.5 space-y-1 border-t pt-1.5">
+                        {msg.toolCalls.map((tc, tcIdx) => (
+                          <div
+                            key={tcIdx}
+                            className="flex items-start gap-1 text-[10px] text-muted-foreground"
+                          >
+                            <WrenchIcon className="mt-0.5 size-2.5 shrink-0" />
+                            <span>
+                              <span className="font-medium">{tc.name}</span>
+                              ({Object.keys(tc.args).length > 0
+                                ? Object.entries(tc.args)
+                                    .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+                                    .join(", ")
+                                : ""})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {/* Per-turn assertion/judge results */}
                   {matchingTurnResults.map((tr, trIdx) => (
@@ -154,9 +161,30 @@ export function ResultCard({ result }: ResultCardProps) {
             {result.chatResponse && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Response</p>
-                <p className="mt-0.5 text-xs bg-muted rounded p-2 max-h-[120px] overflow-y-auto whitespace-pre-wrap">
+                <div className="mt-0.5 text-xs bg-muted rounded p-2 max-h-[120px] overflow-y-auto whitespace-pre-wrap">
                   {result.chatResponse}
-                </p>
+                  {/* Tool calls in single mode */}
+                  {result.chatMessages[1]?.toolCalls && result.chatMessages[1].toolCalls.length > 0 && (
+                    <div className="mt-1.5 space-y-1 border-t pt-1.5">
+                      {result.chatMessages[1].toolCalls.map((tc, tcIdx) => (
+                        <div
+                          key={tcIdx}
+                          className="flex items-start gap-1 text-[10px] text-muted-foreground"
+                        >
+                          <WrenchIcon className="mt-0.5 size-2.5 shrink-0" />
+                          <span>
+                            <span className="font-medium">{tc.name}</span>
+                            ({Object.keys(tc.args).length > 0
+                              ? Object.entries(tc.args)
+                                  .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+                                  .join(", ")
+                              : ""})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </>

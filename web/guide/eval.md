@@ -10,7 +10,7 @@
 | **Judge Agent** | 评审 Agent，通过 evaluator 功能槽位引用，提供模型配置和评分维度 |
 | **Judge Config** | 评分维度配置（仅 name + dimensions），属于 Judge Agent，在 Build > Judge Tab 中管理 |
 | **Eval Run** | 一次评测运行，包含多个用例的执行结果 |
-| **Assertion** | 断言规则（如包含关键词、正则匹配等），用于自动判定通过/失败 |
+| **Assertion** | 断言规则（文本断言 + 工具调用断言），用于自动判定通过/失败 |
 | **Dimension** | 评审维度（如准确性、相关性），由 Judge LLM 打分 |
 
 ## 架构
@@ -95,3 +95,64 @@
 - **Benchmark**：趋势追踪、运行对比、跨模型分析（详见 [benchmark.md](./benchmark.md)）
 
 Judge 配置（评分维度）在 Judge Agent 的 Build 页面 **Judge Tab** 中管理，详见 [judge-config.md](./judge-config.md)。
+
+## 断言类型
+
+### 文本断言
+
+| 类型 | 说明 | value 格式 |
+|------|------|-----------|
+| `contains` | 回复包含指定文本（大小写不敏感） | 纯文本 |
+| `not-contains` | 回复不包含指定文本 | 纯文本 |
+| `regex` | 回复匹配正则表达式 | 正则表达式 |
+| `length-min` | 回复长度 >= 指定值 | 数字 |
+| `length-max` | 回复长度 <= 指定值 | 数字 |
+| `json-valid` | 回复是合法 JSON | 无需填写 |
+
+### 工具调用断言
+
+| 类型 | 说明 | value 格式 |
+|------|------|-----------|
+| `tool-called` | AI 调用了指定工具 | 工具名，如 `getWeather` |
+| `tool-not-called` | AI 未调用指定工具 | 工具名 |
+| `tool-called-with-contains` | AI 调用了指定工具且参数包含子集 | `{"tool": "name", "args": {...}}` |
+| `tool-called-with-exact` | AI 调用了指定工具且参数精确匹配 | `{"tool": "name", "args": {...}}` |
+
+工具调用断言基于执行期间实际发生的 `generateText` 步骤中提取的 `ToolCallRecord[]`。
+
+## EvalTurn 工具调用注入
+
+`EvalTurn` 支持可选的 `toolCalls` 字段，用于在 injected/sequential 模式中注入包含工具调用的 assistant 历史：
+
+```ts
+interface EvalTurnToolCall {
+  name: string;          // 工具名
+  args: Record<string, unknown>; // 调用参数
+  result: string;        // 工具返回结果
+}
+```
+
+注入时，带 `toolCalls` 的 assistant turn 会被转换为 `AssistantModelMessage`（包含 text + tool-call parts）+ `ToolModelMessage`（包含 tool-result parts），确保 LLM 能正确理解历史中的工具调用上下文。
+
+## 从聊天历史导入 Turns
+
+手动创建包含工具调用的多轮对话评测用例较繁琐。可通过 **Import** 功能从 Request Inspector 的 Messages tab 复制 `UIMessage[]` JSON，快速转换为 `EvalTurn[]`。
+
+### 操作步骤
+
+1. 在聊天界面打开 Request Inspector → Messages tab
+2. 复制完整的 `UIMessage[]` JSON
+3. 在 Eval Case 编辑页，点击 turns 区域底部的 **Import** 按钮
+4. 粘贴 JSON → 点击 Import
+
+### 转换规则
+
+- `system` 消息被跳过
+- `text` parts 拼接为 turn 的 `content`（多个 text part 以换行连接）
+- 静态工具（`tool-xxx`）和动态工具（`dynamic-tool`）均提取为 `toolCalls[]`
+- 工具的 `input` 映射为 `args`，`output` 通过 `JSON.stringify` 映射为 `result`
+- 如果已有 turns，导入会替换全部现有 turns
+
+### 解析函数
+
+`parseUIMessagesToTurns(messages: UIMessage[]): EvalTurn[]`（位于 `src/lib/eval/import-turns.ts`）

@@ -1,4 +1,6 @@
 import { generateText, Output, stepCountIs } from "ai";
+import type { ModelMessage, AssistantModelMessage, ToolModelMessage } from "@ai-sdk/provider-utils";
+import type { TextPart, ToolCallPart, ToolResultPart } from "@ai-sdk/provider-utils";
 import { db } from "@/db";
 import { evalRuns, evalRunResults, modelConfigs, judgeConfigs, tools } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
@@ -6,7 +8,7 @@ import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
 import { gatherTemplateData, renderTemplate, disposeTemplateData } from "@/lib/template/render";
 import { buildJudgeSchema, toJudgeResult } from "@/lib/eval/judge-dimensions";
-import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResult } from "@/lib/eval/types";
+import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResult, EvalTurn, ToolCallRecord } from "@/lib/eval/types";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
@@ -19,6 +21,65 @@ import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
 import { QuotaExceededError } from "@/lib/credits/errors";
 
 export const maxDuration = 120;
+
+// ── Helper: extract ToolCallRecord[] from generateText steps ──
+
+function extractToolCalls(steps: Awaited<ReturnType<typeof generateText>>["steps"] | undefined): ToolCallRecord[] {
+  if (!steps) return [];
+  const records: ToolCallRecord[] = [];
+  for (const step of steps) {
+    for (const tc of step.toolCalls) {
+      const matchingResult = step.toolResults.find(
+        (tr) => tr.toolCallId === tc.toolCallId
+      );
+      records.push({
+        toolName: tc.toolName,
+        args: (tc.input ?? {}) as Record<string, unknown>,
+        result: matchingResult?.output,
+      });
+    }
+  }
+  return records;
+}
+
+// ── Helper: convert EvalTurn (with optional toolCalls) to ModelMessage[] ──
+
+function turnToMessages(turn: EvalTurn): ModelMessage[] {
+  if (turn.role === "user") {
+    return [{ role: "user", content: turn.content }];
+  }
+
+  // assistant turn without toolCalls
+  if (!turn.toolCalls || turn.toolCalls.length === 0) {
+    return [{ role: "assistant", content: turn.content }];
+  }
+
+  // assistant turn with toolCalls → AssistantModelMessage + ToolModelMessage
+  const assistantParts: (TextPart | ToolCallPart)[] = [];
+  if (turn.content) {
+    assistantParts.push({ type: "text", text: turn.content });
+  }
+  for (const tc of turn.toolCalls) {
+    assistantParts.push({
+      type: "tool-call",
+      toolCallId: `eval-tc-${tc.name}`,
+      toolName: tc.name,
+      input: tc.args,
+    });
+  }
+
+  const toolResultParts: ToolResultPart[] = turn.toolCalls.map((tc) => ({
+    type: "tool-result" as const,
+    toolCallId: `eval-tc-${tc.name}`,
+    toolName: tc.name,
+    output: { type: "text" as const, value: tc.result },
+  }));
+
+  const assistantMsg: AssistantModelMessage = { role: "assistant", content: assistantParts };
+  const toolMsg: ToolModelMessage = { role: "tool", content: toolResultParts };
+
+  return [assistantMsg, toolMsg];
+}
 
 export async function POST(
   req: Request,
@@ -152,11 +213,12 @@ export async function POST(
     const chatMessages: ChatMessage[] = [];
     const turnResults: TurnResult[] = [];
     let chatResponse = "";
+    let allToolCalls: ToolCallRecord[] = [];
 
     if (mode === "single") {
       // Single turn: one user message, one LLM call
       const userContent = turns[0]?.content ?? "";
-      const messages = [{ role: "user" as const, content: userContent }];
+      const messages: ModelMessage[] = [{ role: "user", content: userContent }];
 
       const chatResult = await generateText({
         model: await resolveModel(chatModel, orgId),
@@ -169,8 +231,16 @@ export async function POST(
       chatResponse = chatResult.text;
       accumulateUsage(chatUsage, chatResult.usage);
 
+      allToolCalls = extractToolCalls(chatResult.steps);
+
       chatMessages.push({ role: "user", content: userContent });
-      chatMessages.push({ role: "assistant", content: chatResponse });
+      chatMessages.push({
+        role: "assistant",
+        content: chatResponse,
+        toolCalls: allToolCalls.length > 0
+          ? allToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args }))
+          : undefined,
+      });
 
     } else if (mode === "injected") {
       // Injected: all turns become message history, only last user turn triggers LLM
@@ -179,20 +249,18 @@ export async function POST(
         -1
       );
 
-      const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+      const messages: ModelMessage[] = [];
 
       for (let i = 0; i < turns.length; i++) {
         const turn = turns[i];
-        messages.push({ role: turn.role, content: turn.content });
+        const turnMsgs = turnToMessages(turn);
+        messages.push(...turnMsgs);
         chatMessages.push({
           role: turn.role,
           content: turn.content,
           injected: i < lastUserIndex || (i === lastUserIndex ? false : i < turns.length - 1),
+          toolCalls: turn.toolCalls?.map((tc) => ({ name: tc.name, args: tc.args })),
         });
-      }
-      // The last user message is NOT injected
-      if (chatMessages.length > 0) {
-        chatMessages[chatMessages.length - 1].injected = false;
       }
       // Mark all messages before the last user message as injected
       for (let i = 0; i < chatMessages.length; i++) {
@@ -214,19 +282,33 @@ export async function POST(
       chatResponse = chatResult.text;
       accumulateUsage(chatUsage, chatResult.usage);
 
-      chatMessages.push({ role: "assistant", content: chatResponse });
+      allToolCalls = extractToolCalls(chatResult.steps);
+
+      chatMessages.push({
+        role: "assistant",
+        content: chatResponse,
+        toolCalls: allToolCalls.length > 0
+          ? allToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args }))
+          : undefined,
+      });
 
     } else if (mode === "sequential") {
       // Sequential: process turns one at a time, calling LLM for each user turn
-      const history: Array<{ role: "user" | "assistant"; content: string }> = [];
+      const history: ModelMessage[] = [];
 
       for (let i = 0; i < turns.length; i++) {
         const turn = turns[i];
 
         if (turn.role === "assistant") {
           // Inject assistant turn into history without calling LLM
-          history.push({ role: "assistant", content: turn.content });
-          chatMessages.push({ role: "assistant", content: turn.content, injected: true });
+          const turnMsgs = turnToMessages(turn);
+          history.push(...turnMsgs);
+          chatMessages.push({
+            role: "assistant",
+            content: turn.content,
+            injected: true,
+            toolCalls: turn.toolCalls?.map((tc) => ({ name: tc.name, args: tc.args })),
+          });
         } else {
           // User turn: add to history and call LLM
           history.push({ role: "user", content: turn.content });
@@ -244,13 +326,22 @@ export async function POST(
           const assistantResponse = chatResult.text;
           chatResponse = assistantResponse; // Last response
 
+          const turnToolCalls = extractToolCalls(chatResult.steps);
+          allToolCalls.push(...turnToolCalls);
+
           history.push({ role: "assistant", content: assistantResponse });
-          chatMessages.push({ role: "assistant", content: assistantResponse });
+          chatMessages.push({
+            role: "assistant",
+            content: assistantResponse,
+            toolCalls: turnToolCalls.length > 0
+              ? turnToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args }))
+              : undefined,
+          });
 
           // Per-turn assertions
           let perTurnAssertionsPassed = true;
           if (turn.assertions && turn.assertions.length > 0) {
-            const perTurnAssertionResults = runAllAssertions(turn.assertions, assistantResponse);
+            const perTurnAssertionResults = runAllAssertions(turn.assertions, assistantResponse, turnToolCalls);
             perTurnAssertionsPassed = perTurnAssertionResults.every((r) => r.passed);
             turnResults.push({
               turnIndex: i,
@@ -310,7 +401,7 @@ export async function POST(
     }
 
     // Case-level assertions (on final response)
-    const assertionResults = runAllAssertions(evalCase.assertions, chatResponse);
+    const assertionResults = runAllAssertions(evalCase.assertions, chatResponse, allToolCalls);
     const allAssertionsPassed = assertionResults.every((r) => r.passed);
 
     // Case-level judge (only if assertions pass, unless configured otherwise)

@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { nanoid } from "nanoid";
 import {
   PlusIcon,
+  ImportIcon,
   Trash2Icon,
   ChevronUpIcon,
   ChevronDownIcon,
+  WrenchIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +21,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AssertionRow } from "./assertion-row";
-import type { Assertion, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
+import { ToolCallRow } from "./tool-call-row";
+import { ImportTurnsDialog } from "./import-turns-dialog";
+import type { Assertion, EvalCaseMode, EvalTurn, EvalTurnToolCall } from "@/lib/eval/types";
 
 interface TurnsListProps {
   turns: EvalTurn[];
@@ -28,6 +32,15 @@ interface TurnsListProps {
 }
 
 export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
+  const [importOpen, setImportOpen] = useState(false);
+
+  const handleImport = useCallback(
+    (imported: EvalTurn[]) => {
+      onTurnsChange(imported);
+    },
+    [onTurnsChange]
+  );
+
   const handleAdd = useCallback(() => {
     onTurnsChange([
       ...turns,
@@ -152,6 +165,63 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
     [turns, onTurnsChange]
   );
 
+  // ── Tool call handlers ──
+
+  const handleAddToolCall = useCallback(
+    (idx: number) => {
+      onTurnsChange(
+        turns.map((t, i) =>
+          i === idx
+            ? {
+                ...t,
+                toolCalls: [
+                  ...(t.toolCalls ?? []),
+                  { name: "", args: {}, result: "" },
+                ],
+              }
+            : t
+        )
+      );
+    },
+    [turns, onTurnsChange]
+  );
+
+  const handleToolCallChange = useCallback(
+    (turnIdx: number, tcIdx: number, updated: EvalTurnToolCall) => {
+      onTurnsChange(
+        turns.map((t, i) =>
+          i === turnIdx
+            ? {
+                ...t,
+                toolCalls: (t.toolCalls ?? []).map((tc, j) =>
+                  j === tcIdx ? updated : tc
+                ),
+              }
+            : t
+        )
+      );
+    },
+    [turns, onTurnsChange]
+  );
+
+  const handleToolCallDelete = useCallback(
+    (turnIdx: number, tcIdx: number) => {
+      onTurnsChange(
+        turns.map((t, i) =>
+          i === turnIdx
+            ? {
+                ...t,
+                toolCalls: (t.toolCalls ?? []).filter(
+                  (_, j) => j !== tcIdx
+                ),
+              }
+            : t
+        )
+      );
+    },
+    [turns, onTurnsChange]
+  );
+
   return (
     <div className="space-y-3">
       {turns.map((turn, idx) => (
@@ -208,7 +278,7 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
           </div>
 
           <Textarea
-            className="min-h-[40px] resize-none text-sm"
+            className="min-h-[40px] max-h-[200px] resize-none text-sm"
             value={turn.content}
             onChange={(e) => handleContentChange(idx, e.target.value)}
             placeholder={
@@ -217,6 +287,35 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
                 : "Assistant response..."
             }
           />
+
+          {/* Tool calls section (assistant turns only, injected/sequential modes) */}
+          {turn.role === "assistant" && mode !== "single" && (
+            <div className="space-y-2 pl-3 border-l-2 border-blue-200">
+              <div className="flex items-center gap-2">
+                <WrenchIcon className="size-3 text-blue-500" />
+                <span className="text-xs text-muted-foreground">Tool Calls</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => handleAddToolCall(idx)}
+                >
+                  <PlusIcon className="mr-1 size-3" />
+                  Add Tool Call
+                </Button>
+              </div>
+              {(turn.toolCalls ?? []).map((tc, tcIdx) => (
+                <ToolCallRow
+                  key={tcIdx}
+                  toolCall={tc}
+                  onChange={(updated) =>
+                    handleToolCallChange(idx, tcIdx, updated)
+                  }
+                  onDelete={() => handleToolCallDelete(idx, tcIdx)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Per-turn assertions + judge (sequential mode, user turns only) */}
           {mode === "sequential" && turn.role === "user" && (
@@ -272,15 +371,32 @@ export function TurnsList({ turns, mode, onTurnsChange }: TurnsListProps) {
         </div>
       ))}
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={handleAdd}
-      >
-        <PlusIcon className="mr-1 size-3" />
-        Add Turn
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={handleAdd}
+        >
+          <PlusIcon className="mr-1 size-3" />
+          Add Turn
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setImportOpen(true)}
+        >
+          <ImportIcon className="mr-1 size-3" />
+          Import
+        </Button>
+      </div>
+
+      <ImportTurnsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImport={handleImport}
+        hasExistingTurns={turns.length > 0}
+      />
     </div>
   );
 }

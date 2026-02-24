@@ -4,7 +4,11 @@ export type AssertionType =
   | "regex"
   | "length-min"
   | "length-max"
-  | "json-valid";
+  | "json-valid"
+  | "tool-called"
+  | "tool-not-called"
+  | "tool-called-with-contains"
+  | "tool-called-with-exact";
 
 export interface Assertion {
   id: string;
@@ -26,6 +30,20 @@ export interface AssertionFailConfig {
 
 export type EvalCaseMode = "single" | "injected" | "sequential";
 
+/** Tool call attached to an EvalTurn for history injection */
+export interface EvalTurnToolCall {
+  name: string;
+  args: Record<string, unknown>;
+  result: string;
+}
+
+/** Flattened tool call record extracted from generateText steps */
+export interface ToolCallRecord {
+  toolName: string;
+  args: Record<string, unknown>;
+  result?: unknown;
+}
+
 export interface EvalTurn {
   id: string;
   role: "user" | "assistant";
@@ -33,6 +51,7 @@ export interface EvalTurn {
   assertions?: Assertion[];
   judge?: boolean;
   expectedOutput?: string;
+  toolCalls?: EvalTurnToolCall[];
 }
 
 export interface ChatMessage {
