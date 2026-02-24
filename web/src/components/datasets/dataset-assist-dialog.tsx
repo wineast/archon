@@ -19,6 +19,7 @@ export function DatasetAssistDialog({
   onOpenChange,
   data,
   agentId,
+  orgId,
   onApply,
 }: DatasetAssistDialogProps) {
   return (
@@ -28,6 +29,7 @@ export function DatasetAssistDialog({
       content={data}
       onApply={onApply}
       agentId={agentId}
+      orgId={orgId}
       editorType="json"
       title="AI 辅助编辑数据"
       fieldContext="dataset-data"

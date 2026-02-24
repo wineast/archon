@@ -17,6 +17,7 @@ export function JsxAssistDialog({
   jsxSource,
   onApply,
   agentId,
+  orgId,
 }: JsxAssistDialogProps) {
   return (
     <AssistDialog
@@ -25,6 +26,7 @@ export function JsxAssistDialog({
       content={jsxSource}
       onApply={onApply}
       agentId={agentId}
+      orgId={orgId}
       editorType="js"
       title="AI 辅助编辑组件"
       fieldContext="component-jsx"

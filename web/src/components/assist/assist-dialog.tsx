@@ -14,6 +14,8 @@ import { JsEditor } from "@/components/editors/js-editor";
 import { MdEditor } from "@/components/editors/md-editor";
 import { JsonEditor } from "@/components/editors/json-editor";
 import { useAgentSlots } from "@/lib/slots/hooks";
+import { SlotAgentSelect } from "@/components/slots/slot-agent-select";
+import { SLOT_DEFS } from "@/lib/slots/constants";
 
 export interface AssistDialogProps {
   open: boolean;
@@ -21,6 +23,7 @@ export interface AssistDialogProps {
   content: string;
   onApply: (content: string) => void;
   agentId?: string;
+  orgId?: string;
   editorType: "js" | "md" | "json";
   title: string;
   fieldContext: string;
@@ -40,11 +43,12 @@ export function AssistDialog({
   content,
   onApply,
   agentId,
+  orgId,
   editorType,
   title,
   fieldContext,
   placeholder = "描述你想要的修改...",
-  emptyHint = "描述你想要的修改，AI 会帮你更新左侧内容",
+  emptyHint = "请先选择一个 Assist Agent",
 }: AssistDialogProps) {
   const [draftContent, setDraftContent] = useState(content);
   const [originalContent, setOriginalContent] = useState(content);
@@ -235,8 +239,18 @@ export function AssistDialog({
 
           {/* Right: Embedded Assist Agent */}
           <div className="flex w-1/2 flex-col">
-            <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">
-              AI 助手
+            <div className="flex items-center gap-2 px-3 py-2 border-b">
+              <span className="text-xs font-medium text-muted-foreground">
+                {SLOT_DEFS.assist.label}
+              </span>
+              {agentId && orgId && (
+                <SlotAgentSelect
+                  agentId={agentId}
+                  orgId={orgId}
+                  slotKey="assist"
+                  className="flex-1"
+                />
+              )}
             </div>
             <div className="flex-1 min-h-0">
               {iframeSrc ? (

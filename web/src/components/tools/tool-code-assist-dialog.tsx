@@ -18,6 +18,7 @@ export function ToolCodeAssistDialog({
   onOpenChange,
   code,
   agentId,
+  orgId,
   onApply,
 }: ToolCodeAssistDialogProps) {
   return (
@@ -27,6 +28,7 @@ export function ToolCodeAssistDialog({
       content={code}
       onApply={onApply}
       agentId={agentId}
+      orgId={orgId}
       editorType="js"
       title="AI 辅助编辑 Handler"
       fieldContext="tool-handler"

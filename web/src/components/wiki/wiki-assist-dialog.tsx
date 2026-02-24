@@ -17,6 +17,7 @@ export function WikiAssistDialog({
   onOpenChange,
   content,
   agentId,
+  orgId,
   onApply,
 }: WikiAssistDialogProps) {
   return (
@@ -26,6 +27,7 @@ export function WikiAssistDialog({
       content={content}
       onApply={onApply}
       agentId={agentId}
+      orgId={orgId}
       editorType="md"
       title="AI 辅助编辑文档"
       fieldContext="wiki-content"
