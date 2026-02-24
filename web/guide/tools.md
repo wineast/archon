@@ -106,3 +106,4 @@ export default async function(args) {
 - [沙盒模式](tool-sandbox.md)
 - [工具 Examples 功能](tool-examples.md)
 - [测试用例断言](tool-test-assertions.md)
+- [组件渲染预览](tool-component-preview.md)

@@ -29,6 +29,7 @@ import type { ToolTestCaseRow } from "@/db/schema";
 import type { RunTestCaseResult } from "@/lib/tools/test-case-hooks";
 import type { Assertion } from "@/lib/eval/types";
 import { nanoid } from "nanoid";
+import { ToolComponentPreview, type ToolComponentPreviewData } from "./tool-component-preview";
 
 export interface ToolTestCaseItemProps {
   testCase: ToolTestCaseRow;
@@ -51,6 +52,8 @@ export interface ToolTestCaseItemProps {
   ) => Promise<RunTestCaseResult>;
   runResult?: RunTestCaseResult;
   busy: boolean;
+  toolName?: string;
+  componentPreview?: ToolComponentPreviewData | null;
 }
 
 export function ToolTestCaseItem({
@@ -60,6 +63,8 @@ export function ToolTestCaseItem({
   onRun,
   runResult,
   busy,
+  toolName,
+  componentPreview,
 }: ToolTestCaseItemProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(testCase.name);
@@ -420,11 +425,21 @@ export function ToolTestCaseItem({
                   </p>
                 )}
                 {result.success && result.result !== undefined && (
-                  <JsonEditor
-                    value={JSON.stringify(result.result, null, 2)}
-                    readOnly
-                    height="80px"
-                  />
+                  <>
+                    <JsonEditor
+                      value={JSON.stringify(result.result, null, 2)}
+                      readOnly
+                      height="80px"
+                    />
+                    {componentPreview && toolName && (
+                      <ToolComponentPreview
+                        toolName={toolName}
+                        input={(() => { try { return JSON.parse(inputValue); } catch { return {}; } })()}
+                        output={result.result}
+                        preview={componentPreview}
+                      />
+                    )}
+                  </>
                 )}
                 {result.assertionResults && result.assertionResults.length > 0 && (
                   <div className="space-y-0.5">

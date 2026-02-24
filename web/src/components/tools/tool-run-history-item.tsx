@@ -11,6 +11,7 @@ import {
 import type { ToolTestRunRow } from "@/db/schema";
 import type { ToolTestRunDetail } from "@/lib/tools/test-case-hooks";
 import { ToolRunResultCard } from "./tool-run-result-card";
+import type { ToolComponentPreviewData } from "./tool-component-preview";
 
 interface ToolRunHistoryItemProps {
   run: ToolTestRunRow;
@@ -20,6 +21,8 @@ interface ToolRunHistoryItemProps {
   deletingRun: boolean;
   onToggle: () => void;
   onDelete: () => void;
+  toolName?: string;
+  componentPreview?: ToolComponentPreviewData | null;
 }
 
 export function ToolRunHistoryItem({
@@ -30,6 +33,8 @@ export function ToolRunHistoryItem({
   deletingRun,
   onToggle,
   onDelete,
+  toolName,
+  componentPreview,
 }: ToolRunHistoryItemProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const passRate =
@@ -91,7 +96,7 @@ export function ToolRunHistoryItem({
           {detail && (
             <>
               {detail.results.map((r) => (
-                <ToolRunResultCard key={r.id} result={r} />
+                <ToolRunResultCard key={r.id} result={r} toolName={toolName} componentPreview={componentPreview} />
               ))}
             </>
           )}

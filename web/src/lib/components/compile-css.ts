@@ -42,28 +42,31 @@ export function extractCandidates(source: string): string[] {
 
 /**
  * Extract only the utility rules and @property declarations from full Tailwind output.
- * Strips theme variables, base layer, and :root/:dark blocks that are already on the page.
+ * Strips theme variables, base layer, :root/:dark blocks, and the @layer utilities
+ * wrapper itself — only the inner rules are kept. This avoids creating duplicate
+ * @layer utilities blocks when injected into a page that already has global Tailwind.
  */
 export function extractUtilityCss(fullCss: string): string {
   const parts: string[] = [];
 
-  // Extract @layer utilities { ... } — handle nested braces
+  // Extract inner content of @layer utilities { ... } — strip the wrapper
   const utilitiesMatch = fullCss.match(/@layer utilities \{/);
   if (utilitiesMatch && utilitiesMatch.index !== undefined) {
-    let depth = 0;
-    let start = utilitiesMatch.index;
-    let end = start;
-    for (let i = start; i < fullCss.length; i++) {
+    const innerStart = utilitiesMatch.index + utilitiesMatch[0].length;
+    let depth = 1; // we're already inside the opening brace
+    let innerEnd = innerStart;
+    for (let i = innerStart; i < fullCss.length; i++) {
       if (fullCss[i] === "{") depth++;
       if (fullCss[i] === "}") {
         depth--;
         if (depth === 0) {
-          end = i + 1;
+          innerEnd = i;
           break;
         }
       }
     }
-    parts.push(fullCss.slice(start, end));
+    const inner = fullCss.slice(innerStart, innerEnd).trim();
+    if (inner) parts.push(inner);
   }
 
   // Extract @property declarations (needed for CSS variable fallbacks)
