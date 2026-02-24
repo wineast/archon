@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,11 +40,17 @@ export function RunEvalDialog({
   onConfirm,
   confirming = false,
 }: RunEvalDialogProps) {
-  const { evaluator, mutate: mutateEvaluator } = useResolvedEvaluator(agentId);
-  const judgeAgentId = evaluator?.judgeAgentId ?? undefined;
+  const { evaluator } = useResolvedEvaluator(agentId);
+  // Local override: once user picks a judge in the Select, trust that immediately
+  const [localJudgeId, setLocalJudgeId] = useState<string | null | undefined>(undefined);
+  const judgeAgentId = localJudgeId !== undefined ? localJudgeId : (evaluator?.judgeAgentId ?? undefined);
   const orgId = useAgentOrgId(agentId);
 
   const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>({});
+
+  const handleJudgeChanged = useCallback((targetAgentId: string | null) => {
+    setLocalJudgeId(targetAgentId);
+  }, []);
 
   const canConfirm = !!judgeAgentId && !confirming;
 
@@ -85,7 +91,7 @@ export function RunEvalDialog({
                   agentId={agentId}
                   orgId={orgId}
                   slotKey="evaluator"
-                  onChanged={mutateEvaluator}
+                  onChanged={handleJudgeChanged}
                 />
               </div>
             )}

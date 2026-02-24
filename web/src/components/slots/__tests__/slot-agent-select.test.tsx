@@ -133,6 +133,6 @@ describe("SlotAgentSelect", () => {
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByText("Agent B"));
 
-    expect(onChanged).toHaveBeenCalled();
+    expect(onChanged).toHaveBeenCalledWith("agent-b");
   });
 });
