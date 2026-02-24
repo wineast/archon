@@ -49,3 +49,7 @@ storybook-static
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# playwright
+/test-results/
+/playwright-report/

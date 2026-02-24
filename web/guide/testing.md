@@ -1,20 +1,28 @@
-# 组件测试指南
+# 测试指南
 
-项目使用 **Vitest** 作为统一测试运行器，通过 `vitest.config.ts` 中的 `projects` 配置划分为两个测试域：
+项目使用 **Vitest**（Layer 1-3）+ **Playwright Test**（Layer 4）的四层测试体系。
 
-| 域 | 名称 | 环境 | 匹配规则 |
-|----|------|------|---------|
-| **unit** | 单元/组件测试 | node 或 jsdom | `src/**/__tests__/**/*.test.{ts,tsx}` |
-| **storybook** | Story 交互测试 | chromium (browser mode) | `src/**/*.stories.tsx`（自动） |
+| 层 | 名称 | 运行器 | 环境 | 匹配规则 |
+|----|------|--------|------|---------|
+| **L1** | 纯逻辑单元测试 | Vitest | node | `src/**/__tests__/**/*.test.ts` |
+| **L2** | 组件测试 | Vitest | jsdom | `src/**/__tests__/**/*.test.tsx` |
+| **L3** | Story 交互测试 | Vitest | chromium (browser) | `src/**/*.stories.tsx`（自动） |
+| **L4** | E2E 端到端测试 | Playwright Test | chromium | `e2e/**/*.spec.ts` |
 
-运行命令：`make test`（全量）或 `npx vitest run --project unit`（仅单元）
+运行命令：
+- `make test` — Layer 1-3（Vitest）
+- `make e2e` — Layer 4（Playwright）
+- `make e2e-ui` — Layer 4 交互调试模式
 
 ---
 
-## 三层测试模型
+## 四层测试模型
 
 ```
 ┌─────────────────────────────────────────────┐
+│  Layer 4: E2E 端到端测试 (Playwright Test)   │  真实服务器
+│  真实服务器 + 真实 DB + 真实 Auth             │  + 真实 Auth
+├─────────────────────────────────────────────┤
 │  Layer 3: Story 交互测试 (play function)     │  真实浏览器
 │  真实 DOM + 真实渲染，验证用户交互流程        │  chromium
 ├─────────────────────────────────────────────┤
@@ -34,6 +42,7 @@
 | 组件渲染、按钮点击、表单交互 | Layer 2 | 需要 DOM 但可 mock 外部服务 |
 | 真实 DOM 行为（Monaco Editor、拖拽、焦点） | Layer 3 | jsdom 不支持的 API 必须在真实浏览器测 |
 | 视觉回归、样式一致性 | Layer 3 | 只有真实浏览器能渲染 CSS |
+| 跨页面用户旅程、真实 API + DB | Layer 4 | 需要完整服务端栈，零 mock |
 
 ---
 
@@ -274,6 +283,55 @@ export const KeepsFocusOnVarChange: Story = {
 
 ---
 
+## Layer 4: E2E 端到端测试 (Playwright Test)
+
+**适用场景**：跨页面用户旅程、真实 API 调用、真实数据库操作、登录/权限验证
+
+**特点**：
+- 运行器：`@playwright/test`（独立于 Vitest）
+- 环境：真实 Next.js dev server + 真实 Clerk Auth + 真实数据库
+- 零 mock — 测试完整系统集成
+- 速度最慢但覆盖面最广
+
+**文件位置**：`e2e/**/*.spec.ts`
+
+**Auth 机制**：
+- 使用 `@clerk/testing` 的 `clerkSetup()` + `clerk.signIn()` 绕过验证码
+- 登录态通过 Playwright `storageState` 持久化，所有 `authenticated` project 的测试复用同一份登录 cookie
+- 凭据从环境变量读取：`E2E_CLERK_USER_USERNAME` / `E2E_CLERK_USER_PASSWORD`（配置在 `.env.local`）
+
+**项目配置**（`playwright.config.ts`）：
+- `setup` project — 运行 `auth.setup.ts` 执行 Clerk 登录 + 保存 `.clerk/user.json`
+- `authenticated` project — 依赖 setup，自动加载登录态
+- `webServer` — 自动启动 dev server（worktree 感知端口）
+
+**示例**：
+
+```ts
+// e2e/smoke.spec.ts
+import { setupClerkTestingToken } from "@clerk/testing/playwright"
+import { test, expect } from "@playwright/test"
+
+test("authenticated user sees agents page", async ({ page }) => {
+  await setupClerkTestingToken({ page })
+  await page.goto("/")
+  await expect(page).toHaveTitle(/archon/i)
+  await expect(page.locator("header")).toBeVisible()
+})
+```
+
+**运行命令**：
+- `make e2e` — 运行所有 E2E 测试
+- `make e2e-ui` — Playwright UI 模式（交互式调试）
+
+**何时用 Layer 4**：
+- 需要验证完整用户旅程（登录 → 创建资源 → 编辑 → 删除）
+- 需要验证真实 API 响应（不是 mock 数据）
+- 需要验证跨页面状态传递
+- 需要验证权限控制（不同角色看到不同内容）
+
+---
+
 ## 决策流程图
 
 ```
@@ -294,11 +352,16 @@ export const KeepsFocusOnVarChange: Story = {
 │  └─ 需要验证焦点/拖拽/动画等浏览器行为？
 │     → Layer 3
 │
+├─ 跨页面用户旅程 / 真实 API + DB + Auth
+│  → Layer 4（Playwright E2E）
+│
 └─ 回归测试
    │
    ├─ 可用简单断言描述 → Layer 1 或 Layer 2
    │
-   └─ 需要真实交互重现 → Layer 3
+   ├─ 需要真实交互重现 → Layer 3
+   │
+   └─ 需要完整服务端环境 → Layer 4
 ```
 
 ---
@@ -308,13 +371,15 @@ export const KeepsFocusOnVarChange: Story = {
 ### 1. 测试金字塔：数量分布
 
 ```
-        ▲
-       /  \        Layer 3: 少量（关键交互路径）
-      /    \
-     /──────\      Layer 2: 适量（核心组件行为）
-    /        \
-   /──────────\    Layer 1: 大量（业务逻辑全覆盖）
-  ──────────────
+          ▲
+         / \       Layer 4: 极少（核心用户旅程）
+        /   \
+       /─────\     Layer 3: 少量（关键交互路径）
+      /       \
+     /─────────\   Layer 2: 适量（核心组件行为）
+    /           \
+   /─────────────\ Layer 1: 大量（业务逻辑全覆盖）
+  ─────────────────
 ```
 
 Layer 1 数量最多、速度最快、维护成本最低。每往上一层，数量递减但保真度递增。
@@ -522,3 +587,4 @@ src/
 - Layer 1：与被测文件同目录的 `__tests__/` 下
 - Layer 2：与被测组件同目录的 `__tests__/` 下（`.tsx`）
 - Layer 3：统一放在 `components/__stories__/` 下
+- Layer 4：统一放在 `e2e/` 下（`.spec.ts`）
