@@ -18,7 +18,7 @@ interface SlotAgentSelectProps {
   orgId: string;
   slotKey: AgentSlotKey;
   className?: string;
-  onChanged?: (targetAgentId: string | null) => void;
+  onChanged?: () => void;
 }
 
 const NONE_VALUE = "__none__";
@@ -36,12 +36,11 @@ export function SlotAgentSelect({ agentId, orgId, slotKey, className, onChanged 
       setBusy(true);
       if (value === NONE_VALUE) {
         await deleteAgentSlot(agentId, slotKey, mutate);
-        onChanged?.(null);
       } else {
         await updateAgentSlot(agentId, slotKey, value, mutate);
-        onChanged?.(value);
       }
       setBusy(false);
+      onChanged?.();
     },
     [agentId, slotKey, mutate, onChanged]
   );
