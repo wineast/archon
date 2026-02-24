@@ -151,6 +151,13 @@ function runAssertion(
         };
       }
     }
+    default: {
+      return {
+        assertion,
+        passed: false,
+        message: `Unknown assertion type: ${(assertion as Assertion).type}`,
+      };
+    }
   }
 }
 
