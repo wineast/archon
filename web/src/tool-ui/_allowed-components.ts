@@ -23,6 +23,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
@@ -63,6 +64,7 @@ export const INJECTED_DEPS_BY_MODULE: Record<string, Record<string, unknown>> = 
     TableRow,
     Tooltip,
     TooltipContent,
+    TooltipProvider,
     TooltipTrigger,
     CollapsibleSection,
     Sheet,
