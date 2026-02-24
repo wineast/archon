@@ -193,12 +193,12 @@ make e2e-eval
 ### 测试文件
 
 - `web/e2e/eval-flow.spec.ts` — 冒烟测试（single 模式、1 case、contains 断言 + judge）
-- `web/e2e/eval-full.spec.ts` — 综合测试（5 case 批量运行，覆盖 single/sequential/injected 三种模式 + regex 断言 + 断言失败场景）
+- `web/e2e/eval-full.spec.ts` — 综合测试（8 case 批量运行，覆盖 single/sequential/injected 三种模式 + regex 断言 + tool-called 断言 + 断言失败场景 + tool call 历史注入 + UIMessage[] 导入 + tag 筛选 + tag 筛选后 Run All）
 
 ### 配置
 
 - **Playwright project**: `eval`（独立于 `authenticated` project）
-- **超时**: 300 秒（5 分钟，真实 API 调用较慢）
+- **超时**: 600 秒（10 分钟，综合测试包含 2 轮 Run All 需要更长时间）
 - **视频录制**: 默认开启，录制文件保存在 `web/test-results/`
 - **视口**: 1440 x 900
 
@@ -229,15 +229,19 @@ E2E_DEEPSEEK_API_KEY=<your-deepseek-api-key>
 12. 验证结果（pass rate + score 显示）
 
 **eval-full.spec.ts（综合测试）**：
-1. 环境准备同上（步骤 1-7）
-2. 创建 5 个用例：
-   - `math_basic`（single，contains "4"）— 预期通过
-   - `capital_regex`（single，regex "Paris"）— 预期通过
-   - `fail_case`（single，contains "banana"）— 预期失败
-   - `seq_memory`（sequential，2 轮对话，Turn 2 contains "Alice" + judge）— 预期通过
-   - `injected_ctx`（injected，注入历史 + 最后提问，contains "7890"）— 预期通过
-3. Run All → 选择 Judge Agent → 确认
-4. 验证：至少 3/5 通过、存在 Passed 和 Failed badge、有评分
+1. 环境准备同上（步骤 1-7）+ 创建 `get_lucky_number` 工具
+2. 创建 8 个用例（每个附带 tag）：
+   - `math_basic`（single，contains "4"）[tag: math] — 预期通过
+   - `capital_regex`（single，regex "Paris"）[tag: math] — 预期通过
+   - `fail_case`（single，contains "banana"）[tag: math] — 预期失败
+   - `seq_memory`（sequential，2 轮对话，Turn 2 contains "Alice" + judge）[tag: context] — 预期通过
+   - `injected_ctx`（injected，注入历史 + 最后提问，contains "7890"）[tag: context] — 预期通过
+   - `tool_call`（single，tool-called "get_lucky_number"）[tag: tool] — 预期通过
+   - `injected_tool_ctx`（injected，assistant turn 含 tool call 历史，contains "42"）[tag: tool] — 预期通过
+   - `import_test`（injected，通过 Import 导入 UIMessage[] JSON，contains "2"）[tag: math] — 预期通过
+3. Tag 筛选验证：切换 math/tool tag 检查 Run All 按钮显示的 case 计数
+4. Tagged Run All（math，4 case）→ 验证 pass rate 3/4
+5. Clear tags → Full Run All（全部 8 case）→ 验证 pass rate 7/8 + 评分
 
 ### 种子数据
 

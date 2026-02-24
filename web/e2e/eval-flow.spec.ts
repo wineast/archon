@@ -264,10 +264,8 @@ test.describe("Eval E2E Flow", () => {
     // The run may complete very quickly for simple cases (DeepSeek answers "2+2=?" in seconds).
     // Instead of checking for "Running" state (which may flash too fast), wait directly for results.
 
-    // Wait for the expanded result card to show "Passed" badge — up to 180s for real API call
-    await expect(page.getByTestId("badge-passed").first()).toBeVisible({ timeout: 180_000 })
-
-    // Verify summary row: pass rate and score
+    // Wait for pass rate to appear (run completed) — up to 180s for real LLM call
+    await expect(page.getByTestId("run-pass-rate").first()).toBeVisible({ timeout: 180_000 })
     await expect(page.getByTestId("run-pass-rate").first()).toHaveText(/1\/1/)
     await expect(page.getByTestId("run-score").first()).toHaveText(/[1-9]\d?\/10/)
   })

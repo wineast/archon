@@ -55,7 +55,7 @@ export default defineConfig({
       name: "eval",
       dependencies: ["setup"],
       testMatch: /eval-(flow|full)\.spec\.ts/,
-      timeout: 300_000,
+      timeout: 600_000,
       use: {
         ...devices["Desktop Chrome"],
         storageState: ".clerk/user.json",
