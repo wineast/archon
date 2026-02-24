@@ -28,7 +28,8 @@ import { ComponentTestCaseCreateForm } from "./component-test-case-create-form";
 import { ComponentRunResultCard } from "./component-run-result-card";
 import { ComponentRunHistoryItem } from "./component-run-history-item";
 import type { ComponentTestRunResultRow } from "@/db/schema";
-import { compileComponentGraph, keyToPascal, type ComponentRecord } from "@/tool-ui";
+import type { ComponentRecord } from "@/tool-ui";
+import { useCompiledComponent } from "@/lib/components/use-compiled-component";
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import { validateAgainstSchema } from "@/lib/components/validate-schema";
 
@@ -54,19 +55,24 @@ async function executeRenderTest(
     const { createElement } = await import("react");
     const { renderToStaticMarkup } = await import("react-dom/server");
     const { compileSourceWithDeps } = await import("@/tool-ui/_dynamic-renderer");
+    const { TooltipProvider } = await import("@/components/ui/tooltip");
 
     const Comp = compileSourceWithDeps(componentSource, extraDeps);
 
-    // Render to string to check for errors
+    // Wrap with TooltipProvider so components using Tooltip render without error
     renderToStaticMarkup(
-      createElement(Comp, {
-        data: scenario === "component" ? data : undefined,
-        tool: scenario === "tool" ? (data as { name: string; input: unknown; output: unknown }) : undefined,
-        state: "output-available",
-        isLoading: false,
-        isComplete: true,
-        isError: false,
-      })
+      createElement(
+        TooltipProvider,
+        null,
+        createElement(Comp, {
+          data: scenario === "component" ? data : undefined,
+          tool: scenario === "tool" ? (data as { name: string; input: unknown; output: unknown }) : undefined,
+          state: "output-available",
+          isLoading: false,
+          isComplete: true,
+          isError: false,
+        }),
+      )
     );
 
     const durationMs = Math.round(performance.now() - start);
@@ -109,22 +115,11 @@ export function ComponentTestCasesPanel({
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
 
-  // Compute extra deps from component graph for composition
-  const compositionDeps = useMemo(() => {
-    if (!componentKey || !allComponents?.length) return undefined;
-    try {
-      const compiled = compileComponentGraph(allComponents);
-      const deps: Record<string, unknown> = {};
-      for (const [key, comp] of compiled) {
-        if (key !== componentKey) {
-          deps[keyToPascal(key)] = comp;
-        }
-      }
-      return Object.keys(deps).length > 0 ? deps : undefined;
-    } catch {
-      return undefined;
-    }
-  }, [componentKey, allComponents]);
+  const { compiledComponent, compositionDeps } = useCompiledComponent(
+    componentKey,
+    allComponents,
+    componentSource,
+  );
 
   // All unique tags
   const allTags = useMemo(() => {
@@ -387,6 +382,7 @@ export function ComponentTestCasesPanel({
                   key={tc.id}
                   testCase={tc}
                   componentSource={componentSource}
+                  compiledComponent={compiledComponent}
                   onSave={handleSave}
                   onDelete={handleDelete}
                   onRun={handleRun}

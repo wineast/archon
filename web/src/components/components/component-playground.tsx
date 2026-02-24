@@ -43,9 +43,9 @@ import { DataCard } from "@/components/components/data-card";
 import {
   DynamicComponentRenderer,
   DynamicComponentErrorBoundary,
-  compileComponentGraph,
   type ComponentRecord,
 } from "@/tool-ui";
+import { useCompiledComponent } from "@/lib/components/use-compiled-component";
 import {
   useComponentTestCases,
   createComponentTestCase,
@@ -130,22 +130,11 @@ export function ComponentPlayground({
     return { examples: ex, nonExamples: ne };
   }, [testCases, scenario]);
 
-  // Compile component graph to resolve cross-component references
-  const compiledComponent = useMemo(() => {
-    if (!componentKey || !allComponents?.length || !componentSource.trim())
-      return undefined;
-    try {
-      // Replace current component's source with latest (unsaved) version
-      const records = allComponents.map((r) =>
-        r.key === componentKey ? { ...r, source: componentSource } : r
-      );
-      const compiled = compileComponentGraph(records);
-      return compiled.get(componentKey);
-    } catch (e) {
-      console.error("[playground-composition]", e);
-      return undefined;
-    }
-  }, [componentKey, allComponents, componentSource]);
+  const { compiledComponent } = useCompiledComponent(
+    componentKey,
+    allComponents,
+    componentSource,
+  );
 
   const runSchemaValidation = useCallback(async () => {
     const result = await validateAgainstSchema(activeSchema, parsedData);

@@ -7,10 +7,10 @@ import { useComponentTestCases } from "@/lib/components/test-case-hooks";
 import {
   DynamicComponentRenderer,
   DynamicComponentErrorBoundary,
-  compileComponentGraph,
   type ComponentRecord,
   type ComponentRendererProps,
 } from "@/tool-ui";
+import { useCompiledComponent } from "@/lib/components/use-compiled-component";
 import type { ComponentTestCaseRow } from "@/db/schema";
 
 interface ComponentExamplesPanelProps {
@@ -33,20 +33,11 @@ export function ComponentExamplesPanel({
     [testCases]
   );
 
-  // Compile component graph to resolve cross-component references
-  const compiledComponent = useMemo(() => {
-    if (!componentKey || !allComponents?.length || !componentSource.trim())
-      return undefined;
-    try {
-      const records = allComponents.map((r) =>
-        r.key === componentKey ? { ...r, source: componentSource } : r
-      );
-      const compiled = compileComponentGraph(records);
-      return compiled.get(componentKey);
-    } catch {
-      return undefined;
-    }
-  }, [componentKey, allComponents, componentSource]);
+  const { compiledComponent } = useCompiledComponent(
+    componentKey,
+    allComponents,
+    componentSource,
+  );
 
   if (examples.length === 0) {
     return (
