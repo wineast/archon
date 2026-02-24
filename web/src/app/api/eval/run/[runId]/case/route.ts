@@ -1,12 +1,12 @@
 import { generateText, Output, stepCountIs } from "ai";
 import { db } from "@/db";
-import { evalRuns, evalRunResults, modelConfigs, judgeConfigs, tools } from "@/db/schema";
+import { evalRuns, evalRunResults, tools } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { runAllAssertions } from "@/lib/eval/assertions";
 import { gatherTemplateData, renderTemplate, disposeTemplateData } from "@/lib/template/render";
 import { buildJudgeSchema, toJudgeResult } from "@/lib/eval/judge-dimensions";
-import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResult } from "@/lib/eval/types";
+import type { RunCaseRequest, RunCaseResponse, EvalResult, ChatMessage, TurnResult, Dimension } from "@/lib/eval/types";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
@@ -28,9 +28,6 @@ export async function POST(
   const body: RunCaseRequest = await req.json();
   const {
     case: evalCase,
-    judgeModelConfigId,
-    judgeConfigId,
-    modelConfigId,
     templateVars = {},
     toolNames = [],
   } = body;
@@ -41,64 +38,30 @@ export async function POST(
     .from(evalRuns)
     .where(eq(evalRuns.id, runId));
 
-  if (!run) {
+  if (!run || !run.agentId) {
     return Response.json({ error: "Run not found" }, { status: 404 });
   }
 
-  const ctx = await requireAgentRole(run.agentId!, "editor");
+  const ctx = await requireAgentRole(run.agentId, "editor");
   if (ctx instanceof NextResponse) return ctx;
 
   const orgId = await getOrgIdByAgentId(run.agentId);
 
-  // Load model config from DB
-  const [modelConfig] = await db
-    .select()
-    .from(modelConfigs)
-    .where(and(eq(modelConfigs.id, modelConfigId), isNull(modelConfigs.deletedAt)));
+  // Read all config from the run record (snapshot)
+  const chatModel = run.chatModel;
+  const chatSystemPrompt = run.chatSystemPrompt;
+  const chatTemperature = run.chatTemperature;
 
-  if (!modelConfig || !modelConfig.modelId) {
-    return Response.json(
-      { error: "Model config not found or modelId is empty" },
-      { status: 400 }
-    );
-  }
+  const judgeSnapshot = run.judgeModelConfigSnapshot as { modelId: string; systemPrompt: string; temperature: number } | null;
+  const judgeModel = judgeSnapshot?.modelId ?? "";
+  const judgeSystemPrompt = judgeSnapshot?.systemPrompt ?? "";
+  const judgeTemperature = judgeSnapshot?.temperature ?? 0.1;
 
-  const chatModel = modelConfig.modelId;
-  const chatSystemPrompt = modelConfig.systemPrompt;
-  const chatTemperature = modelConfig.temperature;
-
-  // Load judge model config from DB
-  const [judgeModelConfig] = await db
-    .select()
-    .from(modelConfigs)
-    .where(and(eq(modelConfigs.id, judgeModelConfigId), isNull(modelConfigs.deletedAt)));
-
-  if (!judgeModelConfig || !judgeModelConfig.modelId) {
-    return Response.json(
-      { error: "Judge model config not found or modelId is empty" },
-      { status: 400 }
-    );
-  }
-
-  // Load judge config (dimensions) from DB
-  const [judgeConfig] = await db
-    .select()
-    .from(judgeConfigs)
-    .where(and(eq(judgeConfigs.id, judgeConfigId), isNull(judgeConfigs.deletedAt)));
-
-  if (!judgeConfig) {
-    return Response.json(
-      { error: "Judge config not found" },
-      { status: 400 }
-    );
-  }
-
-  const judgeModel = judgeModelConfig.modelId;
-  const judgeSystemPrompt = judgeModelConfig.systemPrompt;
-  const judgeTemperature = judgeModelConfig.temperature ?? 0.1;
-  const dimensions = judgeConfig.dimensions ?? [];
+  const judgeConfigSnapshot = run.judgeConfigSnapshot as { name: string; dimensions: Dimension[] } | null;
+  const dimensions: Dimension[] = judgeConfigSnapshot?.dimensions ?? [];
   const judgeSchema = buildJudgeSchema(dimensions);
-  const evalAgentId = modelConfig.agentId ?? undefined;
+
+  const evalAgentId = run.agentId ?? undefined;
   const evalVersionId = evalAgentId ? await resolveEditingVersionId(evalAgentId) : undefined;
   const templateData = await gatherTemplateData(evalAgentId, evalVersionId);
 
@@ -126,10 +89,12 @@ export async function POST(
     );
 
     // Build tools (matching chat route)
-    const enabledRows = await db
-      .select()
-      .from(tools)
-      .where(and(eq(tools.enabled, true), isNull(tools.deletedAt)));
+    const enabledRows = evalVersionId
+      ? await db
+          .select()
+          .from(tools)
+          .where(and(eq(tools.versionId, evalVersionId), eq(tools.enabled, true), isNull(tools.deletedAt)))
+      : [];
 
     const toolPayloads: ToolDefinitionPayload[] = enabledRows.map((row) => ({
       name: row.name,
@@ -141,7 +106,7 @@ export async function POST(
     }));
 
     const allTools = toolPayloads.length
-      ? buildDynamicTools(toolPayloads, templateData, modelConfig.agentId ?? undefined, undefined, evalVersionId)
+      ? buildDynamicTools(toolPayloads, templateData, evalAgentId, undefined, evalVersionId)
       : {};
 
     const mode = evalCase.mode ?? "single";
@@ -187,20 +152,8 @@ export async function POST(
         chatMessages.push({
           role: turn.role,
           content: turn.content,
-          injected: i < lastUserIndex || (i === lastUserIndex ? false : i < turns.length - 1),
+          injected: i < lastUserIndex,
         });
-      }
-      // The last user message is NOT injected
-      if (chatMessages.length > 0) {
-        chatMessages[chatMessages.length - 1].injected = false;
-      }
-      // Mark all messages before the last user message as injected
-      for (let i = 0; i < chatMessages.length; i++) {
-        if (i < lastUserIndex) {
-          chatMessages[i].injected = true;
-        } else if (i === lastUserIndex) {
-          chatMessages[i].injected = false;
-        }
       }
 
       const chatResult = await generateText({

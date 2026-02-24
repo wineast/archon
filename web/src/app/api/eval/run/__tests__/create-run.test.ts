@@ -3,14 +3,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ── Mock DB ──
 
 const insertedValues: Record<string, unknown>[] = [];
-const returningMock = vi.fn(() => [{ id: "run-1" }]);
+const returningMock = vi.fn(() => [{ id: "run-1", chatModel: "gpt-4" }]);
 const valuesMock = vi.fn((v: Record<string, unknown>) => {
   insertedValues.push(v);
   return { returning: returningMock };
 });
 const insertMock = vi.fn(() => ({ values: valuesMock }));
 
-// Track sequential select calls: modelConfig, judgeModelConfig, judgeConfig
+// Track sequential select calls: modelConfig (by versionId+isActive), judgeModelConfig, judgeConfig
 let selectCallIndex = 0;
 const selectResults: unknown[][] = [
   [{ id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null }],
@@ -30,8 +30,8 @@ vi.mock("@/db", () => ({
 
 vi.mock("@/db/schema", () => ({
   evalRuns: { id: "id" },
-  modelConfigs: { id: "id" },
-  judgeConfigs: { id: "id" },
+  modelConfigs: { id: "id", versionId: "version_id", isActive: "is_active" },
+  judgeConfigs: { id: "id", versionId: "version_id", isActive: "is_active" },
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -42,6 +42,12 @@ vi.mock("drizzle-orm", () => ({
 
 vi.mock("@/lib/auth/require-agent-role", () => ({
   requireAgentRole: vi.fn().mockResolvedValue({ agentId: "agent-1" }),
+}));
+
+vi.mock("@/lib/versions/resolve", () => ({
+  resolveEditingVersionId: vi.fn().mockImplementation((agentId: string) =>
+    Promise.resolve(agentId === "agent-1" ? "version-1" : "judge-version-1")
+  ),
 }));
 
 const { POST } = await import("../route");
@@ -56,10 +62,7 @@ function makeRequest(body: Record<string, unknown>) {
 
 const baseBody = {
   agentId: "agent-1",
-  modelConfigId: "mc-1",
   judgeAgentId: "judge-agent-1",
-  judgeModelConfigId: "jmc-1",
-  judgeConfigId: "jc-1",
   totalCases: 5,
 };
 
@@ -73,12 +76,12 @@ describe("POST /api/eval/run (create run)", () => {
     selectResults[2] = [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }] }];
   });
 
-  it("creates a run record and returns runId", async () => {
+  it("creates a run record and returns runId + chatModel", async () => {
     const res = await POST(makeRequest(baseBody));
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json).toEqual({ runId: "run-1" });
+    expect(json).toEqual({ runId: "run-1", chatModel: "gpt-4" });
   });
 
   it("initializes passedAssertions=0 and averageScore=null", async () => {
@@ -91,33 +94,40 @@ describe("POST /api/eval/run (create run)", () => {
     });
   });
 
-  it("returns 400 if model config not found", async () => {
+  it("returns 400 if no active model config found", async () => {
     selectResults[0] = [];
     const res = await POST(makeRequest(baseBody));
 
     expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain("active model config");
   });
 
-  it("returns 400 if judge model config not found", async () => {
+  it("returns 400 if no active judge model config found", async () => {
     selectResults[1] = [];
     const res = await POST(makeRequest(baseBody));
 
     expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain("active model config");
   });
 
-  it("returns 400 if judge config not found", async () => {
+  it("returns 400 if no active judge config found", async () => {
     selectResults[2] = [];
     const res = await POST(makeRequest(baseBody));
 
     expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain("active judge config");
   });
 
-  it("stores chatModel and chatSystemPrompt from model config", async () => {
+  it("stores chatModel, chatSystemPrompt, and chatTemperature from model config", async () => {
     await POST(makeRequest(baseBody));
 
     expect(insertedValues[0]).toMatchObject({
       chatModel: "gpt-4",
       chatSystemPrompt: "You are helpful",
+      chatTemperature: 0.7,
     });
   });
 

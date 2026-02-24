@@ -683,6 +683,7 @@ export const evalRuns = pgTable("eval_runs", {
   }),
   chatModel: text("chat_model").notNull(),
   chatSystemPrompt: text("chat_system_prompt").notNull(),
+  chatTemperature: real("chat_temperature").notNull().default(0.7),
   judgeAgentId: uuid("judge_agent_id"),
   judgeModelConfigSnapshot: jsonb("judge_model_config_snapshot"),
   judgeConfigSnapshot: jsonb("judge_config_snapshot"),

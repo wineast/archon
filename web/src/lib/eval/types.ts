@@ -149,10 +149,8 @@ export interface EvalRunResponse {
 
 /** POST /api/eval/run — create a run record only */
 export interface CreateEvalRunRequest {
-  modelConfigId: string;
+  agentId: string;
   judgeAgentId: string;
-  judgeModelConfigId: string;
-  judgeConfigId: string;
   filterTags?: string[];
   assertionFailConfig?: AssertionFailConfig;
   totalCases: number;
@@ -160,14 +158,12 @@ export interface CreateEvalRunRequest {
 
 export interface CreateEvalRunResponse {
   runId: string;
+  chatModel: string;
 }
 
 /** POST /api/eval/run/[runId]/case — execute a single case */
 export interface RunCaseRequest {
   case: EvalCase;
-  judgeModelConfigId: string;
-  judgeConfigId: string;
-  modelConfigId: string;
   templateVars?: Record<string, string>;
   toolNames?: string[];
 }

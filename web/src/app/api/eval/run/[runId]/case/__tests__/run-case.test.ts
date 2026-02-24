@@ -8,45 +8,31 @@ const valuesMock = vi.fn((v: Record<string, unknown>) => {
 });
 const insertMock = vi.fn(() => ({ values: valuesMock }));
 
-let selectRunResult: unknown[] = [{ id: "run-1", agentId: "agent-1", assertionFailConfig: null }];
-let selectModelResult: unknown[] = [
-  {
-    id: "mc-1",
-    modelId: "gpt-4",
-    systemPrompt: "You are helpful",
-    temperature: 0.7,
-    agentId: null,
-  },
-];
-let selectJudgeModelResult: unknown[] = [
-  {
-    id: "jmc-1",
+let selectRunResult: unknown[] = [{
+  id: "run-1",
+  agentId: "agent-1",
+  chatModel: "gpt-4",
+  chatSystemPrompt: "You are helpful",
+  chatTemperature: 0.7,
+  judgeModelConfigSnapshot: {
     modelId: "gpt-4-judge",
     systemPrompt: "Judge this",
     temperature: 0.1,
-    agentId: null,
   },
-];
-let selectJudgeConfigResult: unknown[] = [
-  {
-    id: "jc-1",
+  judgeConfigSnapshot: {
     name: "Default",
     dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
   },
-];
+  assertionFailConfig: null,
+}];
 let selectToolsResult: unknown[] = [];
 
 // Track which table was queried
 let fromCallIndex = 0;
 const whereSelectMock = vi.fn(() => {
-  // 0: evalRuns, 1: modelConfigs, 2: judgeModelConfig, 3: judgeConfig, 4: tools
+  // 0: evalRuns, 1: tools
   const idx = fromCallIndex++;
-  const result =
-    idx === 0 ? selectRunResult :
-    idx === 1 ? selectModelResult :
-    idx === 2 ? selectJudgeModelResult :
-    idx === 3 ? selectJudgeConfigResult :
-    selectToolsResult;
+  const result = idx === 0 ? selectRunResult : selectToolsResult;
   return {
     limit: vi.fn(() => result),
     then: (fn: (v: unknown[]) => unknown) => Promise.resolve(fn(result)),
@@ -66,8 +52,6 @@ vi.mock("@/db", () => ({
 vi.mock("@/db/schema", () => ({
   evalRuns: { id: "id" },
   evalRunResults: { runId: "run_id" },
-  modelConfigs: { id: "id" },
-  judgeConfigs: { id: "id" },
   tools: { enabled: "enabled", deletedAt: "deleted_at" },
   agents: { id: "id", orgId: "org_id" },
   schemas: { id: "id", agentId: "agent_id", parameters: "parameters", deletedAt: "deleted_at" },
@@ -141,6 +125,10 @@ vi.mock("@/lib/eval/judge-dimensions", () => ({
   }),
 }));
 
+vi.mock("@/lib/versions/resolve", () => ({
+  resolveEditingVersionId: vi.fn().mockResolvedValue("version-1"),
+}));
+
 const { POST } = await import("../route");
 
 const params = Promise.resolve({ runId: "run-1" });
@@ -162,9 +150,6 @@ const baseBody = {
     assertions: [{ id: "a1", type: "contains", value: "world" }],
     expectedOutput: "Hello world",
   },
-  judgeModelConfigId: "jmc-1",
-  judgeConfigId: "jc-1",
-  modelConfigId: "mc-1",
 };
 
 describe("POST /api/eval/run/[runId]/case", () => {
@@ -172,32 +157,23 @@ describe("POST /api/eval/run/[runId]/case", () => {
     vi.clearAllMocks();
     insertedResults.length = 0;
     fromCallIndex = 0;
-    selectRunResult = [{ id: "run-1", agentId: "agent-1", assertionFailConfig: null }];
-    selectModelResult = [
-      {
-        id: "mc-1",
-        modelId: "gpt-4",
-        systemPrompt: "You are helpful",
-        temperature: 0.7,
-        agentId: null,
-      },
-    ];
-    selectJudgeModelResult = [
-      {
-        id: "jmc-1",
+    selectRunResult = [{
+      id: "run-1",
+      agentId: "agent-1",
+      chatModel: "gpt-4",
+      chatSystemPrompt: "You are helpful",
+      chatTemperature: 0.7,
+      judgeModelConfigSnapshot: {
         modelId: "gpt-4-judge",
         systemPrompt: "Judge this",
         temperature: 0.1,
-        agentId: null,
       },
-    ];
-    selectJudgeConfigResult = [
-      {
-        id: "jc-1",
+      judgeConfigSnapshot: {
         name: "Default",
         dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
       },
-    ];
+      assertionFailConfig: null,
+    }];
     selectToolsResult = [];
   });
 
@@ -206,27 +182,6 @@ describe("POST /api/eval/run/[runId]/case", () => {
 
     const res = await POST(makeRequest(baseBody), { params });
     expect(res.status).toBe(404);
-  });
-
-  it("returns 400 if model config not found", async () => {
-    selectModelResult = [];
-
-    const res = await POST(makeRequest(baseBody), { params });
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 400 if judge model config not found", async () => {
-    selectJudgeModelResult = [];
-
-    const res = await POST(makeRequest(baseBody), { params });
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 400 if judge config not found", async () => {
-    selectJudgeConfigResult = [];
-
-    const res = await POST(makeRequest(baseBody), { params });
-    expect(res.status).toBe(400);
   });
 
   it("executes a single mode case and returns result with all assertions passed", async () => {
@@ -347,7 +302,6 @@ describe("POST /api/eval/run/[runId]/case", () => {
     mockRunAllAssertions.mockReturnValue([]);
 
     const injectedBody = {
-      ...baseBody,
       case: {
         id: "case-2",
         name: "Injected Case",
@@ -380,7 +334,6 @@ describe("POST /api/eval/run/[runId]/case", () => {
     mockRunAllAssertions.mockReturnValue([]);
 
     const sequentialBody = {
-      ...baseBody,
       case: {
         id: "case-3",
         name: "Sequential Case",
@@ -403,5 +356,20 @@ describe("POST /api/eval/run/[runId]/case", () => {
     // 4 chat messages: user1, assistant1, user2, assistant2
     expect(json.result.chatMessages).toHaveLength(4);
     expect(json.result.chatResponse).toBe("Max LTV is 75%");
+  });
+
+  it("reads chatTemperature from run record", async () => {
+    selectRunResult = [{
+      ...selectRunResult[0] as Record<string, unknown>,
+      chatTemperature: 0.3,
+    }];
+
+    mockGenerateText.mockResolvedValueOnce({ text: "response", usage: { inputTokens: 50, outputTokens: 20 } });
+    mockRunAllAssertions.mockReturnValue([]);
+
+    await POST(makeRequest(baseBody), { params });
+
+    const chatCall = mockGenerateText.mock.calls[0][0];
+    expect(chatCall.temperature).toBe(0.3);
   });
 });

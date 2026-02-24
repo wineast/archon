@@ -29,10 +29,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { AssertionRow } from "./assertion-row";
 import { TurnsList } from "./turns-list";
 import { ResultCard } from "./result-card";
-import { useActiveModelConfig } from "@/lib/model-config/hooks";
-import { useActiveJudgeConfig } from "@/lib/judge-config/hooks";
+import { RunEvalDialog } from "./run-eval-dialog";
 import { useEvalRuns } from "@/lib/eval/hooks";
-import { useResolvedEvaluator } from "@/lib/eval/use-resolved-evaluator";
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { useEvalRun } from "@/lib/eval/eval-run-context";
@@ -45,6 +43,7 @@ import type {
   EvalTurn,
   CreateEvalRunResponse,
   RunCaseResponse,
+  AssertionFailConfig,
 } from "@/lib/eval/types";
 
 interface RunResultEntry {
@@ -75,14 +74,10 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   const [deleting, setDeleting] = useState(false);
   const [running, setRunning] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [runResults, setRunResults] = useState<RunResultEntry[]>([]);
 
   // Hooks for running
-  const { activeConfig: activeModelConfig } = useActiveModelConfig(agentId);
-  const { evaluator } = useResolvedEvaluator(agentId);
-  const judgeAgentId = evaluator?.judgeAgentId ?? undefined;
-  const { activeConfig: activeJudgeModelConfig } = useActiveModelConfig(judgeAgentId);
-  const { activeConfig: activeJudgeConfig } = useActiveJudgeConfig(judgeAgentId);
   const { templateVars } = useTemplateVars(agentId);
   const { tools: allDbTools } = useTools(agentId);
   const { isRunning: isGlobalRunning } = useEvalRun();
@@ -219,13 +214,12 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     error,
   });
 
-  const canRun = !!(activeModelConfig && judgeAgentId && activeJudgeModelConfig && activeJudgeConfig);
-
-  const handleRun = useCallback(async () => {
-    if (!activeModelConfig || !judgeAgentId || !activeJudgeModelConfig || !activeJudgeConfig) {
-      toast.error("Missing model config, judge agent, or judge config");
-      return;
-    }
+  const handleRunConfirm = useCallback(async (params: {
+    judgeAgentId: string;
+    assertionFailConfig: AssertionFailConfig;
+  }) => {
+    if (!agentId) return;
+    const { judgeAgentId, assertionFailConfig } = params;
 
     const currentCase: EvalCase = {
       id: evalCase.id,
@@ -240,43 +234,47 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     const enabledToolNames = allDbTools
       .filter((t) => t.enabled)
       .map((t) => t.name);
-    const modelName = activeModelConfig.name;
 
+    setRunDialogOpen(false);
     setRunning(true);
 
     // Step 1: Create run record
     let runId: string;
+    let chatModel: string;
     try {
       const createRes = await fetch("/api/eval/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agentId,
-          modelConfigId: activeModelConfig.id,
           judgeAgentId,
-          judgeModelConfigId: activeJudgeModelConfig.id,
-          judgeConfigId: activeJudgeConfig.id,
+          assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
           totalCases: 1,
         }),
       });
       if (!createRes.ok) {
-        throw new Error(
-          `HTTP ${createRes.status}: ${await createRes.text()}`
-        );
+        const errData = await createRes.json().catch(() => null);
+        const errMsg = errData?.error || `HTTP ${createRes.status}`;
+        throw new Error(errMsg);
       }
-      const { runId: id }: CreateEvalRunResponse = await createRes.json();
-      runId = id;
+      const data: CreateEvalRunResponse = await createRes.json();
+      runId = data.runId;
+      chatModel = data.chatModel;
     } catch (err) {
       setRunning(false);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      toast.error(errorMsg);
       setRunResults((prev) => [
         {
-          modelName,
-          result: makeErrorResult(err instanceof Error ? err.message : String(err)),
+          modelName: "unknown",
+          result: makeErrorResult(errorMsg),
         },
         ...prev,
       ]);
       return;
     }
+
+    const modelName = chatModel.split("/").pop() ?? chatModel;
 
     // Step 2: Execute the case
     let result: EvalResult;
@@ -286,9 +284,6 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           case: currentCase,
-          judgeModelConfigId: activeJudgeModelConfig.id,
-          judgeConfigId: activeJudgeConfig.id,
-          modelConfigId: activeModelConfig.id,
           templateVars,
           toolNames: enabledToolNames,
         }),
@@ -325,10 +320,6 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     assertions,
     expectedOutput,
     tags,
-    activeModelConfig,
-    judgeAgentId,
-    activeJudgeModelConfig,
-    activeJudgeConfig,
     templateVars,
     allDbTools,
     mutateRuns,
@@ -488,8 +479,8 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         <Button
           size="sm"
           variant="outline"
-          onClick={handleRun}
-          disabled={busy || isGlobalRunning || !canRun}
+          onClick={() => setRunDialogOpen(true)}
+          disabled={busy || isGlobalRunning}
         >
           {running ? (
             <Spinner className="mr-1 size-3" />
@@ -542,6 +533,18 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         description={`Are you sure you want to delete "${evalCase.name}"? This action cannot be undone.`}
         onConfirm={handleDelete}
       />
+
+      {agentId && (
+        <RunEvalDialog
+          open={runDialogOpen}
+          onOpenChange={setRunDialogOpen}
+          agentId={agentId}
+          mode="single"
+          caseCount={1}
+          onConfirm={handleRunConfirm}
+          confirming={running}
+        />
+      )}
 
       {/* Run results */}
       {runResults.length > 0 && (

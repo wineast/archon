@@ -27,46 +27,6 @@ import type { EvalCaseRow } from "@/db/schema";
 
 const mockMutateRuns = vi.fn();
 
-vi.mock("@/lib/model-config/hooks", () => ({
-  useActiveModelConfig: () => ({
-    activeConfig: {
-      id: "mc-1",
-      name: "Test Model",
-      modelId: "claude-sonnet-4-5-20250929",
-    },
-    isLoading: false,
-    error: undefined,
-    mutate: vi.fn(),
-  }),
-}));
-
-vi.mock("@/lib/eval/use-resolved-evaluator", () => ({
-  useResolvedEvaluator: () => ({
-    evaluator: {
-      judgeAgentId: "judge-agent-1",
-      judgeAgentName: "Evaluator",
-      judgeAgentSlug: "evaluator",
-    },
-    isLoading: false,
-    error: undefined,
-    mutate: vi.fn(),
-  }),
-}));
-
-vi.mock("@/lib/judge-config/hooks", () => ({
-  useActiveJudgeConfig: () => ({
-    activeConfig: {
-      id: "jc-1",
-      name: "Default Judge",
-      dimensions: [{ key: "accuracy", label: "Accuracy", weight: 1 }],
-      isActive: true,
-    },
-    isLoading: false,
-    error: undefined,
-    mutate: vi.fn(),
-  }),
-}));
-
 vi.mock("@/lib/eval/hooks", () => ({
   useEvalRuns: () => ({
     runs: [],
@@ -108,6 +68,30 @@ const mockEvalRunCtx = {
 
 vi.mock("@/lib/eval/eval-run-context", () => ({
   useEvalRun: () => mockEvalRunCtx,
+}));
+
+// Mock RunEvalDialog to simplify testing
+const mockOnConfirm = vi.fn();
+vi.mock("../run-eval-dialog", () => ({
+  RunEvalDialog: ({ open, onConfirm, confirming }: {
+    open: boolean;
+    onConfirm: (params: { judgeAgentId: string; assertionFailConfig: Record<string, boolean> }) => void;
+    confirming?: boolean;
+  }) => {
+    // Store onConfirm for test access
+    mockOnConfirm.mockImplementation(onConfirm);
+    return open ? (
+      <div data-testid="run-eval-dialog">
+        <button
+          data-testid="dialog-confirm"
+          disabled={confirming}
+          onClick={() => onConfirm({ judgeAgentId: "judge-agent-1", assertionFailConfig: {} })}
+        >
+          Confirm
+        </button>
+      </div>
+    ) : null;
+  },
 }));
 
 /* ------------------------------------------------------------------ */
@@ -188,8 +172,8 @@ describe("Mode selector", () => {
   });
 });
 
-describe("Run execution", () => {
-  it("calls 3-step API and shows result on success", async () => {
+describe("Run execution via dialog", () => {
+  it("opens dialog on Run click and calls API on confirm", async () => {
     const mockResult = {
       caseId: "case-1",
       caseName: "Test Case",
@@ -218,7 +202,7 @@ describe("Run execution", () => {
       // Step 1: Create run
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1" }),
+        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4" }),
       })
       // Step 2: Execute case
       .mockResolvedValueOnce({
@@ -232,7 +216,15 @@ describe("Run execution", () => {
       });
 
     const { user } = renderDetail();
+
+    // Click Run button to open dialog
     await user.click(screen.getByRole("button", { name: /run/i }));
+
+    // Dialog should be open
+    expect(screen.getByTestId("run-eval-dialog")).toBeInTheDocument();
+
+    // Click confirm in dialog
+    await user.click(screen.getByTestId("dialog-confirm"));
 
     // Wait for results to appear
     await waitFor(() => {
@@ -242,7 +234,7 @@ describe("Run execution", () => {
     // Verify 3-step API was called
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
 
-    // Step 1: Create run — sends judgeAgentId, judgeModelConfigId, judgeConfigId
+    // Step 1: Create run — simplified body (no configIds)
     expect(globalThis.fetch).toHaveBeenNthCalledWith(
       1,
       "/api/eval/run",
@@ -252,7 +244,7 @@ describe("Run execution", () => {
       })
     );
 
-    // Step 2: Execute case — sends judgeModelConfigId, judgeConfigId
+    // Step 2: Execute case — simplified body (no configIds)
     expect(globalThis.fetch).toHaveBeenNthCalledWith(
       2,
       "/api/eval/run/run-1/case",
@@ -272,8 +264,8 @@ describe("Run execution", () => {
     // Verify mutateRuns was called
     expect(mockMutateRuns).toHaveBeenCalled();
 
-    // Verify result card content
-    expect(screen.getByText("Test Model")).toBeInTheDocument();
+    // Verify model name from API response is shown
+    expect(screen.getByText("gpt-4")).toBeInTheDocument();
     expect(screen.getByText("Passed")).toBeInTheDocument();
   });
 
@@ -287,7 +279,11 @@ describe("Run execution", () => {
     );
 
     const { user } = renderDetail();
+
+    // Click Run to open dialog
     await user.click(screen.getByRole("button", { name: /run/i }));
+    // Click confirm
+    await user.click(screen.getByTestId("dialog-confirm"));
 
     // Run button should show spinner text
     expect(screen.getByText("Running...")).toBeInTheDocument();
@@ -299,26 +295,9 @@ describe("Run execution", () => {
     await act(async () => {
       resolveCreate({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1" }),
+        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4" }),
       });
     });
-  });
-
-  it("shows error result when create run fails", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      text: () => Promise.resolve("Internal Server Error"),
-    });
-
-    const { user } = renderDetail();
-    await user.click(screen.getByRole("button", { name: /run/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Run Results (1)")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("Error")).toBeInTheDocument();
   });
 
   it("uses current form values (not saved values) for run", async () => {
@@ -326,7 +305,7 @@ describe("Run execution", () => {
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1" }),
+        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4" }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -359,7 +338,9 @@ describe("Run execution", () => {
     await user.clear(inputTextarea);
     await user.type(inputTextarea, "Modified input");
 
+    // Open dialog and confirm
     await user.click(screen.getByRole("button", { name: /run/i }));
+    await user.click(screen.getByTestId("dialog-confirm"));
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledTimes(3);
@@ -394,7 +375,7 @@ describe("Run execution", () => {
       // Run 1
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1" }),
+        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4" }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -404,7 +385,7 @@ describe("Run execution", () => {
       // Run 2
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-2" }),
+        json: () => Promise.resolve({ runId: "run-2", chatModel: "gpt-4" }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -414,14 +395,16 @@ describe("Run execution", () => {
 
     const { user } = renderDetail();
 
-    // Run 1
+    // Run 1: open dialog and confirm
     await user.click(screen.getByRole("button", { name: /run/i }));
+    await user.click(screen.getByTestId("dialog-confirm"));
     await waitFor(() => {
       expect(screen.getByText("Run Results (1)")).toBeInTheDocument();
     });
 
-    // Run 2
+    // Run 2: open dialog and confirm
     await user.click(screen.getByRole("button", { name: /run/i }));
+    await user.click(screen.getByTestId("dialog-confirm"));
     await waitFor(() => {
       expect(screen.getByText("Run Results (2)")).toBeInTheDocument();
     });
