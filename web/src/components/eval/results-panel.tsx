@@ -4,13 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import {
   useEvalCases,
@@ -21,21 +14,19 @@ import {
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useEvalRun } from "@/lib/eval/eval-run-context";
 import { useTools } from "@/lib/tools/hooks";
-import { useModelConfigs, useActiveModelConfig } from "@/lib/model-config/hooks";
-import { useJudgeConfigs, useActiveJudgeConfig } from "@/lib/judge-config/hooks";
-import { useResolvedEvaluator } from "@/lib/eval/use-resolved-evaluator";
 import { toEvalCase, toEvalResult } from "@/lib/eval/types";
 import type {
   EvalResult,
   CreateEvalRunResponse,
   RunCaseResponse,
   EvalRunDetail,
+  AssertionFailConfig,
 } from "@/lib/eval/types";
 import type { EvalRunRow } from "@/db/schema";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import { ResultCard } from "./result-card";
+import { RunEvalDialog } from "./run-eval-dialog";
 import {
   PlayIcon,
   Trash2Icon,
@@ -43,7 +34,6 @@ import {
   ChevronRightIcon,
   ClockIcon,
   BookmarkIcon,
-  AlertTriangleIcon,
 } from "lucide-react";
 import {
   setBaseline,
@@ -52,9 +42,6 @@ import {
   benchmarkModelsKey,
 } from "@/lib/eval/benchmark-hooks";
 import { useSWRConfig } from "swr";
-import type { AssertionFailConfig } from "@/lib/eval/types";
-import { SlotAgentSelect } from "@/components/slots/slot-agent-select";
-import { useAgentOrgId } from "@/lib/agents/hooks";
 
 interface ResultsPanelProps {
   agentId?: string;
@@ -68,21 +55,8 @@ export function ResultsPanel({
   const { cases: caseRows } = useEvalCases(agentId);
   const { templateVars } = useTemplateVars(agentId);
   const { tools: allDbTools } = useTools(agentId);
-  const { configs: modelConfigs } = useModelConfigs(agentId);
-  const { activeConfig: activeModelConfig } = useActiveModelConfig(agentId);
   const getEnabledToolNames = () =>
     allDbTools.filter((t) => t.enabled).map((t) => t.name);
-
-  // Resolve evaluator slot
-  const { evaluator, mutate: mutateEvaluator } = useResolvedEvaluator(agentId);
-  const judgeAgentId = evaluator?.judgeAgentId ?? undefined;
-  const orgId = useAgentOrgId(agentId);
-
-  // Judge Agent's model configs and judge configs
-  const { configs: judgeModelConfigs } = useModelConfigs(judgeAgentId);
-  const { configs: judgeJudgeConfigs } = useJudgeConfigs(judgeAgentId);
-  const { activeConfig: activeJudgeModelConfig } = useActiveModelConfig(judgeAgentId);
-  const { activeConfig: activeJudgeConfig } = useActiveJudgeConfig(judgeAgentId);
 
   const { runs, mutate: mutateRuns } = useEvalRuns(agentId);
   const {
@@ -95,10 +69,7 @@ export function ResultsPanel({
   } = useEvalRun();
 
   const [currentResults, setCurrentResults] = useState<EvalResult[]>([]);
-  const [selectedConfigId, setSelectedConfigId] = useState<string>("");
-  const [selectedJudgeModelConfigId, setSelectedJudgeModelConfigId] = useState<string>("");
-  const [selectedJudgeConfigId, setSelectedJudgeConfigId] = useState<string>("");
-  const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>({});
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
 
   // Run detail expansion
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
@@ -108,22 +79,22 @@ export function ResultsPanel({
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
 
-  // Resolve selected IDs (fallback to active)
-  const resolvedConfigId = selectedConfigId || activeModelConfig?.id || "";
-  const resolvedJudgeModelConfigId = selectedJudgeModelConfigId || activeJudgeModelConfig?.id || "";
-  const resolvedJudgeConfigId = selectedJudgeConfigId || activeJudgeConfig?.id || "";
-
   const allCases = caseRows.map(toEvalCase);
   const cases =
     selectedTags.length > 0
       ? allCases.filter((c) => selectedTags.some((t) => c.tags?.includes(t)))
       : allCases;
 
-  const canRun = !!judgeAgentId && !!resolvedConfigId && !!resolvedJudgeModelConfigId && !!resolvedJudgeConfigId && cases.length > 0;
+  const canRun = cases.length > 0;
 
-  const handleRunAll = useCallback(async () => {
-    if (!canRun || !judgeAgentId) return;
+  const handleRunAllConfirm = useCallback(async (params: {
+    judgeAgentId: string;
+    assertionFailConfig: AssertionFailConfig;
+  }) => {
+    if (!agentId) return;
+    const { judgeAgentId, assertionFailConfig } = params;
 
+    setRunDialogOpen(false);
     setRunning(true);
     setProgress(0);
     setCurrentResults([]);
@@ -136,41 +107,24 @@ export function ResultsPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          modelConfigId: resolvedConfigId,
+          agentId,
           judgeAgentId,
-          judgeModelConfigId: resolvedJudgeModelConfigId,
-          judgeConfigId: resolvedJudgeConfigId,
           filterTags: selectedTags.length > 0 ? selectedTags : undefined,
           assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
           totalCases: cases.length,
         }),
       });
       if (!createRes.ok) {
-        const errText = await createRes.text();
-        throw new Error(`Failed to create run: HTTP ${createRes.status}: ${errText}`);
+        const errData = await createRes.json().catch(() => null);
+        const errMsg = errData?.error || `HTTP ${createRes.status}`;
+        throw new Error(errMsg);
       }
       const { runId: id }: CreateEvalRunResponse = await createRes.json();
       runId = id;
     } catch (err) {
       setRunning(false);
       setProgress(0);
-      setCurrentResults(
-        cases.map((c) => ({
-          caseId: c.id,
-          caseName: c.name,
-          mode: c.mode,
-          turns: c.turns,
-          chatMessages: [],
-          turnResults: [],
-          chatResponse: "",
-          assertionResults: [],
-          allAssertionsPassed: false,
-          judgeResult: null,
-          timestamp: Date.now(),
-          durationMs: 0,
-          error: err instanceof Error ? err.message : String(err),
-        }))
-      );
+      toast.error(err instanceof Error ? err.message : String(err));
       return;
     }
 
@@ -186,9 +140,6 @@ export function ResultsPanel({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             case: c,
-            judgeModelConfigId: resolvedJudgeModelConfigId,
-            judgeConfigId: resolvedJudgeConfigId,
-            modelConfigId: resolvedConfigId,
             templateVars,
             toolNames: getEnabledToolNames(),
           }),
@@ -248,15 +199,10 @@ export function ResultsPanel({
     setRunning(false);
     mutateRuns();
   }, [
-    canRun,
-    judgeAgentId,
+    agentId,
     cases,
-    resolvedConfigId,
-    resolvedJudgeModelConfigId,
-    resolvedJudgeConfigId,
     templateVars,
     selectedTags,
-    assertionFailConfig,
     setRunning,
     setProgress,
     setRunningCaseId,
@@ -315,139 +261,11 @@ export function ResultsPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-3 border-b px-4 py-3">
-        {/* Area 1: Agent Model Config */}
-        <div>
-          <label className="text-[10px] font-medium text-muted-foreground">
-            Agent Model Config
-          </label>
-          <Select value={resolvedConfigId} onValueChange={setSelectedConfigId}>
-            <SelectTrigger className="mt-0.5 h-8 text-xs">
-              <SelectValue placeholder="Select config..." />
-            </SelectTrigger>
-            <SelectContent>
-              {modelConfigs.map((mc) => (
-                <SelectItem key={mc.id} value={mc.id} className="text-xs">
-                  {mc.name}
-                  {mc.isActive ? " (Active)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Area 2: Judge Configuration */}
-        <div className="rounded-md border p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
-              Judge Agent
-            </span>
-            {agentId && orgId && (
-              <SlotAgentSelect
-                agentId={agentId}
-                orgId={orgId}
-                slotKey="evaluator"
-                className="flex-1"
-                onChanged={mutateEvaluator}
-              />
-            )}
-          </div>
-
-          {!judgeAgentId && (
-            <div className="flex items-start gap-2 rounded-md bg-amber-50 p-2 dark:bg-amber-950/20">
-              <AlertTriangleIcon className="mt-0.5 size-3 shrink-0 text-amber-500" />
-              <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                请选择一个 Judge Agent
-              </p>
-            </div>
-          )}
-
-          {judgeAgentId && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-medium text-muted-foreground">
-                  Judge Model
-                </label>
-                <Select value={resolvedJudgeModelConfigId} onValueChange={setSelectedJudgeModelConfigId}>
-                  <SelectTrigger className="mt-0.5 h-8 text-xs">
-                    <SelectValue placeholder="Select model..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {judgeModelConfigs.map((mc) => (
-                      <SelectItem key={mc.id} value={mc.id} className="text-xs">
-                        {mc.name}
-                        {mc.isActive ? " (Active)" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-[10px] font-medium text-muted-foreground">
-                  Judge Config
-                </label>
-                <Select value={resolvedJudgeConfigId} onValueChange={setSelectedJudgeConfigId}>
-                  <SelectTrigger className="mt-0.5 h-8 text-xs">
-                    <SelectValue placeholder="Select config..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {judgeJudgeConfigs.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="text-xs">
-                        {c.name}
-                        {c.isActive ? " (Active)" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Area 3: Run settings */}
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="judgeOnFail"
-              checked={!!assertionFailConfig.judgeOnFail}
-              onCheckedChange={(v) =>
-                setAssertionFailConfig((prev) => ({ ...prev, judgeOnFail: v }))
-              }
-            />
-            <Label htmlFor="judgeOnFail" className="text-xs">
-              断言失败仍执行评估
-            </Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="judgeTurnOnFail"
-              checked={!!assertionFailConfig.judgeTurnOnFail}
-              onCheckedChange={(v) =>
-                setAssertionFailConfig((prev) => ({ ...prev, judgeTurnOnFail: v }))
-              }
-            />
-            <Label htmlFor="judgeTurnOnFail" className="text-xs">
-              单轮断言失败仍评估该轮
-            </Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="stopOnTurnFail"
-              checked={!!assertionFailConfig.stopOnTurnFail}
-              onCheckedChange={(v) =>
-                setAssertionFailConfig((prev) => ({ ...prev, stopOnTurnFail: v }))
-              }
-            />
-            <Label htmlFor="stopOnTurnFail" className="text-xs">
-              单轮断言失败停止后续轮
-            </Label>
-          </div>
-        </div>
-
-        {/* Area 4: Run action */}
+        {/* Run action */}
         <div className="flex items-center gap-2">
           <Button
             size="sm"
-            onClick={handleRunAll}
+            onClick={() => setRunDialogOpen(true)}
             disabled={isRunning || !canRun}
           >
             <PlayIcon className="mr-1 size-3" />
@@ -542,6 +360,17 @@ export function ResultsPanel({
           )}
         </div>
       </ScrollArea>
+
+      {agentId && (
+        <RunEvalDialog
+          open={runDialogOpen}
+          onOpenChange={setRunDialogOpen}
+          agentId={agentId}
+          mode="all"
+          caseCount={cases.length}
+          onConfirm={handleRunAllConfirm}
+        />
+      )}
     </div>
   );
 }

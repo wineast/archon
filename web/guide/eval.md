@@ -54,6 +54,7 @@
 | agentId | uuid | 被测 Agent |
 | chatModel | text | 对话模型 ID |
 | chatSystemPrompt | text | 对话系统提示词 |
+| chatTemperature | real | 对话温度 |
 | judgeAgentId | uuid | Judge Agent ID |
 | judgeModelConfigSnapshot | jsonb | Judge 模型配置快照 |
 | judgeConfigSnapshot | jsonb | Judge 评分维度快照 |
@@ -61,7 +62,7 @@
 | passedAssertions | integer | 通过断言数 |
 | averageScore | real | 平均评分 |
 
-> 运行记录通过快照保存 Judge 配置，确保历史记录不受后续修改影响。
+> 运行记录通过快照保存所有配置（含 chatTemperature），确保历史记录不受后续修改影响。
 
 ### judgeConfigs 表
 
@@ -75,8 +76,8 @@
 | POST | `/api/eval/cases` | 创建用例 |
 | PATCH | `/api/eval/cases/[id]` | 更新用例 |
 | DELETE | `/api/eval/cases/[id]` | 删除用例 |
-| POST | `/api/eval/run` | 创建评测运行记录 |
-| POST | `/api/eval/run/[runId]/case` | 执行单个用例 |
+| POST | `/api/eval/run` | 创建评测运行记录（服务端自动解析 active 配置，请求只需 agentId + judgeAgentId） |
+| POST | `/api/eval/run/[runId]/case` | 执行单个用例（从 run 记录读取配置快照，请求只需 case + templateVars + toolNames） |
 | PATCH | `/api/eval/run/[runId]` | 完成运行（汇总统计） |
 | GET | `/api/eval/runs?agentId=xxx` | 列出运行记录 |
 | GET | `/api/eval/resolve-judge?agentId=xxx` | 解析 evaluator 槽位得到 Judge Agent |
@@ -87,11 +88,9 @@
 
 - **Cases**：管理测试用例，支持 tag 筛选
 - **Results**：运行评测并查看结果
-  - 区域 1：被测 Agent 的 Model Config 选择器
-  - 区域 2：Judge 配置（Judge Agent 信息 + Model Config 选择器 + Judge Config 选择器）
-  - 区域 3：运行设置（断言失败行为开关）
-  - 区域 4：Run All 按钮 + 进度条
-  - 如果 evaluator 槽位未配置，显示引导提示
+  - Run All 按钮打开 **RunEvalDialog** 弹窗，选择 Judge Agent 和断言设置后确认执行
+  - 被测 Agent 和 Judge Agent 的 Model Config / Judge Config 均自动使用 Active 配置，无需手动选择
+  - 进度条 + 结果展示 + 历史记录
 - **Benchmark**：趋势追踪、运行对比、跨模型分析（详见 [benchmark.md](./benchmark.md)）
 
 Judge 配置（评分维度）在 Judge Agent 的 Build 页面 **Judge Tab** 中管理，详见 [judge-config.md](./judge-config.md)。

@@ -115,6 +115,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - **生产部署**：只用 `make db-migrate`，禁止 `db-push`——迁移文件是上线唯一通道
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 - 详见 `web/guide/production-database.md`
+- **查询版本化资源（tools、functions、components、datasets、wiki、schemas 等）时必须加 `versionId` 过滤**——这些资源按 version 隔离，缺少 `versionId` 条件会导致跨 Agent/跨版本数据混入。标准模式：`eq(table.versionId, versionId)` + 其他条件（如 `eq(table.enabled, true)`, `isNull(table.deletedAt)`）
 
 ### 资源共享池
 - **所有资源都必须存在于数据库中**，禁止前端硬编码资源列表（如 `BUILTIN_FUNCTIONS`、`BUILTIN_COMPONENTS` 常量）
