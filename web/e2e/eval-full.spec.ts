@@ -2,17 +2,25 @@ import { setupClerkTestingToken } from "@clerk/testing/playwright"
 import { test, expect, type Page, type Locator } from "@playwright/test"
 
 /**
- * E2E: Comprehensive evaluation flow — covers all three modes, assertion types, and batch run.
+ * E2E: Comprehensive evaluation flow — covers all three modes, assertion types,
+ * tag filtering, import, and batch run.
  *
  * Cases created:
- *   1. math_basic     (single)     — contains "4"         → should pass
- *   2. capital_regex   (single)     — regex "Paris"        → should pass
- *   3. fail_case       (single)     — contains "banana"    → should fail
- *   4. seq_memory      (sequential) — 2 user turns, Turn 2 contains "Alice" + judge
- *   5. injected_ctx    (injected)   — inject history, last question, contains "7890"
- *   6. tool_call       (single)     — tool-called "get_lucky_number" → should pass
+ *   1. math_basic        (single)     — contains "4"             → should pass  [tag: math]
+ *   2. capital_regex      (single)     — regex "Paris"            → should pass  [tag: math]
+ *   3. fail_case          (single)     — contains "banana"        → should fail  [tag: math]
+ *   4. seq_memory         (sequential) — 2 user turns, contains "Alice" + judge [tag: context]
+ *   5. injected_ctx       (injected)   — inject history, contains "7890"        [tag: context]
+ *   6. tool_call          (single)     — tool-called "get_lucky_number"         [tag: tool]
+ *   7. injected_tool_ctx  (injected)   — tool call in history, contains "42"    [tag: tool]
+ *   8. import_test        (injected)   — imported turns, contains "2"           [tag: math]
  *
- * Expected: 5 pass, 1 fail → pass rate 5/6
+ * Tag groups:
+ *   math(4): 1,2,3,8    context(2): 4,5    tool(2): 6,7
+ *
+ * Expected:
+ *   Tagged "math" run: 3 pass, 1 fail → pass rate 3/4
+ *   Full run:          7 pass, 1 fail → pass rate 7/8
  */
 
 const TIMESTAMP = Date.now()
@@ -167,6 +175,59 @@ async function selectCaseInSidebar(page: Page, caseName: string) {
   // Cases are rendered as buttons with the case name text
   await page.locator("button", { hasText: caseName }).and(page.locator(":visible")).click()
   await page.waitForTimeout(500)
+}
+
+/**
+ * Add a tag to the current case via the tag input.
+ */
+async function addTag(page: Page, tag: string) {
+  const tagInput = page.getByPlaceholder("Add tag...").and(page.locator(":visible"))
+  await tagInput.fill(tag)
+  await page.waitForTimeout(100)
+  await page.keyboard.press("Enter")
+  await page.waitForTimeout(300)
+}
+
+/**
+ * Add a tool call to an assistant turn by index.
+ */
+async function addToolCallToTurn(
+  page: Page,
+  turnIndex: number,
+  toolCall: { name: string; args: string; result: string }
+) {
+  const turnCards = page.getByTestId("turn-card").and(page.locator(":visible"))
+  const card = turnCards.nth(turnIndex)
+  await card.getByRole("button", { name: /Add Tool Call/i }).click()
+  await page.waitForTimeout(200)
+  await card.getByPlaceholder("Tool name").last().fill(toolCall.name)
+  await card.getByPlaceholder('{"key": "value"}').last().fill(toolCall.args)
+  await card.getByPlaceholder("Tool result...").last().fill(toolCall.result)
+}
+
+/**
+ * Import turns from UIMessage[] JSON via the Import dialog.
+ */
+async function importTurns(page: Page, json: string) {
+  await page.getByRole("button", { name: "Import", exact: true }).and(page.locator(":visible")).click()
+  const dialog = page.getByRole("dialog")
+  await expect(dialog).toBeVisible({ timeout: 5_000 })
+  await dialog.locator("textarea").fill(json)
+  await page.waitForTimeout(200)
+  await dialog.getByRole("button", { name: "Import" }).click()
+  await expect(dialog).not.toBeVisible({ timeout: 5_000 })
+  await page.waitForTimeout(300)
+}
+
+/**
+ * Toggle a tag filter pill in the sidebar.
+ */
+async function toggleTag(page: Page, tagName: string) {
+  await page
+    .locator("button.rounded-full", { hasText: tagName })
+    .and(page.locator(":visible"))
+    .click()
+  await page.waitForTimeout(300)
 }
 
 // ── Test ──────────────────────────────────────────────
@@ -349,7 +410,7 @@ test.describe("Eval Full E2E", () => {
     await page.waitForTimeout(500)
 
     // ═══════════════════════════════════════════════════════
-    // CASE 1: math_basic (single mode, contains "4") — PASS
+    // CASE 1: math_basic (single mode, contains "4") — PASS [tag: math]
     // ═══════════════════════════════════════════════════════
 
     await createCase(page, "math_basic")
@@ -357,28 +418,31 @@ test.describe("Eval Full E2E", () => {
     await visible(page, "textarea-case-input").fill("What is 2+2? Please answer with just the number.")
     await visible(page, "textarea-expected-output").fill("4")
     await addAssertion(page, "contains", "4")
+    await addTag(page, "math")
     await saveCase(page)
 
     // ═══════════════════════════════════════════════════════
-    // CASE 2: capital_regex (single mode, regex "Paris") — PASS
+    // CASE 2: capital_regex (single mode, regex "Paris") — PASS [tag: math]
     // ═══════════════════════════════════════════════════════
 
     await createCase(page, "capital_regex")
     await visible(page, "textarea-case-input").fill("What is the capital of France? Answer in one word.")
     await addAssertion(page, "regex", "Paris")
+    await addTag(page, "math")
     await saveCase(page)
 
     // ═══════════════════════════════════════════════════════
-    // CASE 3: fail_case (single mode, contains "banana") — FAIL
+    // CASE 3: fail_case (single mode, contains "banana") — FAIL [tag: math]
     // ═══════════════════════════════════════════════════════
 
     await createCase(page, "fail_case")
     await visible(page, "textarea-case-input").fill("What is 2+2?")
     await addAssertion(page, "contains", "banana")
+    await addTag(page, "math")
     await saveCase(page)
 
     // ═══════════════════════════════════════════════════════
-    // CASE 4: seq_memory (sequential, 2 user turns) — PASS
+    // CASE 4: seq_memory (sequential, 2 user turns) — PASS [tag: context]
     // ═══════════════════════════════════════════════════════
 
     await createCase(page, "seq_memory")
@@ -398,11 +462,12 @@ test.describe("Eval Full E2E", () => {
     // Toggle judge on Turn 2
     await toggleTurnJudge(page, 1)
 
+    await addTag(page, "context")
     // Save
     await saveCase(page)
 
     // ═══════════════════════════════════════════════════════
-    // CASE 5: injected_ctx (injected mode, 3 turns) — PASS
+    // CASE 5: injected_ctx (injected mode, 3 turns) — PASS [tag: context]
     // ═══════════════════════════════════════════════════════
 
     await createCase(page, "injected_ctx")
@@ -424,11 +489,12 @@ test.describe("Eval Full E2E", () => {
     // Case-level assertion: contains "7890"
     await addAssertion(page, "contains", "7890")
 
+    await addTag(page, "context")
     // Save
     await saveCase(page)
 
     // ═══════════════════════════════════════════════════════
-    // CASE 6: tool_call (single mode, tool-called assertion) — PASS
+    // CASE 6: tool_call (single mode, tool-called assertion) — PASS [tag: tool]
     // ═══════════════════════════════════════════════════════
 
     await createCase(page, "tool_call")
@@ -437,14 +503,93 @@ test.describe("Eval Full E2E", () => {
       "What is my lucky number? Please use the get_lucky_number tool to find out."
     )
     await addAssertion(page, "tool-called", "get_lucky_number")
+    await addTag(page, "tool")
     await saveCase(page)
 
     // ═══════════════════════════════════════════════════════
-    // RUN ALL: Switch to Results → Run All → Select Judge → Confirm
+    // CASE 7: injected_tool_ctx (injected, tool call history) — PASS [tag: tool]
+    // ═══════════════════════════════════════════════════════
+
+    await createCase(page, "injected_tool_ctx")
+    await setMode(page, "injected")
+
+    // Turn 0 (user): "What is my lucky number?"
+    await addTurn(page)
+    await fillTurnContent(page, 0, "What is my lucky number?")
+
+    // Turn 1 (assistant): content + tool call
+    await addTurn(page)
+    await setTurnRole(page, 1, "assistant")
+    await fillTurnContent(page, 1, "Your lucky number is 42!")
+    await addToolCallToTurn(page, 1, {
+      name: "get_lucky_number",
+      args: "{}",
+      result: '{"lucky_number": 42}',
+    })
+
+    // Turn 2 (user): "What was my lucky number again?"
+    await addTurn(page)
+    await fillTurnContent(page, 2, "What was my lucky number again? Just say the number.")
+
+    // Case-level assertion: contains "42"
+    await addAssertion(page, "contains", "42")
+
+    await addTag(page, "tool")
+    await saveCase(page)
+
+    // ═══════════════════════════════════════════════════════
+    // CASE 8: import_test (injected, imported turns) — PASS [tag: math]
+    // ═══════════════════════════════════════════════════════
+
+    await createCase(page, "import_test")
+    await setMode(page, "injected")
+
+    // Import UIMessage[] JSON
+    const importJson = JSON.stringify([
+      { id: "1", role: "user", parts: [{ type: "text", text: "Hello there" }] },
+      { id: "2", role: "assistant", parts: [{ type: "text", text: "Hi! How can I help?" }] },
+      { id: "3", role: "user", parts: [{ type: "text", text: "What is 1+1?" }] },
+    ])
+    await importTurns(page, importJson)
+
+    // Verify imported turns
+    const turnCards = page.getByTestId("turn-card").and(page.locator(":visible"))
+    await expect(turnCards).toHaveCount(3, { timeout: 5_000 })
+    await expect(turnCards.nth(0).getByTestId("textarea-turn-content")).toHaveValue("Hello there")
+    await expect(turnCards.nth(1).getByTestId("textarea-turn-content")).toHaveValue("Hi! How can I help?")
+    await expect(turnCards.nth(2).getByTestId("textarea-turn-content")).toHaveValue("What is 1+1?")
+
+    // Case-level assertion: contains "2"
+    await addAssertion(page, "contains", "2")
+
+    await addTag(page, "math")
+    await saveCase(page)
+
+    // ═══════════════════════════════════════════════════════
+    // TAG FILTERING: Verify sidebar tag filter changes Run All count
     // ═══════════════════════════════════════════════════════
 
     await visible(page, "btn-eval-results").click()
     await page.waitForTimeout(500)
+
+    // No tags selected → all 8 cases
+    await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(8\)/, { timeout: 5_000 })
+
+    // Click "math" → 4 cases (math_basic, capital_regex, fail_case, import_test)
+    await toggleTag(page, "math")
+    await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(4\)/, { timeout: 5_000 })
+
+    // Add "tool" → 6 cases (math 4 + tool 2, no overlap)
+    await toggleTag(page, "tool")
+    await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(6\)/, { timeout: 5_000 })
+
+    // Remove "tool" → back to 4 (just math)
+    await toggleTag(page, "tool")
+    await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(4\)/, { timeout: 5_000 })
+
+    // ═══════════════════════════════════════════════════════
+    // TAGGED RUN ALL: math tag (4 cases) → expect 3/4 pass
+    // ═══════════════════════════════════════════════════════
 
     await visible(page, "btn-run-all").click()
 
@@ -461,22 +606,35 @@ test.describe("Eval Full E2E", () => {
     await page.getByTestId("btn-confirm-run").click()
     await expect(runDialog).not.toBeVisible({ timeout: 10_000 })
 
+    // Wait for pass rate to appear (run completed) — up to 300s for real LLM calls
+    const passRate1 = page.getByTestId("run-pass-rate").first()
+    await expect(passRate1).toBeVisible({ timeout: 300_000 })
+    const passRateText1 = await passRate1.textContent()
+    // Should show x/4 where x >= 2 (at least the deterministic cases pass)
+    expect(passRateText1).toMatch(/[2-3]\/4/)
+
     // ═══════════════════════════════════════════════════════
-    // VERIFY RESULTS: Wait for completion and check outcomes
+    // CLEAR TAGS → FULL RUN ALL: all 8 cases → expect 7/8 pass
     // ═══════════════════════════════════════════════════════
 
-    // Wait for at least one "Passed" badge in the expanded results — up to 300s for 6 cases with real API
-    await expect(page.getByTestId("badge-passed").first()).toBeVisible({ timeout: 300_000 })
+    // Deselect "math" to clear all tag filters
+    await toggleTag(page, "math")
+    await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(8\)/, { timeout: 5_000 })
 
-    // Wait for all cases to complete — expect at least one "Failed" badge too
-    await expect(page.getByTestId("badge-failed").first()).toBeVisible({ timeout: 300_000 })
+    // Run All (full)
+    await visible(page, "btn-run-all").click()
+    const runDialog2 = page.getByRole("dialog")
+    await expect(runDialog2).toBeVisible({ timeout: 5_000 })
 
-    // Wait for the run to fully complete — pass rate appears only after all cases finish
-    const passRate = page.getByTestId("run-pass-rate").first()
-    await expect(passRate).toBeVisible({ timeout: 300_000 })
-    const passRateText = await passRate.textContent()
-    // Should show x/6 where x >= 4 (at least the deterministic cases pass)
-    expect(passRateText).toMatch(/[4-5]\/6/)
+    // Judge already selected from previous run — just confirm
+    await page.getByTestId("btn-confirm-run").click()
+    await expect(runDialog2).not.toBeVisible({ timeout: 10_000 })
+
+    // Wait for the latest run's pass rate — should match x/8
+    await expect(page.getByTestId("run-pass-rate").first()).toHaveText(/\d\/8/, { timeout: 300_000 })
+    const passRateText2 = await page.getByTestId("run-pass-rate").first().textContent()
+    // Should show x/8 where x >= 5 (at least the deterministic cases pass)
+    expect(passRateText2).toMatch(/[5-7]\/8/)
 
     // Verify score exists
     await expect(page.getByTestId("run-score").first()).toHaveText(/[1-9]\d?\/10/)

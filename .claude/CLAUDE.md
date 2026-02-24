@@ -156,6 +156,9 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - **文件头 JSDoc 保留**：概述该 spec 覆盖的场景和预期结果，相当于行为规范的精简版
 - **公共 helper 提取到 `web/e2e/helpers/`**：如登录、创建 Agent、配置模型等跨 spec 复用的操作，避免每个 spec 文件重复定义
 - **不需要独立的 BDD 文档**：`test.describe` + `test.step` + 文件头 JSDoc 已覆盖行为描述，不维护额外的 `.feature` / BDD `.md` 文件
+- **Monaco 编辑器不能用 `.fill()` / `.type()`**：Playwright 的标准输入方法对 Monaco 无效（Monaco 用自定义 input 机制，不响应标准 DOM 事件）。必须通过 `page.evaluate()` 调用 Monaco API：`monaco.editor.getModels()` 遍历找到目标 model，调用 `model.setValue(code)` 写入内容。识别目标 model 可通过内容判断（如空内容 `!model.getValue().trim()` 表示未填写的 handler）
+- **Eval Run 结果验证不要依赖 `badge-passed` / `badge-failed`**：运行完成后展开的 detail 可能只有部分 ResultCard（auto-refresh 在 run 状态变为 completed 时停止，最后一次 fetch 可能拿到的是不完整的结果）。应直接验证 `run-pass-rate`（显示在 History 行标题上，run 完成后立即可见）
+- **Eval E2E 中 `getByRole("button", { name })` 注意 sidebar case 名干扰**：sidebar 中 case 按钮的文本（如 "Import Test"）会匹配 `/Import/i`，导致 strict mode violation。需用 `{ name: "Import", exact: true }` 精确匹配
 
 ### Chat Persistence
 - 分层持久化：session 创建 + 用户消息在 `streamText()` 前 `await` 保存（~10-50ms）；AI 响应消息保留在 `onFinish → after()` 中异步保存
