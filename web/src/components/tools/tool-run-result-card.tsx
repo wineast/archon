@@ -4,15 +4,20 @@ import { useState } from "react";
 import { CheckCircle2Icon, ChevronDownIcon, XCircleIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ToolTestRunResultRow } from "@/db/schema";
+import { ToolComponentPreview, type ToolComponentPreviewData } from "./tool-component-preview";
 
 interface ToolRunResultCardProps {
   result: ToolTestRunResultRow;
   defaultOpen?: boolean;
+  toolName?: string;
+  componentPreview?: ToolComponentPreviewData | null;
 }
 
 export function ToolRunResultCard({
   result,
   defaultOpen = false,
+  toolName,
+  componentPreview,
 }: ToolRunResultCardProps) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -84,6 +89,14 @@ export function ToolRunResultCard({
               }`}>
                 {JSON.stringify(result.output, null, 2)}
               </pre>
+              {!result.error && componentPreview && toolName && (
+                <ToolComponentPreview
+                  toolName={toolName}
+                  input={result.input}
+                  output={result.output}
+                  preview={componentPreview}
+                />
+              )}
             </div>
           )}
 

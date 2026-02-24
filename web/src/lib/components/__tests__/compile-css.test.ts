@@ -90,7 +90,7 @@ describe("extractCandidates", () => {
 // extractUtilityCss
 // ---------------------------------------------------------------------------
 describe("extractUtilityCss", () => {
-  it("extracts @layer utilities block", () => {
+  it("extracts inner rules from @layer utilities (without the wrapper)", () => {
     const fullCss = `
 :root { --color-primary: #000; }
 @layer base { body { margin: 0; } }
@@ -100,7 +100,7 @@ describe("extractUtilityCss", () => {
 }
 `;
     const result = extractUtilityCss(fullCss);
-    expect(result).toContain("@layer utilities");
+    expect(result).not.toContain("@layer utilities");
     expect(result).toContain(".flex");
     expect(result).toContain(".p-4");
     expect(result).not.toContain(":root");
@@ -117,7 +117,7 @@ describe("extractUtilityCss", () => {
 }
 `;
     const result = extractUtilityCss(fullCss);
-    expect(result).toContain("@layer utilities");
+    expect(result).not.toContain("@layer utilities");
     expect(result).toContain("hover");
     expect(result).toContain("@media");
     expect(result).toContain("md");
@@ -178,7 +178,7 @@ describe("compileCssForComponent", () => {
   it("generates CSS for basic Tailwind classes", async () => {
     const source = `<div className="flex items-center gap-2 p-4">hello</div>`;
     const css = await compileCssForComponent(source);
-    expect(css).toContain("@layer utilities");
+    expect(css).not.toContain("@layer utilities");
     expect(css).toContain("flex");
     expect(css).toContain("padding");
   });
@@ -225,7 +225,7 @@ describe("compileCssForComponent", () => {
     `;
     const css = await compileCssForComponent(source);
     expect(css.length).toBeGreaterThan(0);
-    expect(css).toContain("@layer utilities");
+    expect(css).not.toContain("@layer utilities");
     // Should contain common utilities used above
     expect(css).toContain("rounded");
     expect(css).toContain("padding");

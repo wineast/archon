@@ -309,7 +309,10 @@ function EmbedChat({
     if (cssBlocks.length === 0) return;
     const style = document.createElement("style");
     style.setAttribute("data-dynamic-components", "true");
-    style.textContent = cssBlocks.join("\n");
+    // Wrap in @layer components — lower priority than global @layer utilities,
+    // so duplicate standard utilities are harmless while component-specific
+    // classes (e.g. arbitrary values) still work.
+    style.textContent = `@layer components {\n${cssBlocks.join("\n")}\n}`;
     document.head.appendChild(style);
     return () => {
       style.remove();
