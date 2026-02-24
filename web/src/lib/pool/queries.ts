@@ -357,6 +357,7 @@ export async function getAgentFunctions(
  */
 export async function getReferencedBuiltinFunctionKeys(
   agentId: string,
+  versionId?: string,
 ): Promise<Set<string>> {
   const rows = await db
     .select({ key: functions.key })
@@ -364,7 +365,9 @@ export async function getReferencedBuiltinFunctionKeys(
     .innerJoin(functions, eq(functions.id, agentResourceRefs.resourceId))
     .where(
       and(
-        eq(agentResourceRefs.agentId, agentId),
+        ...(versionId
+          ? [eq(agentResourceRefs.versionId, versionId)]
+          : [eq(agentResourceRefs.agentId, agentId)]),
         eq(agentResourceRefs.resourceType, "function"),
         isNull(functions.agentId),
         eq(functions.origin, "builtin"),

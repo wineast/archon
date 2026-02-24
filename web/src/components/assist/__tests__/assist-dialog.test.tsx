@@ -25,6 +25,13 @@ vi.mock("@/lib/slots/hooks", () => ({
   useAgentSlots: () => ({ slots: mockSlots, isLoading: false, error: null, mutate: vi.fn() }),
 }));
 
+// Mock SlotAgentSelect
+vi.mock("@/components/slots/slot-agent-select", () => ({
+  SlotAgentSelect: ({ slotKey }: { slotKey: string }) => (
+    <div data-testid={`slot-select-${slotKey}`}>SlotAgentSelect</div>
+  ),
+}));
+
 // Mock editors — render simple textareas to avoid Monaco dependency
 vi.mock("@/components/editors/js-editor", () => ({
   JsEditor: ({ value, onChange, readOnly }: { value: string; onChange: (v: string) => void; readOnly?: boolean }) => (
@@ -59,6 +66,7 @@ function renderDialog(overrides: Partial<React.ComponentProps<typeof AssistDialo
     content: "original content",
     onApply: vi.fn(),
     agentId: "agent-1",
+    orgId: "org-1",
     editorType: "md" as const,
     title: "Test Dialog",
     fieldContext: "system-prompt",
@@ -91,6 +99,16 @@ describe("AssistDialog", () => {
     cleanup();
     renderDialog({ editorType: "js", content: "code" });
     expect(screen.getByTestId("js-editor")).toBeInTheDocument();
+  });
+
+  it("renders SlotAgentSelect when agentId and orgId are provided", () => {
+    renderDialog();
+    expect(screen.getByTestId("slot-select-assist")).toBeInTheDocument();
+  });
+
+  it("does not render SlotAgentSelect when orgId is missing", () => {
+    renderDialog({ orgId: undefined });
+    expect(screen.queryByTestId("slot-select-assist")).not.toBeInTheDocument();
   });
 
   it("renders iframe with correct src when assist agent ID is resolved", () => {

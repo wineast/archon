@@ -18,6 +18,7 @@ export function FunctionCodeAssistDialog({
   code,
   onApply,
   agentId,
+  orgId,
 }: FunctionCodeAssistDialogProps) {
   return (
     <AssistDialog
@@ -26,6 +27,7 @@ export function FunctionCodeAssistDialog({
       content={code}
       onApply={onApply}
       agentId={agentId}
+      orgId={orgId}
       editorType="js"
       title="AI 辅助编辑函数"
       fieldContext="function-code"

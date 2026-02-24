@@ -18,6 +18,7 @@ export function SchemaCodeAssistDialog({
   schema,
   onApply,
   agentId,
+  orgId,
 }: SchemaCodeAssistDialogProps) {
   return (
     <AssistDialog
@@ -26,6 +27,7 @@ export function SchemaCodeAssistDialog({
       content={schema}
       onApply={onApply}
       agentId={agentId}
+      orgId={orgId}
       editorType="json"
       title="AI 辅助编辑 Schema"
       fieldContext="schema"

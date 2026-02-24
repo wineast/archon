@@ -286,6 +286,42 @@ describe("resolveDatasets", () => {
   });
 });
 
+// ── topoSortDatasets: duplicate key regression ──
+
+describe("topoSortDatasets duplicate key handling", () => {
+  it("throws when duplicate keys are present (cross-version scenario)", () => {
+    // This simulates the bug where datasets from multiple versions share the same key.
+    // The fix prevents duplicates from reaching topoSort, but if they do arrive,
+    // topoSort still detects them as sorted.length !== records.length.
+    const records = [
+      { key: "company", data: "Acme Corp" },
+      { key: "company", data: "TechCorp" },
+    ];
+    expect(() => topoSortDatasets(records)).toThrow();
+  });
+
+  it("throws on duplicate keys even when mixed with unique datasets", () => {
+    const records = [
+      { key: "rates", data: { base: 4.5 } },
+      { key: "company", data: "Acme Corp" },
+      { key: "company", data: "TechCorp" },
+    ];
+    expect(() => topoSortDatasets(records)).toThrow();
+  });
+
+  it("error message for duplicate keys is 'Circular dependency' (known limitation)", () => {
+    // Note: When duplicate keys arrive, byKey Map deduplicates them so sorted has
+    // fewer items than records. The remaining filter also matches by key, so remaining
+    // is empty. This produces "Circular dependency detected among datasets: " with
+    // empty list — misleading but harmless since the fix prevents duplicates upstream.
+    const records = [
+      { key: "x", data: "v1" },
+      { key: "x", data: "v2" },
+    ];
+    expect(() => topoSortDatasets(records)).toThrow(/Circular dependency/);
+  });
+});
+
 // ── validateNoCycle ──
 
 describe("validateNoCycle", () => {

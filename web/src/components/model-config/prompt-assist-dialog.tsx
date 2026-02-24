@@ -17,6 +17,7 @@ export function PromptAssistDialog({
   systemPrompt,
   onApply,
   agentId,
+  orgId,
 }: PromptAssistDialogProps) {
   return (
     <AssistDialog
@@ -25,6 +26,7 @@ export function PromptAssistDialog({
       content={systemPrompt}
       onApply={onApply}
       agentId={agentId}
+      orgId={orgId}
       editorType="md"
       title="AI 辅助编辑提示词"
       fieldContext="system-prompt"
