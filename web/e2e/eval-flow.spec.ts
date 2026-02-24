@@ -23,20 +23,24 @@ const TIMESTAMP = Date.now()
 const TEST_AGENT_NAME = `E2E Test Agent ${TIMESTAMP}`
 const JUDGE_AGENT_NAME = `E2E Judge Agent ${TIMESTAMP}`
 
+const TAG = "[eval-flow]"
+const log = (...args: unknown[]) => console.log(TAG, ...args)
+
 // ── Helpers ──────────────────────────────────────────────
 
 async function waitForStable(page: Page) {
   await page.waitForLoadState("networkidle")
 }
 
-/** Open agent card's dropdown menu and click "构建" to enter build page */
+/** Navigate to agent build page by extracting href from card */
 async function navigateToAgentBuild(page: Page, agentName: string) {
-  // Find the agent card link containing the agent name
   const card = page.locator("a", { hasText: agentName })
-  await card.getByTestId("btn-agent-menu").click({ force: true })
-  await page.waitForTimeout(300)
-  // Click "构建" (build) menu item
-  await page.getByTestId("menu-item-build").click()
+  await card.waitFor({ state: "visible", timeout: 10_000 })
+  const href = await card.getAttribute("href")
+  if (!href) throw new Error(`Agent card href not found for "${agentName}"`)
+  const buildUrl = href.replace(/\/chat$/, "/build")
+  log(`navigateToAgentBuild → ${buildUrl}`)
+  await page.goto(buildUrl)
   await waitForStable(page)
 }
 
@@ -52,99 +56,84 @@ test.describe("Eval E2E Flow", () => {
   test("full evaluation lifecycle", async ({ page }) => {
     await setupClerkTestingToken({ page })
 
-    // ── Step 1: Login & land on agents page ──
+    log("打开首页")
     await page.goto("/")
     await waitForStable(page)
     await expect(page.locator("header")).toBeVisible({ timeout: 15_000 })
+    log("登录成功")
 
-    // ── Step 2: Create "E2E Test Agent" ──
+    log(`创建测试 Agent: ${TEST_AGENT_NAME}`)
     await page.getByTestId("btn-create-agent").click()
-
     const dialog = page.getByRole("dialog")
     await expect(dialog).toBeVisible({ timeout: 5_000 })
     await dialog.locator("#agent-name").fill(TEST_AGENT_NAME)
     await page.waitForTimeout(300)
     await dialog.getByTestId("btn-submit-agent").click()
     await expect(dialog).not.toBeVisible({ timeout: 10_000 })
+    log("测试 Agent 创建完成")
 
-    // Agent created — go to Org Settings directly from homepage
-    // ── Step 3: Org Settings → Configure DeepSeek API Key ──
+    log("进入组织设置 → API Keys")
     await page.getByTestId("link-org-settings").click()
     await waitForStable(page)
-
-    // Click "API Keys" tab in settings sidebar
     await page.getByTestId("tab-api-keys").click()
     await page.waitForTimeout(500)
-
-    // Find DeepSeek row and click configure
     await page.getByTestId("btn-configure-deepseek").click()
     await page.waitForTimeout(300)
-
-    // Fill API key & save
+    log("填入 DeepSeek API Key")
     await page.getByTestId("input-api-key").fill(process.env.E2E_DEEPSEEK_API_KEY!)
     await page.getByTestId("btn-save-api-key").click()
     await page.waitForTimeout(1_000)
-
-    // Verify saved — masked key visible
     await expect(page.getByTestId("api-key-row-deepseek")).not.toContainText("未配置", { timeout: 5_000 })
+    log("API Key 保存成功")
 
-    // ── Step 4: Back to E2E Test Agent → Model Config ──
     await page.goto("/")
     await waitForStable(page)
     await navigateToAgentBuild(page, TEST_AGENT_NAME)
-
-    // Click Model Config tab
+    log("进入 Model Config tab")
     await page.getByTestId("tab-model-config").click()
     await page.waitForTimeout(500)
 
-    // Create new model config
+    log("创建 model config: deepseek_chat")
     await visible(page, "btn-new-model-config").click()
     const mcDialog = page.getByRole("dialog")
     await expect(mcDialog).toBeVisible({ timeout: 5_000 })
-
-    // Fill key → auto-generates name
     await mcDialog.locator("input").first().fill("deepseek_chat")
     await page.waitForTimeout(300)
     await mcDialog.getByTestId("btn-create-config").click()
     await expect(mcDialog).not.toBeVisible({ timeout: 5_000 })
     await page.waitForTimeout(500)
 
-    // Select DeepSeek model via combobox
+    log("选择 deepseek-v3 模型")
     await visible(page, "combobox-model").click()
     await page.waitForTimeout(300)
     await page.locator("input[placeholder*='Search']").fill("deepseek-v3")
     await page.waitForTimeout(500)
-    // Click first available deepseek model
     await page.locator("[cmdk-item]").first().click()
     await page.waitForTimeout(500)
-
-    // Save model config
     await visible(page, "btn-save").click()
     await page.waitForTimeout(1_000)
-
-    // Activate model config (new configs default to inactive)
+    log("激活 model config")
     await visible(page, "switch-activate").click()
     await page.waitForTimeout(1_000)
 
-    // ── Step 5: Home → Create "E2E Judge Agent" ──
+    log(`创建 Judge Agent: ${JUDGE_AGENT_NAME}`)
     await page.goto("/")
     await waitForStable(page)
     await page.getByTestId("btn-create-agent").click()
-
     const judgeDialog = page.getByRole("dialog")
     await expect(judgeDialog).toBeVisible({ timeout: 5_000 })
     await judgeDialog.locator("#agent-name").fill(JUDGE_AGENT_NAME)
     await page.waitForTimeout(300)
     await judgeDialog.getByTestId("btn-submit-agent").click()
     await expect(judgeDialog).not.toBeVisible({ timeout: 10_000 })
+    log("Judge Agent 创建完成")
 
-    // Enter Judge Agent → build page
     await navigateToAgentBuild(page, JUDGE_AGENT_NAME)
-
-    // ── Step 6: Judge Agent → Model Config → DeepSeek ──
+    log("进入 Judge Agent Model Config tab")
     await page.getByTestId("tab-model-config").click()
     await page.waitForTimeout(500)
 
+    log("创建 model config: deepseek_judge")
     await visible(page, "btn-new-model-config").click()
     const jmcDialog = page.getByRole("dialog")
     await expect(jmcDialog).toBeVisible({ timeout: 5_000 })
@@ -154,26 +143,24 @@ test.describe("Eval E2E Flow", () => {
     await expect(jmcDialog).not.toBeVisible({ timeout: 5_000 })
     await page.waitForTimeout(500)
 
-    // Select DeepSeek model
+    log("选择 deepseek-v3 模型")
     await visible(page, "combobox-model").click()
     await page.waitForTimeout(300)
     await page.locator("input[placeholder*='Search']").fill("deepseek-v3")
     await page.waitForTimeout(500)
     await page.locator("[cmdk-item]").first().click()
     await page.waitForTimeout(500)
-
-    // Save
     await visible(page, "btn-save").click()
     await page.waitForTimeout(1_000)
-
-    // Activate judge's model config
+    log("激活 Judge model config")
     await visible(page, "switch-activate").click()
     await page.waitForTimeout(1_000)
 
-    // ── Step 7: Judge Agent → Judge tab → Create Judge Config ──
+    log("进入 Judge tab")
     await page.getByTestId("tab-judge").click()
     await page.waitForTimeout(500)
 
+    log("创建 judge config: accuracy")
     await visible(page, "btn-new-judge-config").click()
     const jcDialog = page.getByRole("dialog")
     await expect(jcDialog).toBeVisible({ timeout: 5_000 })
@@ -183,34 +170,28 @@ test.describe("Eval E2E Flow", () => {
     await expect(jcDialog).not.toBeVisible({ timeout: 5_000 })
     await page.waitForTimeout(500)
 
-    // Add a dimension
+    log("添加 dimension: accuracy/Accuracy/1")
     await visible(page, "btn-add-dimension").click()
     await page.waitForTimeout(300)
-
-    // Fill dimension: key=accuracy, label=Accuracy, weight=1
     await page.locator("input[placeholder='key']:visible").fill("accuracy")
     await page.locator("input[placeholder='Label']:visible").fill("Accuracy")
     await page.locator("input[placeholder='Weight']:visible").fill("")
     await page.locator("input[placeholder='Weight']:visible").fill("1")
     await page.waitForTimeout(300)
-
-    // Save judge config
     await visible(page, "btn-save").click()
     await page.waitForTimeout(1_000)
-
-    // Activate judge config
+    log("激活 judge config")
     await visible(page, "switch-activate").click()
     await page.waitForTimeout(1_000)
 
-    // ── Step 8: Back to E2E Test Agent → Eval tab ──
     await page.goto("/")
     await waitForStable(page)
     await navigateToAgentBuild(page, TEST_AGENT_NAME)
-
+    log("进入 Eval tab")
     await page.getByTestId("tab-eval").click()
     await page.waitForTimeout(500)
 
-    // ── Step 9: Create Eval Case ──
+    log("创建 eval case: math_basic (contains 4)")
     await visible(page, "btn-new-case").click()
     const caseDialog = page.getByRole("dialog")
     await expect(caseDialog).toBeVisible({ timeout: 5_000 })
@@ -220,53 +201,40 @@ test.describe("Eval E2E Flow", () => {
     await expect(caseDialog).not.toBeVisible({ timeout: 5_000 })
     await page.waitForTimeout(500)
 
-    // Fill case input
     await visible(page, "textarea-case-input").fill("What is 2+2? Please answer with just the number.")
-
-    // Fill expected output
     await visible(page, "textarea-expected-output").fill("4")
-
-    // Add assertion: contains "4"
     await visible(page, "btn-add-assertion").click()
     await page.waitForTimeout(300)
-
-    // The assertion type defaults to "Contains" — fill value
     await visible(page, "input-assertion-value").fill("4")
-
-    // Save the case
     await visible(page, "btn-save").click()
     await page.waitForTimeout(1_000)
+    log("case 保存完成")
 
-    // ── Step 10: Switch to Results → Run All ──
+    log("切换到 Results 面板 → Run All")
     await visible(page, "btn-eval-results").click()
     await page.waitForTimeout(500)
-
-    // Click Run All
     await visible(page, "btn-run-all").click()
 
-    // RunEvalDialog opens
     const runDialog = page.getByRole("dialog")
     await expect(runDialog).toBeVisible({ timeout: 5_000 })
 
-    // Select Judge Agent via the slot select
+    log(`选择 Judge Agent: ${JUDGE_AGENT_NAME}`)
     await page.getByTestId("select-judge-agent").click()
     await page.waitForTimeout(500)
-
-    // Click on the Judge Agent option in the dropdown
     await page.getByRole("option", { name: new RegExp(JUDGE_AGENT_NAME) }).click()
     await page.waitForTimeout(500)
 
-    // Confirm run
+    log("确认运行")
     await page.getByTestId("btn-confirm-run").click()
     await expect(runDialog).not.toBeVisible({ timeout: 10_000 })
 
-    // ── Step 11 & 12: Wait for eval to complete and verify results ──
-    // The run may complete very quickly for simple cases (DeepSeek answers "2+2=?" in seconds).
-    // Instead of checking for "Running" state (which may flash too fast), wait directly for results.
-
-    // Wait for pass rate to appear (run completed) — up to 180s for real LLM call
+    log("等待 run 完成（最长 180s）...")
     await expect(page.getByTestId("run-pass-rate").first()).toBeVisible({ timeout: 180_000 })
+    const passRateText = await page.getByTestId("run-pass-rate").first().textContent()
+    log(`run 完成，pass rate: ${passRateText}`)
     await expect(page.getByTestId("run-pass-rate").first()).toHaveText(/1\/1/)
+    const scoreText = await page.getByTestId("run-score").first().textContent()
+    log(`score: ${scoreText}`)
     await expect(page.getByTestId("run-score").first()).toHaveText(/[1-9]\d?\/10/)
   })
 })

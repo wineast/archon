@@ -27,6 +27,9 @@ const TIMESTAMP = Date.now()
 const TEST_AGENT_NAME = `E2E Full Agent ${TIMESTAMP}`
 const JUDGE_AGENT_NAME = `E2E Full Judge ${TIMESTAMP}`
 
+const TAG = "[eval-full]"
+const log = (...args: unknown[]) => console.log(TAG, ...args)
+
 // ── Helpers ──────────────────────────────────────────────
 
 async function waitForStable(page: Page) {
@@ -35,9 +38,12 @@ async function waitForStable(page: Page) {
 
 async function navigateToAgentBuild(page: Page, agentName: string) {
   const card = page.locator("a", { hasText: agentName })
-  await card.getByTestId("btn-agent-menu").click({ force: true })
-  await page.waitForTimeout(300)
-  await page.getByTestId("menu-item-build").click()
+  await card.waitFor({ state: "visible", timeout: 10_000 })
+  const href = await card.getAttribute("href")
+  if (!href) throw new Error(`Agent card href not found for "${agentName}"`)
+  const buildUrl = href.replace(/\/chat$/, "/build")
+  log(`navigateToAgentBuild → ${buildUrl}`)
+  await page.goto(buildUrl)
   await waitForStable(page)
 }
 
@@ -240,12 +246,13 @@ test.describe("Eval Full E2E", () => {
     // SETUP: Same as eval-flow.spec.ts — Create agents, configure API keys, model configs
     // ═══════════════════════════════════════════════════════
 
-    // ── Step 1: Login ──
+    log("打开首页")
     await page.goto("/")
     await waitForStable(page)
     await expect(page.locator("header")).toBeVisible({ timeout: 15_000 })
+    log("登录成功")
 
-    // ── Step 2: Create Test Agent ──
+    log(`创建测试 Agent: ${TEST_AGENT_NAME}`)
     await page.getByTestId("btn-create-agent").click()
     const createDialog = page.getByRole("dialog")
     await expect(createDialog).toBeVisible({ timeout: 5_000 })
@@ -253,26 +260,30 @@ test.describe("Eval Full E2E", () => {
     await page.waitForTimeout(300)
     await createDialog.getByTestId("btn-submit-agent").click()
     await expect(createDialog).not.toBeVisible({ timeout: 10_000 })
+    log("测试 Agent 创建完成")
 
-    // ── Step 3: Org Settings → DeepSeek API Key ──
+    log("进入组织设置 → API Keys")
     await page.getByTestId("link-org-settings").click()
     await waitForStable(page)
     await page.getByTestId("tab-api-keys").click()
     await page.waitForTimeout(500)
     await page.getByTestId("btn-configure-deepseek").click()
     await page.waitForTimeout(300)
+    log("填入 DeepSeek API Key")
     await page.getByTestId("input-api-key").fill(process.env.E2E_DEEPSEEK_API_KEY!)
     await page.getByTestId("btn-save-api-key").click()
     await page.waitForTimeout(1_000)
     await expect(page.getByTestId("api-key-row-deepseek")).not.toContainText("未配置", { timeout: 5_000 })
+    log("API Key 保存成功")
 
-    // ── Step 4: Test Agent → Model Config ──
     await page.goto("/")
     await waitForStable(page)
     await navigateToAgentBuild(page, TEST_AGENT_NAME)
+    log("进入 Model Config tab")
     await page.getByTestId("tab-model-config").click()
     await page.waitForTimeout(500)
 
+    log("创建 model config: deepseek_chat")
     await visible(page, "btn-new-model-config").click()
     const mcDialog = page.getByRole("dialog")
     await expect(mcDialog).toBeVisible({ timeout: 5_000 })
@@ -282,6 +293,7 @@ test.describe("Eval Full E2E", () => {
     await expect(mcDialog).not.toBeVisible({ timeout: 5_000 })
     await page.waitForTimeout(500)
 
+    log("选择 deepseek-v3 模型")
     await visible(page, "combobox-model").click()
     await page.waitForTimeout(300)
     await page.locator("input[placeholder*='Search']").fill("deepseek-v3")
@@ -290,10 +302,11 @@ test.describe("Eval Full E2E", () => {
     await page.waitForTimeout(500)
     await visible(page, "btn-save").click()
     await page.waitForTimeout(1_000)
+    log("激活 model config")
     await visible(page, "switch-activate").click()
     await page.waitForTimeout(1_000)
 
-    // ── Step 5: Create Judge Agent ──
+    log(`创建 Judge Agent: ${JUDGE_AGENT_NAME}`)
     await page.goto("/")
     await waitForStable(page)
     await page.getByTestId("btn-create-agent").click()
@@ -303,12 +316,14 @@ test.describe("Eval Full E2E", () => {
     await page.waitForTimeout(300)
     await judgeDialog.getByTestId("btn-submit-agent").click()
     await expect(judgeDialog).not.toBeVisible({ timeout: 10_000 })
+    log("Judge Agent 创建完成")
 
-    // ── Step 6: Judge Agent → Model Config ──
     await navigateToAgentBuild(page, JUDGE_AGENT_NAME)
+    log("进入 Judge Agent Model Config tab")
     await page.getByTestId("tab-model-config").click()
     await page.waitForTimeout(500)
 
+    log("创建 model config: deepseek_judge")
     await visible(page, "btn-new-model-config").click()
     const jmcDialog = page.getByRole("dialog")
     await expect(jmcDialog).toBeVisible({ timeout: 5_000 })
@@ -318,6 +333,7 @@ test.describe("Eval Full E2E", () => {
     await expect(jmcDialog).not.toBeVisible({ timeout: 5_000 })
     await page.waitForTimeout(500)
 
+    log("选择 deepseek-v3 模型")
     await visible(page, "combobox-model").click()
     await page.waitForTimeout(300)
     await page.locator("input[placeholder*='Search']").fill("deepseek-v3")
@@ -326,13 +342,15 @@ test.describe("Eval Full E2E", () => {
     await page.waitForTimeout(500)
     await visible(page, "btn-save").click()
     await page.waitForTimeout(1_000)
+    log("激活 Judge model config")
     await visible(page, "switch-activate").click()
     await page.waitForTimeout(1_000)
 
-    // ── Step 7: Judge Agent → Judge Config ──
+    log("进入 Judge tab")
     await page.getByTestId("tab-judge").click()
     await page.waitForTimeout(500)
 
+    log("创建 judge config: accuracy")
     await visible(page, "btn-new-judge-config").click()
     const jcDialog = page.getByRole("dialog")
     await expect(jcDialog).toBeVisible({ timeout: 5_000 })
@@ -342,6 +360,7 @@ test.describe("Eval Full E2E", () => {
     await expect(jcDialog).not.toBeVisible({ timeout: 5_000 })
     await page.waitForTimeout(500)
 
+    log("添加 dimension: accuracy/Accuracy/1")
     await visible(page, "btn-add-dimension").click()
     await page.waitForTimeout(300)
     await page.locator("input[placeholder='key']:visible").fill("accuracy")
@@ -351,6 +370,7 @@ test.describe("Eval Full E2E", () => {
     await page.waitForTimeout(300)
     await visible(page, "btn-save").click()
     await page.waitForTimeout(1_000)
+    log("激活 judge config")
     await visible(page, "switch-activate").click()
     await page.waitForTimeout(1_000)
 
@@ -358,6 +378,7 @@ test.describe("Eval Full E2E", () => {
     // TOOL: Create get_lucky_number tool on Test Agent
     // ═══════════════════════════════════════════════════════
 
+    log("创建 get_lucky_number 工具")
     await page.goto("/")
     await waitForStable(page)
     await navigateToAgentBuild(page, TEST_AGENT_NAME)
@@ -398,7 +419,7 @@ test.describe("Eval Full E2E", () => {
     })
     await page.waitForTimeout(300)
 
-    // Save tool
+    log("保存工具")
     await page.getByRole("button", { name: "Save", exact: true }).click()
     await page.waitForTimeout(1_000)
 
@@ -406,6 +427,7 @@ test.describe("Eval Full E2E", () => {
     // EVAL: Switch to Eval Tab
     // ═══════════════════════════════════════════════════════
 
+    log("进入 Eval tab")
     await page.getByTestId("tab-eval").click()
     await page.waitForTimeout(500)
 
@@ -413,6 +435,7 @@ test.describe("Eval Full E2E", () => {
     // CASE 1: math_basic (single mode, contains "4") — PASS [tag: math]
     // ═══════════════════════════════════════════════════════
 
+    log("创建 case 1: math_basic (single, contains 4, tag:math)")
     await createCase(page, "math_basic")
     // Mode defaults to single — no change needed
     await visible(page, "textarea-case-input").fill("What is 2+2? Please answer with just the number.")
@@ -425,6 +448,7 @@ test.describe("Eval Full E2E", () => {
     // CASE 2: capital_regex (single mode, regex "Paris") — PASS [tag: math]
     // ═══════════════════════════════════════════════════════
 
+    log("创建 case 2: capital_regex (single, regex Paris, tag:math)")
     await createCase(page, "capital_regex")
     await visible(page, "textarea-case-input").fill("What is the capital of France? Answer in one word.")
     await addAssertion(page, "regex", "Paris")
@@ -435,6 +459,7 @@ test.describe("Eval Full E2E", () => {
     // CASE 3: fail_case (single mode, contains "banana") — FAIL [tag: math]
     // ═══════════════════════════════════════════════════════
 
+    log("创建 case 3: fail_case (single, contains banana→fail, tag:math)")
     await createCase(page, "fail_case")
     await visible(page, "textarea-case-input").fill("What is 2+2?")
     await addAssertion(page, "contains", "banana")
@@ -445,6 +470,7 @@ test.describe("Eval Full E2E", () => {
     // CASE 4: seq_memory (sequential, 2 user turns) — PASS [tag: context]
     // ═══════════════════════════════════════════════════════
 
+    log("创建 case 4: seq_memory (sequential, 2 turns, tag:context)")
     await createCase(page, "seq_memory")
     await setMode(page, "sequential")
 
@@ -470,6 +496,7 @@ test.describe("Eval Full E2E", () => {
     // CASE 5: injected_ctx (injected mode, 3 turns) — PASS [tag: context]
     // ═══════════════════════════════════════════════════════
 
+    log("创建 case 5: injected_ctx (injected, 3 turns, tag:context)")
     await createCase(page, "injected_ctx")
     await setMode(page, "injected")
 
@@ -497,6 +524,7 @@ test.describe("Eval Full E2E", () => {
     // CASE 6: tool_call (single mode, tool-called assertion) — PASS [tag: tool]
     // ═══════════════════════════════════════════════════════
 
+    log("创建 case 6: tool_call (single, tool-called, tag:tool)")
     await createCase(page, "tool_call")
     // Mode defaults to single — no change needed
     await visible(page, "textarea-case-input").fill(
@@ -510,6 +538,7 @@ test.describe("Eval Full E2E", () => {
     // CASE 7: injected_tool_ctx (injected, tool call history) — PASS [tag: tool]
     // ═══════════════════════════════════════════════════════
 
+    log("创建 case 7: injected_tool_ctx (injected, tool history, tag:tool)")
     await createCase(page, "injected_tool_ctx")
     await setMode(page, "injected")
 
@@ -541,6 +570,7 @@ test.describe("Eval Full E2E", () => {
     // CASE 8: import_test (injected, imported turns) — PASS [tag: math]
     // ═══════════════════════════════════════════════════════
 
+    log("创建 case 8: import_test (injected, imported turns, tag:math)")
     await createCase(page, "import_test")
     await setMode(page, "injected")
 
@@ -569,21 +599,22 @@ test.describe("Eval Full E2E", () => {
     // TAG FILTERING: Verify sidebar tag filter changes Run All count
     // ═══════════════════════════════════════════════════════
 
+    log("切换到 Results 面板，验证 tag 过滤")
     await visible(page, "btn-eval-results").click()
     await page.waitForTimeout(500)
 
-    // No tags selected → all 8 cases
+    log("无 tag 选中 → 期望 8 cases")
     await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(8\)/, { timeout: 5_000 })
 
-    // Click "math" → 4 cases (math_basic, capital_regex, fail_case, import_test)
+    log("选中 math → 期望 4 cases")
     await toggleTag(page, "math")
     await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(4\)/, { timeout: 5_000 })
 
-    // Add "tool" → 6 cases (math 4 + tool 2, no overlap)
+    log("追加 tool → 期望 6 cases")
     await toggleTag(page, "tool")
     await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(6\)/, { timeout: 5_000 })
 
-    // Remove "tool" → back to 4 (just math)
+    log("取消 tool → 回到 4 cases")
     await toggleTag(page, "tool")
     await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(4\)/, { timeout: 5_000 })
 
@@ -591,52 +622,54 @@ test.describe("Eval Full E2E", () => {
     // TAGGED RUN ALL: math tag (4 cases) → expect 3/4 pass
     // ═══════════════════════════════════════════════════════
 
+    log("运行 math tag (4 cases)")
     await visible(page, "btn-run-all").click()
 
     const runDialog = page.getByRole("dialog")
     await expect(runDialog).toBeVisible({ timeout: 5_000 })
 
-    // Select Judge Agent
+    log(`选择 Judge Agent: ${JUDGE_AGENT_NAME}`)
     await page.getByTestId("select-judge-agent").click()
     await page.waitForTimeout(500)
     await page.getByRole("option", { name: new RegExp(JUDGE_AGENT_NAME) }).click()
     await page.waitForTimeout(500)
 
-    // Confirm run
+    log("确认运行")
     await page.getByTestId("btn-confirm-run").click()
     await expect(runDialog).not.toBeVisible({ timeout: 10_000 })
 
-    // Wait for pass rate to appear (run completed) — up to 300s for real LLM calls
+    log("等待 tagged run 完成（最长 300s）...")
     const passRate1 = page.getByTestId("run-pass-rate").first()
     await expect(passRate1).toBeVisible({ timeout: 300_000 })
     const passRateText1 = await passRate1.textContent()
-    // Should show x/4 where x >= 2 (at least the deterministic cases pass)
+    log(`tagged run 完成，pass rate: ${passRateText1}`)
     expect(passRateText1).toMatch(/[2-3]\/4/)
 
     // ═══════════════════════════════════════════════════════
     // CLEAR TAGS → FULL RUN ALL: all 8 cases → expect 7/8 pass
     // ═══════════════════════════════════════════════════════
 
-    // Deselect "math" to clear all tag filters
+    log("取消 math tag → 全部 8 cases")
     await toggleTag(page, "math")
     await expect(visible(page, "btn-run-all")).toHaveText(/Run All \(8\)/, { timeout: 5_000 })
 
-    // Run All (full)
+    log("运行全部 8 cases")
     await visible(page, "btn-run-all").click()
     const runDialog2 = page.getByRole("dialog")
     await expect(runDialog2).toBeVisible({ timeout: 5_000 })
 
-    // Judge already selected from previous run — just confirm
+    log("确认运行（Judge 沿用上次选择）")
     await page.getByTestId("btn-confirm-run").click()
     await expect(runDialog2).not.toBeVisible({ timeout: 10_000 })
 
-    // Wait for the latest run's pass rate — should match x/8
+    log("等待 full run 完成（最长 300s）...")
     await expect(page.getByTestId("run-pass-rate").first()).toHaveText(/\d\/8/, { timeout: 300_000 })
     const passRateText2 = await page.getByTestId("run-pass-rate").first().textContent()
-    // Should show x/8 where x >= 5 (at least the deterministic cases pass)
+    log(`full run 完成，pass rate: ${passRateText2}`)
     expect(passRateText2).toMatch(/[5-7]\/8/)
 
-    // Verify score exists
+    const scoreText = await page.getByTestId("run-score").first().textContent()
+    log(`score: ${scoreText}`)
     await expect(page.getByTestId("run-score").first()).toHaveText(/[1-9]\d?\/10/)
   })
 })

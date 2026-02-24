@@ -29,7 +29,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  reporter: [["list", { printSteps: true }], ["html", { open: "never" }]],
   globalSetup: "./e2e/global-setup.ts",
 
   use: {
@@ -45,7 +45,7 @@ export default defineConfig({
     {
       name: "authenticated",
       dependencies: ["setup"],
-      testIgnore: /eval-(flow|full)\.spec\.ts/,
+      testIgnore: /eval-(flow|full|judge-skip)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: ".clerk/user.json",
@@ -54,7 +54,7 @@ export default defineConfig({
     {
       name: "eval",
       dependencies: ["setup"],
-      testMatch: /eval-(flow|full)\.spec\.ts/,
+      testMatch: /eval-(flow|full|judge-skip)\.spec\.ts/,
       timeout: 600_000,
       use: {
         ...devices["Desktop Chrome"],

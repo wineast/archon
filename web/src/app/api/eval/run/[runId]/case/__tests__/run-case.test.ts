@@ -312,7 +312,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
           { id: "t3", role: "user", content: "Tell me more about Universe" },
         ],
         assertions: [],
-        expectedOutput: "",
+        expectedOutput: "Universe details",
       },
     };
 
@@ -343,7 +343,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
           { id: "t2", role: "user", content: "What is max LTV?" },
         ],
         assertions: [],
-        expectedOutput: "",
+        expectedOutput: "Max LTV is 75%",
       },
     };
 
