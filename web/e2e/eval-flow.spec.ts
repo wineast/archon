@@ -236,5 +236,23 @@ test.describe("Eval E2E Flow", () => {
     const scoreText = await page.getByTestId("run-score").first().textContent()
     log(`score: ${scoreText}`)
     await expect(page.getByTestId("run-score").first()).toHaveText(/[1-9]\d?\/10/)
+
+    log("打开报告页")
+    const [newPage] = await Promise.all([
+      page.context().waitForEvent("page"),
+      page.getByTestId("btn-eval-report").first().click(),
+    ])
+    await newPage.waitForLoadState("networkidle")
+    await expect(newPage.getByTestId("eval-report-page")).toBeVisible({ timeout: 15_000 })
+    log("报告页已加载")
+
+    await expect(newPage.getByTestId("report-pass-rate")).toHaveText(/1\/1/)
+    log("报告页 pass rate 验证通过")
+    await expect(newPage.getByTestId("report-score")).toHaveText(/\d+\/10/)
+    log("报告页 score 验证通过")
+    const reportCards = newPage.getByTestId("result-card")
+    await expect(reportCards).toHaveCount(1, { timeout: 10_000 })
+    log("报告页 result cards 数量验证通过")
+    await newPage.close()
   })
 })

@@ -7,6 +7,7 @@ export interface TrendPoint {
   averageLatencyMs: number | null;
   totalCases: number;
   isBaseline: boolean;
+  scoreMax: number;
 }
 
 export interface CaseComparison {

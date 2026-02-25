@@ -54,7 +54,7 @@ export function JudgeRecordsPanel({ agentId }: { agentId: string }) {
                   </span>
                   {run.averageScore != null && (
                     <Badge variant="outline" className="text-[10px]">
-                      {(run.averageScore * 100).toFixed(0)}%
+                      {run.averageScore}
                     </Badge>
                   )}
                 </div>

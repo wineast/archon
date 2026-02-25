@@ -7,7 +7,7 @@ Judge Config 定义 LLM 评审的评分维度，属于 Judge Agent（通过 eval
 | 概念 | 说明 |
 |------|------|
 | **Judge Config** | 评分维度配置，包含名称和维度列表 |
-| **Dimension** | 单个评分维度（如准确性、完整性），含 key/label/weight |
+| **Dimension** | 单个评分维度（如准确性、完整性），含 key/label/weight/min/max |
 | **Active Config** | 当前激活的评分配置，同一 Agent 下只能有一个 |
 
 ## 与 Model Config 的关系
@@ -39,11 +39,27 @@ Judge Config **仅**存储评分维度，不包含模型/提示词/温度。评�
 {
   "key": "accuracy",
   "label": "Accuracy",
-  "weight": 0.5
+  "weight": 0.5,
+  "min": 0,
+  "max": 10
 }
 ```
 
+| 字段 | 说明 | 默认值 |
+|------|------|--------|
+| key | 维度唯一标识 | — |
+| label | 显示名称 | — |
+| weight | 权重 | — |
+| min | 最低分 | 0 |
+| max | 最高分 | 10 |
+
 权重（weight）用于计算加权平均分，所有维度权重之和应为 1.0。
+
+min/max 支持自定义分数范围。常见配置：
+- **标准评估**：min=0, max=10（默认，10 分制）
+- **二元评估**：min=0, max=1（通过/不通过）
+
+UI 中的分数显示会根据 max 值动态调整（如 `7/10` 或 `1/1`），无需额外配置。
 
 ## API
 
@@ -65,20 +81,21 @@ Judge Config **仅**存储评分维度，不包含模型/提示词/温度。评�
 - 右侧：配置详情编辑器
   - Key（只读）
   - Name
-  - Dimensions 编辑器（key/label/weight 行列表，支持增删）
+  - Dimensions 编辑器（key/label/weight/min/max 行列表，支持增删）
   - 底部操作栏：Active Switch / Save / Reset / Delete
 
 底部区域显示评估记录聚合面板（当前 Agent 作为 Judge 的所有评测运行记录）。
 
-## 默认种子数据
+## Fixture 种子数据
 
-通过 evaluator 功能槽位创建的 Agent 会自动附带默认 Judge Config：
+Evaluator Agent（`data/fixtures/evaluator/manifest.json`）预置以下 Judge Config：
 
-| 维度 | Weight |
-|------|--------|
-| Accuracy | 0.5 |
-| Completeness | 0.3 |
-| Tone | 0.2 |
+| 配置 | 维度 | 分数范围 | 默认激活 |
+|------|------|----------|----------|
+| 二元评估 | pass (weight=1) | 0-1 | 是 |
+| 通用评估 | accuracy/completeness/relevance/tone | 0-10 | 否 |
+| 客服质量 | problem_resolution/empathy/clarity/proactiveness | 0-10 | 否 |
+| 技术问答 | correctness/depth/practicality/code_quality | 0-10 | 否 |
 
 ## 版本系统
 

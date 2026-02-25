@@ -6,17 +6,19 @@ import type { EvalResult } from "@/lib/eval/types";
 import { CheckCircle2Icon, XCircleIcon, AlertCircleIcon, WrenchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function scoreColor(score: number): string {
-  if (score >= 8) return "text-green-600";
-  if (score >= 5) return "text-yellow-600";
+function scoreColor(score: number, max = 10): string {
+  const ratio = max > 0 ? score / max : 0;
+  if (ratio >= 0.8) return "text-green-600";
+  if (ratio >= 0.5) return "text-yellow-600";
   return "text-red-600";
 }
 
 interface ResultCardProps {
   result: EvalResult;
+  scoreMax?: number;
 }
 
-export function ResultCard({ result }: ResultCardProps) {
+export function ResultCard({ result, scoreMax = 10 }: ResultCardProps) {
   const isMultiTurn = result.mode !== "single" && result.chatMessages.length > 0;
 
   return (
@@ -137,8 +139,8 @@ export function ResultCard({ result }: ResultCardProps) {
                       )}
                       {tr.judgeResult && (
                         <div className="text-[10px] text-muted-foreground">
-                          Turn judge: <span className={scoreColor(tr.judgeResult.overallScore)}>
-                            {tr.judgeResult.overallScore}/10
+                          Turn judge: <span className={scoreColor(tr.judgeResult.overallScore, scoreMax)}>
+                            {tr.judgeResult.overallScore}/{scoreMax}
                           </span>
                         </div>
                       )}
@@ -224,9 +226,9 @@ export function ResultCard({ result }: ResultCardProps) {
                       {key}:{" "}
                     </span>
                     <span
-                      className={`text-sm font-bold ${scoreColor(entry.score)}`}
+                      className={`text-sm font-bold ${scoreColor(entry.score, scoreMax)}`}
                     >
-                      {entry.score}/10
+                      {entry.score}/{scoreMax}
                     </span>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {entry.reason}
@@ -237,9 +239,9 @@ export function ResultCard({ result }: ResultCardProps) {
               <div className="flex items-center gap-2 pt-1 border-t">
                 <span className="text-xs font-medium">Overall:</span>
                 <span
-                  className={`text-sm font-bold ${scoreColor(result.judgeResult.overallScore)}`}
+                  className={`text-sm font-bold ${scoreColor(result.judgeResult.overallScore, scoreMax)}`}
                 >
-                  {result.judgeResult.overallScore}/10
+                  {result.judgeResult.overallScore}/{scoreMax}
                 </span>
               </div>
             </div>

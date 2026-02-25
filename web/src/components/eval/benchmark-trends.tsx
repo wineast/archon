@@ -39,12 +39,15 @@ export function BenchmarkTrends({ agentId }: BenchmarkTrendsProps) {
 
   const baseline = trends.find((t) => t.isBaseline);
 
+  const maxScoreMax = Math.max(...trends.map((t) => t.scoreMax));
+
   const chartData = trends.map((t) => ({
     date: new Date(t.createdAt).toLocaleDateString("en", {
       month: "2-digit",
       day: "2-digit",
     }),
     score: t.averageScore,
+    scoreMax: t.scoreMax,
     passRate: t.passRate,
     latency: t.averageLatencyMs,
     model: t.chatModel.split("/").pop(),
@@ -62,10 +65,10 @@ export function BenchmarkTrends({ agentId }: BenchmarkTrendsProps) {
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis domain={[0, 10]} tick={{ fontSize: 11 }} />
+              <YAxis domain={[0, maxScoreMax]} tick={{ fontSize: 11 }} />
               <Tooltip
-                formatter={(value) => [
-                  value != null ? `${Number(value).toFixed(1)}/10` : "N/A",
+                formatter={(value, _name, props) => [
+                  value != null ? `${Number(value).toFixed(1)}/${(props.payload as Record<string, unknown>)?.scoreMax ?? maxScoreMax}` : "N/A",
                   "Score",
                 ]}
               />
