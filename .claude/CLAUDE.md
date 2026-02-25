@@ -112,7 +112,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - schema 见 `web/src/db/schema.ts`
 - **工作区（worktree）开发**：只用 `make db-push` 快速迭代，不生成迁移文件——因为工作区并行导致迁移生成顺序不固定
 - **上游分支（dev/main）**：schema 变更从工作区合并后，统一 `make db-generate` 生成迁移文件并提交
-- **生产部署**：只用 `make db-migrate`，禁止 `db-push`——迁移文件是上线唯一通道
+- **生产部署**：Vercel 构建时自动执行 `db:migrate`（见 `vercel-build` 脚本），无需手动迁移；迁移文件是上线唯一通道，禁止本地连接任何线上生产数据库
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 - 详见 `web/guide/production-database.md`
 - **查询版本化资源（tools、functions、components、datasets、wiki、schemas 等）时必须加 `versionId` 过滤**——这些资源按 version 隔离，缺少 `versionId` 条件会导致跨 Agent/跨版本数据混入。标准模式：`eq(table.versionId, versionId)` + 其他条件（如 `eq(table.enabled, true)`, `isNull(table.deletedAt)`）
