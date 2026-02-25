@@ -13,6 +13,7 @@ import { test, expect, type Page } from "@playwright/test"
  *   5. Test Agent → Eval tab → Create case ("2+2=?" with "contains 4" + expectedOutput)
  *   6. Run All → Select Judge → Confirm
  *   7. Wait for completion → Verify pass rate and score format (x/1)
+ *   8. Case Detail → Run single case → Verify score format (x/1) in Run Results
  */
 
 const TIMESTAMP = Date.now()
@@ -262,6 +263,49 @@ test.describe("二元评估 E2E", () => {
       await expect(reportCards).toHaveCount(1, { timeout: 10_000 })
       log("报告页 result cards 数量验证通过")
       await newPage.close()
+    })
+
+    // ── Step 8: Case Detail → Run single case → Verify score x/1 ──
+    await test.step("Case Detail 独立运行：验证二元分数格式 (x/1)", async () => {
+      log("恢复原页面焦点")
+      await page.bringToFront()
+      await page.waitForTimeout(500)
+
+      log("点击 sidebar 中的 Math Binary case")
+      // Case key 是 math_binary，自动生成的 name 是 "Math Binary"
+      const caseBtn = page.locator("button", { hasText: "Math Binary" }).first()
+      await expect(caseBtn).toBeVisible({ timeout: 5_000 })
+      await caseBtn.click()
+      await page.waitForTimeout(500)
+
+      log("点击 Run 按钮")
+      await visible(page, "btn-case-run").click()
+      const runDialog = page.getByRole("dialog")
+      await expect(runDialog).toBeVisible({ timeout: 5_000 })
+
+      // Judge Agent 应该已被上次选择记住（slot 机制），如果没有则手动选
+      const confirmBtn = runDialog.getByTestId("btn-confirm-run")
+      if (await confirmBtn.isDisabled()) {
+        log("Judge Agent 未自动选择，手动选择")
+        await page.getByTestId("select-judge-agent").click()
+        await page.waitForTimeout(500)
+        await page.getByRole("option", { name: new RegExp(JUDGE_AGENT_NAME) }).click()
+        await page.waitForTimeout(500)
+      }
+
+      log("确认运行")
+      await confirmBtn.click()
+      await expect(runDialog).not.toBeVisible({ timeout: 10_000 })
+
+      log("等待 Run Results 出现（最长 180s）...")
+      const scoreEl = page.getByTestId("result-overall-score").first()
+      await expect(scoreEl).toBeVisible({ timeout: 180_000 })
+      const scoreText = await scoreEl.textContent()
+      log(`Case Detail 独立 run score: ${scoreText}`)
+
+      // Binary scoring: score should be 0/1 or 1/1 (NOT x/10)
+      await expect(scoreEl).toHaveText(/[01]\/1/)
+      log("Case Detail 独立 run 二元分数格式验证通过 ✓")
     })
   })
 })

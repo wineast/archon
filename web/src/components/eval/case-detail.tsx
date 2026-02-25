@@ -34,10 +34,12 @@ import { useEvalRuns, fetchEvalRunDetail } from "@/lib/eval/hooks";
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { useEvalRun } from "@/lib/eval/eval-run-context";
+import { getScoreMax } from "@/lib/eval/judge-dimensions";
 import { toEvalResult } from "@/lib/eval/types";
 import type { EvalCaseRow } from "@/db/schema";
 import type {
   Assertion,
+  Dimension,
   EvalResult,
   EvalCase,
   EvalCaseMode,
@@ -49,6 +51,7 @@ import type {
 interface RunResultEntry {
   result: EvalResult;
   modelName: string;
+  scoreMax: number;
 }
 
 interface CaseDetailProps {
@@ -250,7 +253,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
       const modelName = chatModel.split("/").pop() ?? chatModel;
       const runId = data.runId;
 
-      const pollResult = async (): Promise<EvalResult | null> => {
+      const pollResult = async (): Promise<{ result: EvalResult; scoreMax: number } | null> => {
         for (let i = 0; i < 120; i++) {
           await new Promise((r) => setTimeout(r, 2000));
           const detail = await fetchEvalRunDetail(runId);
@@ -258,7 +261,10 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           if (detail.run.status === "completed" || detail.run.status === "failed" || detail.run.status === "cancelled") {
             mutateRuns();
             if (detail.results.length > 0) {
-              return toEvalResult(detail.results[0]);
+              const scoreMax = getScoreMax(
+                (detail.run.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)?.dimensions
+              );
+              return { result: toEvalResult(detail.results[0]), scoreMax };
             }
             return null;
           }
@@ -266,9 +272,9 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         return null;
       };
 
-      const result = await pollResult();
-      if (result) {
-        setRunResults((prev) => [{ result, modelName }, ...prev]);
+      const pollData = await pollResult();
+      if (pollData) {
+        setRunResults((prev) => [{ result: pollData.result, modelName, scoreMax: pollData.scoreMax }, ...prev]);
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -450,6 +456,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           variant="outline"
           onClick={() => setRunDialogOpen(true)}
           disabled={busy || isGlobalRunning}
+          data-testid="btn-case-run"
         >
           {running ? (
             <Spinner className="mr-1 size-3" />
@@ -529,7 +536,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
                   <span>{new Date(entry.result.timestamp).toLocaleTimeString()}</span>
                   <span>{entry.modelName}</span>
                 </div>
-                <ResultCard result={entry.result} />
+                <ResultCard result={entry.result} scoreMax={entry.scoreMax} />
               </div>
             ))}
           </div>

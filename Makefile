@@ -21,9 +21,8 @@ setup:
 		echo ""; \
 		exit 1; \
 	fi
-	@echo "🐘 [db-up] 启动 Docker PostgreSQL..."
 	@docker info >/dev/null 2>&1 || { echo "❌ Docker 未运行，请先启动 Docker Desktop"; exit 1; }
-	@docker compose up -d --wait
+	@$(MAKE) db-up
 	@$(MAKE) wt-setup
 	@$(MAKE) wt-init
 	@echo ""
