@@ -94,6 +94,7 @@ const baseRun = {
   isBaseline: false,
   status: "running" as const,
   completedCases: 0,
+  concurrency: 3,
   error: null,
   createdAt: new Date(),
 };

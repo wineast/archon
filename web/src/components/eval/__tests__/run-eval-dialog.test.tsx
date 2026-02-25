@@ -153,6 +153,7 @@ describe("RunEvalDialog", () => {
     expect(onConfirm).toHaveBeenCalledWith({
       judgeAgentId: "judge-agent-1",
       assertionFailConfig: {},
+      concurrency: 3,
     });
   });
 

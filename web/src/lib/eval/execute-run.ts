@@ -8,7 +8,7 @@ import { getOrgIdByAgentId } from "@/lib/ai/get-org-id";
 import type { EvalCase } from "./types";
 import type { EvalRunRow } from "@/db/schema";
 
-const CONCURRENCY = 3;
+const DEFAULT_CONCURRENCY = 3;
 
 export interface ExecuteEvalRunParams {
   runId: string;
@@ -41,7 +41,7 @@ export async function executeEvalRun(params: ExecuteEvalRunParams): Promise<void
 
     const orgId = (await getOrgIdByAgentId(agentId)) ?? "";
 
-    const limit = pLimit(CONCURRENCY);
+    const limit = pLimit(run.concurrency ?? DEFAULT_CONCURRENCY);
 
     const tasks = cases.map((evalCase) =>
       limit(async () => {

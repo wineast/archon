@@ -1,6 +1,6 @@
 ---
 name: make
-description: Makefile 命令速查与执行指南。当用户询问"怎么跑"、"有哪些命令"、"make 怎么用"，或要求执行任何 make 相关命令时调用。
+description: Makefile 命令速查与执行指南。当用户询问"怎么跑"、"有哪些命令"、"make 怎么用"，或要求执行任何 make 相关命令时调用。也包括"压缩 fixture"、"打包版本"、"fixture-zip"等操作。
 allowed-tools: Bash, Read
 ---
 

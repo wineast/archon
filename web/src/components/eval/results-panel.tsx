@@ -114,9 +114,10 @@ export function ResultsPanel({
   const handleRunAllConfirm = useCallback(async (params: {
     judgeAgentId: string;
     assertionFailConfig: AssertionFailConfig;
+    concurrency: number;
   }) => {
     if (!agentId) return;
-    const { judgeAgentId, assertionFailConfig } = params;
+    const { judgeAgentId, assertionFailConfig, concurrency } = params;
 
     setRunDialogOpen(false);
 
@@ -129,6 +130,7 @@ export function ResultsPanel({
           judgeAgentId,
           filterTags: selectedTags.length > 0 ? selectedTags : undefined,
           assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
+          concurrency,
           totalCases: cases.length,
           cases,
           templateVars,

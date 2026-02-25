@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,6 +28,7 @@ interface RunEvalDialogProps {
   onConfirm: (params: {
     judgeAgentId: string;
     assertionFailConfig: AssertionFailConfig;
+    concurrency: number;
   }) => void;
   confirming?: boolean;
 }
@@ -45,6 +47,7 @@ export function RunEvalDialog({
   const orgId = useAgentOrgId(agentId);
 
   const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>({});
+  const [concurrency, setConcurrency] = useState(3);
 
   const canConfirm = !!judgeAgentId && !confirming;
 
@@ -55,6 +58,7 @@ export function RunEvalDialog({
       assertionFailConfig: Object.values(assertionFailConfig).some(Boolean)
         ? assertionFailConfig
         : {},
+      concurrency,
     });
   };
 
@@ -94,6 +98,25 @@ export function RunEvalDialog({
                 请选择一个 Judge Agent
               </p>
             )}
+          </div>
+
+          {/* Concurrency */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              并发数
+            </label>
+            <Input
+              type="number"
+              min={1}
+              max={5}
+              value={concurrency}
+              onChange={(e) => setConcurrency(Math.max(1, Math.min(5, Number(e.target.value) || 3)))}
+              className="mt-1 w-20"
+              data-testid="input-concurrency"
+            />
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              同时执行的用例数（1-5）
+            </p>
           </div>
 
           {/* Assertion Settings */}

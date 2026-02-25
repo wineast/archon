@@ -173,6 +173,7 @@ export interface CreateEvalRunRequest {
   judgeAgentId: string;
   filterTags?: string[];
   assertionFailConfig?: AssertionFailConfig;
+  concurrency?: number;
   totalCases: number;
   cases: EvalCase[];
   templateVars?: Record<string, string>;
