@@ -20,8 +20,10 @@ import type {
   CreateEvalRunResponse,
   EvalRunDetail,
   AssertionFailConfig,
+  Dimension,
 } from "@/lib/eval/types";
 import type { EvalRunRow } from "@/db/schema";
+import { getScoreMax } from "@/lib/eval/judge-dimensions";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ResultCard } from "./result-card";
@@ -34,7 +36,9 @@ import {
   ChevronRightIcon,
   ClockIcon,
   BookmarkIcon,
+  FileTextIcon,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import {
   setBaseline,
   clearBaseline,
@@ -298,7 +302,13 @@ function RunHistoryItem({
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { mutate: globalMutate } = useSWRConfig();
+  const pathname = usePathname();
   const isRunning = run.status === "running";
+  const reportUrl = pathname.replace(/\/build.*$/, `/eval/${run.id}`);
+
+  const scoreMax = getScoreMax(
+    (run.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)?.dimensions
+  );
 
   const passRate =
     run.totalCases > 0
@@ -374,7 +384,7 @@ function RunHistoryItem({
             <span className="shrink-0 font-medium" data-testid="run-pass-rate">{passRate}</span>
             {run.averageScore != null && (
               <span className="shrink-0 text-muted-foreground" data-testid="run-score">
-                {run.averageScore}/10
+                {run.averageScore}/{scoreMax}
               </span>
             )}
           </>
@@ -389,6 +399,15 @@ function RunHistoryItem({
           <BookmarkIcon
             className={`size-3 ${run.isBaseline ? "fill-primary text-primary" : ""}`}
           />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          data-testid="btn-eval-report"
+          onClick={(e) => { e.stopPropagation(); window.open(reportUrl, "_blank"); }}
+          title="Open report"
+        >
+          <FileTextIcon className="size-3" />
         </Button>
         <Button
           variant="ghost"
@@ -426,7 +445,7 @@ function RunHistoryItem({
           {detail && (
             <div className="space-y-3">
               {detail.results.map((r) => (
-                <ResultCard key={r.id} result={toEvalResult(r)} />
+                <ResultCard key={r.id} result={toEvalResult(r)} scoreMax={scoreMax} />
               ))}
               {detail.results.length === 0 && isRunning && (
                 <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground">

@@ -11,7 +11,7 @@
 | **Judge Config** | 评分维度配置（仅 name + dimensions），属于 Judge Agent，在 Build > Judge Tab 中管理 |
 | **Eval Run** | 一次评测运行，包含多个用例的执行结果 |
 | **Assertion** | 断言规则（文本断言 + 工具调用断言），用于自动判定通过/失败 |
-| **Dimension** | 评审维度（如准确性、相关性），由 Judge LLM 打分 |
+| **Dimension** | 评审维度（如准确性、相关性），由 Judge LLM 打分，支持自定义 min/max 分数范围（默认 0-10，可配为 0-1 二元评估） |
 
 ## 架构
 
@@ -115,7 +115,18 @@
   - 运行中的 run 在 History 列表中带 `Running x/y` badge，自动展开并轮询加载已完成结果
   - 刷新页面后自动恢复运行状态（DB 驱动）
   - `cancelled` / `failed` 状态有对应 badge 标识
+  - History 列表每行有**报告按钮**（`FileTextIcon`），点击在新标签页打开独立报告页
 - **Benchmark**：趋势追踪、运行对比、跨模型分析（详见 [benchmark.md](./benchmark.md)）
+
+### 报告页
+
+独立全屏页面，URL 格式：`/{orgSlug}/{agentSlug}/eval/{runId}`
+
+- 顶部导航栏：返回按钮 → Build Eval Tab、Agent 名称 + "Eval Report"
+- 汇总区：模型名、运行时间、状态 badge、通过率、平均分
+- Running 状态时显示进度条，3 秒自动刷新
+- 下方为 ResultCard 列表，展示每个 case 的完整结果
+- 组织内成员可通过 URL 直接查看
 
 Judge 配置（评分维度）在 Judge Agent 的 Build 页面 **Judge Tab** 中管理，详见 [judge-config.md](./judge-config.md)。
 
@@ -192,8 +203,12 @@ make e2e-eval
 
 ### 测试文件
 
-- `web/e2e/eval-flow.spec.ts` — 冒烟测试（single 模式、1 case、contains 断言 + judge）
-- `web/e2e/eval-full.spec.ts` — 综合测试（8 case 批量运行，覆盖 single/sequential/injected 三种模式 + regex 断言 + tool-called 断言 + 断言失败场景 + tool call 历史注入 + UIMessage[] 导入 + tag 筛选 + tag 筛选后 Run All）
+- `web/e2e/eval-flow.spec.ts` — 冒烟测试（single 模式、1 case、contains 断言 + judge + 报告页验证）
+- `web/e2e/eval-full.spec.ts` — 综合测试（8 case 批量运行，覆盖 single/sequential/injected 三种模式 + regex 断言 + tool-called 断言 + 断言失败场景 + tool call 历史注入 + UIMessage[] 导入 + tag 筛选 + tag 筛选后 Run All + 报告页验证）
+- `web/e2e/eval-judge-skip.spec.ts` — Judge 跳过测试（无 expectedOutput 时跳过 judge 评审 + 报告页验证）
+- `web/e2e/eval-binary.spec.ts` — 二元评估测试（binary scoring 0/1，验证 min/max 维度配置 + 分数显示格式 x/1 + 报告页验证）
+
+所有 eval E2E 测试的最后一步都会在报告页上验证 pass rate、score 和 result card 数量。
 
 ### 配置
 
