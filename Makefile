@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test e2e e2e-ui e2e-eval clean storybook deps db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test e2e e2e-ui e2e-eval e2e-eval-binary clean storybook deps db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
 
 # ============================================================
 # Setup
@@ -137,6 +137,9 @@ e2e-ui:
 
 e2e-eval:
 	cd web && npx playwright test --project=eval
+
+e2e-eval-binary:
+	cd web && npx playwright test --project=eval eval-binary
 
 storybook:
 	@if [ -f .worktree/meta.json ]; then \

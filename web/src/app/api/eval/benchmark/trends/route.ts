@@ -4,6 +4,8 @@ import { asc, avg, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import type { TrendPoint } from "@/lib/eval/benchmark-types";
+import type { Dimension } from "@/lib/eval/types";
+import { getScoreMax } from "@/lib/eval/judge-dimensions";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -38,6 +40,7 @@ export async function GET(req: Request) {
         ? (run.passedAssertions / run.totalCases) * 100
         : 0;
 
+    const dimensions = (run.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)?.dimensions;
     points.push({
       runId: run.id,
       createdAt: run.createdAt.toISOString(),
@@ -49,6 +52,7 @@ export async function GET(req: Request) {
         : null,
       totalCases: run.totalCases,
       isBaseline: run.isBaseline,
+      scoreMax: getScoreMax(dimensions),
     });
   }
 

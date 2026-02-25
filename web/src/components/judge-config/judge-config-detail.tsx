@@ -46,7 +46,7 @@ export function JudgeConfigDetail({
     if (dimensions.length !== config.dimensions.length) return true;
     return dimensions.some((d, i) => {
       const orig = config.dimensions[i];
-      return d.key !== orig.key || d.label !== orig.label || d.weight !== orig.weight;
+      return d.key !== orig.key || d.label !== orig.label || d.weight !== orig.weight || d.min !== orig.min || d.max !== orig.max;
     });
   }, [name, dimensions, config]);
 
@@ -83,7 +83,7 @@ export function JudgeConfigDetail({
   const addDimension = useCallback(() => {
     setDimensions((prev) => [
       ...prev,
-      { _id: nanoid(), key: "", label: "", weight: 0.1 },
+      { _id: nanoid(), key: "", label: "", weight: 0.1, min: 0, max: 10 },
     ]);
   }, []);
 
@@ -166,6 +166,26 @@ export function JudgeConfigDetail({
                     value={dim.weight}
                     onChange={(e) =>
                       updateDimension(dim._id, "weight", parseFloat(e.target.value) || 0)
+                    }
+                  />
+                  <Input
+                    className="h-7 w-14 text-xs"
+                    type="number"
+                    step="1"
+                    placeholder="Min"
+                    value={dim.min ?? 0}
+                    onChange={(e) =>
+                      updateDimension(dim._id, "min", parseInt(e.target.value) || 0)
+                    }
+                  />
+                  <Input
+                    className="h-7 w-14 text-xs"
+                    type="number"
+                    step="1"
+                    placeholder="Max"
+                    value={dim.max ?? 10}
+                    onChange={(e) =>
+                      updateDimension(dim._id, "max", parseInt(e.target.value) || 0)
                     }
                   />
                   <Button
