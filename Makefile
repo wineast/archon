@@ -235,23 +235,23 @@ db-init:
 
 ## 列出所有 worktree
 wt-list:
-	@./.claude/skills/worktree/scripts/worktree.sh list
+	@./scripts/worktree.sh list
 
 ## 创建 worktree（用法: make wt-create NAME=feature-xxx [BASE=main]）
 wt-create:
-	@./.claude/skills/worktree/scripts/worktree.sh create $(NAME) $(BASE)
+	@./scripts/worktree.sh create $(NAME) $(BASE)
 
 ## 同步上游分支到当前工作区
 wt-sync:
-	@./.claude/skills/worktree/scripts/worktree.sh sync
+	@./scripts/worktree.sh sync
 
 ## 合并工作区回 base 分支（用法: make wt-merge NAME=feature-xxx）
 wt-merge:
-	@./.claude/skills/worktree/scripts/worktree.sh merge $(NAME)
+	@./scripts/worktree.sh merge $(NAME)
 
 ## 删除 worktree（用法: make wt-delete NAME=feature-xxx）
 wt-delete:
-	@./.claude/skills/worktree/scripts/worktree.sh delete $(NAME)
+	@./scripts/worktree.sh delete $(NAME)
 
 ## 工作区静态环境初始化（link-env + db-local-env + npm install）
 wt-setup:

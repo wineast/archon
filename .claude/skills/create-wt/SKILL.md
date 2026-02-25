@@ -1,46 +1,21 @@
 ---
-name: worktree
-description: 管理 git worktree（创建、列出、合并、删除工作区）。当用户说"创建工作区"、"新建工作区"、"合并工作区"、"删除工作区"、"列出工作区"等类似表述时，应调用此技能。
+name: create-wt
+description: 创建 git worktree 工作区。当用户说"创建工作区"、"新建工作区"、"开个工作区做XX"、"worktree create"等时调用。
 allowed-tools: Bash, Write, Edit, Read, Grep, Glob, Task, AskUserQuestion, Skill
 ---
 
-管理 git worktree 工作区。
+创建 git worktree 工作区，生成启动脚本让另一个 Claude Code 实例在工作区内自行实现。
 
-## 触发条件
+## 参数
 
-当用户提到以下任意表述时，应调用此技能（`/worktree`）：
-- "创建工作区"、"新建工作区"
-- "列出工作区"、"查看工作区"
-- "删除工作区"
-- "合并工作区"、"合并到上游"、"merge 工作区"
-
-## 调用方式
-
-```
-/worktree                    # 列出所有 worktree
-/worktree create <name>      # 创建工作区
-/worktree merge <name>       # 合并工作区分支回 base 分支
-/worktree delete <name>      # 删除 worktree
-/worktree clean              # 清空所有 worktree（强制清理）
-```
-
-## 操作流程
-
-### 列出 worktree（无参数或 `list`）
-
-```bash
-make wt-list
-```
-
-### 创建 worktree（`create`）
-
-参数：
 - `name`（必填）：worktree 名称，如 `fix-ontology-drag`
 - `base`（可选）：基础分支，默认当前分支
 
-**重要：不要进入 plan mode，不要开始实现代码。** 本技能的职责是创建工作区并生成启动脚本，让另一个 Claude Code 实例在工作区里自行规划和实现。
+如果用户传入完整路径如 `/path/to/.worktrees/hotfix`，提取最后的目录名 `hotfix` 作为 NAME。
 
-流程：
+## 流程
+
+**重要：不要进入 plan mode，不要开始实现代码。** 本技能的职责是创建工作区并生成启动脚本，让另一个 Claude Code 实例在工作区里自行规划和实现。
 
 1. **需求澄清**：调用 `/clarify` 技能，通过现状调研 + 结构化追问帮助用户明确需求（包括现状理解、问题域、边界、验收标准、约束）。如果用户描述已经足够清晰（有明确的功能描述、验收标准），可跳过。
 2. **生成 prompt**：基于澄清结果，生成工作区 prompt。prompt 必须是**需求导向**的，描述"要做什么"和"验收标准"，而不是"怎么实现"。具体原则：
@@ -66,64 +41,6 @@ make wt-list
 5. **提示用户**：
    - worktree 路径：`.worktrees/<name>`
    - 启动方式：`cd .worktrees/<name> && ./start.sh`
-
-### 合并工作区（`merge`）
-
-将工作区分支合并回其 base 分支（记录在 `.worktree/meta.json` 中）。**必须从主仓库执行**。
-
-流程：
-
-1. **路径检查**：确认当前工作目录是主仓库（不在 `.worktrees/` 内）。如果当前在 worktree 内，**先 cd 回主仓库**再执行合并命令。
-2. **自动提交未提交变更**：工作区有未提交修改时，自动 `git add -A && git commit` 提交（不需要询问用户），commit message 描述工作区的改动内容。
-3. **执行合并**：
-   ```bash
-   make wt-merge NAME=<name>
-   ```
-4. **冲突处理**：如果合并有冲突，分析冲突内容，解决后提交合并。
-5. **验证**：合并完成后运行 typecheck 和测试，确保合并没有引入问题：
-   ```bash
-   make typecheck
-   make test
-   ```
-6. **依赖检测**：合并后自动检测 `package.json` / `package-lock.json` 是否有变更，有则自动执行 `make deps`
-
-### 删除 worktree（`delete`）
-
-```bash
-# 1. 先确认目标存在
-make wt-list
-
-# 2. 删除
-make wt-delete NAME=<name>
-
-# 3. 确认删除成功
-make wt-list
-```
-
-### 清空所有 worktree（`clean`）
-
-当 `.worktrees/` 目录中有残留的、失效的 worktree 时（如 `git worktree remove` 报错），使用 `clean` 强制清理。
-
-流程：
-1. 先列出 `.worktrees/` 下所有目录
-2. 对每个目录，先尝试 `make wt-delete NAME=<name>`
-3. 如果 `wt-delete` 失败（git 记录已失效），直接 `rm -rf .worktrees/<name>`
-4. 最后执行 `git worktree prune` 清理 git 中的失效记录
-5. 确认清理结果：`make wt-list`
-
-```bash
-# 逐个尝试删除，失败则强制移除
-for dir in .worktrees/*/; do
-  name=$(basename "$dir")
-  make wt-delete NAME="$name" || rm -rf ".worktrees/$name"
-done
-
-# 清理 git 中的失效 worktree 记录
-git worktree prune
-
-# 确认
-make wt-list
-```
 
 ## 核心原则：工作区必须独立并行
 
@@ -162,9 +79,3 @@ make wt-list
 - **合并回上游后统一生成迁移**：工作区合并到 dev/main 后，在上游分支执行 `make db-generate` 生成迁移文件并提交
 - 工作区共享同一个 Docker PostgreSQL 容器，各自通过 `db-push` 同步 schema 到本地库即可
 - 详见 `web/guide/production-database.md`
-
-## 其他注意事项
-
-- 只需传入 worktree 名称，不需要完整路径
-- 如果用户传入完整路径如 `/path/to/.worktrees/hotfix`，提取最后的目录名 `hotfix` 作为 NAME
-- 如果用户没有指定子命令，默认执行 `list`
