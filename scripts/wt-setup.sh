@@ -3,7 +3,7 @@
 # 用法: ./scripts/wt-setup.sh [target_dir]
 #
 # 环境变量（可选，用于 worktree 自定义端口）:
-#   WT_DEV_PORT, WT_SB_PORT, WT_STUDIO_PORT, WT_BASE_BRANCH
+#   WT_DEV_PORT, WT_SB_PORT, WT_STUDIO_PORT, WT_INNGEST_PORT, WT_BASE_BRANCH
 #
 # 流程: meta.json → link-env → db-local-env → npm install
 
@@ -18,9 +18,10 @@ if [ ! -f "$target_dir/.worktree/meta.json" ]; then
     dev_port="${WT_DEV_PORT:-3000}"
     sb_port="${WT_SB_PORT:-6006}"
     studio_port="${WT_STUDIO_PORT:-4983}"
+    inngest_port="${WT_INNGEST_PORT:-8288}"
     base_branch="${WT_BASE_BRANCH:-main}"
-    echo "{\"dev\":$dev_port,\"storybook\":$sb_port,\"studio\":$studio_port,\"baseBranch\":\"$base_branch\"}" > "$target_dir/.worktree/meta.json"
-    echo "  Created $target_dir/.worktree/meta.json (dev=$dev_port, storybook=$sb_port, studio=$studio_port, baseBranch=$base_branch)"
+    echo "{\"dev\":$dev_port,\"storybook\":$sb_port,\"studio\":$studio_port,\"inngest\":$inngest_port,\"baseBranch\":\"$base_branch\"}" > "$target_dir/.worktree/meta.json"
+    echo "  Created $target_dir/.worktree/meta.json (dev=$dev_port, storybook=$sb_port, studio=$studio_port, inngest=$inngest_port, baseBranch=$base_branch)"
 else
     echo "  $target_dir/.worktree/meta.json 已存在，跳过"
 fi
@@ -63,6 +64,15 @@ target_env="$target_dir/web/.env.development.local"
 if [ -f "$source_env" ] && [ "$(realpath "$source_env")" != "$(realpath "$target_env")" ]; then
     grep -v -E '^(DATABASE_URL|DATABASE_URL_UNPOOLED)=' "$source_env" | grep -v '^[[:space:]]*$' >> "$target_env" || true
     echo "  Inherited extra env vars from main repo"
+fi
+
+# 追加 Inngest Dev Server 端口（worktree 场景下从 meta.json 读取）
+if [ -f "$target_dir/.worktree/meta.json" ]; then
+    inngest_port_val=$(node -p "require('$target_dir/.worktree/meta.json').inngest || ''" 2>/dev/null)
+    if [ -n "$inngest_port_val" ]; then
+        printf 'INNGEST_DEV=http://127.0.0.1:%s\n' "$inngest_port_val" >> "$target_env"
+        echo "  Added INNGEST_DEV → port $inngest_port_val"
+    fi
 fi
 
 echo "  Created web/.env.development.local → local DB ($db_name)"

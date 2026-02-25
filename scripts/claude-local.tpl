@@ -11,3 +11,4 @@
 | Dev Server | {{DEV_PORT}} | `make dev` |
 | Storybook | {{STORYBOOK_PORT}} | `make storybook` |
 | Drizzle Studio | {{STUDIO_PORT}} | `make db-studio` |
+| Inngest Dev | {{INNGEST_PORT}} | `make inngest-dev` |

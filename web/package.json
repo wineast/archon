@@ -55,6 +55,7 @@
     "fast-deep-equal": "^3.1.3",
     "filtrex": "^3.1.0",
     "gray-matter": "^4.0.3",
+    "inngest": "^3.52.3",
     "jszip": "^3.10.1",
     "liquidjs": "^10.24.0",
     "lucide-react": "^0.564.0",
@@ -65,7 +66,6 @@
     "nanoid": "^5.1.6",
     "next": "16.1.6",
     "next-intl": "^4.8.3",
-    "p-limit": "^7.3.0",
     "papaparse": "^5.5.3",
     "pdf-parse": "^2.4.5",
     "postgres": "^3.4.8",
@@ -93,6 +93,7 @@
   "devDependencies": {
     "@chromatic-com/storybook": "^5.0.1",
     "@clerk/testing": "^1.14.1",
+    "@inngest/test": "^0.1.9",
     "@playwright/test": "^1.58.2",
     "@storybook/addon-a11y": "^10.2.8",
     "@storybook/addon-docs": "^10.2.8",

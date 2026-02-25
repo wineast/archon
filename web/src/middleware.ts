@@ -11,6 +11,7 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/sso-callback(.*)",
   "/sso-callback(.*)",
   "/api/webhooks(.*)",
+  "/api/inngest(.*)",
   "/share(.*)",
   "/api/share(.*)",
   "/embed(.*)",

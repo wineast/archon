@@ -692,6 +692,8 @@ export const evalRuns = pgTable("eval_runs", {
   judgeConfigSnapshot: jsonb("judge_config_snapshot"),
   filterTags: text("filter_tags").array().notNull().default([]),
   assertionFailConfig: jsonb("assertion_fail_config").$type<AssertionFailConfig>(),
+  templateVars: jsonb("template_vars").$type<Record<string, string>>().notNull().default({}),
+  toolNames: text("tool_names").array().notNull().default([]),
   concurrency: integer("concurrency").notNull().default(3),
   totalCases: integer("total_cases").notNull(),
   passedAssertions: integer("passed_assertions").notNull(),
@@ -734,7 +736,10 @@ export const evalRunResults = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [index("eval_run_results_run_id_idx").on(table.runId)]
+  (table) => [
+    index("eval_run_results_run_id_idx").on(table.runId),
+    uniqueIndex("eval_run_results_run_id_case_id_idx").on(table.runId, table.caseId),
+  ]
 );
 
 export type EvalRunResultRow = typeof evalRunResults.$inferSelect;

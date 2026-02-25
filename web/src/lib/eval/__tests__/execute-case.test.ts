@@ -88,6 +88,8 @@ const baseRun = {
   assertionFailConfig: null,
   judgeAgentId: "judge-1",
   filterTags: [],
+  templateVars: {},
+  toolNames: [],
   totalCases: 1,
   passedAssertions: 0,
   averageScore: null,

@@ -22,22 +22,30 @@
 
 这种设计让任何 Agent 都能成为 Judge Agent，只需在功能槽位中配置即可。
 
-### 服务端执行引擎
+### 服务端执行引擎（Inngest）
 
-评测运行由**服务端异步执行**，前端仅发起创建请求并通过 SWR 轮询获取进度：
+评测运行由 **Inngest** 事件驱动框架异步执行，前端仅发起创建请求并通过 SWR 轮询获取进度：
 
 1. 前端 `POST /api/eval/run`，传入 `cases`、`templateVars`、`toolNames`
-2. 服务端创建 `evalRuns` 记录（`status: "running"`），在 `after()` 中启动 `executeEvalRun()`
-3. 执行引擎使用 `p-limit(concurrency)` 并发控制（并发数 1-5，默认 3，在 RunEvalDialog 中配置），逐个执行用例（调用 `executeCase()`），每完成一个原子递增 `completedCases`
-4. 每个用例执行前检查 `status === "cancelled"`，如是则跳过
-5. 全部完成后 `finalizeRun()` 聚合统计，设置最终状态（`completed` / `cancelled`）
-6. 前端 `useEvalRuns` 在检测到 running 状态时自动 2s 轮询刷新
+2. 服务端创建 `evalRuns` 记录（`status: "running"`，同时存储 `templateVars` 和 `toolNames` 快照），发送 `eval/run.created` Inngest 事件
+3. **eval-orchestrator** 函数接收事件，加载 run 配置和 orgId，将 caseIds 按 `concurrency`（1-5，默认 3）分批
+4. 每批前通过 `step.run("check-cancel-N")` 检查 DB 取消标志，如已取消则跳过后续批次
+5. 批内通过 `step.invoke()` + `Promise.all()` 并行调用 **eval-case-worker** 函数
+6. **eval-case-worker** 每个 case 分三步：`load`（加载 run + case）→ `execute`（调用 `executeCase()`）→ `save`（upsert 结果 + COUNT 更新 completedCases + 记录用量）
+7. 全部批次完成后 `step.run("finalize")` 聚合统计，设置最终状态（`completed` / `cancelled`）
+8. 前端 `useEvalRuns` 在检测到 running 状态时自动 2s 轮询刷新
 
 **关键好处**：
 - 刷新/离开页面不丢失运行状态——进度持久化在 DB
-- 支持 Cancel——前端调用 `POST /api/eval/run/{runId}/cancel` 设置 `status: "cancelled"`
+- 无 120s 超时限制——Inngest 函数不受 Vercel serverless 时间约束
+- 无竞态条件——`step.run("finalize")` 在所有 worker 完成后执行，结果已全部可见
+- 自动重试——case worker 配置 3 次重试，`onConflictDoUpdate` 保证幂等
+- 支持 Cancel——前端调用 `POST /api/eval/run/{runId}/cancel` 设置 `status: "cancelled"`，orchestrator 每批前检查
+- 支持 Retry Failed——`POST /api/eval/run/{runId}/retry-failed` 删除失败结果并重新发送事件
 - 同一 Agent 不能同时运行两个 Run（409 并发检查）
 - 超过 30 分钟的 running run 自动标记为 `failed`
+
+**本地开发**：`make up` 已包含 Inngest Dev Server（Worktree 端口从 `meta.json` 读取，主仓库默认 8288）。也可独立启动：`make inngest-dev`
 
 ## 测试用例模式
 
@@ -75,6 +83,8 @@
 | judgeAgentId | uuid | Judge Agent ID |
 | judgeModelConfigSnapshot | jsonb | Judge 模型配置快照 |
 | judgeConfigSnapshot | jsonb | Judge 评分维度快照 |
+| templateVars | jsonb | 模板变量快照（使 run 自包含，支持 retry） |
+| toolNames | text[] | 工具名列表快照 |
 | concurrency | integer | 并发数（1-5，默认 3） |
 | totalCases | integer | 总用例数 |
 | passedAssertions | integer | 通过断言数 |
@@ -101,6 +111,7 @@
 | POST | `/api/eval/run/[runId]/case` | 执行单个用例（保留供调试，从 run 记录读取配置快照） |
 | PATCH | `/api/eval/run/[runId]` | 完成运行（汇总统计，单用例场景使用） |
 | POST | `/api/eval/run/[runId]/cancel` | 取消运行中的 run |
+| POST | `/api/eval/run/[runId]/retry-failed` | 重跑执行失败的 case（error IS NOT NULL，非断言失败） |
 | GET | `/api/eval/runs?agentId=xxx` | 列出运行记录（自动超时降级 30min+ running → failed） |
 | GET | `/api/eval/resolve-judge?agentId=xxx` | 解析 evaluator 槽位得到 Judge Agent |
 
@@ -192,6 +203,26 @@ interface EvalTurnToolCall {
 
 `parseUIMessagesToTurns(messages: UIMessage[]): EvalTurn[]`（位于 `src/lib/eval/import-turns.ts`）
 
+## 单元测试（Inngest 函数）
+
+使用 `@inngest/test`（`InngestTestEngine`）+ Vitest mock 测试 Inngest 执行引擎。
+
+### 测试文件
+
+- `web/src/inngest/functions/__tests__/eval-orchestrator.test.ts` — 编排器（分批、取消、finalize）
+- `web/src/inngest/functions/__tests__/eval-case-worker.test.ts` — Case Worker（执行、保存、用量记录）
+- `web/src/app/api/eval/run/[runId]/retry-failed/__tests__/retry-failed.test.ts` — Retry Failed API
+
+### 测试策略
+
+- **Orchestrator**：mock 依赖（DB、isRunCancelled、finalizeRun），let step handlers 运行原始代码；`step.invoke` 通过 `InngestTestEngine` 的 `steps` 选项 mock
+- **Case Worker**：mock DB 链式操作（sequential select results）、executeCase、recordUsage，let 所有 step handlers 运行原始代码
+- **Retry Failed**：传统 vi.mock DB + inngest.send，直接测试 route handler
+
+### Known Issue
+
+`retry-failed` route 中 `inngest.send()` 在 DB 操作之后调用，send 失败时状态已被污染（results 已删除、status 已更新为 running）。应将 `inngest.send` 移到 DB 操作之前或用事务包裹。
+
 ## E2E 测试
 
 评估模块有完整的 Playwright E2E 测试，覆盖从创建 Agent 到运行评估并查看结果的全流程。
@@ -209,8 +240,9 @@ make e2e-eval
 - `web/e2e/eval-judge-skip.spec.ts` — Judge 跳过测试（无 expectedOutput 时跳过 judge 评审 + 报告页验证）
 - `web/e2e/eval-binary.spec.ts` — 二元评估测试（binary scoring 0/1，验证 min/max 维度配置 + 分数显示格式 x/1 + 报告页验证）
 - `web/e2e/eval-concurrency.spec.ts` — 并发数配置测试（RunEvalDialog 设置 concurrency=1 + 运行 + 报告页验证 concurrency 显示）
+- `web/e2e/eval-cancel.spec.ts` — 取消运行测试（5 case concurrency=1 顺序执行 + 等待 run 开始 + 点击 Stop + 验证 Cancelled 状态）
 
-所有 eval E2E 测试的最后一步都会在报告页上验证 pass rate、score 和 result card 数量。
+所有 eval E2E 测试的最后一步都会在报告页上验证 pass rate、score 和 result card 数量（cancel 测试除外，因为取消后不产生完整结果）。
 
 ### 配置
 

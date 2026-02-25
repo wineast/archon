@@ -75,11 +75,12 @@ cmd_create() {
     local dev_port=$(( RANDOM % 5000 + 4000 ))  # 4000-8999
     local storybook_port=$(( dev_port + 1 ))
     local studio_port=$(( dev_port + 2 ))
+    local inngest_port=$(( dev_port + 3 ))
     local wt_config_dir="$worktree_path/.worktree"
 
     # 静态环境初始化（通过环境变量传端口和 baseBranch）
     info "初始化工作区环境..."
-    WT_DEV_PORT=$dev_port WT_SB_PORT=$storybook_port WT_STUDIO_PORT=$studio_port WT_BASE_BRANCH="$base_branch" \
+    WT_DEV_PORT=$dev_port WT_SB_PORT=$storybook_port WT_STUDIO_PORT=$studio_port WT_INNGEST_PORT=$inngest_port WT_BASE_BRANCH="$base_branch" \
         "$PROJECT_ROOT/scripts/wt-setup.sh" "$worktree_path"
     # 数据初始化
     "$PROJECT_ROOT/scripts/wt-init.sh" "$worktree_path"
@@ -90,6 +91,7 @@ cmd_create() {
         -e "s|{{DEV_PORT}}|$dev_port|g" \
         -e "s|{{STORYBOOK_PORT}}|$storybook_port|g" \
         -e "s|{{STUDIO_PORT}}|$studio_port|g" \
+        -e "s|{{INNGEST_PORT}}|$inngest_port|g" \
         "$SCRIPT_DIR/claude-local.tpl" > "$worktree_path/CLAUDE.local.md"
     info "已生成 CLAUDE.local.md (dev=$dev_port)"
 
