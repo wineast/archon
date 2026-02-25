@@ -692,6 +692,7 @@ export const evalRuns = pgTable("eval_runs", {
   judgeConfigSnapshot: jsonb("judge_config_snapshot"),
   filterTags: text("filter_tags").array().notNull().default([]),
   assertionFailConfig: jsonb("assertion_fail_config").$type<AssertionFailConfig>(),
+  concurrency: integer("concurrency").notNull().default(3),
   totalCases: integer("total_cases").notNull(),
   passedAssertions: integer("passed_assertions").notNull(),
   averageScore: real("average_score"),

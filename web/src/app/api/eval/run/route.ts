@@ -17,11 +17,14 @@ export async function POST(req: Request) {
     judgeAgentId,
     filterTags,
     assertionFailConfig,
+    concurrency: rawConcurrency,
     totalCases,
     cases,
     templateVars = {},
     toolNames = [],
   } = body;
+
+  const concurrency = Math.max(1, Math.min(5, rawConcurrency ?? 3));
 
   if (!agentId) {
     return NextResponse.json({ error: "agentId is required" }, { status: 400 });
@@ -132,6 +135,7 @@ export async function POST(req: Request) {
       },
       filterTags: filterTags ?? [],
       assertionFailConfig: assertionFailConfig ?? null,
+      concurrency,
       totalCases,
       passedAssertions: 0,
       averageScore: null,

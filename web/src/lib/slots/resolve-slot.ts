@@ -83,9 +83,9 @@ export async function resolveAgentSlot(
     return value;
   }
 
-  const value: ResolvedSlot = { agentId: null, model: "", temperature: 0 };
-  setCache(key, value);
-  return value;
+  // Don't cache null results — slot may be configured later and we want
+  // the next resolve call to pick it up immediately.
+  return { agentId: null, model: "", temperature: 0 };
 }
 
 /**

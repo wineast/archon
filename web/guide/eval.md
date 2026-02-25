@@ -28,7 +28,7 @@
 
 1. 前端 `POST /api/eval/run`，传入 `cases`、`templateVars`、`toolNames`
 2. 服务端创建 `evalRuns` 记录（`status: "running"`），在 `after()` 中启动 `executeEvalRun()`
-3. 执行引擎使用 `p-limit(3)` 并发控制，逐个执行用例（调用 `executeCase()`），每完成一个原子递增 `completedCases`
+3. 执行引擎使用 `p-limit(concurrency)` 并发控制（并发数 1-5，默认 3，在 RunEvalDialog 中配置），逐个执行用例（调用 `executeCase()`），每完成一个原子递增 `completedCases`
 4. 每个用例执行前检查 `status === "cancelled"`，如是则跳过
 5. 全部完成后 `finalizeRun()` 聚合统计，设置最终状态（`completed` / `cancelled`）
 6. 前端 `useEvalRuns` 在检测到 running 状态时自动 2s 轮询刷新
@@ -75,6 +75,7 @@
 | judgeAgentId | uuid | Judge Agent ID |
 | judgeModelConfigSnapshot | jsonb | Judge 模型配置快照 |
 | judgeConfigSnapshot | jsonb | Judge 评分维度快照 |
+| concurrency | integer | 并发数（1-5，默认 3） |
 | totalCases | integer | 总用例数 |
 | passedAssertions | integer | 通过断言数 |
 | averageScore | real | 平均评分 |
@@ -109,7 +110,7 @@
 
 - **Cases**：管理测试用例，支持 tag 筛选
 - **Results**：运行评测并查看结果
-  - Run All 按钮打开 **RunEvalDialog** 弹窗，选择 Judge Agent 和断言设置后确认执行
+  - Run All 按钮打开 **RunEvalDialog** 弹窗，选择 Judge Agent、配置并发数（1-5，默认 3）和断言设置后确认执行
   - 被测 Agent 和 Judge Agent 的 Model Config / Judge Config 均自动使用 Active 配置，无需手动选择
   - 运行中显示进度条（`completedCases / totalCases`），支持 Stop 按钮取消
   - 运行中的 run 在 History 列表中带 `Running x/y` badge，自动展开并轮询加载已完成结果
@@ -207,6 +208,7 @@ make e2e-eval
 - `web/e2e/eval-full.spec.ts` — 综合测试（8 case 批量运行，覆盖 single/sequential/injected 三种模式 + regex 断言 + tool-called 断言 + 断言失败场景 + tool call 历史注入 + UIMessage[] 导入 + tag 筛选 + tag 筛选后 Run All + 报告页验证）
 - `web/e2e/eval-judge-skip.spec.ts` — Judge 跳过测试（无 expectedOutput 时跳过 judge 评审 + 报告页验证）
 - `web/e2e/eval-binary.spec.ts` — 二元评估测试（binary scoring 0/1，验证 min/max 维度配置 + 分数显示格式 x/1 + 报告页验证）
+- `web/e2e/eval-concurrency.spec.ts` — 并发数配置测试（RunEvalDialog 设置 concurrency=1 + 运行 + 报告页验证 concurrency 显示）
 
 所有 eval E2E 测试的最后一步都会在报告页上验证 pass rate、score 和 result card 数量。
 

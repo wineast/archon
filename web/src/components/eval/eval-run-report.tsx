@@ -76,7 +76,7 @@ export function EvalRunReport({ agent, runId, orgSlug }: EvalRunReportProps) {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-4 border-b bg-muted/30 px-6 py-4 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 border-b bg-muted/30 px-6 py-4 sm:grid-cols-6">
         <div>
           <p className="text-xs text-muted-foreground">Model</p>
           <p className="text-sm font-medium">{run.chatModel.split("/").pop()}</p>
@@ -98,6 +98,10 @@ export function EvalRunReport({ agent, runId, orgSlug }: EvalRunReportProps) {
           <p className="text-sm font-medium" data-testid="report-score">
             {run.averageScore != null ? `${run.averageScore}/${scoreMax}` : "-"}
           </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Concurrency</p>
+          <p className="text-sm font-medium" data-testid="report-concurrency">{run.concurrency ?? 3}</p>
         </div>
       </div>
 
