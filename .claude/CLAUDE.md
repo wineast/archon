@@ -66,8 +66,15 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 ## 约束
 
 ### Commands
-- 常用命令统一使用 `make` 执行，所有可用 target 见 @Makefile
+- 常用命令统一使用 `make` 执行，不直接 `cd web && npm ...`
 - 如果需要的 make target 不存在，先在 Makefile 中补充，再执行
+- 完整定义见 `Makefile`，下面是速查：
+  - **初始化**：`make setup`（clone 后一次）/ `make teardown`（反向清理）
+  - **开发**：`make up`（全部服务）/ `make down` / `make dev`（仅 Next.js）/ `make storybook`
+  - **构建检查**：`make build` / `make lint` / `make typecheck` / `make test` / `make e2e`
+  - **数据库**：`make db-up` / `make db-push`（schema 变更）/ `make db-reset`（破坏性变更）/ `make db-seed` / `make db-studio`
+  - **Worktree**：`make wt-list` / `make wt-create NAME=xxx` / `make wt-sync` / `make wt-merge NAME=xxx` / `make wt-delete NAME=xxx`
+  - **Fixtures**：`make fixture-zip NAME=xxx`
 
 ### Forms（react-hook-form）
 - 所有表单必须使用 react-hook-form，采用**非受控模式**以保证大表单/动态列表场景零卡顿
