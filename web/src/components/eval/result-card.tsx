@@ -240,6 +240,7 @@ export function ResultCard({ result, scoreMax = 10 }: ResultCardProps) {
                 <span className="text-xs font-medium">Overall:</span>
                 <span
                   className={`text-sm font-bold ${scoreColor(result.judgeResult.overallScore, scoreMax)}`}
+                  data-testid="result-overall-score"
                 >
                   {result.judgeResult.overallScore}/{scoreMax}
                 </span>

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Git Worktree 管理脚本
-# 用法: ./.claude/skills/worktree/scripts/worktree.sh [list|create|delete] [args]
+# 用法: ./scripts/worktree.sh [list|create|delete|merge|sync] [args]
 
 set -e
 

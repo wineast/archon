@@ -66,8 +66,15 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 ## 约束
 
 ### Commands
-- 常用命令统一使用 `make` 执行，所有可用 target 见 @Makefile
+- 常用命令统一使用 `make` 执行，不直接 `cd web && npm ...`
 - 如果需要的 make target 不存在，先在 Makefile 中补充，再执行
+- 完整定义见 `Makefile`，下面是速查：
+  - **初始化**：`make setup`（clone 后一次）/ `make teardown`（反向清理）
+  - **开发**：`make up`（全部服务）/ `make down` / `make dev`（仅 Next.js）/ `make storybook`
+  - **构建检查**：`make build` / `make lint` / `make typecheck` / `make test` / `make e2e`
+  - **数据库**：`make db-up` / `make db-push`（schema 变更）/ `make db-reset`（破坏性变更）/ `make db-seed` / `make db-studio`
+  - **Worktree**：`make wt-list` / `make wt-create NAME=xxx` / `make wt-sync` / `make wt-merge NAME=xxx` / `make wt-delete NAME=xxx`
+  - **Fixtures**：`make fixture-zip NAME=xxx`
 
 ### Forms（react-hook-form）
 - 所有表单必须使用 react-hook-form，采用**非受控模式**以保证大表单/动态列表场景零卡顿
@@ -112,7 +119,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - schema 见 `web/src/db/schema.ts`
 - **工作区（worktree）开发**：只用 `make db-push` 快速迭代，不生成迁移文件——因为工作区并行导致迁移生成顺序不固定
 - **上游分支（dev/main）**：schema 变更从工作区合并后，统一 `make db-generate` 生成迁移文件并提交
-- **生产部署**：只用 `make db-migrate`，禁止 `db-push`——迁移文件是上线唯一通道
+- **生产部署**：Vercel 构建时自动执行 `db:migrate`（见 `vercel-build` 脚本），无需手动迁移；迁移文件是上线唯一通道，禁止本地连接任何线上生产数据库
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 - 详见 `web/guide/production-database.md`
 - **查询版本化资源（tools、functions、components、datasets、wiki、schemas 等）时必须加 `versionId` 过滤**——这些资源按 version 隔离，缺少 `versionId` 条件会导致跨 Agent/跨版本数据混入。标准模式：`eq(table.versionId, versionId)` + 其他条件（如 `eq(table.enabled, true)`, `isNull(table.deletedAt)`）
@@ -179,7 +186,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 ### 收尾检查
 - 代码修改完成后，必须依次执行 `make typecheck` 和 `make test`，确认类型无报错 + 测试通过后才算任务完成
 - 新增或修改功能必须有对应的测试用例覆盖，不能只让现有测试通过就算完成
-- 涉及用户交互流程的功能变更，运行 `make e2e` 确认端到端测试通过
+- E2E 测试（`make e2e`）非常耗时，**不在常规收尾检查中执行**，需用户明确要求时才跑
 - 同步 `web/guide/` 使用指南：根据本次改动内容，对 `web/guide/` 目录下的相关文档执行 CRUD——新增功能写新文档或新章节，修改功能更新对应段落，删除功能移除过时描述，确保文档与代码始终一致
 
 ### 测试账号
