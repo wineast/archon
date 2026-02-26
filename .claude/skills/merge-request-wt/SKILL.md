@@ -1,10 +1,10 @@
 ---
 name: merge-request-wt
 description: 工作区合并请求。在工作区内发起，做检查、展示摘要、确认后合并回上游。当用户说"合并请求"、"MR"、"提交合并"、"合回上游"、"完成工作区"等时调用。
-allowed-tools: Bash, Read, Grep, Glob, AskUserQuestion
+allowed-tools: Bash, Read, Grep, Glob, AskUserQuestion, Skill
 ---
 
-在工作区内部发起合并请求：检查代码质量 → 展示变更摘要 → 用户确认 → 执行合并回上游。
+在工作区内部发起合并请求：review → 质量检查 → E2E → 变更摘要 → 用户确认 → 合并。
 
 ## 前置条件
 
@@ -36,7 +36,21 @@ git status --short
 
 如果有未提交变更，**自动** `git add -A && git commit`（commit message 描述变更内容），不需要询问用户。
 
-### 3. 质量检查
+### 3. 同步上游检查
+
+检查当前工作区是否落后于 baseBranch：
+
+```bash
+git rev-list HEAD..<baseBranch> --count
+```
+
+如果落后（count > 0），先调用 `/sync-upstream` 技能同步上游变更。同步完成后再继续。
+
+### 4. Review 变更
+
+调用 `/review-wt` 技能，输出 review 报告。报告中如有严重问题（❌ 未实现的功能、明确的 bug 风险），展示给用户并让其决定是修复还是继续。
+
+### 5. 质量检查
 
 依次执行，**任一失败则停止并报告**：
 
@@ -47,7 +61,7 @@ make test
 
 如果失败，展示错误信息，让用户决定是修复还是跳过。
 
-### 4. 端到端测试
+### 6. 端到端测试
 
 检测本工作区是否包含 E2E 测试文件：
 
@@ -55,33 +69,28 @@ make test
 git diff <baseBranch>..HEAD --name-only | grep -E '\.spec\.ts$'
 ```
 
-如果有新增或修改的 spec 文件，运行对应的 E2E 测试：
+如果有新增或修改的 spec 文件：
 
-```bash
-make e2e  # 或针对特定 spec: cd web && npx playwright test <spec-file>
-```
+1. **确保服务启动**：先执行 `make up` 启动全部服务（Dev Server、DB 等），等待就绪
+2. **运行 E2E 测试**：
+   ```bash
+   make e2e  # 或针对特定 spec: cd web && npx playwright test <spec-file>
+   ```
+3. **后台执行**：E2E 耗时较长，用 `Bash(run_in_background=true)` 后台执行，通过 `Read(output_file)` 定期查看日志判断进度
+4. **卡住处理**：日志长时间无更新，用 `TaskStop` 终止并用 Playwright MCP 检查浏览器状态
+5. 测试通过 → 继续；失败 → 展示失败信息，让用户决定修复还是跳过
 
-- E2E 测试耗时较长，用 `Bash(run_in_background=true)` 后台执行
-- 通过 `Read(output_file)` 定期查看日志判断进度
-- 如果长时间无进展，用 `TaskStop` 终止并用 Playwright MCP 检查浏览器状态
-- 测试通过 → 继续；失败 → 展示失败信息，让用户决定修复还是跳过
-
-### 5. 变更摘要
+### 7. 变更摘要
 
 对比当前分支与 base 分支的差异：
 
 ```bash
-# 相对于 base 分支的所有 commits
 git log <baseBranch>..HEAD --oneline
-
-# 变更文件统计
 git diff <baseBranch>..HEAD --stat
-
-# 详细 diff（用于理解改了什么）
 git diff <baseBranch>..HEAD
 ```
 
-分析所有变更，向用户展示一份简洁的合并摘要：
+向用户展示一份简洁的合并摘要：
 
 - **工作区**：名称、分支
 - **目标分支**：baseBranch
@@ -91,14 +100,14 @@ git diff <baseBranch>..HEAD
 - **Schema 变更**：如果 diff 包含 `db/schema.ts`，提醒合并后需要 `make db-generate`
 - **风险提示**：如有（如大量文件修改、破坏性变更等）
 
-### 6. 用户确认
+### 8. 用户确认
 
 用 `AskUserQuestion` 让用户选择：
 
 - **确认合并** — 执行合并
 - **取消** — 终止，不做任何操作
 
-### 7. 执行合并
+### 9. 执行合并
 
 确认后，在**主仓库**中执行已有的合并脚本：
 
@@ -116,7 +125,7 @@ make -C <主仓库路径> wt-merge NAME=<工作区名称>
 
 如果合并冲突，脚本会报错退出，此时分析冲突内容，向用户说明解决方案。
 
-### 8. 合并后处理
+### 10. 合并后处理
 
 在主仓库中检测 schema 变更：
 
@@ -125,7 +134,7 @@ git -C <主仓库路径> diff HEAD~1 --name-only | grep -E "(drizzle/|db/schema\
 # 有变更则提醒用户执行 make db-generate
 ```
 
-### 9. 输出结果
+### 11. 输出结果
 
 - 合并成功：告知用户已合并，提示可选的下一步操作（`make wt-delete NAME=<name>`、`make db-generate`）
 - 合并失败：展示错误信息，给出解决建议
