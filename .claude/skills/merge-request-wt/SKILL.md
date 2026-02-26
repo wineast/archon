@@ -90,15 +90,36 @@ git diff <baseBranch>..HEAD --stat
 git diff <baseBranch>..HEAD
 ```
 
-向用户展示一份简洁的合并摘要：
+额外检查（用于决定摘要中包含哪些条件 section）：
 
-- **工作区**：名称、分支
-- **目标分支**：baseBranch
-- **Commits**：列出所有 commit（单行）
-- **变更概要**：用 1-5 个要点概括改了什么、为什么
-- **文件统计**：N files changed, N insertions, N deletions
-- **Schema 变更**：如果 diff 包含 `db/schema.ts`，提醒合并后需要 `make db-generate`
-- **风险提示**：如有（如大量文件修改、破坏性变更等）
+```bash
+# 是否包含数据库迁移文件或 schema 变更
+git diff <baseBranch>..HEAD --name-only | grep -E '(drizzle/|db/schema\.ts)'
+
+# 是否包含 UI 变更
+git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
+```
+
+向用户展示合并摘要，格式参考 PR skill：
+
+```markdown
+## Summary
+<1-5 个要点，每个要点说明 what + why>
+
+## Database
+<仅当 diff 包含 drizzle/ 迁移文件或 schema.ts 变更时出现>
+<提醒合并后需要 make db-generate>
+
+## Breaking changes
+<仅当存在不兼容变更时出现>
+
+## Test plan
+<已通过的检查项：typecheck、test、e2e 等>
+```
+
+- **Summary** 先说 why 再说 what，避免只罗列文件名
+- **Database / Breaking changes** 为条件 section，无则不展示
+- **Test plan** 列出本次合并流程中已通过的检查项
 
 ### 8. 用户确认
 
