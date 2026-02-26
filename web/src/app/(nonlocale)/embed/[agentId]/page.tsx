@@ -370,7 +370,7 @@ function EmbedChat({
           addToolOutput({
             tool: toolCall.toolName,
             toolCallId: toolCall.toolCallId,
-            output: JSON.stringify({ error: "Not running in iframe" }),
+            output: { error: "Not running in iframe" },
           });
           return;
         }
@@ -401,15 +401,15 @@ function EmbedChat({
           addToolOutput({
             tool: toolCall.toolName,
             toolCallId: toolCall.toolCallId,
-            output: JSON.stringify(result ?? {}),
+            output: result ?? {},
           });
         } catch (err) {
           addToolOutput({
             tool: toolCall.toolName,
             toolCallId: toolCall.toolCallId,
-            output: JSON.stringify({
+            output: {
               error: err instanceof Error ? err.message : String(err),
-            }),
+            },
           });
         }
         return;

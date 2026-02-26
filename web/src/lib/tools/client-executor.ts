@@ -2,7 +2,7 @@ import type { ToolRow } from "@/db/schema";
 
 export async function executeClientTool(
   toolCall: { toolCallId: string; toolName: string; input: unknown },
-  addToolOutput: (opts: { tool: string; toolCallId: string; output: string }) => void,
+  addToolOutput: (opts: { tool: string; toolCallId: string; output: unknown }) => void,
   toolsList: ToolRow[]
 ) {
   const toolDef = toolsList.find(
@@ -12,7 +12,7 @@ export async function executeClientTool(
     addToolOutput({
       tool: toolCall.toolName,
       toolCallId: toolCall.toolCallId,
-      output: JSON.stringify({ error: "Tool not found" }),
+      output: { error: "Tool not found" },
     });
     return;
   }
@@ -22,7 +22,7 @@ export async function executeClientTool(
     addToolOutput({
       tool: toolCall.toolName,
       toolCallId: toolCall.toolCallId,
-      output: JSON.stringify({ error: "No handler" }),
+      output: { error: "No handler" },
     });
     return;
   }
@@ -33,15 +33,15 @@ export async function executeClientTool(
     addToolOutput({
       tool: toolCall.toolName,
       toolCallId: toolCall.toolCallId,
-      output: typeof result === "string" ? result : JSON.stringify(result),
+      output: result,
     });
   } catch (e) {
     addToolOutput({
       tool: toolCall.toolName,
       toolCallId: toolCall.toolCallId,
-      output: JSON.stringify({
+      output: {
         error: `Client execution error: ${e instanceof Error ? e.message : String(e)}`,
-      }),
+      },
     });
   }
 }
