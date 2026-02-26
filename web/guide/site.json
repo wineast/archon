@@ -1,0 +1,121 @@
+[
+  {
+    "group": "开发环境",
+    "items": [
+      "local-docker-db",
+      "env-vars",
+      "production-database",
+      "worktree"
+    ]
+  },
+  {
+    "group": "工具",
+    "items": [
+      "tools",
+      "tool-handler",
+      "tool-sandbox",
+      "tool-examples",
+      "tool-test-assertions",
+      "tool-component-preview"
+    ]
+  },
+  {
+    "group": "函数",
+    "items": [
+      "functions",
+      "function-code"
+    ]
+  },
+  {
+    "group": "组件",
+    "items": [
+      "components",
+      "component-authoring"
+    ]
+  },
+  {
+    "group": "数据",
+    "items": [
+      "datasets",
+      "dataset-data",
+      "schemas",
+      "schema"
+    ]
+  },
+  {
+    "group": "模板与内容",
+    "items": [
+      "template-engine",
+      "prompt-editing",
+      "wiki-tree",
+      "wiki-content",
+      "ontology",
+      "rag"
+    ]
+  },
+  {
+    "group": "Agent 配置",
+    "items": [
+      "model-config",
+      "chat-config",
+      "context-compression",
+      "skills",
+      "mcp-servers",
+      "memory",
+      "memory-injection-mode",
+      "files",
+      "sessions",
+      "module-system",
+      "runtime-events"
+    ]
+  },
+  {
+    "group": "版本与资源",
+    "items": [
+      "version-system",
+      "builtin-agents",
+      "agent-slots-and-resource-pool",
+      "resource-pool",
+      "agent-export-import"
+    ]
+  },
+  {
+    "group": "评测",
+    "items": [
+      "eval",
+      "judge-config",
+      "benchmark"
+    ]
+  },
+  {
+    "group": "集成与部署",
+    "items": [
+      "embed-widget",
+      "embed-host-communication",
+      "support-bubble",
+      "build-chat"
+    ]
+  },
+  {
+    "group": "平台管理",
+    "items": [
+      "user-permissions",
+      "org-tenant",
+      "usage-metering",
+      "profit-sharing",
+      "credits",
+      "byok",
+      "invitation-codes",
+      "account-deletion"
+    ]
+  },
+  {
+    "group": "开发规范",
+    "items": [
+      "testing",
+      "i18n",
+      "edit-preview-pattern",
+      "key-field-pattern"
+    ]
+  }
+]
