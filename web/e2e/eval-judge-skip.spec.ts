@@ -115,14 +115,21 @@ test.describe("Eval Judge Skip", () => {
       await waitForStable(page)
       await page.getByTestId("tab-api-keys").click()
       await page.waitForTimeout(500)
-      await page.getByTestId("btn-configure-deepseek").click()
-      await page.waitForTimeout(300)
-      log("填入 DeepSeek API Key")
-      await page.getByTestId("input-api-key").fill(process.env.E2E_DEEPSEEK_API_KEY!)
-      await page.getByTestId("btn-save-api-key").click()
-      await page.waitForTimeout(1_000)
-      await expect(page.getByTestId("api-key-row-deepseek")).not.toContainText("未配置", { timeout: 5_000 })
-      log("API Key 保存成功")
+
+      const keyRow = page.getByTestId("api-key-row-deepseek")
+      const keyText = await keyRow.textContent()
+      if (keyText?.includes("未配置")) {
+        await page.getByTestId("btn-configure-deepseek").click()
+        await page.waitForTimeout(300)
+        log("填入 DeepSeek API Key")
+        await page.getByTestId("input-api-key").fill(process.env.E2E_DEEPSEEK_API_KEY!)
+        await page.getByTestId("btn-save-api-key").click()
+        await page.waitForTimeout(1_000)
+        await expect(keyRow).not.toContainText("未配置", { timeout: 5_000 })
+        log("API Key 保存成功")
+      } else {
+        log("DeepSeek API Key 已配置，跳过")
+      }
     })
 
     await test.step("配置测试 Agent Model Config", async () => {
@@ -288,27 +295,27 @@ test.describe("Eval Judge Skip", () => {
     })
 
     await test.step("验证 judge 行为", async () => {
-      // useEffect 自动设置 expandedRunId 但不 fetch detail
-      // 先点击折叠（toggle off），再点击展开（toggle on + fetch detail）
+      // 折叠再展开以触发 detail 加载
       log("折叠再展开以加载 detail")
-      const passRate = page.getByTestId("run-pass-rate").first()
-      await passRate.click()
+      const batchHeader = page.getByTestId("run-pass-rate").first().locator("../..")
+      await batchHeader.click()
       await page.waitForTimeout(500)
-      await passRate.click()
-      await page.waitForTimeout(2_000)
+      await batchHeader.click()
 
-      const resultCards = page.getByTestId("result-card")
+      log("等待 result cards 加载")
+      const resultCards = visible(page, "result-card")
+      await expect(resultCards.first()).toBeVisible({ timeout: 15_000 })
+      await expect(resultCards).toHaveCount(2, { timeout: 15_000 })
       const count = await resultCards.count()
       log(`result cards 数量: ${count}`)
-      await expect(resultCards).toHaveCount(2, { timeout: 15_000 })
 
       log("验证 with_expected case → judge-score-section 可见")
       const withExpectedCard = resultCards.filter({ has: page.getByTestId("result-case-name").filter({ hasText: "With Expected" }) })
-      await expect(withExpectedCard.getByTestId("judge-score-section")).toBeVisible({ timeout: 5_000 })
+      await expect(withExpectedCard.getByTestId("judge-score-section")).toBeVisible({ timeout: 15_000 })
 
       log("验证 without_expected case → judge-skipped 可见")
       const withoutExpectedCard = resultCards.filter({ has: page.getByTestId("result-case-name").filter({ hasText: "Without Expected" }) })
-      await expect(withoutExpectedCard.getByTestId("judge-skipped")).toBeVisible({ timeout: 5_000 })
+      await expect(withoutExpectedCard.getByTestId("judge-skipped")).toBeVisible({ timeout: 15_000 })
       await expect(withoutExpectedCard.getByTestId("judge-score-section")).not.toBeVisible()
       log("judge 行为验证通过 ✓")
     })
