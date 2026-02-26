@@ -158,3 +158,24 @@ export async function deleteEvalRun(
     return false;
   }
 }
+
+export async function retryFailedCases(
+  runId: string,
+  mutate: () => void
+): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/eval/run/${runId}/retry-failed`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+    mutate();
+    return true;
+  } catch (e) {
+    console.warn("retryFailedCases failed:", e);
+    toast.error(e instanceof Error ? e.message : "Failed to retry failed cases");
+    return false;
+  }
+}

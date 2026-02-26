@@ -11,6 +11,7 @@ import {
   useEvalRuns,
   fetchEvalRunDetail,
   deleteEvalRun,
+  retryFailedCases,
 } from "@/lib/eval/hooks";
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useEvalRun } from "@/lib/eval/eval-run-context";
@@ -37,6 +38,7 @@ import {
   ClockIcon,
   BookmarkIcon,
   FileTextIcon,
+  RotateCcwIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import {
@@ -253,6 +255,9 @@ export function ResultsPanel({
                     onToggle={() => handleToggleRunDetail(run.id)}
                     onDelete={() => handleDeleteRun(run.id)}
                     onBaselineChanged={mutateRuns}
+                    onRetryFailed={async () => {
+                      await retryFailedCases(run.id, mutateRuns);
+                    }}
                   />
                 ))}
               </div>
@@ -291,6 +296,7 @@ function RunHistoryItem({
   onToggle,
   onDelete,
   onBaselineChanged,
+  onRetryFailed,
 }: {
   run: EvalRunRow;
   agentId?: string;
@@ -301,12 +307,17 @@ function RunHistoryItem({
   onToggle: () => void;
   onDelete: () => void;
   onBaselineChanged: () => void;
+  onRetryFailed: () => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const { mutate: globalMutate } = useSWRConfig();
   const pathname = usePathname();
   const isRunning = run.status === "running";
   const reportUrl = pathname.replace(/\/build.*$/, `/eval/${run.id}`);
+
+  const canRetry = run.status === "completed" || run.status === "failed";
+  const hasFailedCases = canRetry && detail?.results.some((r) => r.error != null);
 
   const scoreMax = getScoreMax(
     (run.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)?.dimensions
@@ -411,6 +422,27 @@ function RunHistoryItem({
         >
           <FileTextIcon className="size-3" />
         </Button>
+        {hasFailedCases && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            data-testid="btn-retry-failed"
+            onClick={async (e) => {
+              e.stopPropagation();
+              setRetrying(true);
+              await onRetryFailed();
+              setRetrying(false);
+            }}
+            disabled={retrying || isRunning}
+            title="Retry failed cases"
+          >
+            {retrying ? (
+              <Spinner className="size-3" />
+            ) : (
+              <RotateCcwIcon className="size-3" />
+            )}
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon-xs"

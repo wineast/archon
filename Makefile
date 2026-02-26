@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test e2e e2e-ui e2e-eval e2e-eval-binary clean storybook deps db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
 
 # ============================================================
 # Setup
@@ -43,45 +43,52 @@ teardown:
 
 LOG_DIR := .logs
 
-## 启动所有开发服务（db + dev + storybook + db-studio），日志输出到 .logs/
+## 启动所有开发服务（db + dev + storybook + db-studio + inngest），日志输出到 .logs/
 up: db-up
 	@mkdir -p $(LOG_DIR)
 	@if [ -f .worktree/meta.json ]; then \
 		DEV_PORT=$$(node -p "require('./.worktree/meta.json').dev") && \
 		SB_PORT=$$(node -p "require('./.worktree/meta.json').storybook") && \
 		STUDIO_PORT=$$(node -p "require('./.worktree/meta.json').studio") && \
+		INNGEST_PORT=$$(node -p "require('./.worktree/meta.json').inngest || 8288") && \
 		lsof -ti :$$DEV_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$SB_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$STUDIO_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :$$INNGEST_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		echo "" && \
 		echo "🚀 启动服务..." && \
-		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio}.log" && \
+		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio,inngest}.log" && \
 		echo "" && \
 		echo "  Dev Server   → http://localhost:$$DEV_PORT" && \
 		echo "  Storybook    → http://localhost:$$SB_PORT" && \
 		echo "  DB Studio    → https://local.drizzle.studio?port=$$STUDIO_PORT" && \
+		echo "  Inngest Dev  → http://localhost:$$INNGEST_PORT" && \
 		echo "  Embed Test   → http://localhost:$$DEV_PORT/embed/test.html" && \
 		echo "" && \
 		(cd web && npm run dev -- --port $$DEV_PORT) > $(LOG_DIR)/dev.log 2>&1 & \
 		(cd web && npm run storybook -- -p $$SB_PORT) > $(LOG_DIR)/storybook.log 2>&1 & \
 		(cd web && npx drizzle-kit studio --port $$STUDIO_PORT) > $(LOG_DIR)/studio.log 2>&1 & \
+		(npx inngest-cli@latest dev -u http://localhost:$$DEV_PORT/api/inngest --port $$INNGEST_PORT) > $(LOG_DIR)/inngest.log 2>&1 & \
 		wait; \
 	else \
 		lsof -ti :3000 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :4983 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :8288 2>/dev/null | xargs kill 2>/dev/null || true; \
 		echo "" && \
 		echo "🚀 启动服务..." && \
-		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio}.log" && \
+		echo "📄 日志: $(LOG_DIR)/{dev,storybook,studio,inngest}.log" && \
 		echo "" && \
 		echo "  Dev Server   → http://localhost:3000" && \
 		echo "  Storybook    → http://localhost:6006" && \
 		echo "  DB Studio    → https://local.drizzle.studio" && \
+		echo "  Inngest Dev  → http://localhost:8288" && \
 		echo "  Embed Test   → http://localhost:3000/embed/test.html" && \
 		echo "" && \
 		(cd web && npm run dev) > $(LOG_DIR)/dev.log 2>&1 & \
 		(cd web && npm run storybook) > $(LOG_DIR)/storybook.log 2>&1 & \
 		(cd web && npm run db:studio) > $(LOG_DIR)/studio.log 2>&1 & \
+		(npx inngest-cli@latest dev -u http://localhost:3000/api/inngest) > $(LOG_DIR)/inngest.log 2>&1 & \
 		wait; \
 	fi
 
@@ -91,13 +98,16 @@ down:
 		DEV_PORT=$$(node -p "require('./.worktree/meta.json').dev") && \
 		SB_PORT=$$(node -p "require('./.worktree/meta.json').storybook") && \
 		STUDIO_PORT=$$(node -p "require('./.worktree/meta.json').studio") && \
+		INNGEST_PORT=$$(node -p "require('./.worktree/meta.json').inngest || 8288") && \
 		lsof -ti :$$DEV_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$SB_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :$$STUDIO_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :$$INNGEST_PORT 2>/dev/null | xargs kill 2>/dev/null || true; \
 	else \
 		lsof -ti :3000 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
 		lsof -ti :4983 2>/dev/null | xargs kill 2>/dev/null || true; \
+		lsof -ti :8288 2>/dev/null | xargs kill 2>/dev/null || true; \
 	fi
 	@echo "✅ 所有服务已停止"
 
@@ -140,6 +150,12 @@ e2e-eval:
 e2e-eval-binary:
 	cd web && npx playwright test --project=eval eval-binary
 
+e2e-eval-cancel:
+	cd web && npx playwright test --project=eval eval-cancel
+
+e2e-report:
+	cd web && npx playwright show-report
+
 storybook:
 	@if [ -f .worktree/meta.json ]; then \
 		export SB_PORT=$$(node -p "require('./.worktree/meta.json').storybook") && \
@@ -149,6 +165,18 @@ storybook:
 	else \
 		lsof -ti :6006 2>/dev/null | xargs kill 2>/dev/null || true; \
 		cd web && npm run storybook; \
+	fi
+
+## 启动 Inngest Dev Server
+inngest-dev:
+	@if [ -f .worktree/meta.json ]; then \
+		DEV_PORT=$$(node -p "require('./.worktree/meta.json').dev") && \
+		INNGEST_PORT=$$(node -p "require('./.worktree/meta.json').inngest || 8288") && \
+		echo "Inngest Dev Server → http://localhost:$$INNGEST_PORT" && \
+		npx inngest-cli@latest dev -u http://localhost:$$DEV_PORT/api/inngest --port $$INNGEST_PORT; \
+	else \
+		echo "Inngest Dev Server → http://localhost:8288" && \
+		npx inngest-cli@latest dev -u http://localhost:3000/api/inngest; \
 	fi
 
 ## 重启所有开发服务

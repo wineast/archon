@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import { db } from "@/db";
 import { evalRuns, modelConfigs, judgeConfigs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
@@ -6,9 +5,7 @@ import { NextResponse } from "next/server";
 import type { CreateEvalRunRequest, CreateEvalRunResponse } from "@/lib/eval/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
-import { executeEvalRun } from "@/lib/eval/execute-run";
-
-export const maxDuration = 120;
+import { inngest } from "@/inngest/client";
 
 export async function POST(req: Request) {
   const body: CreateEvalRunRequest = await req.json();
@@ -135,6 +132,8 @@ export async function POST(req: Request) {
       },
       filterTags: filterTags ?? [],
       assertionFailConfig: assertionFailConfig ?? null,
+      templateVars,
+      toolNames,
       concurrency,
       totalCases,
       passedAssertions: 0,
@@ -144,16 +143,15 @@ export async function POST(req: Request) {
     })
     .returning();
 
-  // Trigger server-side execution in after()
-  after(async () => {
-    await executeEvalRun({
+  // Send Inngest event to start orchestration
+  await inngest.send({
+    name: "eval/run.created",
+    data: {
       runId: run.id,
       agentId,
-      cases,
-      templateVars,
-      toolNames,
+      caseIds: cases.map((c) => c.id),
       userId: ctx.user.id,
-    });
+    },
   });
 
   return Response.json({

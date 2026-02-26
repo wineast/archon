@@ -64,19 +64,10 @@ vi.mock("@/lib/versions/resolve", () => ({
   ),
 }));
 
-// Mock after() — just call the callback immediately (or not)
-const afterCallbacks: (() => Promise<void>)[] = [];
-vi.mock("next/server", async () => {
-  const actual = await vi.importActual<typeof import("next/server")>("next/server");
-  return {
-    ...actual,
-    after: (fn: () => Promise<void>) => { afterCallbacks.push(fn); },
-  };
-});
-
-// Mock executeEvalRun
-vi.mock("@/lib/eval/execute-run", () => ({
-  executeEvalRun: vi.fn().mockResolvedValue(undefined),
+// Mock inngest client
+const inngestSendMock = vi.fn().mockResolvedValue({ ids: ["evt-1"] });
+vi.mock("@/inngest/client", () => ({
+  inngest: { send: (...args: unknown[]) => inngestSendMock(...args) },
 }));
 
 const { POST } = await import("../route");
@@ -102,7 +93,6 @@ describe("POST /api/eval/run (create run)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertedValues.length = 0;
-    afterCallbacks.length = 0;
     selectCallIndex = 0;
     selectResults[0] = []; // concurrency: no running
     selectResults[1] = [{ id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null }];
@@ -129,10 +119,33 @@ describe("POST /api/eval/run (create run)", () => {
     });
   });
 
-  it("triggers executeEvalRun in after()", async () => {
+  it("sends inngest event with runId and caseIds", async () => {
     await POST(makeRequest(baseBody));
 
-    expect(afterCallbacks).toHaveLength(1);
+    expect(inngestSendMock).toHaveBeenCalledWith({
+      name: "eval/run.created",
+      data: {
+        runId: "run-1",
+        agentId: "agent-1",
+        caseIds: ["c1"],
+        userId: "user-1",
+      },
+    });
+  });
+
+  it("stores templateVars and toolNames in run record", async () => {
+    await POST(
+      makeRequest({
+        ...baseBody,
+        templateVars: { key1: "val1" },
+        toolNames: ["tool1", "tool2"],
+      })
+    );
+
+    expect(insertedValues[0]).toMatchObject({
+      templateVars: { key1: "val1" },
+      toolNames: ["tool1", "tool2"],
+    });
   });
 
   it("returns 400 if cases are missing", async () => {
