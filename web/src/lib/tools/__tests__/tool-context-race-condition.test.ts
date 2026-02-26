@@ -1,11 +1,15 @@
 /**
- * 测试 ToolContext.fn() 并发竞态条件（Issue: concurrent-functions-exec-race-condition）
+ * 测试 ToolContext.fn() 并发竞态条件与版本隔离（Issue: concurrent-functions-exec-race-condition）
  *
- * 验证场景：多个 ToolContext 并行调用 fn()，冷缓存下通过模块级 Promise 锁
- * 去重编译请求，确保只编译一次、所有调用方共享同一个 exec context。
+ * 验证场景：
+ * 1. 多个 ToolContext 并行调用 fn()，冷缓存下通过模块级 Promise 锁
+ *    去重编译请求，确保只编译一次、所有调用方共享同一个 exec context
+ * 2. 不同版本的 ToolContext 各自独立编译，缓存互不干扰
+ * 3. 清除 draft 版本缓存不影响 published 版本正在使用的函数
  *
  * 冷缓存：全部 fulfilled（Promise 锁去重）
  * 热缓存：全部 fulfilled（直接命中缓存）
+ * 版本隔离：draft/published 各自编译、互不 dispose
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { clearFunctionCache } from "@/lib/functions/compile";
@@ -197,5 +201,136 @@ describe("ToolContext.fn() 并发竞态", () => {
     // 关键断言：全部结果正确
 
     clearFunctionCache(AGENT_ID);
+  });
+});
+
+describe("ToolContext.fn() 版本隔离", () => {
+  const AGENT_ID = "isolation-test-agent";
+  const DRAFT_VERSION = "draft-version-id";
+  const PUBLISHED_VERSION = "published-version-id";
+
+  const ADD_FN_RECORD = [
+    {
+      key: "add",
+      code: `export default function(input) { return input.a + input.b; }`,
+      parametersSchema: {
+        type: "object",
+        properties: { a: { type: "number" }, b: { type: "number" } },
+        required: ["a", "b"],
+      },
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clearFunctionCache();
+  });
+
+  it("不同版本各自独立编译，互不共享 Promise 锁", async () => {
+    // 加延迟确保并发窗口
+    mockGetAgentFunctions.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve(ADD_FN_RECORD), 10)
+        )
+    );
+    mockGetAgentDatasets.mockResolvedValue([]);
+
+    const { createToolContext } = await import("../tool-context");
+
+    // draft 和 published 各 2 个 ToolContext 并行调用
+    const draftContexts = Array.from({ length: 2 }, () =>
+      createToolContext(AGENT_ID, DRAFT_VERSION)
+    );
+    const pubContexts = Array.from({ length: 2 }, () =>
+      createToolContext(AGENT_ID, PUBLISHED_VERSION)
+    );
+
+    // 全部并行
+    const [draftFns, pubFns] = await Promise.all([
+      Promise.all(draftContexts.map((ctx) => ctx.fn("add"))),
+      Promise.all(pubContexts.map((ctx) => ctx.fn("add"))),
+    ]);
+
+    // 两组各自成功
+    for (const fn of draftFns) {
+      expect((fn as (input: unknown) => unknown)({ a: 1, b: 2 })).toBe(3);
+    }
+    for (const fn of pubFns) {
+      expect((fn as (input: unknown) => unknown)({ a: 10, b: 20 })).toBe(30);
+    }
+
+    // 每个版本各编译 1 次（Promise 锁按 agentId:versionId 去重）→ 共 2 次
+    expect(mockGetAgentFunctions).toHaveBeenCalledTimes(2);
+    expect(mockGetAgentFunctions).toHaveBeenCalledWith(AGENT_ID, DRAFT_VERSION);
+    expect(mockGetAgentFunctions).toHaveBeenCalledWith(AGENT_ID, PUBLISHED_VERSION);
+
+    clearFunctionCache();
+  });
+
+  it("清除 draft 缓存后 published 版本函数仍可正常调用", async () => {
+    mockGetAgentFunctions.mockResolvedValue(ADD_FN_RECORD);
+    mockGetAgentDatasets.mockResolvedValue([]);
+
+    const { createToolContext } = await import("../tool-context");
+
+    // 分别预热 draft 和 published 缓存
+    const draftCtx = createToolContext(AGENT_ID, DRAFT_VERSION);
+    const pubCtx = createToolContext(AGENT_ID, PUBLISHED_VERSION);
+
+    const draftAdd = await draftCtx.fn("add");
+    const pubAdd = await pubCtx.fn("add");
+
+    // 两者都正常
+    expect((draftAdd as (input: unknown) => unknown)({ a: 1, b: 2 })).toBe(3);
+    expect((pubAdd as (input: unknown) => unknown)({ a: 10, b: 20 })).toBe(30);
+
+    // 模拟编辑 draft function → 只清除 draft 版本缓存
+    clearFunctionCache(AGENT_ID, DRAFT_VERSION);
+
+    // draft 的 exec 已 dispose
+    expect(() => (draftAdd as (input: unknown) => unknown)({ a: 1, b: 2 })).toThrow(
+      "Exec context has been disposed"
+    );
+
+    // published 不受影响，仍然可用
+    expect((pubAdd as (input: unknown) => unknown)({ a: 10, b: 20 })).toBe(30);
+
+    clearFunctionCache();
+  });
+
+  it("draft 重新编译不 dispose published 的 exec context", async () => {
+    mockGetAgentFunctions.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve(ADD_FN_RECORD), 5)
+        )
+    );
+    mockGetAgentDatasets.mockResolvedValue([]);
+
+    const { createToolContext } = await import("../tool-context");
+
+    // 预热两个版本
+    const pubCtx = createToolContext(AGENT_ID, PUBLISHED_VERSION);
+    const pubAdd = await pubCtx.fn("add");
+    expect((pubAdd as (input: unknown) => unknown)({ a: 5, b: 5 })).toBe(10);
+
+    const draftCtx1 = createToolContext(AGENT_ID, DRAFT_VERSION);
+    const draftAdd1 = await draftCtx1.fn("add");
+    expect((draftAdd1 as (input: unknown) => unknown)({ a: 1, b: 1 })).toBe(2);
+
+    // 清除 draft 缓存并重新编译（模拟用户编辑保存后下次调用）
+    clearFunctionCache(AGENT_ID, DRAFT_VERSION);
+
+    const draftCtx2 = createToolContext(AGENT_ID, DRAFT_VERSION);
+    const draftAdd2 = await draftCtx2.fn("add");
+
+    // 新的 draft 编译正常
+    expect((draftAdd2 as (input: unknown) => unknown)({ a: 3, b: 4 })).toBe(7);
+
+    // published 始终不受影响
+    expect((pubAdd as (input: unknown) => unknown)({ a: 100, b: 200 })).toBe(300);
+
+    clearFunctionCache();
   });
 });
