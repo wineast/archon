@@ -465,7 +465,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           variant="outline"
           onClick={() => setRunDialogOpen(true)}
           disabled={busy || isGlobalRunning}
-          data-testid="btn-case-run"
+          data-testid="btn-run-case"
         >
           {running ? (
             <Spinner className="mr-1 size-3" />
