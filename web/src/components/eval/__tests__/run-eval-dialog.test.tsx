@@ -154,6 +154,8 @@ describe("RunEvalDialog", () => {
       judgeAgentId: "judge-agent-1",
       assertionFailConfig: {},
       concurrency: 3,
+      repeatCount: 1,
+      runConcurrency: 1,
     });
   });
 

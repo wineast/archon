@@ -9,6 +9,7 @@
 | **Eval Case** | 测试用例，定义输入 + 预期输出 + 断言规则 |
 | **Judge Agent** | 评审 Agent，通过 evaluator 功能槽位引用，提供模型配置和评分维度 |
 | **Judge Config** | 评分维度配置（仅 name + dimensions），属于 Judge Agent，在 Build > Judge Tab 中管理 |
+| **Eval Batch** | 一次评测批次，包含 1-10 个 Run，用于评估稳定性 |
 | **Eval Run** | 一次评测运行，包含多个用例的执行结果 |
 | **Assertion** | 断言规则（文本断言 + 工具调用断言），用于自动判定通过/失败 |
 | **Dimension** | 评审维度（如准确性、相关性），由 Judge LLM 打分，支持自定义 min/max 分数范围（默认 0-10，可配为 0-1 二元评估） |
@@ -24,26 +25,38 @@
 
 ### 服务端执行引擎（Inngest）
 
-评测运行由 **Inngest** 事件驱动框架异步执行，前端仅发起创建请求并通过 SWR 轮询获取进度：
+评测运行由 **Inngest** 事件驱动框架异步执行，前端仅发起创建请求并通过 SWR 轮询获取进度。
 
-1. 前端 `POST /api/eval/run`，传入 `cases`、`templateVars`、`toolNames`
-2. 服务端创建 `evalRuns` 记录（`status: "running"`，同时存储 `templateVars` 和 `toolNames` 快照），发送 `eval/run.created` Inngest 事件
-3. **eval-orchestrator** 函数接收事件，加载 run 配置和 orgId，将 caseIds 按 `concurrency`（1-5，默认 3）分批
-4. 每批前通过 `step.run("check-cancel-N")` 检查 DB 取消标志，如已取消则跳过后续批次
-5. 批内通过 `step.invoke()` + `Promise.all()` 并行调用 **eval-case-worker** 函数
-6. **eval-case-worker** 每个 case 分三步：`load`（加载 run + case）→ `execute`（调用 `executeCase()`）→ `save`（upsert 结果 + COUNT 更新 completedCases + 记录用量）
-7. 全部批次完成后 `step.run("finalize")` 聚合统计，设置最终状态（`completed` / `cancelled`）
-8. 前端 `useEvalRuns` 在检测到 running 状态时自动 2s 轮询刷新
+#### 两层编排：Batch → Run → Case
+
+所有评测运行归属于 **Batch**（批次）。单次执行是 `repeatCount=1` 的 batch，自动展平为单 run 显示；`repeatCount>1` 时展示聚合视图。
+
+**Batch 层**（`eval-batch-orchestrator`）：
+1. 前端 `POST /api/eval/batch`，传入 `cases`、`templateVars`、`toolNames`、`repeatCount`（1-10）、`runConcurrency`（1-5）
+2. 服务端创建 `evalBatches` 记录 + N 个 `evalRuns` 记录（`status: "pending"`），发送 `eval/batch.created` Inngest 事件
+3. **eval-batch-orchestrator** 接收事件，按 `runConcurrency` 将 runs 分批
+4. 每批前检查 batch 是否被取消，然后将批内 runs 设为 "running"
+5. 通过 `step.invoke(evalOrchestrator)` 并行调用每个 run 的编排器
+6. 批完成后更新 `completedRuns`
+7. 全部完成后调用 `finalizeBatch(batchId)` 聚合统计
+
+**Run 层**（`eval-orchestrator` + `eval-case-worker`，无需修改）：
+1. eval-orchestrator 加载 run 配置和 orgId，将 caseIds 按 `concurrency`（1-5，默认 3）分批
+2. 每批前通过 `step.run("check-cancel-N")` 检查 DB 取消标志
+3. 批内通过 `step.invoke()` + `Promise.all()` 并行调用 **eval-case-worker**
+4. eval-case-worker 每个 case 分三步：`load` → `execute` → `save`
+5. 全部批次完成后 `step.run("finalize")` 聚合统计
 
 **关键好处**：
 - 刷新/离开页面不丢失运行状态——进度持久化在 DB
 - 无 120s 超时限制——Inngest 函数不受 Vercel serverless 时间约束
-- 无竞态条件——`step.run("finalize")` 在所有 worker 完成后执行，结果已全部可见
+- 无竞态条件——finalize 在所有 worker 完成后执行
 - 自动重试——case worker 配置 3 次重试，`onConflictDoUpdate` 保证幂等
-- 支持 Cancel——前端调用 `POST /api/eval/run/{runId}/cancel` 设置 `status: "cancelled"`，orchestrator 每批前检查
+- 支持 Cancel——`POST /api/eval/batch/{batchId}/cancel` 取消 batch + 所有 pending/running runs
 - 支持 Retry Failed——`POST /api/eval/run/{runId}/retry-failed` 删除失败结果并重新发送事件
-- 同一 Agent 不能同时运行两个 Run（409 并发检查）
-- 超过 30 分钟的 running run 自动标记为 `failed`
+- 同一 Agent 不能同时运行两个 Batch（409 并发检查）
+- 超过 30 分钟的 running batch 自动标记为 `failed`
+- **稳定性评估**：`repeatCount>1` 时，batch finalize 计算聚合统计（均分、标准差、最低/最高分），量化 Agent 输出稳定性
 
 **本地开发**：`make up` 已包含 Inngest Dev Server（Worktree 端口从 `meta.json` 读取，主仓库默认 8288）。也可独立启动：`make inngest-dev`
 
@@ -71,12 +84,36 @@
 | assertions | jsonb | 断言规则列表 |
 | tags | text[] | 标签（用于筛选） |
 
+### evalBatches 表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | uuid | 主键 |
+| agentId | uuid | 被测 Agent |
+| repeatCount | integer | 重复次数（1-10） |
+| runConcurrency | integer | Run 并发数（1-5，默认 1） |
+| chatModel | text | 对话模型 ID 快照 |
+| judgeConfigSnapshot | jsonb | Judge 评分维度快照（用于 scoreMax 计算） |
+| totalCasesPerRun | integer | 每个 run 的 case 数 |
+| status | text | `pending` / `running` / `completed` / `cancelled` / `failed` |
+| completedRuns | integer | 已完成 run 数 |
+| totalRuns | integer | 总 run 数 |
+| passedAssertions | integer | 通过断言数（N=1 直接用，N>1 所有 run 求和） |
+| averageScore | real | 平均评分（N=1 直接用，N>1 所有 run 平均） |
+| scoreStdDev | real | 评分标准差（仅 N>1） |
+| minScore | real | 最低 run 均分 |
+| maxScore | real | 最高 run 均分 |
+| isBaseline | boolean | 是否为基线 |
+| error | text | 错误信息 |
+
 ### evalRuns 表
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | uuid | 主键 |
 | agentId | uuid | 被测 Agent |
+| batchId | uuid | 所属 Batch（FK → evalBatches，级联删除） |
+| runIndex | integer | 在 batch 内的序号（0-based） |
 | chatModel | text | 对话模型 ID |
 | chatSystemPrompt | text | 对话系统提示词 |
 | chatTemperature | real | 对话温度 |
@@ -89,9 +126,9 @@
 | totalCases | integer | 总用例数 |
 | passedAssertions | integer | 通过断言数 |
 | averageScore | real | 平均评分 |
-| status | text | 运行状态：`pending` / `running` / `completed` / `cancelled` / `failed` |
-| completedCases | integer | 已完成用例数（用于进度展示） |
-| error | text | 错误信息（仅 `failed` 状态） |
+| status | text | `pending` / `running` / `completed` / `cancelled` / `failed` |
+| completedCases | integer | 已完成用例数 |
+| error | text | 错误信息 |
 
 > 运行记录通过快照保存所有配置（含 chatTemperature），确保历史记录不受后续修改影响。
 
@@ -101,18 +138,41 @@
 
 ## API
 
+### Batch 端点
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/eval/batch` | 创建 batch（含 N 个 run），替代原 POST /api/eval/run |
+| GET | `/api/eval/batches?agentId=xxx` | 列出 batch 记录（自动超时降级 30min+ running → failed） |
+| GET | `/api/eval/batches/[id]` | Batch 详情（含所有 runs） |
+| DELETE | `/api/eval/batches/[id]` | 删除 batch（级联删除 runs + results） |
+| PATCH | `/api/eval/batches/[id]` | 更新 batch（`isBaseline` 切换） |
+| POST | `/api/eval/batch/[batchId]/cancel` | 取消 batch + 所有 pending/running runs |
+
+### Case 端点
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/eval/cases?agentId=xxx` | 列出测试用例 |
 | POST | `/api/eval/cases` | 创建用例 |
 | PATCH | `/api/eval/cases/[id]` | 更新用例 |
 | DELETE | `/api/eval/cases/[id]` | 删除用例 |
-| POST | `/api/eval/run` | 创建运行并启动服务端异步执行（请求需 agentId + judgeAgentId + cases + templateVars + toolNames） |
-| POST | `/api/eval/run/[runId]/case` | 执行单个用例（保留供调试，从 run 记录读取配置快照） |
-| PATCH | `/api/eval/run/[runId]` | 完成运行（汇总统计，单用例场景使用） |
-| POST | `/api/eval/run/[runId]/cancel` | 取消运行中的 run |
-| POST | `/api/eval/run/[runId]/retry-failed` | 重跑执行失败的 case（error IS NOT NULL，非断言失败） |
-| GET | `/api/eval/runs?agentId=xxx` | 列出运行记录（自动超时降级 30min+ running → failed） |
+
+### Run 端点（保留）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/eval/run` | 创建单次运行（并发检查已改为检查 running batch） |
+| POST | `/api/eval/run/[runId]/case` | 执行单个用例（调试用） |
+| PATCH | `/api/eval/run/[runId]` | 完成运行（汇总统计） |
+| POST | `/api/eval/run/[runId]/cancel` | 取消单个 run |
+| POST | `/api/eval/run/[runId]/retry-failed` | 重跑失败 case |
+| GET | `/api/eval/runs?agentId=xxx` | 列出 run 记录 |
+
+### 其他
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
 | GET | `/api/eval/resolve-judge?agentId=xxx` | 解析 evaluator 槽位得到 Judge Agent |
 
 ## UI
@@ -121,16 +181,25 @@
 
 - **Cases**：管理测试用例，支持 tag 筛选
 - **Results**：运行评测并查看结果
-  - Run All 按钮打开 **RunEvalDialog** 弹窗，选择 Judge Agent、配置并发数（1-5，默认 3）和断言设置后确认执行
-  - 被测 Agent 和 Judge Agent 的 Model Config / Judge Config 均自动使用 Active 配置，无需手动选择
-  - 运行中显示进度条（`completedCases / totalCases`），支持 Stop 按钮取消
-  - 运行中的 run 在 History 列表中带 `Running x/y` badge，自动展开并轮询加载已完成结果
+  - Run All / Run 按钮打开 **RunEvalDialog** 弹窗，配置：
+    - Judge Agent（通过 evaluator 槽位自动选择）
+    - 用例并发数（1-5，默认 3）
+    - **重复次数**（1-10，默认 1）——同一组 case 重复执行 N 次
+    - **Run 并发数**（1-5，默认 1，仅重复次数 >1 时显示）
+    - 断言设置
+  - 确认后创建 Batch，包含 N 个 Run
+  - 被测 Agent 和 Judge Agent 的 Model Config / Judge Config 均自动使用 Active 配置
+  - 运行中显示进度条（`completedRuns / totalRuns`），支持 Stop 按钮取消
+  - **N=1 展平显示**：与原单 run 完全一致——时间戳、模型名、状态、passRate、score
+  - **N>1 聚合视图**：Header 显示 "×N" badge，聚合统计（avg score ± stdDev, min~max），展开后显示各 run 折叠列表
+  - History 列表显示 batches（替代原来的 runs），支持 Baseline、Delete 操作
   - 刷新页面后自动恢复运行状态（DB 驱动）
   - `cancelled` / `failed` 状态有对应 badge 标识
-  - History 列表每行有**报告按钮**（`FileTextIcon`），点击在新标签页打开独立报告页
 - **Benchmark**：趋势追踪、运行对比、跨模型分析（详见 [benchmark.md](./benchmark.md)）
 
 ### 报告页
+
+#### Run Report
 
 独立全屏页面，URL 格式：`/{orgSlug}/{agentSlug}/eval/{runId}`
 
@@ -139,6 +208,18 @@
 - Running 状态时显示进度条，3 秒自动刷新
 - 下方为 ResultCard 列表，展示每个 case 的完整结果
 - 组织内成员可通过 URL 直接查看
+- 入口：展开 batch → 单 run 详情区 / per-run 折叠项中的 ExternalLinkIcon
+
+#### Batch Report
+
+独立全屏页面，URL 格式：`/{orgSlug}/{agentSlug}/eval/batch/{batchId}`
+
+- 顶部导航栏：返回按钮 → Build Eval Tab、Agent 名称 + "Batch Report"
+- 汇总区：模型名、运行时间、状态 badge、重复次数（x{N}）、通过率、平均分（N>1 附加 ±stdDev）
+- Running 状态时显示进度条（completedRuns/totalRuns），3 秒自动刷新
+- **N=1 展平**：直接显示单个 run 的 ResultCard 列表（同 Run Report）
+- **N>1 聚合**：聚合统计卡片（Avg Pass Rate / Avg Score / Std Dev / Range）+ 每个 run 可折叠展开查看 ResultCard
+- 入口：History 列表中 batch header 上的 ExternalLinkIcon 按钮
 
 Judge 配置（评分维度）在 Judge Agent 的 Build 页面 **Judge Tab** 中管理，详见 [judge-config.md](./judge-config.md)。
 
@@ -209,13 +290,15 @@ interface EvalTurnToolCall {
 
 ### 测试文件
 
-- `web/src/inngest/functions/__tests__/eval-orchestrator.test.ts` — 编排器（分批、取消、finalize）
+- `web/src/inngest/functions/__tests__/eval-orchestrator.test.ts` — Run 编排器（分批、取消、finalize）
 - `web/src/inngest/functions/__tests__/eval-case-worker.test.ts` — Case Worker（执行、保存、用量记录）
+- `web/src/lib/eval/__tests__/execute-batch.test.ts` — Batch 辅助函数（isBatchCancelled、finalizeBatch）
 - `web/src/app/api/eval/run/[runId]/retry-failed/__tests__/retry-failed.test.ts` — Retry Failed API
 
 ### 测试策略
 
-- **Orchestrator**：mock 依赖（DB、isRunCancelled、finalizeRun），let step handlers 运行原始代码；`step.invoke` 通过 `InngestTestEngine` 的 `steps` 选项 mock
+- **Batch Orchestrator**：mock DB + isBatchCancelled + finalizeBatch，验证 runConcurrency 分批、cancel 检查、completedRuns 更新
+- **Run Orchestrator**：mock 依赖（DB、isRunCancelled、finalizeRun），let step handlers 运行原始代码；`step.invoke` 通过 `InngestTestEngine` 的 `steps` 选项 mock
 - **Case Worker**：mock DB 链式操作（sequential select results）、executeCase、recordUsage，let 所有 step handlers 运行原始代码
 - **Retry Failed**：传统 vi.mock DB + inngest.send，直接测试 route handler
 
@@ -241,6 +324,7 @@ make e2e-eval
 - `web/e2e/eval-binary.spec.ts` — 二元评估测试（binary scoring 0/1，验证 min/max 维度配置 + 分数显示格式 x/1 + 报告页验证）
 - `web/e2e/eval-concurrency.spec.ts` — 并发数配置测试（RunEvalDialog 设置 concurrency=1 + 运行 + 报告页验证 concurrency 显示）
 - `web/e2e/eval-cancel.spec.ts` — 取消运行测试（5 case concurrency=1 顺序执行 + 等待 run 开始 + 点击 Stop + 验证 Cancelled 状态）
+- `web/e2e/eval-batch-repeat.spec.ts` — 批量重复执行测试（repeatCount=3 + 运行中状态验证 + 完成后聚合统计 + per-run 展开验证 + batch report 报告页验证）
 
 所有 eval E2E 测试的最后一步都会在报告页上验证 pass rate、score 和 result card 数量（cancel 测试除外，因为取消后不产生完整结果）。
 

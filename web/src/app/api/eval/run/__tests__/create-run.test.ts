@@ -43,6 +43,7 @@ vi.mock("@/db", () => ({
 }));
 
 vi.mock("@/db/schema", () => ({
+  evalBatches: { id: "id", agentId: "agent_id", status: "status" },
   evalRuns: { id: "id", agentId: "agent_id", status: "status" },
   modelConfigs: { id: "id", versionId: "version_id", isActive: "is_active" },
   judgeConfigs: { id: "id", versionId: "version_id", isActive: "is_active" },
