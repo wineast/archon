@@ -1,0 +1,167 @@
+---
+name: merge-request-wt
+description: 工作区合并请求。在工作区内发起，做检查、展示摘要、确认后合并回上游。当用户说"合并请求"、"MR"、"提交合并"、"合回上游"、"完成工作区"等时调用。
+allowed-tools: Bash, Read, Grep, Glob, AskUserQuestion, Skill
+---
+
+在工作区内部发起合并请求：review → 质量检查 → E2E → 变更摘要 → 用户确认 → 合并。
+
+## 前置条件
+
+必须在 worktree 内执行（`.worktree/meta.json` 存在）。
+
+## 流程
+
+### 1. 读取工作区信息
+
+```bash
+cat .worktree/meta.json
+```
+
+获取 `baseBranch`。如果文件不存在，提示用户不在 worktree 中，终止。
+
+```bash
+# 当前分支
+git branch --show-current
+
+# 工作区名称（从路径提取）
+basename "$(pwd)"
+```
+
+### 2. 自动提交未提交变更
+
+```bash
+git status --short
+```
+
+如果有未提交变更，**自动** `git add -A && git commit`（commit message 描述变更内容），不需要询问用户。
+
+### 3. 同步上游检查
+
+检查当前工作区是否落后于 baseBranch：
+
+```bash
+git rev-list HEAD..<baseBranch> --count
+```
+
+如果落后（count > 0），先调用 `/sync-upstream` 技能同步上游变更。同步完成后再继续。
+
+### 4. Review 变更
+
+调用 `/review-wt` 技能，输出 review 报告。报告中如有严重问题（❌ 未实现的功能、明确的 bug 风险），展示给用户并让其决定是修复还是继续。
+
+### 5. 质量检查
+
+依次执行，**任一失败则停止并报告**：
+
+```bash
+make typecheck
+make test
+```
+
+如果失败，展示错误信息，让用户决定是修复还是跳过。
+
+### 6. 端到端测试
+
+检测本工作区是否包含 E2E 测试文件：
+
+```bash
+git diff <baseBranch>..HEAD --name-only | grep -E '\.spec\.ts$'
+```
+
+如果有新增或修改的 spec 文件：
+
+1. **确保服务启动**：先执行 `make up` 启动全部服务（Dev Server、DB 等），等待就绪
+2. **运行 E2E 测试**：
+   ```bash
+   make e2e  # 或针对特定 spec: cd web && npx playwright test <spec-file>
+   ```
+3. **后台执行**：E2E 耗时较长，用 `Bash(run_in_background=true)` 后台执行，通过 `Read(output_file)` 定期查看日志判断进度
+4. **卡住处理**：日志长时间无更新，用 `TaskStop` 终止并用 Playwright MCP 检查浏览器状态
+5. 测试通过 → 继续；失败 → 展示失败信息，让用户决定修复还是跳过
+
+### 7. 变更摘要
+
+对比当前分支与 base 分支的差异：
+
+```bash
+git log <baseBranch>..HEAD --oneline
+git diff <baseBranch>..HEAD --stat
+git diff <baseBranch>..HEAD
+```
+
+额外检查（用于决定摘要中包含哪些条件 section）：
+
+```bash
+# 是否包含数据库迁移文件或 schema 变更
+git diff <baseBranch>..HEAD --name-only | grep -E '(drizzle/|db/schema\.ts)'
+
+# 是否包含 UI 变更
+git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
+```
+
+向用户展示合并摘要，格式参考 PR skill：
+
+```markdown
+## Summary
+<1-5 个要点，每个要点说明 what + why>
+
+## Database
+<仅当 diff 包含 drizzle/ 迁移文件或 schema.ts 变更时出现>
+<提醒合并后需要 make db-generate>
+
+## Breaking changes
+<仅当存在不兼容变更时出现>
+
+## Test plan
+<已通过的检查项：typecheck、test、e2e 等>
+```
+
+- **Summary** 先说 why 再说 what，避免只罗列文件名
+- **Database / Breaking changes** 为条件 section，无则不展示
+- **Test plan** 列出本次合并流程中已通过的检查项
+
+### 8. 用户确认
+
+用 `AskUserQuestion` 让用户选择：
+
+- **确认合并** — 执行合并
+- **取消** — 终止，不做任何操作
+
+### 9. 执行合并
+
+确认后，在**主仓库**中执行已有的合并脚本：
+
+```bash
+# 找到主仓库路径
+git worktree list --porcelain | head -1 | sed 's/worktree //'
+```
+
+```bash
+# 在主仓库执行 make wt-merge（脚本自动处理 checkout、merge、依赖安装）
+make -C <主仓库路径> wt-merge NAME=<工作区名称>
+```
+
+`wt-merge` 脚本已内置：切换到 baseBranch → merge 工作区分支 → 检测依赖变更自动 npm install。
+
+如果合并冲突，脚本会报错退出，此时分析冲突内容，向用户说明解决方案。
+
+### 10. 合并后处理
+
+在主仓库中检测 schema 变更：
+
+```bash
+git -C <主仓库路径> diff HEAD~1 --name-only | grep -E "(drizzle/|db/schema\.ts)"
+# 有变更则提醒用户执行 make db-generate
+```
+
+### 11. 输出结果
+
+- 合并成功：告知用户已合并，提示可选的下一步操作（`make wt-delete NAME=<name>`、`make db-generate`）
+- 合并失败：展示错误信息，给出解决建议
+
+## 注意
+
+- 本技能在**工作区内**执行，`merge-wt` 在**主仓库**执行——两者互补
+- 合并操作需要切到主仓库目录执行，但前置检查在工作区内完成
+- 不要自动删除工作区，让用户决定
