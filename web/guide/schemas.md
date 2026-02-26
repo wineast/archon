@@ -706,7 +706,7 @@ Archon 使用以下 `x-` 前缀扩展字段：
 
 ## Examples（用例示范）
 
-Schema 的测试用例可以标记为 **Example**，在 Examples 标签页中集中展示，用于向 FDA 或团队成员演示 Schema 的典型输入。
+Schema 的测试用例可以标记为 **Example**，在 Examples 标签页中集中展示，用于向 FDE 或团队成员演示 Schema 的典型输入。
 
 ### 标记为 Example
 

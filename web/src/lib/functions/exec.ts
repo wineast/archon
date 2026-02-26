@@ -4,7 +4,7 @@
  * User code is scanned for dangerous patterns (via acorn AST analysis),
  * then executed directly using `new Function()`. No WASM isolation.
  *
- * This approach is suitable for trusted FDA users who don't need
+ * This approach is suitable for trusted FDE users who don't need
  * process-level isolation. The static scanner prevents accidental
  * use of Node.js APIs.
  */

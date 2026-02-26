@@ -15,6 +15,6 @@
 - [工具沙盒](tool-sandbox.md) — 两层沙盒方案：QuickJS 轻量沙盒 + Vercel Sandbox 重型沙盒，UX 设计
 - [组织与租户](org-tenant.md) — 多租户隔离：组织 CRUD、成员管理、权限继承、org 级用量聚合
 - [用量计费](usage-metering.md) — Token 用量统计、费用计算、存储统计、Dashboard 可视化
-- [分润模式](profit-sharing.md) — FDA 收益分成：角色制分润池、组织结构、比例设计、合规要点
+- [分润模式](profit-sharing.md) — FDE 收益分成：角色制分润池、组织结构、比例设计、合规要点
 - [Git Worktree](worktree.md) — 多任务并行开发：创建、同步、合并、删除工作区
 - [注销账号](account-deletion.md) — 账号注销：7 天恢复期、永久删除、Cron 清理
