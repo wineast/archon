@@ -1,11 +1,11 @@
 /**
  * 测试 ToolContext.fn() 并发竞态条件（Issue: concurrent-functions-exec-race-condition）
  *
- * 复现场景：多个 ToolContext 并行调用 fn()，冷缓存下各自编译 → setCachedFunctions
- * 互相 dispose → 部分调用方拿到已废弃的 exec context → 抛错。
+ * 验证场景：多个 ToolContext 并行调用 fn()，冷缓存下通过模块级 Promise 锁
+ * 去重编译请求，确保只编译一次、所有调用方共享同一个 exec context。
  *
- * 修复前：至少 1 个 rejected（disposed）
- * 修复后：全部 fulfilled
+ * 冷缓存：全部 fulfilled（Promise 锁去重）
+ * 热缓存：全部 fulfilled（直接命中缓存）
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { clearFunctionCache } from "@/lib/functions/compile";
@@ -69,7 +69,7 @@ describe("ToolContext.fn() 并发竞态", () => {
     clearFunctionCache(AGENT_ID);
   });
 
-  it("冷缓存下 N 个 ToolContext 并行 fn() → 至少 1 个抛 'Exec context has been disposed'", async () => {
+  it("冷缓存下 N 个 ToolContext 并行 fn() → 全部成功（Promise 锁去重编译）", async () => {
     // Mock: getAgentFunctions 返回一个简单的 function record
     // 加 10ms 延迟模拟编译耗时，确保并发窗口足够大
     mockGetAgentFunctions.mockImplementation(
@@ -105,14 +105,13 @@ describe("ToolContext.fn() 并发竞态", () => {
       createToolContext(AGENT_ID, VERSION_ID)
     );
 
-    // Phase 1：全部并行调用 fn("add") → 各自触发 getCompiledFunctions → 各自编译
-    // 等所有 fn() 都 resolve 后，setCachedFunctions 已被调用 N 次，前 N-1 个 exec 被 dispose
+    // Phase 1：全部并行调用 fn("add") → Promise 锁去重，只编译一次
+    // 所有调用方共享同一个 fns Map 和 exec context
     const fnRefs = await Promise.all(
       contexts.map((ctx) => ctx.fn("add"))
     );
 
-    // Phase 2：此时前 N-1 个 fnRef 的闭包持有已 disposed 的 exec，调用会抛错
-    // 注意：fn 调用是同步的（非 async），同步 throw 需要包在 Promise 中才能被 allSettled 捕获
+    // Phase 2：所有 fnRef 共享同一个 exec，全部可正常调用
     const results = await Promise.allSettled(
       fnRefs.map((fn) => {
         try {
@@ -137,17 +136,12 @@ describe("ToolContext.fn() 并发竞态", () => {
       );
     }
 
-    // 修复前断言：至少有 1 个失败（被 dispose 的 exec）
-    // 修复后：将此断言改为 rejected.length === 0
-    expect(rejected.length).toBeGreaterThanOrEqual(1);
-    for (const r of rejected) {
-      expect((r as PromiseRejectedResult).reason.message).toContain(
-        "Exec context has been disposed"
-      );
-    }
+    // 并发编译已去重，全部成功，无 disposed 错误
+    expect(rejected.length).toBe(0);
+    expect(fulfilled.length).toBe(N);
 
-    // 至少最后一个应该成功（最后写入缓存的 exec 存活）
-    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+    // 关键断言：编译只发生了 1 次（Promise 锁去重生效）
+    expect(mockGetAgentFunctions).toHaveBeenCalledTimes(1);
     for (const r of fulfilled) {
       expect((r as PromiseFulfilledResult<number>).value).toBe(3);
     }

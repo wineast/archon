@@ -104,6 +104,28 @@ export interface ToolContext {
   ontology: OntologyContext;
 }
 
+// Module-level promise lock: deduplicates concurrent compilations for the same agentId.
+// First caller triggers the actual compile; subsequent callers await the same promise.
+const compilingPromises = new Map<string, Promise<Map<string, unknown>>>();
+
+async function doCompileFunctions(agentId: string, versionId: string): Promise<Map<string, unknown>> {
+  const allRows = await getAgentFunctions(agentId, versionId);
+
+  const fnRecords: FunctionRecord[] = allRows.map((r) => ({
+    key: r.key,
+    code: r.code,
+    parameters: r.parametersSchema ?? {},
+  }));
+
+  const defsMap = await getDefsMap(agentId);
+  const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId, versionId);
+  const baseDeps = buildBaseDeps(enabledBuiltinKeys);
+
+  const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
+  setCachedFunctions(agentId, fns, exec);
+  return fns;
+}
+
 export function createToolContext(agentId?: string, versionId?: string): ToolContext {
   let resolvedCache: Record<string, unknown> | null = null;
   let compiledFnsPromise: Promise<Map<string, unknown>> | null = null;
@@ -126,21 +148,17 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
     const cached = getCachedFunctions(agentId);
     if (cached) return cached;
 
-    const allRows = await getAgentFunctions(agentId, versionId);
+    // Deduplicate concurrent compilations for the same agentId
+    const inflight = compilingPromises.get(agentId);
+    if (inflight) return inflight;
 
-    const fnRecords: FunctionRecord[] = allRows.map((r) => ({
-      key: r.key,
-      code: r.code,
-      parameters: r.parametersSchema ?? {},
-    }));
-
-    const defsMap = await getDefsMap(agentId);
-    const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId, versionId);
-    const baseDeps = buildBaseDeps(enabledBuiltinKeys);
-
-    const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
-    setCachedFunctions(agentId, fns, exec);
-    return fns;
+    const promise = doCompileFunctions(agentId, versionId);
+    compilingPromises.set(agentId, promise);
+    try {
+      return await promise;
+    } finally {
+      compilingPromises.delete(agentId);
+    }
   }
 
   return {
