@@ -29,6 +29,8 @@ interface RunEvalDialogProps {
     judgeAgentId: string;
     assertionFailConfig: AssertionFailConfig;
     concurrency: number;
+    repeatCount: number;
+    runConcurrency: number;
   }) => void;
   confirming?: boolean;
 }
@@ -48,6 +50,8 @@ export function RunEvalDialog({
 
   const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>({});
   const [concurrency, setConcurrency] = useState(3);
+  const [repeatCount, setRepeatCount] = useState(1);
+  const [runConcurrency, setRunConcurrency] = useState(1);
 
   const canConfirm = !!judgeAgentId && !confirming;
 
@@ -59,11 +63,19 @@ export function RunEvalDialog({
         ? assertionFailConfig
         : {},
       concurrency,
+      repeatCount,
+      runConcurrency,
     });
   };
 
   const buttonLabel =
-    mode === "all" ? `Run All (${caseCount})` : "Run";
+    mode === "all"
+      ? repeatCount > 1
+        ? `Run All (${caseCount}) x${repeatCount}`
+        : `Run All (${caseCount})`
+      : repeatCount > 1
+        ? `Run x${repeatCount}`
+        : "Run";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,10 +112,10 @@ export function RunEvalDialog({
             )}
           </div>
 
-          {/* Concurrency */}
+          {/* Case Concurrency */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">
-              并发数
+              用例并发数
             </label>
             <Input
               type="number"
@@ -118,6 +130,46 @@ export function RunEvalDialog({
               同时执行的用例数（1-5）
             </p>
           </div>
+
+          {/* Repeat Count */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              重复次数
+            </label>
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              value={repeatCount}
+              onChange={(e) => setRepeatCount(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+              className="mt-1 w-20"
+              data-testid="input-repeat-count"
+            />
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              同一组用例重复执行次数（1-10），用于评估稳定性
+            </p>
+          </div>
+
+          {/* Run Concurrency — only show when repeatCount > 1 */}
+          {repeatCount > 1 && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                Run 并发数
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={5}
+                value={runConcurrency}
+                onChange={(e) => setRunConcurrency(Math.max(1, Math.min(5, Number(e.target.value) || 1)))}
+                className="mt-1 w-20"
+                data-testid="input-run-concurrency"
+              />
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                同时执行的 Run 数（1-5）
+              </p>
+            </div>
+          )}
 
           {/* Assertion Settings */}
           <div className="space-y-2">

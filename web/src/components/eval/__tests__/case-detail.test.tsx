@@ -25,15 +25,16 @@ import type { EvalCaseRow } from "@/db/schema";
 /*  Mocks                                                              */
 /* ------------------------------------------------------------------ */
 
-const mockMutateRuns = vi.fn();
+const mockMutateBatches = vi.fn();
 
 vi.mock("@/lib/eval/hooks", () => ({
-  useEvalRuns: () => ({
-    runs: [],
+  useEvalBatches: () => ({
+    batches: [],
     isLoading: false,
     error: undefined,
-    mutate: mockMutateRuns,
+    mutate: mockMutateBatches,
   }),
+  fetchEvalBatchDetail: vi.fn(),
   fetchEvalRunDetail: vi.fn(),
 }));
 
@@ -58,15 +59,15 @@ vi.mock("@/lib/tools/hooks", () => ({
   }),
 }));
 
-const mockEvalRunCtx = {
+const mockEvalBatchCtx = {
   isRunning: false,
-  activeRun: null,
+  activeBatch: null,
   progress: 0,
-  cancelRun: vi.fn(),
+  cancelBatch: vi.fn(),
 };
 
 vi.mock("@/lib/eval/eval-run-context", () => ({
-  useEvalRun: () => mockEvalRunCtx,
+  useEvalBatch: () => mockEvalBatchCtx,
 }));
 
 // Mock RunEvalDialog to simplify testing
@@ -74,7 +75,7 @@ const mockOnConfirm = vi.fn();
 vi.mock("../run-eval-dialog", () => ({
   RunEvalDialog: ({ open, onConfirm, confirming }: {
     open: boolean;
-    onConfirm: (params: { judgeAgentId: string; assertionFailConfig: Record<string, boolean> }) => void;
+    onConfirm: (params: { judgeAgentId: string; assertionFailConfig: Record<string, boolean>; repeatCount: number; runConcurrency: number }) => void;
     confirming?: boolean;
   }) => {
     // Store onConfirm for test access
@@ -84,7 +85,7 @@ vi.mock("../run-eval-dialog", () => ({
         <button
           data-testid="dialog-confirm"
           disabled={confirming}
-          onClick={() => onConfirm({ judgeAgentId: "judge-agent-1", assertionFailConfig: {} })}
+          onClick={() => onConfirm({ judgeAgentId: "judge-agent-1", assertionFailConfig: {}, repeatCount: 1, runConcurrency: 1 })}
         >
           Confirm
         </button>
@@ -118,7 +119,7 @@ const baseCase: EvalCaseRow = {
 /* ------------------------------------------------------------------ */
 
 import { CaseDetail } from "../case-detail";
-import { fetchEvalRunDetail } from "@/lib/eval/hooks";
+import { fetchEvalBatchDetail, fetchEvalRunDetail } from "@/lib/eval/hooks";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -142,8 +143,8 @@ function renderDetail(overrides: Partial<EvalCaseRow> = {}) {
 beforeEach(() => {
   vi.restoreAllMocks();
   cleanup();
-  mockEvalRunCtx.isRunning = false;
-  mockEvalRunCtx.activeRun = null;
+  mockEvalBatchCtx.isRunning = false;
+  mockEvalBatchCtx.activeBatch = null;
 });
 
 /* ------------------------------------------------------------------ */
@@ -159,7 +160,7 @@ describe("Run button rendering", () => {
   });
 
   it("Run button is disabled when global isRunning is true", () => {
-    mockEvalRunCtx.isRunning = true;
+    mockEvalBatchCtx.isRunning = true;
     renderDetail();
     expect(screen.getByRole("button", { name: /run/i })).toBeDisabled();
   });
@@ -173,7 +174,7 @@ describe("Mode selector", () => {
 });
 
 describe("Run execution via dialog", () => {
-  it("opens dialog on Run click and sends create run request", async () => {
+  it("opens dialog on Run click and sends create batch request", async () => {
     const mockResult = {
       caseId: "case-1",
       caseName: "Test Case",
@@ -197,41 +198,48 @@ describe("Run execution via dialog", () => {
       durationMs: 1234,
     };
 
-    // Mock: create run succeeds
+    // Mock: create batch succeeds
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4", status: "running" }),
+        json: () => Promise.resolve({ batchId: "batch-1", chatModel: "gpt-4", status: "running" }),
       });
 
-    // Mock: polling returns completed run with result
-    const mockFetchDetail = vi.mocked(fetchEvalRunDetail);
-    mockFetchDetail
+    // Mock: batch polling returns completed batch with one run
+    const mockFetchBatchDetail = vi.mocked(fetchEvalBatchDetail);
+    mockFetchBatchDetail
       .mockResolvedValueOnce({
-        run: { id: "run-1", status: "running" } as never,
-        results: [],
+        batch: { id: "batch-1", status: "running" } as never,
+        runs: [],
       })
       .mockResolvedValueOnce({
-        run: { id: "run-1", status: "completed" } as never,
-        results: [{
-          id: "r1",
-          runId: "run-1",
-          caseId: mockResult.caseId,
-          caseName: mockResult.caseName,
-          mode: mockResult.mode as "single",
-          turns: mockResult.turns,
-          chatMessages: mockResult.chatMessages,
-          turnResults: mockResult.turnResults,
-          chatResponse: mockResult.chatResponse,
-          assertionResults: mockResult.assertionResults,
-          allAssertionsPassed: mockResult.allAssertionsPassed,
-          judgeResult: mockResult.judgeResult,
-          error: null,
-          durationMs: mockResult.durationMs,
-          createdAt: new Date(),
-        }],
+        batch: { id: "batch-1", status: "completed" } as never,
+        runs: [{ id: "run-1", judgeConfigSnapshot: null } as never],
       });
+
+    // Mock: run detail returns result
+    const mockFetchRunDetail = vi.mocked(fetchEvalRunDetail);
+    mockFetchRunDetail.mockResolvedValueOnce({
+      run: { id: "run-1", status: "completed" } as never,
+      results: [{
+        id: "r1",
+        runId: "run-1",
+        caseId: mockResult.caseId,
+        caseName: mockResult.caseName,
+        mode: mockResult.mode as "single",
+        turns: mockResult.turns,
+        chatMessages: mockResult.chatMessages,
+        turnResults: mockResult.turnResults,
+        chatResponse: mockResult.chatResponse,
+        assertionResults: mockResult.assertionResults,
+        allAssertionsPassed: mockResult.allAssertionsPassed,
+        judgeResult: mockResult.judgeResult,
+        error: null,
+        durationMs: mockResult.durationMs,
+        createdAt: new Date(),
+      }],
+    });
 
     const { user } = renderDetail();
 
@@ -249,18 +257,18 @@ describe("Run execution via dialog", () => {
       expect(screen.getByText("Run Results (1)")).toBeInTheDocument();
     }, { timeout: 10000 });
 
-    // Verify create run API was called with cases
+    // Verify create batch API was called with cases
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      "/api/eval/run",
+      "/api/eval/batch",
       expect.objectContaining({
         method: "POST",
         body: expect.stringContaining('"cases"'),
       })
     );
 
-    // Verify mutateRuns was called
-    expect(mockMutateRuns).toHaveBeenCalled();
+    // Verify mutateBatches was called
+    expect(mockMutateBatches).toHaveBeenCalled();
   });
 
   it("shows Running... and disables buttons during execution", async () => {
@@ -289,7 +297,7 @@ describe("Run execution via dialog", () => {
     await act(async () => {
       resolveCreate({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4", status: "running" }),
+        json: () => Promise.resolve({ batchId: "batch-1", chatModel: "gpt-4", status: "running" }),
       });
     });
   });
@@ -299,12 +307,18 @@ describe("Run execution via dialog", () => {
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4", status: "running" }),
+        json: () => Promise.resolve({ batchId: "batch-1", chatModel: "gpt-4", status: "running" }),
       });
 
     // Mock polling to return completed immediately
-    const mockFetchDetail = vi.mocked(fetchEvalRunDetail);
-    mockFetchDetail.mockResolvedValue({
+    const mockFetchBatchDetail = vi.mocked(fetchEvalBatchDetail);
+    mockFetchBatchDetail.mockResolvedValue({
+      batch: { id: "batch-1", status: "completed" } as never,
+      runs: [{ id: "run-1", judgeConfigSnapshot: null } as never],
+    });
+
+    const mockFetchRunDetail = vi.mocked(fetchEvalRunDetail);
+    mockFetchRunDetail.mockResolvedValue({
       run: { id: "run-1", status: "completed" } as never,
       results: [{
         id: "r1",
@@ -370,25 +384,37 @@ describe("Run execution via dialog", () => {
 
     globalThis.fetch = vi
       .fn()
-      // Run 1
+      // Batch 1
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-1", chatModel: "gpt-4", status: "running" }),
+        json: () => Promise.resolve({ batchId: "batch-1", chatModel: "gpt-4", status: "running" }),
       })
-      // Run 2
+      // Batch 2
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ runId: "run-2", chatModel: "gpt-4", status: "running" }),
+        json: () => Promise.resolve({ batchId: "batch-2", chatModel: "gpt-4", status: "running" }),
       });
 
-    const mockFetchDetail = vi.mocked(fetchEvalRunDetail);
-    // Poll for run 1 — returns completed immediately
-    mockFetchDetail
+    const mockFetchBatchDetail = vi.mocked(fetchEvalBatchDetail);
+    const mockFetchRunDetail = vi.mocked(fetchEvalRunDetail);
+
+    // Poll for batch 1 — returns completed immediately
+    mockFetchBatchDetail
+      .mockResolvedValueOnce({
+        batch: { id: "batch-1", status: "completed" } as never,
+        runs: [{ id: "run-1", judgeConfigSnapshot: null } as never],
+      })
+      // Poll for batch 2 — returns completed immediately
+      .mockResolvedValueOnce({
+        batch: { id: "batch-2", status: "completed" } as never,
+        runs: [{ id: "run-2", judgeConfigSnapshot: null } as never],
+      });
+
+    mockFetchRunDetail
       .mockResolvedValueOnce({
         run: { id: "run-1", status: "completed" } as never,
         results: [makeResult(1000)],
       })
-      // Poll for run 2 — returns completed immediately
       .mockResolvedValueOnce({
         run: { id: "run-2", status: "completed" } as never,
         results: [makeResult(2000)],
@@ -396,14 +422,14 @@ describe("Run execution via dialog", () => {
 
     const { user } = renderDetail();
 
-    // Run 1: open dialog and confirm
+    // Batch 1: open dialog and confirm
     await user.click(screen.getByRole("button", { name: /run/i }));
     await user.click(screen.getByTestId("dialog-confirm"));
     await waitFor(() => {
       expect(screen.getByText("Run Results (1)")).toBeInTheDocument();
     }, { timeout: 10000 });
 
-    // Run 2: open dialog and confirm
+    // Batch 2: open dialog and confirm
     await user.click(screen.getByRole("button", { name: /run/i }));
     await user.click(screen.getByTestId("dialog-confirm"));
     await waitFor(() => {

@@ -14,16 +14,32 @@ target_dir="$(cd "${1:-.}" && pwd)"
 # ---- meta.json ----
 echo "📦 [meta] 创建工作区元数据..."
 mkdir -p "$target_dir/.worktree"
-if [ ! -f "$target_dir/.worktree/meta.json" ]; then
-    dev_port="${WT_DEV_PORT:-3000}"
-    sb_port="${WT_SB_PORT:-6006}"
-    studio_port="${WT_STUDIO_PORT:-4983}"
-    inngest_port="${WT_INNGEST_PORT:-8288}"
-    base_branch="${WT_BASE_BRANCH:-main}"
-    echo "{\"dev\":$dev_port,\"storybook\":$sb_port,\"studio\":$studio_port,\"inngest\":$inngest_port,\"baseBranch\":\"$base_branch\"}" > "$target_dir/.worktree/meta.json"
-    echo "  Created $target_dir/.worktree/meta.json (dev=$dev_port, storybook=$sb_port, studio=$studio_port, inngest=$inngest_port, baseBranch=$base_branch)"
+meta_file="$target_dir/.worktree/meta.json"
+# 默认值（环境变量可覆盖）
+def_dev="${WT_DEV_PORT:-3000}"
+def_sb="${WT_SB_PORT:-6006}"
+def_studio="${WT_STUDIO_PORT:-4983}"
+def_inngest="${WT_INNGEST_PORT:-8288}"
+def_base="${WT_BASE_BRANCH:-main}"
+if [ ! -f "$meta_file" ]; then
+    # 首次创建
+    node -e "
+      var m={dev:$def_dev,storybook:$def_sb,studio:$def_studio,inngest:$def_inngest,baseBranch:'$def_base'};
+      require('fs').writeFileSync('$meta_file',JSON.stringify(m)+'\n');
+    "
+    echo "  Created $meta_file"
 else
-    echo "  $target_dir/.worktree/meta.json 已存在，跳过"
+    # 已存在 → 补缺字段（保留已有值，只补新增字段的默认值）
+    node -e "
+      var fs=require('fs');
+      var m=JSON.parse(fs.readFileSync('$meta_file','utf8'));
+      var defaults={dev:$def_dev,storybook:$def_sb,studio:$def_studio,inngest:$def_inngest,baseBranch:'$def_base'};
+      var added=[];
+      for(var k in defaults){if(m[k]===undefined){m[k]=defaults[k];added.push(k+'='+defaults[k]);}}
+      fs.writeFileSync('$meta_file',JSON.stringify(m)+'\n');
+      if(added.length)console.log('  Patched: '+added.join(', '));
+      else console.log('  All fields present, no changes');
+    "
 fi
 
 # ---- link-env ----
@@ -58,7 +74,8 @@ fi
 printf 'DATABASE_URL=%s\nDATABASE_URL_UNPOOLED=%s\n' "$db_url" "$db_url" > "$target_dir/web/.env.development.local"
 
 # 从主仓库继承非 DB 相关的环境变量（如 API_KEY_ENCRYPTION_SECRET）
-project_root="$(cd "$(dirname "$0")/.." && pwd)"
+# git worktree list 第一行始终是主仓库，无论从哪个 worktree 执行都能正确定位
+project_root="$(git worktree list --porcelain | head -1 | sed 's/^worktree //')"
 source_env="$project_root/web/.env.development.local"
 target_env="$target_dir/web/.env.development.local"
 if [ -f "$source_env" ] && [ "$(realpath "$source_env")" != "$(realpath "$target_env")" ]; then

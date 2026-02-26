@@ -30,10 +30,10 @@ import { AssertionRow } from "./assertion-row";
 import { TurnsList } from "./turns-list";
 import { ResultCard } from "./result-card";
 import { RunEvalDialog } from "./run-eval-dialog";
-import { useEvalRuns, fetchEvalRunDetail } from "@/lib/eval/hooks";
+import { useEvalBatches, fetchEvalBatchDetail, fetchEvalRunDetail } from "@/lib/eval/hooks";
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useTools } from "@/lib/tools/hooks";
-import { useEvalRun } from "@/lib/eval/eval-run-context";
+import { useEvalBatch } from "@/lib/eval/eval-run-context";
 import { getScoreMax } from "@/lib/eval/judge-dimensions";
 import { toEvalResult } from "@/lib/eval/types";
 import type { EvalCaseRow } from "@/db/schema";
@@ -44,7 +44,7 @@ import type {
   EvalCase,
   EvalCaseMode,
   EvalTurn,
-  CreateEvalRunResponse,
+  CreateEvalBatchResponse,
   AssertionFailConfig,
 } from "@/lib/eval/types";
 
@@ -83,8 +83,8 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   // Hooks for running
   const { templateVars } = useTemplateVars(agentId);
   const { tools: allDbTools } = useTools(agentId);
-  const { isRunning: isGlobalRunning } = useEvalRun();
-  const { mutate: mutateRuns } = useEvalRuns(agentId);
+  const { isRunning: isGlobalRunning } = useEvalBatch();
+  const { mutate: mutateBatches } = useEvalBatches(agentId);
 
   const busy = saving || deleting || running;
 
@@ -204,9 +204,11 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   const handleRunConfirm = useCallback(async (params: {
     judgeAgentId: string;
     assertionFailConfig: AssertionFailConfig;
+    repeatCount: number;
+    runConcurrency: number;
   }) => {
     if (!agentId) return;
-    const { judgeAgentId, assertionFailConfig } = params;
+    const { judgeAgentId, assertionFailConfig, repeatCount, runConcurrency } = params;
 
     const currentCase: EvalCase = {
       id: evalCase.id,
@@ -225,9 +227,9 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     setRunDialogOpen(false);
     setRunning(true);
 
-    // Create run via server — server executes asynchronously
+    // Create batch via server
     try {
-      const createRes = await fetch("/api/eval/run", {
+      const createRes = await fetch("/api/eval/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -238,6 +240,8 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           cases: [currentCase],
           templateVars,
           toolNames: enabledToolNames,
+          repeatCount,
+          runConcurrency,
         }),
       });
       if (!createRes.ok) {
@@ -245,36 +249,41 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         const errMsg = errData?.error || `HTTP ${createRes.status}`;
         throw new Error(errMsg);
       }
-      const data: CreateEvalRunResponse = await createRes.json();
-      mutateRuns();
+      const data: CreateEvalBatchResponse = await createRes.json();
+      mutateBatches();
 
-      // Poll for result completion
+      // Poll for batch completion
       const chatModel = data.chatModel;
       const modelName = chatModel.split("/").pop() ?? chatModel;
-      const runId = data.runId;
+      const batchId = data.batchId;
 
-      const pollResult = async (): Promise<{ result: EvalResult; scoreMax: number } | null> => {
+      const pollResult = async (): Promise<Array<{ result: EvalResult; scoreMax: number }>> => {
         for (let i = 0; i < 120; i++) {
           await new Promise((r) => setTimeout(r, 2000));
-          const detail = await fetchEvalRunDetail(runId);
-          if (!detail) continue;
-          if (detail.run.status === "completed" || detail.run.status === "failed" || detail.run.status === "cancelled") {
-            mutateRuns();
-            if (detail.results.length > 0) {
-              const scoreMax = getScoreMax(
-                (detail.run.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)?.dimensions
-              );
-              return { result: toEvalResult(detail.results[0]), scoreMax };
+          const batchDetail = await fetchEvalBatchDetail(batchId);
+          if (!batchDetail) continue;
+          const { batch: batchRow, runs } = batchDetail;
+          if (batchRow.status === "completed" || batchRow.status === "failed" || batchRow.status === "cancelled") {
+            mutateBatches();
+            const results: Array<{ result: EvalResult; scoreMax: number }> = [];
+            for (const run of runs) {
+              const runDetail = await fetchEvalRunDetail(run.id);
+              if (runDetail && runDetail.results.length > 0) {
+                const sm = getScoreMax(
+                  (run.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)?.dimensions
+                );
+                results.push({ result: toEvalResult(runDetail.results[0]), scoreMax: sm });
+              }
             }
-            return null;
+            return results;
           }
         }
-        return null;
+        return [];
       };
 
       const pollData = await pollResult();
-      if (pollData) {
-        setRunResults((prev) => [{ result: pollData.result, modelName, scoreMax: pollData.scoreMax }, ...prev]);
+      for (const entry of pollData) {
+        setRunResults((prev) => [{ result: entry.result, modelName, scoreMax: entry.scoreMax }, ...prev]);
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -294,7 +303,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     tags,
     templateVars,
     allDbTools,
-    mutateRuns,
+    mutateBatches,
   ]);
 
   return (

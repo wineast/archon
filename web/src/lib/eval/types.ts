@@ -133,8 +133,8 @@ export interface EvalRunSummary {
 
 // ── DB row → runtime type converters ──
 
-import type { EvalCaseRow, EvalRunRow, EvalRunResultRow } from "@/db/schema";
-export type { EvalRunStatus } from "@/db/schema";
+import type { EvalCaseRow, EvalRunRow, EvalRunResultRow, EvalBatchRow } from "@/db/schema";
+export type { EvalRunStatus, EvalBatchRow } from "@/db/schema";
 
 export function toEvalCase(row: EvalCaseRow): EvalCase {
   return {
@@ -225,4 +225,37 @@ export function toEvalResult(row: EvalRunResultRow): EvalResult {
 export interface EvalRunDetail {
   run: EvalRunRow;
   results: EvalRunResultRow[];
+}
+
+// ── Batch types ──
+
+export interface CreateEvalBatchRequest extends CreateEvalRunRequest {
+  repeatCount?: number;
+  runConcurrency?: number;
+}
+
+export interface CreateEvalBatchResponse {
+  batchId: string;
+  chatModel: string;
+  status: string;
+}
+
+export interface EvalBatchDetail {
+  batch: EvalBatchRow;
+  runs: EvalRunRow[];
+}
+
+/** Aggregated statistics for N>1 batch display */
+export interface BatchAggregatedStats {
+  avgPassRate: number;
+  avgScore: number | null;
+  scoreStdDev: number | null;
+  minScore: number | null;
+  maxScore: number | null;
+  perRunStats: Array<{
+    runIndex: number;
+    passRate: number;
+    averageScore: number | null;
+    status: string;
+  }>;
 }

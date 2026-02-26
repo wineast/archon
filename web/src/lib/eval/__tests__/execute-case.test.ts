@@ -98,6 +98,8 @@ const baseRun = {
   completedCases: 0,
   concurrency: 3,
   error: null,
+  batchId: null,
+  runIndex: 0,
   createdAt: new Date(),
 };
 

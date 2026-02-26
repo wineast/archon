@@ -153,6 +153,9 @@ e2e-eval-binary:
 e2e-eval-cancel:
 	cd web && npx playwright test --project=eval eval-cancel
 
+e2e-eval-batch:
+	cd web && npx playwright test --project=eval eval-batch-repeat
+
 e2e-report:
 	cd web && npx playwright show-report
 

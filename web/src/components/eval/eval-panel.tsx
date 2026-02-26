@@ -5,12 +5,12 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useEvalCases,
-  useEvalRuns,
+  useEvalBatches,
   createEvalCase,
   updateEvalCase,
   deleteEvalCase,
 } from "@/lib/eval/hooks";
-import { EvalRunProvider } from "@/lib/eval/eval-run-context";
+import { EvalBatchProvider } from "@/lib/eval/eval-run-context";
 import { EvalSidebar, type ActiveView } from "./eval-sidebar";
 import { CaseDetail } from "./case-detail";
 import { ResultsPanel } from "./results-panel";
@@ -20,7 +20,7 @@ import { EvalCaseCreateDialog } from "./eval-case-create-dialog";
 
 export function EvalPanel({ agentId }: { agentId: string }) {
   const { cases, mutate: mutateCases } = useEvalCases(agentId, true);
-  const { runs, mutate: mutateRuns } = useEvalRuns(agentId);
+  const { batches, mutate: mutateBatches } = useEvalBatches(agentId);
   const [activeView, setActiveView] = useState<ActiveView>(null);
   const [mobileView, setMobileView] = useState<"sidebar" | "detail">(
     "sidebar"
@@ -121,7 +121,7 @@ export function EvalPanel({ agentId }: { agentId: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <EvalRunProvider runs={runs} mutateRuns={mutateRuns}>
+      <EvalBatchProvider batches={batches} mutateBatches={mutateBatches}>
         {/* Desktop layout */}
         <div className="hidden h-full sm:flex">
           <EvalSidebar
@@ -162,7 +162,7 @@ export function EvalPanel({ agentId }: { agentId: string }) {
             </>
           )}
         </div>
-      </EvalRunProvider>
+      </EvalBatchProvider>
 
       <EvalCaseCreateDialog
         open={caseDialogOpen}

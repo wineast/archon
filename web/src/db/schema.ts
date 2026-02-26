@@ -679,11 +679,48 @@ export type NewJudgeConfigRow = typeof judgeConfigs.$inferInsert;
 export const EVAL_RUN_STATUSES = ["pending", "running", "completed", "cancelled", "failed"] as const;
 export type EvalRunStatus = (typeof EVAL_RUN_STATUSES)[number];
 
+/* ─────────── Eval Batches ─────────── */
+
+export const evalBatches = pgTable("eval_batches", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  agentId: uuid("agent_id").references(() => agents.id, {
+    onDelete: "cascade",
+  }),
+  repeatCount: integer("repeat_count").notNull().default(1),
+  runConcurrency: integer("run_concurrency").notNull().default(1),
+  chatModel: text("chat_model").notNull(),
+  judgeConfigSnapshot: jsonb("judge_config_snapshot"),
+  totalCasesPerRun: integer("total_cases_per_run").notNull(),
+  status: text("status").notNull().default("pending").$type<EvalRunStatus>(),
+  completedRuns: integer("completed_runs").notNull().default(0),
+  totalRuns: integer("total_runs").notNull(),
+  // Aggregated stats (filled on finalize)
+  passedAssertions: integer("passed_assertions").notNull().default(0),
+  averageScore: real("average_score"),
+  scoreStdDev: real("score_std_dev"),
+  minScore: real("min_score"),
+  maxScore: real("max_score"),
+  isBaseline: boolean("is_baseline").notNull().default(false),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type EvalBatchRow = typeof evalBatches.$inferSelect;
+export type NewEvalBatchRow = typeof evalBatches.$inferInsert;
+
+/* ─────────── Eval Runs ─────────── */
+
 export const evalRuns = pgTable("eval_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
   agentId: uuid("agent_id").references(() => agents.id, {
     onDelete: "cascade",
   }),
+  batchId: uuid("batch_id").references(() => evalBatches.id, {
+    onDelete: "cascade",
+  }),
+  runIndex: integer("run_index").notNull().default(0),
   chatModel: text("chat_model").notNull(),
   chatSystemPrompt: text("chat_system_prompt").notNull(),
   chatTemperature: real("chat_temperature").notNull().default(0.7),

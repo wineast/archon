@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
-import type { EvalCaseRow, EvalRunRow } from "@/db/schema";
-import type { EvalRunDetail } from "./types";
+import type { EvalCaseRow, EvalRunRow, EvalBatchRow } from "@/db/schema";
+import type { EvalRunDetail, EvalBatchDetail, CreateEvalBatchRequest, CreateEvalBatchResponse } from "./types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -14,6 +14,10 @@ export function evalCasesKey(agentId?: string) {
 
 export function evalRunsKey(agentId?: string) {
   return agentId ? `/api/eval/runs?agentId=${agentId}` : null;
+}
+
+export function evalBatchesKey(agentId?: string) {
+  return agentId ? `/api/eval/batches?agentId=${agentId}` : null;
 }
 
 export function useEvalCases(agentId?: string, shouldFetch?: boolean) {
@@ -177,5 +181,105 @@ export async function retryFailedCases(
     console.warn("retryFailedCases failed:", e);
     toast.error(e instanceof Error ? e.message : "Failed to retry failed cases");
     return false;
+  }
+}
+
+// ── Eval Batches ──
+
+export function useEvalBatches(agentId?: string, shouldFetch?: boolean) {
+  const [hasRunning, setHasRunning] = useState(false);
+
+  const { data, error, isLoading, mutate } = useSWR<EvalBatchRow[]>(
+    shouldFetch !== false ? evalBatchesKey(agentId) : null,
+    fetcher,
+    { refreshInterval: hasRunning ? 2000 : 0 }
+  );
+
+  const batches = data ?? [];
+
+  useEffect(() => {
+    setHasRunning(batches.some((b) => b.status === "running"));
+  }, [batches]);
+
+  return {
+    batches,
+    isLoading,
+    error,
+    mutate,
+  };
+}
+
+export async function createEvalBatch(
+  data: CreateEvalBatchRequest,
+  mutate: () => void
+): Promise<CreateEvalBatchResponse | null> {
+  try {
+    const res = await fetch("/api/eval/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.error || `HTTP ${res.status}`);
+    }
+    const result: CreateEvalBatchResponse = await res.json();
+    mutate();
+    return result;
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : "Failed to create eval batch");
+    return null;
+  }
+}
+
+export async function cancelEvalBatch(
+  batchId: string,
+  mutate: () => void
+): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/eval/batch/${batchId}/cancel`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+    mutate();
+    return true;
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : "Failed to cancel batch");
+    return false;
+  }
+}
+
+export async function deleteEvalBatch(
+  id: string,
+  mutate: () => void
+): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/eval/batches/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error(await res.text());
+    mutate();
+    return true;
+  } catch (e) {
+    console.warn("deleteEvalBatch failed:", e);
+    toast.error("Failed to delete batch");
+    return false;
+  }
+}
+
+export async function fetchEvalBatchDetail(
+  id: string
+): Promise<EvalBatchDetail | null> {
+  try {
+    const res = await fetch(`/api/eval/batches/${id}`);
+    if (!res.ok) throw new Error(await res.text());
+    return await res.json();
+  } catch (e) {
+    console.warn("fetchEvalBatchDetail failed:", e);
+    toast.error("Failed to load batch detail");
+    return null;
   }
 }

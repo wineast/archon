@@ -2,13 +2,13 @@ import { db } from "@/db";
 import { evalBatches, evalRuns, modelConfigs, judgeConfigs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import type { CreateEvalRunRequest, CreateEvalRunResponse } from "@/lib/eval/types";
+import type { CreateEvalBatchRequest, CreateEvalBatchResponse } from "@/lib/eval/types";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { inngest } from "@/inngest/client";
 
 export async function POST(req: Request) {
-  const body: CreateEvalRunRequest = await req.json();
+  const body: CreateEvalBatchRequest = await req.json();
   const {
     agentId,
     judgeAgentId,
@@ -19,9 +19,13 @@ export async function POST(req: Request) {
     cases,
     templateVars = {},
     toolNames = [],
+    repeatCount: rawRepeatCount,
+    runConcurrency: rawRunConcurrency,
   } = body;
 
   const concurrency = Math.max(1, Math.min(5, rawConcurrency ?? 3));
+  const repeatCount = Math.max(1, Math.min(10, rawRepeatCount ?? 1));
+  const runConcurrency = Math.max(1, Math.min(5, rawRunConcurrency ?? 1));
 
   if (!agentId) {
     return NextResponse.json({ error: "agentId is required" }, { status: 400 });
@@ -35,7 +39,7 @@ export async function POST(req: Request) {
   if (ctx instanceof NextResponse) return ctx;
 
   // Concurrency check: no other running batch for this agent
-  const [existingRunningBatch] = await db
+  const [existingRunning] = await db
     .select({ id: evalBatches.id })
     .from(evalBatches)
     .where(
@@ -46,7 +50,7 @@ export async function POST(req: Request) {
     )
     .limit(1);
 
-  if (existingRunningBatch) {
+  if (existingRunning) {
     return NextResponse.json(
       { error: "An eval batch is already in progress for this agent" },
       { status: 409 }
@@ -112,51 +116,79 @@ export async function POST(req: Request) {
     );
   }
 
-  // Create the run record with snapshots — status: "running"
-  const [run] = await db
-    .insert(evalRuns)
+  // Create batch record
+  const [batch] = await db
+    .insert(evalBatches)
     .values({
       agentId,
+      repeatCount,
+      runConcurrency,
       chatModel: modelConfig.modelId,
-      chatSystemPrompt: modelConfig.systemPrompt,
-      chatTemperature: modelConfig.temperature,
-      judgeAgentId,
-      judgeModelConfigSnapshot: {
-        modelId: judgeModelConfig.modelId,
-        systemPrompt: judgeModelConfig.systemPrompt,
-        temperature: judgeModelConfig.temperature,
-      },
       judgeConfigSnapshot: {
         name: judgeConfig.name,
         dimensions: judgeConfig.dimensions,
       },
-      filterTags: filterTags ?? [],
-      assertionFailConfig: assertionFailConfig ?? null,
-      templateVars,
-      toolNames,
-      concurrency,
-      totalCases,
-      passedAssertions: 0,
-      averageScore: null,
+      totalCasesPerRun: totalCases,
       status: "running",
-      completedCases: 0,
+      completedRuns: 0,
+      totalRuns: repeatCount,
     })
     .returning();
 
-  // Send Inngest event to start orchestration
+  // Create N eval run records
+  const runConfigs: Array<{ runId: string; caseIds: string[] }> = [];
+  const caseIds = cases.map((c) => c.id);
+
+  for (let i = 0; i < repeatCount; i++) {
+    const [run] = await db
+      .insert(evalRuns)
+      .values({
+        agentId,
+        batchId: batch.id,
+        runIndex: i,
+        chatModel: modelConfig.modelId,
+        chatSystemPrompt: modelConfig.systemPrompt,
+        chatTemperature: modelConfig.temperature,
+        judgeAgentId,
+        judgeModelConfigSnapshot: {
+          modelId: judgeModelConfig.modelId,
+          systemPrompt: judgeModelConfig.systemPrompt,
+          temperature: judgeModelConfig.temperature,
+        },
+        judgeConfigSnapshot: {
+          name: judgeConfig.name,
+          dimensions: judgeConfig.dimensions,
+        },
+        filterTags: filterTags ?? [],
+        assertionFailConfig: assertionFailConfig ?? null,
+        templateVars,
+        toolNames,
+        concurrency,
+        totalCases,
+        passedAssertions: 0,
+        averageScore: null,
+        status: "pending",
+        completedCases: 0,
+      })
+      .returning();
+
+    runConfigs.push({ runId: run.id, caseIds });
+  }
+
+  // Send Inngest event
   await inngest.send({
-    name: "eval/run.created",
+    name: "eval/batch.created",
     data: {
-      runId: run.id,
+      batchId: batch.id,
       agentId,
-      caseIds: cases.map((c) => c.id),
+      runConfigs,
       userId: ctx.user.id,
     },
   });
 
   return Response.json({
-    runId: run.id,
-    chatModel: run.chatModel,
-    status: run.status,
-  } satisfies CreateEvalRunResponse);
+    batchId: batch.id,
+    chatModel: batch.chatModel,
+    status: batch.status,
+  } satisfies CreateEvalBatchResponse);
 }
