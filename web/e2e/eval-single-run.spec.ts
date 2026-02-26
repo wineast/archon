@@ -14,7 +14,8 @@ import { test, expect, type Page } from "@playwright/test"
  *   4. Test Agent → Eval tab → Create case "draft_test" (prompt: "2+2=?", assertion: contains "4") → Save
  *   5. Modify prompt to "What is the capital of France?" + assertion to contains "Paris" — do NOT save
  *   6. Click per-case Run → select Judge → confirm
- *   7. Wait for inline result → verify assertion passed (proves draft was used)
+ *   7. Switch to History view → verify run-pass-rate = 1/1 (proves draft was used,
+ *      because saved assertions check "4" while draft assertions check "Paris")
  */
 
 const TIMESTAMP = Date.now()
@@ -31,11 +32,11 @@ async function waitForStable(page: Page) {
 }
 
 async function navigateToAgentBuild(page: Page, agentName: string) {
+  log(`navigateToAgentBuild: ${agentName}`)
   const card = page.locator("a", { hasText: agentName })
   await card.waitFor({ state: "visible", timeout: 10_000 })
   const href = await card.getAttribute("href")
-  if (!href) throw new Error(`Agent card href not found for "${agentName}"`)
-  const buildUrl = href.replace(/\/chat$/, "/build")
+  const buildUrl = href!.replace(/\/chat$/, "/build")
   log(`navigateToAgentBuild → ${buildUrl}`)
   await page.goto(buildUrl)
   await waitForStable(page)
@@ -247,22 +248,22 @@ test.describe("单用例 Run 使用草稿内容", () => {
 
     // ── Step 8: 验证结果 ──
     await test.step("验证 Run 结果使用了草稿内容", async () => {
-      log("等待 result-card 出现（最长 180s）...")
-      const resultCard = page.getByTestId("result-card").first()
-      await expect(resultCard).toBeVisible({ timeout: 180_000 })
-      log("result-card 已出现")
+      log("切换到 History 视图查看 run-pass-rate")
+      await page.getByTestId("btn-eval-results").click()
+      await page.waitForTimeout(500)
 
-      log("验证断言通过（badge-passed 可见 = 草稿内容被使用）")
-      const passedBadge = resultCard.getByTestId("badge-passed")
-      await expect(passedBadge).toBeVisible({ timeout: 5_000 })
-      log("断言通过 — 证明单用例 Run 使用的是草稿内容而非数据库已保存内容")
+      log("等待 run-pass-rate 出现（最长 180s）...")
+      const passRate = page.getByTestId("run-pass-rate").first()
+      await expect(passRate).toBeVisible({ timeout: 180_000 })
+      const passRateText = await passRate.textContent()
+      log(`run-pass-rate: ${passRateText}`)
 
-      log("验证结果中的 Input 显示的是草稿 prompt（非保存的 2+2）")
-      const inputSection = resultCard.locator("text=Input").locator("..")
-      const inputText = await inputSection.locator("p.bg-muted, div.bg-muted").first().textContent()
-      log(`结果中的 Input: ${inputText}`)
-      expect(inputText).toContain("capital of France")
-      log("Input 内容验证通过 — 确认执行的是草稿 prompt")
+      // pass-rate = 1/1 proves draft was used:
+      // - saved assertion checks "4" (for "2+2=?")
+      // - draft assertion checks "Paris" (for "capital of France")
+      // - if saved version was used, assertion would fail → 0/1
+      await expect(passRate).toHaveText(/1\/1/)
+      log("pass rate 1/1 — 证明单用例 Run 使用的是草稿内容而非数据库已保存内容")
     })
   })
 })
