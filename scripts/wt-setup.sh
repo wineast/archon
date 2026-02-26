@@ -49,6 +49,20 @@ if [ -f "$target_dir/web/.vercel/.env.development.local" ]; then
     echo "  Linked $target_dir/web/.env.local → .vercel/.env.development.local"
 fi
 
+# ---- e2e-env ----
+# 从主仓库拷贝 e2e/.env（含测试账号、API Key，已 gitignore）
+project_root_for_e2e="$(git worktree list --porcelain | head -1 | sed 's/^worktree //')"
+source_e2e_env="$project_root_for_e2e/web/e2e/.env"
+target_e2e_env="$target_dir/web/e2e/.env"
+if [ -f "$source_e2e_env" ] && [ ! -f "$target_e2e_env" ]; then
+    cp "$source_e2e_env" "$target_e2e_env"
+    echo "  Copied e2e/.env from main repo"
+elif [ -f "$target_e2e_env" ]; then
+    echo "  e2e/.env already exists, skipping"
+else
+    echo "  ⚠️  No e2e/.env found in main repo, E2E tests may fail"
+fi
+
 # ---- db-local-env ----
 CONTAINER="archon-postgres"
 DB_USER="archon"
