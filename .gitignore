@@ -11,6 +11,8 @@ node_modules/
 .worktree/meta.json
 CLAUDE.local.md
 start.sh
+clarify-req-from-todo.sh
+req.sh
 .vercel
 .playwright-mcp
 screenshots/
