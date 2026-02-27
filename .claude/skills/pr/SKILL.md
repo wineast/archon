@@ -59,6 +59,12 @@ git diff origin/main..HEAD --name-only | grep -E '(drizzle/|db/schema\.ts)'
 
 # 是否包含 UI 变更（组件文件）
 git diff origin/main..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
+
+# 是否包含 guide 文档变更
+git diff origin/main..HEAD --name-only | grep -E '^web/guide/' | head -5
+
+# 是否包含导出格式迁移变更
+git diff origin/main..HEAD --name-only | grep -E '(versions/migrations/|versions/types\.ts|versions/snapshot\.ts)'
 ```
 
 ### 4. 推送当前分支
@@ -78,16 +84,8 @@ gh pr create --base main --head <当前分支名> --title "<标题>" --body "$(c
 ## Verdict
 <✅/⚠️/❌> **<可以合并/有条件合并/不建议合并>** — <一句话理由>
 
-## Summary
-按 commit 类型分组（Features / Fixes / Refactors），说明 what + why
-**Verification**: ✅ typecheck · ✅ X tests
-
-## Breaking Changes
-<必写——有则按三维度说明，无则写"无"并简要说明原因>
-
 ## Changes
-每个变更项下方附带测试决策说明（✅ 用例名 — 验证什么 / ⏭️ 无用例 — 原因）
-涉及 breaking change 的变更项加 `⚠️ BREAKING` 标记
+按维度分类列出实际变更，涉及 breaking change 的加 `⚠️ BREAKING` 标记
 
 ### UX
 <条件——有用户可感知的变化时>
@@ -95,6 +93,13 @@ gh pr create --base main --head <当前分支名> --title "<标题>" --body "$(c
 <条件——有开发者接口变化时>
 ### Database
 <条件——有 schema 变更时>
+### Export Format
+<条件——有导出格式迁移变更时>
+### Guide
+<条件——有 guide 文档变更时>
+
+## Breaking Changes
+<必写——有则按三维度说明，无则写"无"并简要说明原因>
 
 ## Verification
 ✅ typecheck · ✅ X tests passed
@@ -105,18 +110,15 @@ gh pr create --base main --head <当前分支名> --title "<标题>" --body "$(c
 | 修改 | ~N | `test-file` |
 | 删除 | -N | — |
 
-## Test plan
-<手动验证步骤>
-
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
 )"
 ```
 
 **写作原则**：
-- Summary 按 commit 类型概括 what+why，不重复 Changes 子 section 细节
-- Changes 下的子 section（UX/DX/Database）无则不展示，不留空标题
+- Changes 按维度分类列出实际变更，子 section（UX/DX/Database/Export Format/Guide）无则不展示，不留空标题
 - Breaking Changes 必写（无则写"无"并说明原因）
+- Verification 是变更的自动化验证
 
 #### PR 标题规范
 - 70 字符以内

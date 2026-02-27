@@ -103,6 +103,12 @@ git diff <baseBranch>..HEAD
 git diff <baseBranch>..HEAD --name-only | grep -E '(drizzle/|db/schema\.ts)'
 git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
 
+# 是否包含 guide 文档变更
+git diff <baseBranch>..HEAD --name-only | grep -E '^web/guide/' | head -5
+
+# 是否包含导出格式迁移变更
+git diff <baseBranch>..HEAD --name-only | grep -E '(versions/migrations/|versions/types\.ts|versions/snapshot\.ts)'
+
 # 需求文档（如果存在）
 cat .worktree/REQ.md 2>/dev/null
 ```
@@ -182,24 +188,6 @@ subagent prompt 模板：
 
 如果有合并后注意事项（如 `make db-generate`），附在理由后面。
 
-## Summary
-
-按 commit 类型分组，每组用加粗标题，无则不展示该组：
-
-**Features**
-- <feat commit 对应的要点>
-
-**Fixes**
-- <fix commit 对应的要点>
-
-**Refactors**
-- <refactor/chore commit 对应的要点>
-
-## Breaking Changes
-<必写 section>
-- 有 breaking change：按三维度说明（用户/FDE、技术/API、数据）
-- 无 breaking change：写"无"并简要说明原因
-
 ## Acceptance Reviews
 <条件出现——仅当 `.worktree/REQ.md` 存在时>
 
@@ -225,13 +213,7 @@ subagent prompt 模板：
 
 ## Changes
 
-每个变更项下方附带测试决策说明——加了什么用例、为什么加、没加为什么：
-- ✅ `test-file` — 说明验证了什么
-- ✅ `test-file`（已有，更新）— 说明改了什么断言
-- ⏭️ 无用例 — 说明原因（不可测 / 纯配置 / 已有覆盖等）
-
-涉及 breaking change 的变更项加 `⚠️ BREAKING` 标记，如：
-- **⚠️ BREAKING · XX 接口**：原来 → 现在（说明影响范围）
+按维度分类列出实际变更。每个变更项涉及 breaking change 的加 `⚠️ BREAKING` 标记。
 
 ### UX
 <条件出现——有用户可感知的变化时>
@@ -241,14 +223,33 @@ subagent prompt 模板：
 
 ### DX
 <条件出现——有开发者接口变化时>
-- DB schema、API 接口、配置项、导出格式变化（开发者视角）
+- API 接口、配置项变化（开发者视角）
 
 ### Database
 <条件出现——有 schema 变更时>
 
+### Export Format
+<条件出现——有导出格式迁移变更时>
+- 写清版本号变化（如 v1 → v2）、迁移脚本名、关键逻辑
+- 合并后确认迁移链完整
+
+### Guide
+<条件出现——有 guide 文档变更时>
+- 按 CRUD 分类（新增/更新/删除），列出文件名 + 变更的章节
+
+## Breaking Changes
+<必写 section>
+- 有 breaking change：按三维度说明（用户/FDE、技术/API、数据）
+- 无 breaking change：写"无"并简要说明原因
+
 ## Verification
 
-用例变更总览 + 全局检查结果 + 原始输出：
+变更的自动化验证。每个变更项对应的测试决策：
+- ✅ `test-file` — 说明验证了什么
+- ✅ `test-file`（已有，更新）— 说明改了什么断言
+- ⏭️ 无用例 — 说明原因（不可测 / 纯配置 / 已有覆盖等）
+
+用例变更总览：
 
 | | Count | Details |
 |---|---|---|
@@ -271,11 +272,6 @@ subagent prompt 模板：
 <git log --oneline>
 <git diff --stat>
 <涉及文件摘要>
-
-## How to merge
-```bash
-bash .worktree/merge.sh
-```
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
@@ -300,6 +296,12 @@ make -C "$MAIN_REPO" wt-merge NAME="$WT_NAME"
 if git -C "$MAIN_REPO" diff HEAD~1 --name-only | grep -qE "(drizzle/|db/schema\.ts)"; then
     echo ""
     echo "⚠️  检测到 schema 变更，请执行: make db-generate"
+fi
+
+# 合并后检测导出格式迁移变更
+if git -C "$MAIN_REPO" diff HEAD~1 --name-only | grep -qE "(versions/migrations/|versions/types\.ts|versions/snapshot\.ts)"; then
+    echo ""
+    echo "⚠️  检测到导出格式迁移变更，请确认迁移链完整（模块加载时自动检测）"
 fi
 
 echo ""

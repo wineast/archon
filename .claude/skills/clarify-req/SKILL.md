@@ -12,6 +12,9 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 
 - **UX**：最终用户的体验如何变化？
 - **DX**：开发者的使用方式如何变化？
+- **Database**：DB schema 是否需要变更？
+- **Export Format**：导出格式是否需要新增字段或写迁移脚本？
+- **Guide**：`web/guide/` 文档是否需要新增/更新/删除？
 - **Breaking Changes**：现有行为哪些会被打破，影响范围多大？
 
 ## 追问方法论
@@ -81,6 +84,9 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 追问方向：
 - **UX**：用户操作路径怎么变？新增/移除/修改了哪些界面元素？状态与反馈如何处理？
 - **DX**：API 参数、返回值、组件 props、配置项、schema 怎么变？调用方需要改什么？
+- **Database**：需要新增/修改表或列吗？是否涉及数据迁移？
+- **Export Format**：新增的字段需要出现在 Agent 导出 JSON 中吗？如果是，需要写迁移脚本（`web/src/lib/versions/migrations/`）
+- **Guide**：这个功能改完后，`web/guide/` 里哪些文档需要新增/更新/删除？列出文件名和要改的章节
 - **Breaking Changes**：哪些现有行为会被打破？影响范围多大？兼容策略是什么？
 - **边界情况**：极端输入、空数据、大量数据时如何表现？
 
@@ -89,16 +95,6 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 - 用 `AskUserQuestion` 的 `markdown` 预览展示 UI 布局选项（ASCII mockup）
 - 无 UX 变化（纯后端）或无 DX 变化（纯 UI）时跳过对应子项
 - Breaking Changes 从代码调研中主动提取："我发现 XX 有 N 处调用，如果改了接口都要跟着改"
-
-### 第 5 轮：验收标准
-
-目标：定义怎么算"做完了"。验收标准必须覆盖 UX、DX、Breaking Changes 三个维度。
-
-操作：
-- **UX 验收**：用户按什么路径操作，应看到什么结果？
-- **DX 验收**：开发者用新接口/API，行为符合预期？
-- **兼容验收**：如有 breaking change，迁移后旧功能正常？
-- 用 Given-When-Then 格式，每条可演示
 
 ## 执行规则
 
@@ -154,12 +150,20 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 #### 目标
 {期望的接口/API/调用方式}
 
+### Database
+<条件——涉及 schema 变更时展示>
+{新增/修改的表和列、是否需要数据迁移、合并后需要 `make db-generate`}
+
+### Export Format
+<条件——涉及导出字段新增/修改时展示>
+{新增的导出字段、迁移脚本名、版本号变化}
+
+### Guide
+<条件——涉及 guide 文档新增/修改/删除时展示>
+{按 CRUD 列出 `web/guide/` 中需要变更的文件和章节}
+
 ### Breaking Changes
 {列出每项不兼容变更、影响范围、处理策略。无则写"无"}
-
-## 验收标准
-- Given {前置条件}, When {操作}, Then {预期结果}
-- ...
 
 ## 参考
 - {相关规范文档路径、可复用模块——从代码调研中提取}
@@ -173,10 +177,9 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 - **动机要讲清代价**："为什么做"必须包含做了的好处和不做的坏处，让 reviewer 理解紧迫性
 - **方案选择要有对比**：至少说明考虑过什么替代方案、为什么放弃，没有备选时说明原因
 - **写目标，不写实现**：描述期望达到的状态（UX/DX 的 before→after），不写代码方案
-- **预期变更要具体**：UX/DX 变更的现状和目标都要具体描述，Breaking Changes 要穷举
-- **验收标准覆盖三维度**：UX、DX、兼容性都要有对应验收条件
+- **预期变更要具体**：UX/DX 变更的现状和目标都要具体描述，Breaking Changes 要穷举——预期变更本身就是验收标准，实现完成后直接对照检查
 - **参考可以具体**：列出规范文档路径、可复用模块，帮助执行 Agent 快速定位
-- **无关子项可省略**：预期变更中，纯 UI 改动无 DX 变更时该子项写"无变更"；无 breaking change 写"无"
+- **无关子项可省略**：预期变更中，纯 UI 改动无 DX 变更时省略该子项；Database/Export Format/Guide 无变更时不展示；无 breaking change 写"无"
 - **信任执行 Agent**：它有完整的代码访问权限和 CLAUDE.md 上下文，能自行调研和规划
 
 ### 流程
