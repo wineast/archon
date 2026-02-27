@@ -415,7 +415,9 @@ function EmbedChat({
         return;
       }
 
-      // Client tool: use existing executor
+      // Server tools are already executed server-side; only handle client tools here
+      if (target !== "client") return;
+
       const toolRows = config.tools.map((t) => ({
         ...t,
         id: "",
