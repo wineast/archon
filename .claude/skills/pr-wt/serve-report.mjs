@@ -19,9 +19,18 @@ const WORKTREE_DIR = join(CWD, ".worktree");
 
 const REPORT_PATH = join(WORKTREE_DIR, "REPORT.md");
 const MERGE_SH_PATH = join(WORKTREE_DIR, "merge.sh");
+const REQ_PATH = join(WORKTREE_DIR, "REQ.md");
 
 function readReport() {
   return readFileSync(REPORT_PATH, "utf-8");
+}
+
+function readReq() {
+  try {
+    return readFileSync(REQ_PATH, "utf-8");
+  } catch {
+    return null;
+  }
 }
 
 let mergeShContent;
@@ -113,6 +122,8 @@ function sseExec(command, args, options, res) {
 function buildHtml() {
   // Re-read on every request so edits are visible after refresh
   const escapedMd = JSON.stringify(readReport());
+  const reqMd = readReq();
+  const escapedReqMd = reqMd ? JSON.stringify(reqMd) : "null";
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -146,6 +157,64 @@ function buildHtml() {
     margin: 0 auto;
     padding: 24px 16px;
   }
+  .container.wide { max-width: 1400px; }
+
+  /* Requirements comparison layout */
+  .req-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .req-compare-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .req-compare-panel.left { border-color: #3d5a80; }
+  .req-compare-panel.right { border-color: #2ea043; }
+  .req-panel-header {
+    padding: 10px 16px;
+    font-size: 0.9em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .req-compare-panel.left .req-panel-header { color: var(--accent); border-bottom-color: #3d5a80; }
+  .req-compare-panel.right .req-panel-header { color: var(--green); border-bottom-color: #2ea043; }
+  .req-panel-badge {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .req-compare-panel.left .req-panel-badge { background: rgba(88, 166, 255, 0.15); color: var(--accent); }
+  .req-compare-panel.right .req-panel-badge { background: rgba(63, 185, 80, 0.15); color: var(--green); }
+  .req-panel-body {
+    padding: 12px 16px;
+    max-height: 600px;
+    overflow-y: auto;
+    font-size: 0.9em;
+  }
+  .req-panel-body h1 { font-size: 1.2em; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin: 8px 0; }
+  .req-panel-body h2 { font-size: 1em; border-bottom: none; margin: 12px 0 6px; color: var(--text-muted); }
+  .req-panel-body h3 { font-size: 0.9em; margin: 10px 0 4px; }
+  .req-panel-body p { margin: 4px 0; }
+  .req-panel-body ul, .req-panel-body ol { padding-left: 20px; margin: 4px 0; }
+  .req-panel-body li { margin: 2px 0; }
+  .req-panel-body code {
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  .req-panel-body table { border-collapse: collapse; width: 100%; margin: 6px 0; }
+  .req-panel-body th, .req-panel-body td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; font-size: 0.9em; }
+  .req-panel-body th { background: rgba(255,255,255,0.03); font-weight: 600; }
 
   /* Markdown styles */
   .report h1 { font-size: 1.75em; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 16px; }
@@ -290,6 +359,29 @@ function buildHtml() {
   .status-failed { background: rgba(248, 81, 73, 0.15); color: var(--red); }
   .status-running { background: rgba(210, 153, 34, 0.15); color: var(--yellow); }
 
+  /* Verdict banner */
+  .verdict-banner {
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    font-size: 1.05em;
+    line-height: 1.5;
+  }
+  .verdict-banner p { margin: 2px 0; }
+  .verdict-banner strong { font-weight: 700; }
+  .verdict-pass {
+    background: rgba(63, 185, 80, 0.1);
+    border: 1px solid rgba(63, 185, 80, 0.4);
+  }
+  .verdict-warn {
+    background: rgba(210, 153, 34, 0.1);
+    border: 1px solid rgba(210, 153, 34, 0.4);
+  }
+  .verdict-fail {
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid rgba(248, 81, 73, 0.4);
+  }
+
   /* Video player */
   .report video {
     width: 100%;
@@ -321,7 +413,8 @@ function buildHtml() {
 </style>
 </head>
 <body>
-<div class="container">
+<div class="container" id="main-container">
+  <div id="req-compare-mount"></div>
   <div class="report" id="report"></div>
 
   <div class="actions">
@@ -347,7 +440,89 @@ function buildHtml() {
 <script>
   // Render markdown
   const md = ${escapedMd};
-  document.getElementById("report").innerHTML = marked.parse(md);
+  const reportEl = document.getElementById("report");
+  reportEl.innerHTML = marked.parse(md);
+
+  // Extract Verdict section and render as banner
+  {
+    const h2s = reportEl.querySelectorAll("h2");
+    for (const h2 of h2s) {
+      if (h2.textContent.trim() === "Verdict") {
+        const nodes = [];
+        let sib = h2.nextElementSibling;
+        while (sib && sib.tagName !== "H2") {
+          nodes.push(sib);
+          sib = sib.nextElementSibling;
+        }
+        const html = nodes.map(n => n.outerHTML).join("");
+        nodes.forEach(n => n.remove());
+        h2.remove();
+
+        const banner = document.createElement("div");
+        banner.innerHTML = html;
+        // Detect verdict type from content
+        const text = banner.textContent;
+        if (text.includes("不建议合并") || text.includes("❌")) {
+          banner.className = "verdict-banner verdict-fail";
+        } else if (text.includes("有条件合并") || text.includes("⚠️")) {
+          banner.className = "verdict-banner verdict-warn";
+        } else {
+          banner.className = "verdict-banner verdict-pass";
+        }
+        // Insert before report content (after h1)
+        const h1 = reportEl.querySelector("h1");
+        if (h1 && h1.nextSibling) {
+          reportEl.insertBefore(banner, h1.nextSibling);
+        } else {
+          reportEl.prepend(banner);
+        }
+        break;
+      }
+    }
+  }
+
+  // Build side-by-side: REQ.md (left) + Acceptance Reviews (right)
+  const reqMd = ${escapedReqMd};
+  if (reqMd) {
+    // Extract "Acceptance Reviews" section from rendered report
+    let fulfillmentHtml = "";
+    const h2s = reportEl.querySelectorAll("h2");
+    for (const h2 of h2s) {
+      if (h2.textContent.trim() === "Acceptance Reviews") {
+        // Collect all siblings until next h2
+        const nodes = [];
+        let sib = h2.nextElementSibling;
+        while (sib && sib.tagName !== "H2") {
+          nodes.push(sib);
+          sib = sib.nextElementSibling;
+        }
+        fulfillmentHtml = nodes.map(n => n.outerHTML).join("");
+        // Remove from report flow
+        nodes.forEach(n => n.remove());
+        h2.remove();
+        break;
+      }
+    }
+
+    if (fulfillmentHtml) {
+      document.getElementById("main-container").classList.add("wide");
+      const mount = document.getElementById("req-compare-mount");
+      mount.innerHTML = \`
+        <div class="req-compare">
+          <div class="req-compare-panel left">
+            <div class="req-panel-header"><span class="req-panel-badge">REQ</span> Requirements</div>
+            <div class="req-panel-body" id="req-left"></div>
+          </div>
+          <div class="req-compare-panel right">
+            <div class="req-panel-header"><span class="req-panel-badge">DONE</span> Acceptance Reviews</div>
+            <div class="req-panel-body" id="req-right"></div>
+          </div>
+        </div>
+      \`;
+      document.getElementById("req-left").innerHTML = marked.parse(reqMd);
+      document.getElementById("req-right").innerHTML = fulfillmentHtml;
+    }
+  }
 
   // Post-process: convert video links to inline <video> players
   document.querySelectorAll(".report a[href]").forEach(a => {

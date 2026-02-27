@@ -73,14 +73,50 @@ git push -u origin <当前分支名>
 
 用 `gh pr create`，**base 分支始终为 `main`**：
 
-摘要格式和各 section 规范遵循 `.claude/skills/_shared/merge-summary-format.md`。
-
 ```bash
 gh pr create --base main --head <当前分支名> --title "<标题>" --body "$(cat <<'EOF'
-<按 merge-summary-format.md 格式生成>
+## Verdict
+<✅/⚠️/❌> **<可以合并/有条件合并/不建议合并>** — <一句话理由>
+
+## Summary
+按 commit 类型分组（Features / Fixes / Refactors），说明 what + why
+**Verification**: ✅ typecheck · ✅ X tests
+
+## Breaking Changes
+<必写——有则按三维度说明，无则写"无"并简要说明原因>
+
+## Changes
+每个变更项下方附带测试决策说明（✅ 用例名 — 验证什么 / ⏭️ 无用例 — 原因）
+涉及 breaking change 的变更项加 `⚠️ BREAKING` 标记
+
+### UX
+<条件——有用户可感知的变化时>
+### DX
+<条件——有开发者接口变化时>
+### Database
+<条件——有 schema 变更时>
+
+## Verification
+✅ typecheck · ✅ X tests passed
+
+| | Count | Details |
+|---|---|---|
+| 新增 | +N | `test-file` |
+| 修改 | ~N | `test-file` |
+| 删除 | -N | — |
+
+## Test plan
+<手动验证步骤>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
 )"
 ```
+
+**写作原则**：
+- Summary 按 commit 类型概括 what+why，不重复 Changes 子 section 细节
+- Changes 下的子 section（UX/DX/Database）无则不展示，不留空标题
+- Breaking Changes 必写（无则写"无"并说明原因）
 
 #### PR 标题规范
 - 70 字符以内
