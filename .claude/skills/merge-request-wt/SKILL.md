@@ -100,26 +100,7 @@ git diff <baseBranch>..HEAD --name-only | grep -E '(drizzle/|db/schema\.ts)'
 git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
 ```
 
-向用户展示合并摘要，格式参考 PR skill：
-
-```markdown
-## Summary
-<1-5 个要点，每个要点说明 what + why>
-
-## Database
-<仅当 diff 包含 drizzle/ 迁移文件或 schema.ts 变更时出现>
-<提醒合并后需要 make db-generate>
-
-## Breaking changes
-<仅当存在不兼容变更时出现>
-
-## Test plan
-<已通过的检查项：typecheck、test、e2e 等>
-```
-
-- **Summary** 先说 why 再说 what，避免只罗列文件名
-- **Database / Breaking changes** 为条件 section，无则不展示
-- **Test plan** 列出本次合并流程中已通过的检查项
+向用户展示合并摘要，遵循 `.claude/skills/_shared/merge-summary-format.md`。
 
 ### 8. 用户确认
 

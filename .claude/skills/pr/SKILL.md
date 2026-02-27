@@ -71,26 +71,11 @@ git push -u origin <当前分支名>
 
 用 `gh pr create`，**base 分支始终为 `main`**：
 
+摘要格式和各 section 规范遵循 `.claude/skills/_shared/merge-summary-format.md`。
+
 ```bash
 gh pr create --base main --head <当前分支名> --title "<标题>" --body "$(cat <<'EOF'
-## Summary
-<1-5 个要点，每个要点说明 what + why>
-
-<以下为条件 section，按需包含>
-
-## Database
-<仅当 diff 包含 web/drizzle/ 迁移文件或 schema.ts 变更时出现>
-
-## Breaking changes
-<仅当存在不兼容变更时出现>
-
-## Screenshots
-<仅当有 UI 变更时出现>
-
-## Test plan
-<测试 checklist>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+<按 merge-summary-format.md 格式生成>
 EOF
 )"
 ```
@@ -99,21 +84,6 @@ EOF
 - 70 字符以内
 - 用 `feat:` / `fix:` / `refactor:` / `chore:` / `docs:` 前缀
 - 中文或英文均可，与 commit 风格一致
-
-#### PR body 规范
-
-**Summary**（必须）：概括本次变更的核心内容，每个要点一行。先说 **why**（解决什么问题/满足什么需求），再说 **what**（具体改了什么）。避免只罗列文件名。
-
-**Database**（条件）：仅当 diff 中包含 `web/drizzle/` 迁移文件或 `web/src/db/schema.ts` 变更时出现。说明：
-- 新增/修改了哪些表或字段
-- 是否为破坏性变更（如删列、改类型）
-- Vercel 部署时会自动执行 `db:migrate`，此处提醒 reviewer 关注迁移安全性
-
-**Breaking changes**（条件）：仅当存在不兼容变更时出现（API 签名变更、数据结构变更、行为变更等）。列出影响范围和迁移方式。
-
-**Screenshots**（条件）：仅当有 UI 变更时出现。提供 before/after 截图或 GIF。截图放在 `screenshots/` 目录，用相对路径引用。
-
-**Test plan**（必须）：列出已通过的检查项（typecheck、test、e2e 等），以及手动验证步骤（如有）。
 
 ### 6. 输出结果
 
