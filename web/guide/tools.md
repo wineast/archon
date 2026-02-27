@@ -31,6 +31,31 @@
 | executionTarget | text | 执行位置：`server` / `client` / `host` |
 | sandboxMode | text | 沙盒模式：`light`（QuickJS）/ `full`（Vercel Sandbox） |
 
+## 执行目标（executionTarget）
+
+| 目标 | 运行位置 | 说明 |
+|------|----------|------|
+| **server** | 服务端 | Handler 在 API 路由中通过 `executeToolHandler` 执行，AI SDK 的 `execute` 函数处理调用和返回 |
+| **client** | 浏览器端 | 不注册 `execute` 函数，工具调用通过 AI SDK 的 `onToolCall` 传递到前端，由 `executeClientTool` 在浏览器中执行 handler |
+| **host** | 宿主应用 | 不注册 `execute` 函数，工具调用通过 `onToolCall` 传递到前端，再通过 `postMessage` 委托给嵌入方宿主应用处理 |
+
+### 客户端 onToolCall 过滤
+
+AI SDK 的 `onToolCall` 回调会为**所有**工具调用触发（包括已在服务端执行的 server 工具）。因此前端 `onToolCall` 中必须先检查工具是否为 `client` 类型，仅对客户端工具调用 `executeClientTool`：
+
+```ts
+onToolCall: ({ toolCall }) => {
+  const isClient = toolsList.some(
+    (t) => t.name === toolCall.toolName && t.executionTarget === "client"
+  );
+  if (isClient) {
+    executeClientTool(toolCall, addToolOutput, toolsList);
+  }
+}
+```
+
+此过滤在 `chat-page-content.tsx` 和 `embed/[agentId]/page.tsx` 中均已实现。缺少此过滤会导致 server/host 工具被 `executeClientTool` 误处理，返回 `{ error: "Tool not found" }`。
+
 ## 沙盒模式
 
 | 模式 | 引擎 | 特点 |
