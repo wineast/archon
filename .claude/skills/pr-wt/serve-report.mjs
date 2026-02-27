@@ -191,7 +191,7 @@ function buildHtml() {
     margin: 0 auto;
     padding: 24px 16px;
   }
-  .container.wide { max-width: none; }
+  .container.wide { max-width: 90%; }
 
   /* Main two-column layout: REQ (left) | Report (right) */
   .main-grid {
