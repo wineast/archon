@@ -506,6 +506,8 @@ export async function copyVersionResources(
         name: j.name,
         isActive: j.isActive,
         dimensions: j.dimensions,
+        promptTemplate: j.promptTemplate,
+        turnPromptTemplate: j.turnPromptTemplate,
       }))
     );
   }

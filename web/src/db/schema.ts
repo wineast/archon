@@ -658,6 +658,8 @@ export const judgeConfigs = pgTable(
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(false),
     dimensions: jsonb("dimensions").$type<Dimension[]>().notNull().default([]),
+    promptTemplate: text("prompt_template"),
+    turnPromptTemplate: text("turn_prompt_template"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

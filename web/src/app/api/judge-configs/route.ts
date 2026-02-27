@@ -5,6 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { logAudit } from "@/lib/audit/log";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
+import { DEFAULT_PROMPT_TEMPLATE, DEFAULT_TURN_PROMPT_TEMPLATE } from "@/lib/eval/judge-prompt";
 
 export async function GET(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId");
@@ -44,6 +45,8 @@ export async function POST(req: Request) {
       name: body.name,
       isActive: false,
       dimensions: body.dimensions ?? [],
+      promptTemplate: body.promptTemplate ?? DEFAULT_PROMPT_TEMPLATE,
+      turnPromptTemplate: body.turnPromptTemplate ?? DEFAULT_TURN_PROMPT_TEMPLATE,
     })
     .returning();
 

@@ -335,6 +335,8 @@ export async function buildSnapshot(agentId: string, versionId: string, external
         name: j.name,
         isActive: j.isActive,
         dimensions: j.dimensions,
+        promptTemplate: j.promptTemplate ?? undefined,
+        turnPromptTemplate: j.turnPromptTemplate ?? undefined,
       })
     ),
     objectTypes: objectTypeRows.map(
@@ -741,6 +743,8 @@ export async function restoreSnapshot(
         name: j.name,
         isActive: j.isActive,
         dimensions: j.dimensions,
+        promptTemplate: j.promptTemplate ?? null,
+        turnPromptTemplate: j.turnPromptTemplate ?? null,
       }))
     );
   }
