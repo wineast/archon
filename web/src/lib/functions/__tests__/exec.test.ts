@@ -194,4 +194,72 @@ export default function(input) { return expr(input); }`,
       ])
     ).rejects.toThrow(CompilationError);
   });
+
+  it("import resolves to host dep when no compiled function exists for that key", async () => {
+    // Simulates the fix: builtin functions with host deps are excluded from
+    // compilation, so `import X from "archon:fn/X"` resolves to the host dep.
+    const { compileExpression } = await import("filtrex");
+    const exec = await createFunctionsExec(
+      [
+        {
+          // This function imports compileExpression and uses the raw filtrex API
+          // (passing a string expression, getting back a filter function)
+          key: "engine",
+          code: `import compileExpression from "archon:fn/compileExpression";
+function evaluate(expr, data) {
+  var filter = compileExpression(expr);
+  return filter(data);
+}
+export default function(input) {
+  return evaluate(input.when, input.data);
+}`,
+        },
+      ],
+      // compileExpression is injected as a host dep (raw filtrex function)
+      // and NOT as a compiled function record
+      { compileExpression }
+    );
+    try {
+      const result = exec.call("engine", {
+        when: 'x > 10',
+        data: { x: 15 },
+      });
+      expect(result).toBe(true);
+    } finally {
+      exec.dispose();
+    }
+  });
+
+  it("compiled function shadows host dep when both exist (pre-fix behavior)", async () => {
+    // Demonstrates the issue: when a compiled function with key "myDep" exists
+    // AND a host dep with the same key exists, the import resolves to the
+    // compiled function — which may have a different API.
+    const rawDep = (x: number) => x * 2;
+    const exec = await createFunctionsExec(
+      [
+        {
+          // This compiled function wraps the host dep with a different API
+          key: "myDep",
+          code: `export default function(input) { return myDep(input.value); }`,
+        },
+        {
+          // This function imports myDep expecting the raw API (direct number arg)
+          key: "consumer",
+          code: `import myDep from "archon:fn/myDep";
+export default function(input) { return myDep(input.n); }`,
+        },
+      ],
+      { myDep: rawDep }
+    );
+    try {
+      // consumer's import resolves to the compiled "myDep" function (wrapper),
+      // NOT the raw host dep. The wrapper expects { value: number }.
+      // Calling it with a number (input.n = 5) means input.value is undefined.
+      const result = exec.call("consumer", { n: 5 });
+      // wrapper calls rawDep(undefined) → NaN
+      expect(result).toBeNaN();
+    } finally {
+      exec.dispose();
+    }
+  });
 });
