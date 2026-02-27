@@ -385,29 +385,15 @@ function buildHtml() {
   .btn-delete:hover:not(:disabled) {
     background: #f85149;
   }
-  .btn-sync {
-    background: transparent;
-    border-color: var(--yellow);
-    color: var(--yellow);
-  }
-  .btn-sync:hover:not(:disabled) {
-    background: rgba(210, 153, 34, 0.1);
-  }
-
   .btn-group {
     display: flex;
     gap: 12px;
-    align-items: flex-start;
+    align-items: center;
   }
   .btn-item {
     display: flex;
     flex-direction: column;
     gap: 4px;
-  }
-  .btn-desc {
-    font-size: 11px;
-    color: var(--text-muted);
-    padding-left: 2px;
   }
 
   /* Terminal */
@@ -540,6 +526,61 @@ function buildHtml() {
   .wt-badge.ahead { background: rgba(63,185,80,0.12); color: var(--green); }
   .wt-badge.behind { background: rgba(248,81,73,0.12); color: var(--red); }
 
+  /* Diff commits */
+  .diff-commits {
+    margin-bottom: 12px;
+  }
+  .diff-header {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .diff-header .count {
+    background: rgba(255,255,255,0.08);
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .commit-list {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .commit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .commit-row:last-child { border-bottom: none; }
+  .commit-hash {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .commit-msg {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .commit-date {
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .diff-stat {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+
   /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
@@ -586,19 +627,14 @@ function buildHtml() {
         <div class="wt-card-meta" id="wt-current-meta"></div>
       </div>
     </div>
-    <div class="merge-check checking" id="merge-check">Checking merge status...</div>
+    <div class="diff-commits" id="diff-commits"></div>
+    <div class="merge-check checking" id="merge-check">Checking...</div>
     <div class="btn-group">
-      <div class="btn-item" id="btn-sync-wrap" style="display:none">
-        <button class="btn btn-sync" id="btn-sync" onclick="doSync()">Sync Upstream</button>
-        <span class="btn-desc">临时 commit → git rebase → 恢复未提交状态</span>
-      </div>
       <div class="btn-item" id="btn-merge-wrap">
-        <button class="btn btn-merge" id="btn-merge" onclick="doMerge()">Merge to upstream</button>
-        <span class="btn-desc">typecheck + test → wt-merge 合并到上游</span>
+        <button class="btn btn-merge" id="btn-merge" onclick="doMerge()" disabled>Merge to upstream</button>
       </div>
       <div class="btn-item" id="btn-delete-wrap" style="display:none">
         <button class="btn btn-delete" id="btn-delete" onclick="doDelete()">Delete worktree</button>
-        <span class="btn-desc">删除工作区分支和目录</span>
       </div>
     </div>
     <div class="terminal" id="terminal">
@@ -748,16 +784,13 @@ function buildHtml() {
   const mergeCheckEl = document.getElementById("merge-check");
   const terminal = document.getElementById("terminal");
   const termContent = document.getElementById("terminal-content");
-  const btnSync = document.getElementById("btn-sync");
   const btnMerge = document.getElementById("btn-merge");
   const btnDelete = document.getElementById("btn-delete");
-  const syncWrap = document.getElementById("btn-sync-wrap");
-  const mergeWrap = document.getElementById("btn-merge-wrap");
   const deleteWrap = document.getElementById("btn-delete-wrap");
   const mergeStatus = document.getElementById("merge-status");
   const deleteStatus = document.getElementById("delete-status");
 
-  // --- Worktree status ---
+  // --- Worktree status + button state ---
   function statusBadges(data) {
     let b = "";
     if (data.staged > 0) b += '<span class="wt-badge staged">' + data.staged + ' staged</span>';
@@ -768,8 +801,15 @@ function buildHtml() {
     if (data.behind > 0) b += '<span class="wt-badge behind">\\u2193' + data.behind + ' behind</span>';
     return b;
   }
-  function fetchStatus() {
+  function isDirty(s) { return s && (s.staged > 0 || s.unstaged > 0 || s.untracked > 0); }
+
+  function refreshState() {
+    mergeCheckEl.className = "merge-check checking";
+    mergeCheckEl.textContent = "Checking...";
+    btnMerge.disabled = true;
+
     fetch("/status").then(r => r.json()).then(data => {
+      // Render status cards
       if (data.upstream) {
         document.getElementById("wt-upstream-branch").textContent = data.upstream.branch || "?";
         document.getElementById("wt-upstream-meta").innerHTML = statusBadges(data.upstream);
@@ -778,9 +818,56 @@ function buildHtml() {
         document.getElementById("wt-current-branch").textContent = data.current.branch || "?";
         document.getElementById("wt-current-meta").innerHTML = statusBadges(data.current);
       }
-    }).catch(() => {});
+
+      const curDirty = isDirty(data.current);
+      const upDirty = isDirty(data.upstream);
+
+      if (upDirty) {
+        mergeCheckEl.className = "merge-check conflict";
+        mergeCheckEl.textContent = "\\u26A0\\uFE0F 上游有未提交变更，请先去上游提交";
+        return;
+      }
+      if (curDirty) {
+        mergeCheckEl.className = "merge-check conflict";
+        mergeCheckEl.textContent = "\\u26A0\\uFE0F 当前工作区有未提交变更，请先提交";
+        return;
+      }
+
+      // Both clean → check for merge conflicts (dry-run)
+      fetch("/merge-check").then(r => r.json()).then(mc => {
+        if (mc.status === "conflict") {
+          mergeCheckEl.className = "merge-check conflict";
+          mergeCheckEl.textContent = "\\u274C 检测到合并冲突，需要手动解决后再合并";
+        } else {
+          mergeCheckEl.className = "merge-check clean";
+          mergeCheckEl.textContent = "\\u2705 可以合并";
+          btnMerge.disabled = false;
+        }
+      });
+    }).catch(() => {
+      mergeCheckEl.className = "merge-check";
+      mergeCheckEl.textContent = "";
+    });
   }
-  fetchStatus();
+  refreshState();
+
+  // --- Load diff commits ---
+  fetch("/diff-commits").then(r => r.json()).then(data => {
+    const el = document.getElementById("diff-commits");
+    if (!data.commits || data.commits.length === 0) { el.style.display = "none"; return; }
+    let html = '<div class="diff-header">Commits <span class="count">' + data.commits.length + '</span>';
+    if (data.filesCount) html += '<span class="count">' + data.filesCount + ' files changed</span>';
+    html += '</div><div class="commit-list">';
+    data.commits.forEach(c => {
+      html += '<div class="commit-row">'
+        + '<span class="commit-hash">' + c.short + '</span>'
+        + '<span class="commit-msg">' + c.message + '</span>'
+        + '<span class="commit-date">' + c.date + '</span>'
+        + '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {});
 
   function appendLine(text, cls) {
     const div = document.createElement("div");
@@ -840,93 +927,26 @@ function buildHtml() {
     });
   }
 
-  // --- Merge pre-check on page load ---
-  function checkMergeStatus() {
-    mergeCheckEl.className = "merge-check checking";
-    mergeCheckEl.textContent = "Checking merge status...";
-    syncWrap.style.display = "none";
-    mergeWrap.style.display = "none";
-
-    fetch("/merge-check").then(r => r.json()).then(data => {
-      mergeCheckEl.className = "merge-check " + data.status;
-      mergeCheckEl.textContent = data.message;
-      if (data.status === "conflict" || data.status === "behind") {
-        syncWrap.style.display = "";
-        mergeWrap.style.display = "none";
-      } else {
-        syncWrap.style.display = "none";
-        mergeWrap.style.display = "";
-      }
-    }).catch(() => {
-      mergeCheckEl.className = "merge-check";
-      mergeCheckEl.textContent = "";
-      mergeWrap.style.display = "";
-    });
-  }
-  checkMergeStatus();
-
-  // --- Sync upstream ---
-  async function doSync() {
-    btnSync.disabled = true;
-    btnSync.innerHTML = '<span class="spinner"></span> Syncing...';
+  // --- Merge ---
+  async function doMerge() {
+    btnMerge.disabled = true;
+    btnMerge.innerHTML = '<span class="spinner"></span> Merging...';
+    setStatus(mergeStatus, "running", "Merging");
     termContent.innerHTML = "";
 
     const ok = await new Promise(resolve => {
-      runSSE("/sync-upstream", resolve);
-    });
-
-    if (ok) {
-      syncWrap.style.display = "none";
-      fetchStatus();
-      checkMergeStatus();
-    } else {
-      btnSync.innerHTML = "Sync failed";
-      btnSync.disabled = false;
-      btnSync.onclick = doSync;
-    }
-  }
-
-  // --- Merge pipeline: checks → merge ---
-  async function doMerge() {
-    btnMerge.disabled = true;
-    termContent.innerHTML = "";
-
-    // Step 1: Quality checks
-    btnMerge.innerHTML = '<span class="spinner"></span> Running checks...';
-    setStatus(mergeStatus, "running", "Checking");
-    appendLine("--- typecheck + test ---", "stdout");
-
-    const checksOk = await new Promise(resolve => {
-      runSSE("/run-checks", resolve);
-    });
-
-    if (!checksOk) {
-      setStatus(mergeStatus, "failed", "Checks failed");
-      btnMerge.innerHTML = "Checks failed — retry";
-      btnMerge.disabled = false;
-      btnMerge.onclick = doMerge;
-      return;
-    }
-
-    // Step 2: Merge
-    btnMerge.innerHTML = '<span class="spinner"></span> Merging...';
-    setStatus(mergeStatus, "running", "Merging");
-    appendLine("\\n--- merge ---", "stdout");
-
-    const mergeOk = await new Promise(resolve => {
       runSSE("/merge", resolve);
     });
 
-    if (mergeOk) {
-      setStatus(mergeStatus, "success", "Merged");
-      btnMerge.innerHTML = "Merged";
+    if (ok) {
+      setStatus(mergeStatus, "success", "Merged \\u2705");
+      btnMerge.innerHTML = "Merged \\u2705";
       deleteWrap.style.display = "";
-      fetchStatus();
+      refreshState();
     } else {
-      setStatus(mergeStatus, "failed", "Merge failed");
+      setStatus(mergeStatus, "failed", "Failed");
       btnMerge.innerHTML = "Merge failed — retry";
       btnMerge.disabled = false;
-      btnMerge.onclick = doMerge;
     }
   }
 
@@ -934,15 +954,13 @@ function buildHtml() {
   function doDelete() {
     btnDelete.disabled = true;
     btnDelete.innerHTML = '<span class="spinner"></span> Deleting...';
-    setStatus(deleteStatus, "running", "Running");
-    appendLine("\\n--- Delete worktree ---", "stdout");
+    termContent.innerHTML = "";
 
     runSSE("/delete", (success) => {
       if (success) {
-        setStatus(deleteStatus, "success", "Deleted");
-        btnDelete.innerHTML = "Deleted";
+        btnDelete.innerHTML = "Deleted \\u2705";
+        refreshState();
       } else {
-        setStatus(deleteStatus, "failed", "Failed");
         btnDelete.innerHTML = "Delete failed";
         btnDelete.disabled = false;
       }
@@ -1033,40 +1051,28 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (req.method === "POST" && req.url === "/sync-upstream") {
-    // Full sync: temp commit if dirty → rebase → restore
-    const script = `
-      set -e
-      DIRTY=0
-      if [ -n "$(git status --short)" ]; then
-        echo ">>> Uncommitted changes detected, creating temp commit..."
-        git add -A
-        git commit -m "wip: temp commit before sync"
-        DIRTY=1
-      fi
-      echo ">>> Rebasing onto ${baseBranch}..."
-      if git rebase ${baseBranch}; then
-        echo ">>> Rebase succeeded"
-        if [ "$DIRTY" = "1" ]; then
-          echo ">>> Restoring uncommitted changes..."
-          git reset HEAD~1
-        fi
-        echo ">>> Sync complete"
-      else
-        echo ">>> Rebase failed, aborting..."
-        git rebase --abort
-        if [ "$DIRTY" = "1" ]; then
-          git reset HEAD~1
-        fi
-        exit 1
-      fi
-    `;
-    sseExec("bash", ["-c", script], { cwd: CWD }, res);
-    return;
-  }
-
-  if (req.method === "POST" && req.url === "/run-checks") {
-    sseExec("bash", ["-c", "make typecheck && make test"], { cwd: CWD }, res);
+  if (req.method === "GET" && req.url === "/diff-commits") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    if (!baseBranch) {
+      res.end(JSON.stringify({ commits: [], stat: "" }));
+      return;
+    }
+    try {
+      const log = execSync(
+        `git log ${baseBranch}..HEAD --format="%H|%h|%s|%an|%ar" --no-merges`,
+        { cwd: CWD, encoding: "utf-8" }
+      ).trim();
+      const commits = log ? log.split("\n").map(line => {
+        const [hash, short, message, author, date] = line.split("|");
+        return { hash, short, message, author, date };
+      }) : [];
+      const stat = execSync(`git diff ${baseBranch}..HEAD --stat`, { cwd: CWD, encoding: "utf-8" }).trim();
+      const filesChanged = execSync(`git diff ${baseBranch}..HEAD --name-only`, { cwd: CWD, encoding: "utf-8" }).trim();
+      const files = filesChanged ? filesChanged.split("\n") : [];
+      res.end(JSON.stringify({ commits, stat, filesCount: files.length }));
+    } catch (e) {
+      res.end(JSON.stringify({ commits: [], stat: "", error: e.message }));
+    }
     return;
   }
 
