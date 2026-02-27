@@ -120,7 +120,7 @@ Schema 的 `parameters` 使用 **JSON 编辑器** 直接编辑标准 JSON Schema
 详情页有三个子标签：
 - **Edit**：JSON 编辑器，直接编辑 `parameters` JSON
 - **Preview**：模板渲染预览，将当前 JSON Schema 通过 LiquidJS 模板引擎渲染后，以只读 JSON 编辑器展示结果。可用数据仅限**数据集变量**（扁平命名空间，拓扑排序解析），不包含内置变量、tool 命名空间、ontology 等。`$ref` 引用默认自动展开
-- **Parameters**：参数列表预览，以只读卡片形式展示当前 Schema 定义的各字段（名称、类型、required、description）
+- **Parameters**：参数列表预览，以只读卡片形式展示当前 Schema 定义的各字段（名称、类型、required、description）。支持嵌套 object 递归展开（最深 4 层，缩进 + 连接线表达层级）和 enum 枚举值显示（`value1 | value2 | ...`）
 
 JSON 解析失败时（用户还在打字），表单值不会更新，避免中间状态丢失。
 
@@ -706,7 +706,7 @@ Archon 使用以下 `x-` 前缀扩展字段：
 
 ## Examples（用例示范）
 
-Schema 的测试用例可以标记为 **Example**，在 Examples 标签页中集中展示，用于向 FDA 或团队成员演示 Schema 的典型输入。
+Schema 的测试用例可以标记为 **Example**，在 Examples 标签页中集中展示，用于向 FDE 或团队成员演示 Schema 的典型输入。
 
 ### 标记为 Example
 

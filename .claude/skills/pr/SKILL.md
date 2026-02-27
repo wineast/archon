@@ -49,6 +49,16 @@ git diff origin/main..HEAD
 
 **必须用两点 `..`**（不是三点 `...`）——两点表示"从 origin/main 到 HEAD 的线性差异"，与 GitHub PR 页面展示的 diff 一致。分析所有 commits，理解本次 PR 的完整变更范围。
 
+额外检查（用于决定 PR body 中包含哪些条件 section）：
+
+```bash
+# 是否包含数据库迁移文件或 schema 变更
+git diff origin/main..HEAD --name-only | grep -E '(drizzle/|db/schema\.ts)'
+
+# 是否包含 UI 变更（组件文件）
+git diff origin/main..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
+```
+
 ### 4. 推送当前分支
 
 ```bash
@@ -61,15 +71,11 @@ git push -u origin <当前分支名>
 
 用 `gh pr create`，**base 分支始终为 `main`**：
 
+摘要格式和各 section 规范遵循 `.claude/skills/_shared/merge-summary-format.md`。
+
 ```bash
 gh pr create --base main --head <当前分支名> --title "<标题>" --body "$(cat <<'EOF'
-## Summary
-<基于 Step 3 的分析，1-5 个要点>
-
-## Test plan
-<测试相关的 checklist>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+<按 merge-summary-format.md 格式生成>
 EOF
 )"
 ```
@@ -78,10 +84,6 @@ EOF
 - 70 字符以内
 - 用 `feat:` / `fix:` / `refactor:` / `chore:` / `docs:` 前缀
 - 中文或英文均可，与 commit 风格一致
-
-#### PR body 规范
-- Summary：概括本次变更的核心内容，每个要点一行
-- Test plan：列出已通过的检查项（typecheck、test、e2e 等）
 
 ### 6. 输出结果
 

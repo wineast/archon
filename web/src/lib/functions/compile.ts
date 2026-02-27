@@ -160,40 +160,65 @@ export async function resolveAndCompileFunctions(
   return { fns, exec };
 }
 
-// ── Agent-scoped cache ──
+// ── Version-scoped cache ──
+// Key format: "agentId:versionId" for version-level isolation.
 
 interface CacheEntry {
   fns: Map<string, unknown>;
   exec: FunctionsExec;
 }
 
+function cacheKey(agentId: string, versionId: string): string {
+  return `${agentId}:${versionId}`;
+}
+
 const agentCache = new Map<string, CacheEntry>();
 
-export function getCachedFunctions(agentId: string): Map<string, unknown> | undefined {
-  return agentCache.get(agentId)?.fns;
+export function getCachedFunctions(agentId: string, versionId: string): Map<string, unknown> | undefined {
+  return agentCache.get(cacheKey(agentId, versionId))?.fns;
 }
 
 export function setCachedFunctions(
   agentId: string,
+  versionId: string,
   fns: Map<string, unknown>,
   exec: FunctionsExec
 ) {
+  const key = cacheKey(agentId, versionId);
   // Dispose previous exec context if replacing
-  const prev = agentCache.get(agentId);
+  const prev = agentCache.get(key);
   if (prev) {
     prev.exec.dispose();
   }
-  agentCache.set(agentId, { fns, exec });
+  agentCache.set(key, { fns, exec });
 }
 
-export function clearFunctionCache(agentId?: string) {
-  if (agentId) {
-    const entry = agentCache.get(agentId);
+/**
+ * Clear function cache.
+ * - No args: clear all cache entries
+ * - agentId only: clear all versions for that agent (prefix match)
+ * - agentId + versionId: clear specific version only
+ */
+export function clearFunctionCache(agentId?: string, versionId?: string) {
+  if (agentId && versionId) {
+    // Clear specific version
+    const key = cacheKey(agentId, versionId);
+    const entry = agentCache.get(key);
     if (entry) {
       entry.exec.dispose();
-      agentCache.delete(agentId);
+      agentCache.delete(key);
+    }
+  } else if (agentId) {
+    // Clear all versions for this agent (prefix match)
+    const prefix = `${agentId}:`;
+    for (const [key, entry] of agentCache) {
+      if (key.startsWith(prefix)) {
+        entry.exec.dispose();
+        agentCache.delete(key);
+      }
     }
   } else {
+    // Clear everything
     for (const entry of agentCache.values()) {
       entry.exec.dispose();
     }

@@ -104,6 +104,28 @@ export interface ToolContext {
   ontology: OntologyContext;
 }
 
+// Module-level promise lock: deduplicates concurrent compilations for the same agentId:versionId.
+// First caller triggers the actual compile; subsequent callers await the same promise.
+const compilingPromises = new Map<string, Promise<Map<string, unknown>>>();
+
+async function doCompileFunctions(agentId: string, versionId: string): Promise<Map<string, unknown>> {
+  const allRows = await getAgentFunctions(agentId, versionId);
+
+  const fnRecords: FunctionRecord[] = allRows.map((r) => ({
+    key: r.key,
+    code: r.code,
+    parameters: r.parametersSchema ?? {},
+  }));
+
+  const defsMap = await getDefsMap(agentId);
+  const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId, versionId);
+  const baseDeps = buildBaseDeps(enabledBuiltinKeys);
+
+  const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
+  setCachedFunctions(agentId, versionId, fns, exec);
+  return fns;
+}
+
 export function createToolContext(agentId?: string, versionId?: string): ToolContext {
   let resolvedCache: Record<string, unknown> | null = null;
   let compiledFnsPromise: Promise<Map<string, unknown>> | null = null;
@@ -122,25 +144,22 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
   async function getCompiledFunctions(): Promise<Map<string, unknown>> {
     if (!agentId || !versionId) return new Map();
 
-    // Check cache first
-    const cached = getCachedFunctions(agentId);
+    // Check cache first (version-scoped)
+    const cached = getCachedFunctions(agentId, versionId);
     if (cached) return cached;
 
-    const allRows = await getAgentFunctions(agentId, versionId);
+    // Deduplicate concurrent compilations for the same agentId:versionId
+    const dedupeKey = `${agentId}:${versionId}`;
+    const inflight = compilingPromises.get(dedupeKey);
+    if (inflight) return inflight;
 
-    const fnRecords: FunctionRecord[] = allRows.map((r) => ({
-      key: r.key,
-      code: r.code,
-      parameters: r.parametersSchema ?? {},
-    }));
-
-    const defsMap = await getDefsMap(agentId);
-    const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId, versionId);
-    const baseDeps = buildBaseDeps(enabledBuiltinKeys);
-
-    const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
-    setCachedFunctions(agentId, fns, exec);
-    return fns;
+    const promise = doCompileFunctions(agentId, versionId);
+    compilingPromises.set(dedupeKey, promise);
+    try {
+      return await promise;
+    } finally {
+      compilingPromises.delete(dedupeKey);
+    }
   }
 
   return {

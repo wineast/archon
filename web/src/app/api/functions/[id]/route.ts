@@ -81,8 +81,8 @@ export async function PATCH(
     .where(eq(functions.id, id))
     .returning();
 
-  if (existing.agentId) {
-    clearFunctionCache(existing.agentId);
+  if (existing.agentId && existing.versionId) {
+    clearFunctionCache(existing.agentId, existing.versionId);
   }
 
   if (existing.agentId) {
@@ -128,8 +128,8 @@ export async function DELETE(
 
   await db.update(functions).set({ deletedAt: new Date() }).where(eq(functions.id, id));
 
-  if (existing.agentId) {
-    clearFunctionCache(existing.agentId);
+  if (existing.agentId && existing.versionId) {
+    clearFunctionCache(existing.agentId, existing.versionId);
   }
 
   if (existing.agentId) {

@@ -71,6 +71,13 @@ cmd_create() {
         info "已复制 web/.vercel"
     fi
 
+    # 复制 .claude/settings.local.json（被 gitignore，worktree 不会自动有）
+    if [ -f "$PROJECT_ROOT/.claude/settings.local.json" ]; then
+        mkdir -p "$worktree_path/.claude"
+        cp "$PROJECT_ROOT/.claude/settings.local.json" "$worktree_path/.claude/settings.local.json"
+        info "已复制 .claude/settings.local.json"
+    fi
+
     # 随机分配端口
     local dev_port=$(( RANDOM % 5000 + 4000 ))  # 4000-8999
     local storybook_port=$(( dev_port + 1 ))

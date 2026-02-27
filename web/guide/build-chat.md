@@ -1,6 +1,6 @@
 # Build Chat — 对话式 Agent 配置助手
 
-Build 页面左侧的聊天窗，让 FDA/编辑者通过对话操作 Agent 的所有资源。
+Build 页面左侧的聊天窗，让 FDE/编辑者通过对话操作 Agent 的所有资源。
 
 ## 架构
 
