@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateExportData } from "../types";
+import { CURRENT_EXPORT_VERSION } from "../migrations";
 import type {
   AgentExportData,
   AgentFileSnapshotItem,
@@ -31,7 +32,7 @@ const MINIMAL_SNAPSHOT: AgentSnapshot = {
 
 function makeValidExport(overrides?: Partial<AgentExportData>): AgentExportData {
   return {
-    exportVersion: 1,
+    exportVersion: CURRENT_EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     agent: {
       name: "Test Agent",
@@ -41,6 +42,7 @@ function makeValidExport(overrides?: Partial<AgentExportData>): AgentExportData 
       isPublic: false,
       mcpEnabled: false,
       memoryEnabled: false,
+      ragEnabled: false,
       skillsEnabled: false,
       contextCompressionEnabled: false,
     },
@@ -53,6 +55,8 @@ function makeValidExport(overrides?: Partial<AgentExportData>): AgentExportData 
         isPublished: true,
       },
     ],
+    files: [],
+    embedTokens: [],
     ...overrides,
   };
 }
@@ -87,8 +91,20 @@ describe("validateExportData", () => {
     expect(validateExportData(rest)).toBe(false);
   });
 
-  it("rejects wrong exportVersion", () => {
-    expect(validateExportData({ ...makeValidExport(), exportVersion: 2 })).toBe(false);
+  it("rejects exportVersion higher than current", () => {
+    expect(validateExportData({ ...makeValidExport(), exportVersion: CURRENT_EXPORT_VERSION + 1 })).toBe(false);
+  });
+
+  it("rejects exportVersion 0", () => {
+    expect(validateExportData({ ...makeValidExport(), exportVersion: 0 })).toBe(false);
+  });
+
+  it("rejects non-number exportVersion", () => {
+    expect(validateExportData({ ...makeValidExport(), exportVersion: "1" })).toBe(false);
+  });
+
+  it("accepts exportVersion 1 (old format)", () => {
+    expect(validateExportData({ ...makeValidExport(), exportVersion: 1 })).toBe(true);
   });
 
   it("rejects missing agent", () => {
@@ -121,9 +137,9 @@ describe("validateExportData", () => {
     expect(validateExportData({ ...makeValidExport(), versions: "not-array" })).toBe(false);
   });
 
-  it("accepts export without files field", () => {
+  it("accepts export with empty files array", () => {
     const data = makeValidExport();
-    expect(data.files).toBeUndefined();
+    expect(data.files).toEqual([]);
     expect(validateExportData(data)).toBe(true);
   });
 
@@ -132,10 +148,6 @@ describe("validateExportData", () => {
       { name: "rate-sheet.pdf", contentType: "application/pdf", size: 1024, zipPath: "files/rate-sheet.pdf" },
     ];
     expect(validateExportData(makeValidExport({ files }))).toBe(true);
-  });
-
-  it("accepts export with empty files array", () => {
-    expect(validateExportData(makeValidExport({ files: [] }))).toBe(true);
   });
 
   it("rejects files as non-array", () => {
@@ -238,12 +250,12 @@ describe("EmbedTokenSnapshotItem", () => {
     const data = makeValidExport({ embedTokens: tokens });
     expect(validateExportData(data)).toBe(true);
     expect(data.embedTokens).toHaveLength(1);
-    expect(data.embedTokens![0].name).toBe("Dev Token");
+    expect(data.embedTokens[0].name).toBe("Dev Token");
   });
 
-  it("accepts export without embedTokens (backward compatible)", () => {
+  it("accepts export with empty embedTokens", () => {
     const data = makeValidExport();
-    expect(data.embedTokens).toBeUndefined();
+    expect(data.embedTokens).toEqual([]);
     expect(validateExportData(data)).toBe(true);
   });
 
@@ -255,8 +267,8 @@ describe("EmbedTokenSnapshotItem", () => {
     const data = makeValidExport({ embedTokens: tokens });
     const parsed = JSON.parse(JSON.stringify(data)) as AgentExportData;
     expect(parsed.embedTokens).toHaveLength(2);
-    expect(parsed.embedTokens![0].name).toBe("Token A");
-    expect(parsed.embedTokens![1].allowedOrigins).toEqual(["https://example.com"]);
-    expect(parsed.embedTokens![1].isActive).toBe(false);
+    expect(parsed.embedTokens[0].name).toBe("Token A");
+    expect(parsed.embedTokens[1].allowedOrigins).toEqual(["https://example.com"]);
+    expect(parsed.embedTokens[1].isActive).toBe(false);
   });
 });
