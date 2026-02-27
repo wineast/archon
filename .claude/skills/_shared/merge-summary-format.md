@@ -19,6 +19,8 @@ PR 和工作区合并请求共用此格式。按需包含条件 section，无则
 <仅当有用户可感知的变化时出现>
 - 界面新增/修改了什么、用户操作路径变化、交互行为变化
 - 写用户视角的描述，不写技术实现
+- E2E 视频紧跟对应的 UX 变更项，格式：`[▶ spec 描述](/videos/<test-result-dir>/video.webm)`
+- serve-report.mjs 自动将 .webm/.mp4 链接转为内联 video 播放器
 
 ## DX Changes
 <仅当有开发者接口变化时出现>
@@ -39,11 +41,6 @@ PR 和工作区合并请求共用此格式。按需包含条件 section，无则
   - **技术/API 层面**：API 签名变更、postMessage 协议变更、环境变量变更——影响集成方和嵌入宿主系统
   - **数据层面**：DB schema 不兼容变更、已有数据需要迁移、配置格式变更——影响已部署实例
 - 无 breaking change 时：写"无"并简要说明原因（如"纯 bug fix，行为收窄不扩展，无 API/数据变更"）
-
-## E2E Videos
-<仅当运行了 E2E 测试且有视频录制时出现>
-- 每个 spec 对应一个视频链接，格式：`[spec 描述](/videos/<test-result-dir>/video.webm)`
-- serve-report.mjs 自动将 .webm/.mp4 链接转为内联 video 播放器
 
 ## Test plan
 <已通过的检查项：typecheck、test、e2e 等，以及手动验证步骤>

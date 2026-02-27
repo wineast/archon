@@ -226,7 +226,7 @@ export function JudgeConfigDetail({
           </div>
 
           {/* Prompt Template */}
-          <div>
+          <div data-testid="section-prompt-template">
             <div className="flex items-center gap-1">
               <label className="text-xs font-medium text-muted-foreground">
                 Prompt Template
@@ -238,6 +238,7 @@ export function JudgeConfigDetail({
                   size="icon-xs"
                   onClick={() => setPromptTemplate(DEFAULT_PROMPT_TEMPLATE)}
                   title="Restore default"
+                  data-testid="btn-restore-prompt-template"
                 >
                   <UndoIcon className="size-3" />
                 </Button>
@@ -253,7 +254,7 @@ export function JudgeConfigDetail({
           </div>
 
           {/* Turn Prompt Template */}
-          <div>
+          <div data-testid="section-turn-prompt-template">
             <div className="flex items-center gap-1">
               <label className="text-xs font-medium text-muted-foreground">
                 Turn Prompt Template
@@ -265,6 +266,7 @@ export function JudgeConfigDetail({
                   size="icon-xs"
                   onClick={() => setTurnPromptTemplate(DEFAULT_TURN_PROMPT_TEMPLATE)}
                   title="Restore default"
+                  data-testid="btn-restore-turn-prompt-template"
                 >
                   <UndoIcon className="size-3" />
                 </Button>
