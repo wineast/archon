@@ -193,8 +193,10 @@ function buildObjectSchema(
 ): z.ZodTypeAny {
   // --- Inline properties ---
   if (schema.properties && Object.keys(schema.properties).length > 0) {
-    const obj = buildNestedObject(schema, resolvedVars, options, ancestorKeys);
-    if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+    let obj = buildNestedObject(schema, resolvedVars, options, ancestorKeys);
+    if (schema.additionalProperties === true) {
+      obj = obj.loose();
+    } else if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
       const valSchema = buildPropertySchema(schema.additionalProperties, resolvedVars, options, ancestorKeys);
       return obj.catchall(valSchema);
     }
@@ -392,5 +394,9 @@ export function buildInputSchema(
     return z.object({});
   }
 
-  return buildNestedObject(schema, resolvedVars, options);
+  const obj = buildNestedObject(schema, resolvedVars, options);
+  if (schema.additionalProperties === true) {
+    return obj.loose();
+  }
+  return obj;
 }

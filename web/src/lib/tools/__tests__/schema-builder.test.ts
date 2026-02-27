@@ -602,5 +602,73 @@ describe("schema-builder", () => {
         expect(() => schema.parse({ field: "test" })).not.toThrow();
       });
     });
+
+    describe("additionalProperties", () => {
+      it("strips unknown fields by default", () => {
+        const schema = buildInputSchema(
+          makeSchema({ name: { type: "string" } }, ["name"])
+        );
+        const result = schema.parse({ name: "test", extra: 42 });
+        expect(result).toEqual({ name: "test" });
+        expect(result).not.toHaveProperty("extra");
+      });
+
+      it("preserves unknown fields when additionalProperties is true", () => {
+        const schema = buildInputSchema({
+          type: "object",
+          properties: { name: { type: "string" } },
+          required: ["name"],
+          additionalProperties: true,
+        });
+        const result = schema.parse({ name: "test", extra: 42, nested: { a: 1 } });
+        expect(result).toEqual({ name: "test", extra: 42, nested: { a: 1 } });
+      });
+
+      it("still validates defined fields when additionalProperties is true", () => {
+        const schema = buildInputSchema({
+          type: "object",
+          properties: { count: { type: "number" } },
+          required: ["count"],
+          additionalProperties: true,
+        });
+        expect(() => schema.parse({ count: "not-a-number", extra: true })).toThrow();
+      });
+
+      it("works with nested object that has additionalProperties on inner object", () => {
+        const schema = buildInputSchema({
+          type: "object",
+          properties: {
+            config: {
+              type: "object",
+              properties: { name: { type: "string" } },
+              required: ["name"],
+              additionalProperties: true,
+            },
+          },
+          required: ["config"],
+        });
+        const result = schema.parse({ config: { name: "test", extra: "val" } });
+        expect(result.config).toEqual({ name: "test", extra: "val" });
+      });
+
+      it("top-level passthrough does not affect inner objects without the flag", () => {
+        const schema = buildInputSchema({
+          type: "object",
+          properties: {
+            inner: {
+              type: "object",
+              properties: { a: { type: "number" } },
+              required: ["a"],
+            },
+          },
+          required: ["inner"],
+          additionalProperties: true,
+        });
+        const result = schema.parse({ inner: { a: 1, b: 2 }, topExtra: "yes" });
+        expect(result.topExtra).toBe("yes");
+        // inner object should still strip (no additionalProperties flag)
+        expect(result.inner).toEqual({ a: 1 });
+      });
+    });
   });
 });
