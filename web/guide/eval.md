@@ -8,7 +8,7 @@
 |------|------|
 | **Eval Case** | 测试用例，定义输入 + 预期输出 + 断言规则 |
 | **Judge Agent** | 评审 Agent，通过 evaluator 功能槽位引用，提供模型配置和评分维度 |
-| **Judge Config** | 评分维度配置（仅 name + dimensions），属于 Judge Agent，在 Build > Judge Tab 中管理 |
+| **Judge Config** | 评分配置（name + dimensions + prompt 模板），属于 Judge Agent，在 Build > Judge Tab 中管理。详见 [judge-config.md](./judge-config.md) |
 | **Eval Batch** | 一次评测批次，包含 1-10 个 Run，用于评估稳定性 |
 | **Eval Run** | 一次评测运行，包含多个用例的执行结果 |
 | **Assertion** | 断言规则（文本断言 + 工具调用断言），用于自动判定通过/失败 |

@@ -7,6 +7,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { runAllAssertions } from "@/lib/eval/assertions";
 import { gatherTemplateData, renderTemplate, disposeTemplateData } from "@/lib/template/render";
 import { buildJudgeSchema, toJudgeResult } from "@/lib/eval/judge-dimensions";
+import { renderJudgePrompt } from "@/lib/eval/judge-prompt";
 import type { EvalResult, ChatMessage, TurnResult, Dimension, EvalTurn, EvalCase, ToolCallRecord } from "@/lib/eval/types";
 import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
@@ -125,8 +126,10 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
   const judgeSystemPrompt = judgeSnapshot?.systemPrompt ?? "";
   const judgeTemperature = judgeSnapshot?.temperature ?? 0.1;
 
-  const judgeConfigSnapshot = run.judgeConfigSnapshot as { name: string; dimensions: Dimension[] } | null;
+  const judgeConfigSnapshot = run.judgeConfigSnapshot as { name: string; dimensions: Dimension[]; promptTemplate?: string | null; turnPromptTemplate?: string | null } | null;
   const dimensions: Dimension[] = judgeConfigSnapshot?.dimensions ?? [];
+  const promptTemplate = judgeConfigSnapshot?.promptTemplate ?? null;
+  const turnPromptTemplate = judgeConfigSnapshot?.turnPromptTemplate ?? null;
   const judgeSchema = buildJudgeSchema(dimensions);
 
   const evalAgentId = run.agentId ?? undefined;
@@ -316,12 +319,13 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
               const conversationLog = chatMessages
                 .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.content}`)
                 .join("\n");
-              const judgePrompt = [
-                `Conversation:\n${conversationLog}`,
-                turnExpected ? `Expected Output: ${turnExpected}` : null,
-              ]
-                .filter(Boolean)
-                .join("\n\n");
+              const judgePrompt = await renderJudgePrompt(turnPromptTemplate, {
+                mode: "sequential",
+                user_input: turn.content,
+                expected_output: turnExpected ?? "",
+                actual_response: assistantResponse,
+                conversation: conversationLog,
+              }, true);
 
               const judgeGenResult = await generateText({
                 model: await resolveModel(judgeModel, orgId),
@@ -365,19 +369,13 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
           .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.content}`)
           .join("\n");
         const mode_ = evalCase.mode ?? "single";
-        const judgePrompt = [
-          mode_ === "single"
-            ? `User Input: ${turns[0]?.content ?? ""}`
-            : `Conversation:\n${conversationLog}`,
-          evalCase.expectedOutput
-            ? `Expected Output: ${evalCase.expectedOutput}`
-            : null,
-          mode_ === "single"
-            ? `Actual Response: ${chatResponse}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join("\n\n");
+        const judgePrompt = await renderJudgePrompt(promptTemplate, {
+          mode: mode_,
+          user_input: turns[0]?.content ?? "",
+          expected_output: evalCase.expectedOutput ?? "",
+          actual_response: chatResponse,
+          conversation: conversationLog,
+        }, false);
 
         const judgeGenResult = await generateText({
           model: await resolveModel(judgeModel, orgId),

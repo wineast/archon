@@ -68,6 +68,11 @@ vi.mock("@/lib/eval/judge-dimensions", () => ({
   }),
 }));
 
+const mockRenderJudgePrompt = vi.fn().mockResolvedValue("rendered judge prompt");
+vi.mock("@/lib/eval/judge-prompt", () => ({
+  renderJudgePrompt: (...args: unknown[]) => mockRenderJudgePrompt(...args),
+}));
+
 const { executeCase, extractToolCalls, turnToMessages } = await import("../execute-case");
 
 const baseRun = {
@@ -230,6 +235,39 @@ describe("executeCase", () => {
     expect(mockGenerateText).toHaveBeenCalledTimes(1);
   });
 
+  it("passes snapshot promptTemplate to renderJudgePrompt", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "Hello world response", usage: { inputTokens: 100, outputTokens: 50 } })
+      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } }, usage: { inputTokens: 300, outputTokens: 50 } });
+    mockRunAllAssertions.mockReturnValue([
+      { assertion: { id: "a1", type: "contains", value: "world" }, passed: true, message: "ok" },
+    ]);
+
+    const customRun = {
+      ...baseRun,
+      judgeConfigSnapshot: {
+        ...baseRun.judgeConfigSnapshot,
+        promptTemplate: "Custom: {{ user_input }}",
+        turnPromptTemplate: "Turn: {{ conversation }}",
+      },
+    };
+
+    await executeCase({
+      run: customRun,
+      evalCase: baseCase,
+      templateVars: {},
+      toolNames: [],
+      orgId: "org-1",
+    });
+
+    // renderJudgePrompt should have been called with the custom template
+    expect(mockRenderJudgePrompt).toHaveBeenCalledWith(
+      "Custom: {{ user_input }}",
+      expect.objectContaining({ mode: "single", user_input: "Hello" }),
+      false,
+    );
+  });
+
   it("runs judge when assertions fail and judgeOnFail is true", async () => {
     mockGenerateText
       .mockResolvedValueOnce({ text: "No match", usage: { inputTokens: 80, outputTokens: 30 } })
@@ -291,6 +329,52 @@ describe("executeCase", () => {
     // No per-turn judge results
     const turnJudges = result.turnResults.filter((tr) => tr.judgeResult);
     expect(turnJudges).toHaveLength(0);
+  });
+
+  it("sequential mode: passes turnPromptTemplate to renderJudgePrompt", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "Response 1", usage: { inputTokens: 50, outputTokens: 20 } })
+      .mockResolvedValueOnce({ output: { quality: { score: 8, reason: "good" } }, usage: { inputTokens: 200, outputTokens: 40 } })
+      .mockResolvedValueOnce({ text: "Response 2", usage: { inputTokens: 60, outputTokens: 25 } });
+    mockRunAllAssertions
+      .mockReturnValueOnce([])
+      .mockReturnValue([
+        { assertion: { id: "a1", type: "contains", value: "Response" }, passed: true, message: "ok" },
+      ]);
+
+    const customRun = {
+      ...baseRun,
+      judgeConfigSnapshot: {
+        ...baseRun.judgeConfigSnapshot,
+        promptTemplate: "Case: {{ user_input }}",
+        turnPromptTemplate: "Turn: {{ conversation }}",
+      },
+    };
+
+    const sequentialCase = {
+      ...baseCase,
+      mode: "sequential" as const,
+      expectedOutput: "",
+      turns: [
+        { id: "t1", role: "user" as const, content: "Hello", judge: true, expectedOutput: "Expected 1" },
+        { id: "t2", role: "user" as const, content: "Follow up", judge: true },
+      ],
+    };
+
+    await executeCase({
+      run: customRun,
+      evalCase: sequentialCase,
+      templateVars: {},
+      toolNames: [],
+      orgId: "org-1",
+    });
+
+    // Per-turn judge should use turnPromptTemplate with isPerTurn=true
+    expect(mockRenderJudgePrompt).toHaveBeenCalledWith(
+      "Turn: {{ conversation }}",
+      expect.objectContaining({ mode: "sequential", user_input: "Hello" }),
+      true,
+    );
   });
 
   it("sequential mode: runs per-turn judge when turn has expectedOutput", async () => {

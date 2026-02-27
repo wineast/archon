@@ -61,7 +61,7 @@ export function JudgeConfigPanel({ agentId }: { agentId: string }) {
   );
 
   const handleSave = useCallback(
-    async (id: string, data: { name: string; dimensions: Dimension[] }) => {
+    async (id: string, data: { name: string; dimensions: Dimension[]; promptTemplate?: string | null; turnPromptTemplate?: string | null }) => {
       await updateJudgeConfig(id, data, listMutate);
       activeMutate();
     },

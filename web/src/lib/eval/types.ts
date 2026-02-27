@@ -99,6 +99,8 @@ export interface RuntimeJudgeConfig {
 export interface JudgeConfigData {
   name: string;
   dimensions: Dimension[];
+  promptTemplate?: string | null;
+  turnPromptTemplate?: string | null;
 }
 
 export interface JudgeResult {
