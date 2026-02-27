@@ -71,7 +71,7 @@ git push -u origin <当前分支名>
 
 用 `gh pr create`，**base 分支始终为 `main`**：
 
-摘要格式和各 section 规范参考 `.claude/skills/_shared/merge-summary-format.md`。
+摘要格式和各 section 规范遵循 `.claude/skills/_shared/merge-summary-format.md`。
 
 ```bash
 gh pr create --base main --head <当前分支名> --title "<标题>" --body "$(cat <<'EOF'

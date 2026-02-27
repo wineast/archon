@@ -100,7 +100,7 @@ git diff <baseBranch>..HEAD --name-only | grep -E '(drizzle/|db/schema\.ts)'
 git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
 ```
 
-向用户展示合并摘要，格式参考 `.claude/skills/_shared/merge-summary-format.md`。
+向用户展示合并摘要，遵循 `.claude/skills/_shared/merge-summary-format.md`。
 
 ### 8. 用户确认
 
