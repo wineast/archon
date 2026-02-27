@@ -32,6 +32,7 @@ export default function(input) {
 | 模块 | 说明 |
 |------|------|
 | `archon:fn/<key>` | 导入同 Agent 下的其他函数，包括内置（builtin）函数 |
+| `archon:lib/<key>` | 导入宿主依赖（原始 npm 函数） |
 
 ### archon:fn/<key>
 
@@ -44,6 +45,19 @@ export default function(input) {
   // 直接调用，不用 await
   const result = other_fn({ value: input.x * 2 });
   return { ...result, processed: true };
+}
+```
+
+### archon:lib/<key>
+
+通过 `archon:lib/<key>` 访问宿主依赖（如 filtrex 的 `compileExpression`），所有函数均可使用。可用的 lib 列表见 Build 页面的 Lib 模块。
+
+```js
+import compileExpression from "archon:lib/compileExpression";
+
+export default function(input) {
+  const expr = compileExpression(input.expression);
+  return expr(input.data);
 }
 ```
 

@@ -14,9 +14,8 @@ import {
   getAgentSchemas,
   getAgentDatasets,
   getAgentFunctions,
-  getReferencedBuiltinFunctionKeys,
 } from "@/lib/pool/queries";
-import { resolveAndCompileFunctions, buildBaseDeps } from "@/lib/functions/compile";
+import { resolveAndCompileFunctions, ALL_BASE_DEPS } from "@/lib/functions/compile";
 import type { FunctionsExec } from "@/lib/functions/exec";
 
 // ---------------------------------------------------------------------------
@@ -212,7 +211,7 @@ export async function gatherTemplateData(
     return { resolvedVars: {}, docs: [], toolRows: [], defsMap: {}, datasetEntries: {}, ontologyTypes: [] };
   }
 
-  const [datasetRows, docs, toolRows, allSchemaRows, objTypeRows, objRelRows, fnRows, builtinFnKeys] = await Promise.all([
+  const [datasetRows, docs, toolRows, allSchemaRows, objTypeRows, objRelRows, fnRows] = await Promise.all([
     getAgentDatasets(agentId, versionId),
     getWikiDocs(agentId, versionId),
     getEnabledTools(agentId, versionId),
@@ -220,7 +219,6 @@ export async function gatherTemplateData(
     db.select().from(objectTypes).where(and(eq(objectTypes.agentId, agentId), isNull(objectTypes.deletedAt))).orderBy(objectTypes.order),
     db.select().from(objectRelations).where(and(eq(objectRelations.agentId, agentId), isNull(objectRelations.deletedAt))),
     getAgentFunctions(agentId, versionId),
-    getReferencedBuiltinFunctionKeys(agentId, versionId),
   ]);
 
   const { resolvedVars, datasetEntries } = resolveDatasets(datasetRows);
@@ -276,13 +274,12 @@ export async function gatherTemplateData(
   let fnExec: FunctionsExec | undefined;
   if (fnRows.length > 0) {
     try {
-      const baseDeps = buildBaseDeps(builtinFnKeys);
       const records = fnRows.map((r) => ({
         key: r.key,
         code: r.code,
         parameters: (r.parametersSchema ?? {}) as JsonSchema7,
       }));
-      const { exec } = await resolveAndCompileFunctions(records, defsMap, baseDeps);
+      const { exec } = await resolveAndCompileFunctions(records, defsMap, ALL_BASE_DEPS);
       fnExec = exec;
     } catch (e) {
       console.error("[gatherTemplateData] function compilation failed:", e);

@@ -23,6 +23,11 @@ export function SchemaParameterPreview({ schema }: SchemaParameterPreviewProps) 
   return (
     <div className="space-y-1.5 mt-1">
       <ParameterRows entries={entries} parentSchema={schema} depth={0} />
+      {schema.additionalProperties === true && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-muted-foreground italic">
+          <span>+ accepts additional properties</span>
+        </div>
+      )}
     </div>
   );
 }

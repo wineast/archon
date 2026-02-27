@@ -243,15 +243,13 @@ seedModels → seedBuiltinPool → seedUsers
 
 ### 运行时依赖注入
 
-Builtin 函数不仅是池资源本身，还关联着运行时依赖（如 filtrex 的 `compileExpression`）。依赖通过 `BASE_DEPS` 注入为 `globalThis` 全局变量，函数代码直接使用，无需 import。
+宿主依赖（如 filtrex 的 `compileExpression`）通过 `archon:lib/<key>` 命名空间注入，所有函数（builtin 和用户函数）均可使用。
 
-依赖注入遵循 **引用即可用** 原则：
+依赖注入流程：
 
-1. `tool-context.ts` 中 `getCompiledFunctions()` 调用 `getReferencedBuiltinFunctionKeys(agentId)` 查询 Agent 引用的 builtin 函数
-2. `buildBaseDeps(referencedKeys)` 根据引用的 key 构建过滤后的依赖 map
-3. 依赖注入为 `globalThis` 全局变量，函数代码可直接使用
-
-Agent 必须从共享池添加 builtin 函数引用，运行时才会注入对应依赖。
+1. `ALL_BASE_DEPS` 定义所有可用的宿主依赖
+2. 编译时自动注入，函数通过 `import xxx from "archon:lib/xxx"` 显式访问
+3. 不注入 bare globals，保持干净的命名空间隔离
 
 > 注意：函数的 ref 不使用 `enabled` 字段（该字段为 tool 等资源预留），ref 存在即表示可用。
 

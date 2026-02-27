@@ -33,7 +33,6 @@ const mockGetAgentWikiDocs = vi.fn();
 const mockGetAgentEnabledTools = vi.fn();
 const mockGetAgentSchemas = vi.fn();
 const mockGetAgentFunctions = vi.fn();
-const mockGetReferencedBuiltinFunctionKeys = vi.fn();
 
 vi.mock("@/lib/pool/queries", () => ({
   getAgentDatasets: (...args: unknown[]) => mockGetAgentDatasets(...args),
@@ -41,12 +40,11 @@ vi.mock("@/lib/pool/queries", () => ({
   getAgentEnabledTools: (...args: unknown[]) => mockGetAgentEnabledTools(...args),
   getAgentSchemas: (...args: unknown[]) => mockGetAgentSchemas(...args),
   getAgentFunctions: (...args: unknown[]) => mockGetAgentFunctions(...args),
-  getReferencedBuiltinFunctionKeys: (...args: unknown[]) => mockGetReferencedBuiltinFunctionKeys(...args),
 }));
 
 vi.mock("@/lib/functions/compile", () => ({
   resolveAndCompileFunctions: vi.fn().mockResolvedValue({ exec: undefined }),
-  buildBaseDeps: vi.fn().mockReturnValue({}),
+  ALL_BASE_DEPS: {},
 }));
 
 // ---------------------------------------------------------------------------
@@ -75,7 +73,6 @@ function setupDbChain(queries: unknown[][]) {
   mockGetAgentEnabledTools.mockResolvedValue(queries[2]);
   mockGetAgentSchemas.mockResolvedValue(queries[5]);
   mockGetAgentFunctions.mockResolvedValue([]);
-  mockGetReferencedBuiltinFunctionKeys.mockResolvedValue([]);
 
   // DB chain for direct queries: objectTypes [3], objectRelations [4]
   let callIdx = 0;
@@ -295,7 +292,6 @@ describe("renderSystemPrompt", () => {
     mockGetAgentEnabledTools.mockRejectedValue(new Error("DB connection failed"));
     mockGetAgentSchemas.mockRejectedValue(new Error("DB connection failed"));
     mockGetAgentFunctions.mockRejectedValue(new Error("DB connection failed"));
-    mockGetReferencedBuiltinFunctionKeys.mockRejectedValue(new Error("DB connection failed"));
 
     const { renderSystemPrompt } = await import("../render");
     const original = "Hello {{world}}";
@@ -532,7 +528,6 @@ describe("renderWikiContent", () => {
     mockGetAgentEnabledTools.mockRejectedValue(new Error("DB error"));
     mockGetAgentSchemas.mockRejectedValue(new Error("DB error"));
     mockGetAgentFunctions.mockRejectedValue(new Error("DB error"));
-    mockGetReferencedBuiltinFunctionKeys.mockRejectedValue(new Error("DB error"));
 
     const { renderWikiContent } = await import("../render");
     const original = "Some {{content}}";

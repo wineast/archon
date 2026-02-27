@@ -45,6 +45,7 @@ export default async function(args) {
 | 命名空间 | 用途 | 示例 |
 |----------|------|------|
 | `archon:context` | 运行时 API（wiki/dataset/fn/ontology） | `import { wiki, fn } from "archon:context"` |
+| `archon:lib/<key>` | 宿主依赖（如 `compileExpression`） | `import compileExpression from "archon:lib/compileExpression"` |
 
 ### 运行环境
 
@@ -193,16 +194,27 @@ export default async function(args) {
 }
 ```
 
-### 使用 fn() 调用共享函数过滤数据
+### 使用 archon:lib 直接访问宿主依赖
 
 ```js
-import { dataset, fn } from "archon:context";
+import compileExpression from "archon:lib/compileExpression";
+
+export default function(args) {
+  const expr = compileExpression(args.formula);
+  return { result: expr(args.data) };
+}
+```
+
+### 混合使用 archon:context + archon:lib
+
+```js
+import { dataset } from "archon:context";
+import compileExpression from "archon:lib/compileExpression";
 
 export default async function(args) {
   const items = await dataset.get(args.datasetKey);
   const entries = Object.values(items || {});
-  const compileExpr = await fn("compileExpression");
-  const filter = compileExpr({ expression: args.filter, data: {} });
+  const filter = compileExpression(args.filter);
   return entries.filter(entry => filter(entry));
 }
 ```
