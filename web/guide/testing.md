@@ -320,6 +320,37 @@ test("authenticated user sees agents page", async ({ page }) => {
 })
 ```
 
+**Fixture 导入模式**：
+
+对于需要预配置 Agent 的 E2E 测试，可通过 fixture 导入跳过手动创建步骤：
+
+1. 在 `e2e/fixtures/<name>.json` 定义 Agent 快照（manifest 格式，含 tools、model config 等）
+2. 测试中动态压缩为 ZIP 并通过 UI 导入：
+
+```ts
+import JSZip from "jszip"
+
+const FIXTURE_JSON = path.resolve(__dirname, "fixtures/<name>.json")
+const FIXTURE_ZIP = path.resolve(__dirname, "fixtures/.<name>.zip") // 点前缀，已 gitignore
+
+async function buildFixtureZip() {
+  const manifest = fs.readFileSync(FIXTURE_JSON, "utf-8")
+  const zip = new JSZip()
+  zip.file("manifest.json", manifest)
+  const buf = await zip.generateAsync({ type: "nodebuffer" })
+  fs.writeFileSync(FIXTURE_ZIP, buf)
+}
+
+// 测试中导入
+await buildFixtureZip()
+const fileInput = page.locator('input[type="file"][accept=".zip"]')
+await fileInput.setInputFiles(FIXTURE_ZIP)
+```
+
+生成的 ZIP 文件使用 `.` 前缀（如 `.server-tool-agent.zip`），已在 `.gitignore` 中排除（`e2e/fixtures/.*.zip`）。
+
+参考：`e2e/server-tool-regression.spec.ts`（首个使用 fixture 导入的 E2E 测试）。
+
 **运行命令**：
 - `make e2e` — 运行所有 E2E 测试
 - `make e2e-ui` — Playwright UI 模式（交互式调试）

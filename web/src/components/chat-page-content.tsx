@@ -274,7 +274,13 @@ export function ChatPageContent({
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: ({ toolCall }) => {
-      executeClientTool(toolCall, addToolOutput, toolsList);
+      // Only handle client-side tools; server/host tools are already executed server-side
+      const isClientTool = toolsList.some(
+        (t) => t.name === toolCall.toolName && t.executionTarget === "client"
+      );
+      if (isClientTool) {
+        executeClientTool(toolCall, addToolOutput, toolsList);
+      }
     },
     onError: (error) => {
       try {

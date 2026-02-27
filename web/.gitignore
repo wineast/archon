@@ -58,3 +58,6 @@ storybook-static
 
 # e2e secrets
 e2e/.env
+
+# e2e dynamically generated fixture zips
+e2e/fixtures/.*.zip

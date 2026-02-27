@@ -1,0 +1,91 @@
+{
+  "exportVersion": 1,
+  "exportedAt": "2026-02-27T00:00:00.000Z",
+  "agent": {
+    "name": "E2E Server Tool Regression",
+    "description": "Minimal agent for E2E testing: server-side tool should execute without triggering client-side 'Tool not found' errors",
+    "icon": "wrench",
+    "slug": "e2e-server-tool-regression",
+    "isPublic": false,
+    "mcpEnabled": false,
+    "memoryEnabled": false,
+    "ragEnabled": false,
+    "skillsEnabled": false,
+    "contextCompressionEnabled": false
+  },
+  "versions": [
+    {
+      "version": "0.1.0",
+      "changelog": "Server-side greeting tool for regression test",
+      "snapshot": {
+        "agent": {
+          "name": "E2E Server Tool Regression",
+          "description": "Minimal agent for E2E testing server-side tool execution",
+          "icon": "wrench",
+          "slug": "e2e-server-tool-regression",
+          "isPublic": false
+        },
+        "tools": [
+          {
+            "key": "get_greeting",
+            "name": "get_greeting",
+            "description": "Returns a greeting message for the given name. ALWAYS use this tool when the user asks for a greeting or says hello.",
+            "parametersSchema": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "The name to greet"
+                }
+              }
+            },
+            "returnParametersSchema": null,
+            "handler": "export default async function(args) {\n  return { greeting: `Hello, ${args.name}!`, source: \"server_tool_ok\" };\n}",
+            "url": null,
+            "componentKey": null,
+            "enabled": true,
+            "executionTarget": "server",
+            "testCases": []
+          }
+        ],
+        "functions": [],
+        "components": [],
+        "schemas": [],
+        "wikiDocuments": [],
+        "datasets": [],
+        "modelConfigs": [
+          {
+            "key": "deepseek",
+            "name": "DeepSeek",
+            "modelId": "deepseek/deepseek-v3.2",
+            "systemPrompt": "You are a helpful assistant with access to a greeting tool.\n\nIMPORTANT RULES:\n1. When the user asks you to greet someone, you MUST use the get_greeting tool\n2. NEVER generate greetings yourself — always call the tool first\n3. After the tool returns, relay the greeting to the user",
+            "temperature": 0.1,
+            "isActive": true
+          }
+        ],
+        "chatConfig": {
+          "title": "",
+          "welcomeTitle": "",
+          "welcomeIcon": "",
+          "quickActions": [],
+          "placeholder": "",
+          "suggestions": [],
+          "enableVoice": false,
+          "enableAttachment": false
+        },
+        "memoryConfig": null,
+        "evalCases": [],
+        "judgeConfigs": [],
+        "objectTypes": [],
+        "objectRelations": [],
+        "mcpServers": [],
+        "skills": [],
+        "resourceRefs": []
+      },
+      "isEditing": true,
+      "isPublished": true
+    }
+  ],
+  "files": []
+}
