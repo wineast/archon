@@ -17,15 +17,22 @@ const WORKTREE_DIR = join(CWD, ".worktree");
 
 // --- Read files ---
 
-let reportMd, mergeShContent;
+const REPORT_PATH = join(WORKTREE_DIR, "REPORT.md");
+const MERGE_SH_PATH = join(WORKTREE_DIR, "merge.sh");
+
+function readReport() {
+  return readFileSync(REPORT_PATH, "utf-8");
+}
+
+let mergeShContent;
 try {
-  reportMd = readFileSync(join(WORKTREE_DIR, "REPORT.md"), "utf-8");
+  readReport(); // validate existence at startup
 } catch {
   console.error("Error: .worktree/REPORT.md not found. Run /pr-wt first.");
   process.exit(1);
 }
 try {
-  mergeShContent = readFileSync(join(WORKTREE_DIR, "merge.sh"), "utf-8");
+  mergeShContent = readFileSync(MERGE_SH_PATH, "utf-8");
 } catch {
   console.error("Error: .worktree/merge.sh not found. Run /pr-wt first.");
   process.exit(1);
@@ -99,8 +106,8 @@ function sseExec(command, args, options, res) {
 // --- HTML template ---
 
 function buildHtml() {
-  // Escape the markdown for embedding in JS string
-  const escapedMd = JSON.stringify(reportMd);
+  // Re-read on every request so edits are visible after refresh
+  const escapedMd = JSON.stringify(readReport());
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">

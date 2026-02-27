@@ -111,7 +111,9 @@ git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
 <条件出现>
 
 ## Breaking changes
-<条件出现>
+<必写 section>
+- 有 breaking change：按三维度说明（用户/FDE、技术/API、数据）
+- 无 breaking change：写"无"并简要说明原因
 
 ## Quality checks
 | Check | Result |
