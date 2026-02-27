@@ -1036,14 +1036,14 @@ const server = createServer((req, res) => {
         res.end(JSON.stringify({ status: "behind", behind: parseInt(behind), message: `落后上游 ${behind} 个 commit` }));
         return;
       }
-      // Dry-run merge check: use git merge-tree to detect conflicts without touching worktree
-      const mergeBase = execSync(`git merge-base ${baseBranch} ${wtBranch}`, { cwd: CWD, encoding: "utf-8" }).trim();
-      const mergeTree = execSync(`git merge-tree ${mergeBase} ${baseBranch} ${wtBranch}`, { cwd: CWD, encoding: "utf-8" });
-      const hasConflict = mergeTree.includes("<<<<<<<");
-      if (hasConflict) {
-        res.end(JSON.stringify({ status: "conflict", message: "检测到合并冲突" }));
-      } else {
+      // Dry-run merge check: use git merge-tree --write-tree (exit code 0 = clean, 1 = conflict)
+      // NOTE: old `git merge-tree <base> <b1> <b2>` + includes("<<<<<<<") is broken
+      //       because file content itself may contain conflict marker strings.
+      try {
+        execSync(`git merge-tree --write-tree ${baseBranch} ${wtBranch}`, { cwd: CWD, encoding: "utf-8" });
         res.end(JSON.stringify({ status: "clean", message: "无冲突，可以合并" }));
+      } catch {
+        res.end(JSON.stringify({ status: "conflict", message: "检测到合并冲突" }));
       }
     } catch (e) {
       res.end(JSON.stringify({ status: "unknown", message: e.message }));
