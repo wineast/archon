@@ -48,7 +48,7 @@ async function upsertFunctions(db: SeedDb): Promise<void> {
   const defs = loadBuiltinFunctionDefs();
 
   for (const def of defs) {
-    const [inserted] = await db
+    const [row] = await db
       .insert(functions)
       .values({
         agentId: null as unknown as undefined,
@@ -60,34 +60,33 @@ async function upsertFunctions(db: SeedDb): Promise<void> {
         returnParametersSchema: def.returnParametersSchema,
         origin: "builtin" as const,
       })
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: [functions.key],
+        targetWhere: and(isNull(functions.agentId), isNull(functions.deletedAt)) as SQL,
+        set: {
+          name: sql`excluded.name`,
+          description: sql`excluded.description`,
+          code: sql`excluded.code`,
+          parametersSchema: sql`excluded.parameters_schema`,
+          returnParametersSchema: sql`excluded.return_parameters_schema`,
+        },
+      })
       .returning({ id: functions.id });
 
-    let functionId: string;
-    if (inserted) {
-      functionId = inserted.id;
-    } else {
-      const [existing] = await db
-        .select({ id: functions.id })
-        .from(functions)
-        .where(and(isNull(functions.agentId), eq(functions.key, def.key)));
-      if (!existing) continue;
-      functionId = existing.id;
-    }
+    if (!row) continue;
 
     if (def.testCases.length > 0) {
-      await db
-        .insert(functionTestCases)
-        .values(
-          def.testCases.map((tc) => ({
-            functionId,
-            name: tc.name,
-            input: tc.input,
-            expectedOutput: tc.expectedOutput,
-            showAsExample: tc.showAsExample,
-          })),
-        )
-        .onConflictDoNothing();
+      // Delete existing test cases then re-insert (no unique constraint on name)
+      await db.delete(functionTestCases).where(eq(functionTestCases.functionId, row.id));
+      await db.insert(functionTestCases).values(
+        def.testCases.map((tc) => ({
+          functionId: row.id,
+          name: tc.name,
+          input: tc.input,
+          expectedOutput: tc.expectedOutput,
+          showAsExample: tc.showAsExample,
+        })),
+      );
     }
   }
 }
