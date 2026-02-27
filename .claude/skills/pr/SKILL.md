@@ -26,15 +26,17 @@ git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"
 
 ### 2. 同步远程 main（关键步骤）
 
-本地 main 可能落后于远程，**不依赖本地 main**，直接用 `origin/main` 做对比：
+本地 main 分支可能落后于远程数十个 commit，且切分支可能与未提交修改冲突。**直接 fetch 更新 `origin/main` 引用，不切分支**：
 
 ```bash
 git fetch origin main
 ```
 
+后续所有对比一律使用 `origin/main`（不是本地 `main`）。
+
 ### 3. 分析变更内容
 
-对比当前分支与远程 main 之间的差异（即 PR 实际会包含的变更）：
+对比当前分支与 `origin/main` 之间的差异（即 PR 实际会包含的变更）：
 
 ```bash
 # 当前分支相对于远程 main 的所有 commits
@@ -91,7 +93,7 @@ EOF
 
 ## 注意事项
 
-- **永远 `git fetch origin main` 而非依赖本地 `main`**——本地 main 可能落后数十个 commit
+- **永远 `git fetch origin main` 后用 `origin/main` 对比**——不切分支、不受本地脏状态影响，且 `origin/main` fetch 后即为最新
 - 如果 `gh pr create` 提示已有打开的 PR，用 `gh pr view` 查看现有 PR 并告知用户
 - 不要自动 merge PR，只创建
 - pre-push hook 可能会跑 typecheck + build，耐心等待

@@ -114,6 +114,27 @@ const nestedSchema: JsonSchema7 = {
   },
 };
 
+const additionalPropsSchema: JsonSchema7 = {
+  type: "object",
+  required: ["ltv", "loanAmount"],
+  additionalProperties: true,
+  properties: {
+    ltv: {
+      type: "number",
+      description: "Loan-to-Value ratio (percentage)",
+    },
+    loanAmount: {
+      type: "number",
+      description: "Loan amount in dollars",
+    },
+    loanPurpose: {
+      type: "string",
+      enum: ["purchase", "refinance", "cashOut"],
+      description: "Loan purpose",
+    },
+  },
+};
+
 const emptySchema: JsonSchema7 = {
   type: "object",
   properties: {},
@@ -203,6 +224,11 @@ export const Mixed: Story = {
 export const LongContent: Story = {
   name: "长内容换行",
   args: { schema: longContentSchema },
+};
+
+export const AdditionalProperties: Story = {
+  name: "额外属性",
+  args: { schema: additionalPropsSchema },
 };
 
 export const Empty: Story = {

@@ -154,13 +154,13 @@ describe("resolveAndCompileFunctions", () => {
   });
 });
 
-describe("builtin function as importable module", () => {
-  it("compiles user function that imports builtin compileExpression module", async () => {
+describe("archon:lib namespace", () => {
+  it("compiles functions with archon:lib/fn namespace isolation", async () => {
     const { compileExpression } = await import("filtrex");
     const rows: FunctionRecord[] = [
       {
         key: "compileExpression",
-        code: `export default function(input) {\n  const expr = compileExpression(input.expression);\n  return expr(input.data);\n}`,
+        code: `import compileExpression from "archon:lib/compileExpression";\n\nexport default function(input) {\n  const expr = compileExpression(input.expression);\n  return expr(input.data);\n}`,
         parameters: {
           type: "object",
           properties: {
@@ -190,13 +190,41 @@ export default function(input) {
     const { fns, exec } = await resolveAndCompileFunctions(
       rows,
       undefined,
-      { compileExpression }
+      { compileExpression },
     );
     try {
       const pricingFn = fns.get("pricing_engine") as (input: unknown) => unknown;
       expect(pricingFn).toBeDefined();
       const result = pricingFn({ formula: "x + y * 2", vars: { x: 10, y: 5 } });
       expect(result).toBe(20);
+    } finally {
+      exec.dispose();
+    }
+  });
+
+  it("user function can use archon:lib directly", async () => {
+    const myHelper = (s: string) => s.toUpperCase();
+    const rows: FunctionRecord[] = [
+      {
+        key: "upper",
+        code: `import myHelper from "archon:lib/myHelper";
+export default function(input) { return myHelper(input.text); }`,
+        parameters: {
+          type: "object",
+          properties: { text: { type: "string" } },
+          required: ["text"],
+        },
+      },
+    ];
+
+    const { fns, exec } = await resolveAndCompileFunctions(
+      rows,
+      undefined,
+      { myHelper },
+    );
+    try {
+      const fn = fns.get("upper") as (input: unknown) => unknown;
+      expect(fn({ text: "hello" })).toBe("HELLO");
     } finally {
       exec.dispose();
     }

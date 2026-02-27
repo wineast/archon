@@ -15,11 +15,10 @@ import {
   resolveAndCompileFunctions,
   getCachedFunctions,
   setCachedFunctions,
-  buildBaseDeps,
+  ALL_BASE_DEPS,
   type FunctionRecord,
 } from "@/lib/functions/compile";
 import {
-  getReferencedBuiltinFunctionKeys,
   getAgentDatasets,
   getAgentFunctions,
 } from "@/lib/pool/queries";
@@ -111,17 +110,16 @@ const compilingPromises = new Map<string, Promise<Map<string, unknown>>>();
 async function doCompileFunctions(agentId: string, versionId: string): Promise<Map<string, unknown>> {
   const allRows = await getAgentFunctions(agentId, versionId);
 
-  const fnRecords: FunctionRecord[] = allRows.map((r) => ({
-    key: r.key,
-    code: r.code,
-    parameters: r.parametersSchema ?? {},
-  }));
-
   const defsMap = await getDefsMap(agentId);
-  const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId, versionId);
-  const baseDeps = buildBaseDeps(enabledBuiltinKeys);
 
-  const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
+  const fnRecords: FunctionRecord[] = allRows
+    .map((r) => ({
+      key: r.key,
+      code: r.code,
+      parameters: r.parametersSchema ?? {},
+    }));
+
+  const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, ALL_BASE_DEPS);
   setCachedFunctions(agentId, versionId, fns, exec);
   return fns;
 }

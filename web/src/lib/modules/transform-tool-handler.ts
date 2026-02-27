@@ -7,9 +7,17 @@
  *
  * Transforms:
  * - `import { wiki, dataset } from "archon:context"` → `var wiki = __context.wiki;`
+ * - `import xxx from "archon:lib/yyy"` → `var xxx = __libs["yyy"];`
  * - `export default function(args) { ... }` → extracts function for IIFE wrapping
  * - `export default async function(args) { ... }` → same
  */
+
+export interface TransformResult {
+  /** IIFE-wrapped code string */
+  code: string;
+  /** Keys of archon:lib/ imports found (e.g. ["compileExpression"]) */
+  libKeys: string[];
+}
 
 /**
  * Transform module-format tool handler into an IIFE-wrapped expression
@@ -17,9 +25,10 @@
  *
  * Returns code like: `(function(){ var wiki = __context.wiki; ... var __fn = function(args) { ... }; return __fn(__args, __context); })()`
  */
-export function transformToolHandlerImports(code: string): string {
+export function transformToolHandlerImports(code: string): TransformResult {
   const preamble: string[] = [];
   const bodyLines: string[] = [];
+  const libKeys: string[] = [];
   let handlerExpr: string | null = null;
 
   for (const line of code.split("\n")) {
@@ -37,14 +46,25 @@ export function transformToolHandlerImports(code: string): string {
       continue;
     }
 
-    // Match: unsupported import (any import not from archon:context)
+    // Match: import X from "archon:lib/Y"
+    const libImport = trimmed.match(
+      /^import\s+(\w+)\s+from\s+["']archon:lib\/([^"']+)["']\s*;?\s*$/
+    );
+    if (libImport) {
+      const [, alias, key] = libImport;
+      preamble.push(`var ${alias} = __libs["${key}"];`);
+      libKeys.push(key);
+      continue;
+    }
+
+    // Match: unsupported import (any import not from archon:context or archon:lib)
     const unsupportedImport = trimmed.match(
       /^import\s+.+\s+from\s+["']([^"']+)["']\s*;?\s*$/
     );
     if (unsupportedImport) {
       const mod = unsupportedImport[1];
       throw new Error(
-        `工具 Handler 不支持模块 "${mod}"，只能使用 import { ... } from "archon:context"。如需调用函数，请使用 const myFn = await fn("key")`
+        `工具 Handler 不支持模块 "${mod}"，只能使用 import { ... } from "archon:context" 或 import xxx from "archon:lib/xxx"。如需调用函数，请使用 const myFn = await fn("key")`
       );
     }
 
@@ -88,5 +108,5 @@ export function transformToolHandlerImports(code: string): string {
   }
   parts.push("})()");
 
-  return parts.join("\n");
+  return { code: parts.join("\n"), libKeys };
 }

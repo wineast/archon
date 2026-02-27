@@ -44,7 +44,6 @@ const mockGetAgentFunctions = vi.fn();
 const mockGetAgentDatasets = vi.fn();
 
 vi.mock("@/lib/pool/queries", () => ({
-  getReferencedBuiltinFunctionKeys: vi.fn().mockResolvedValue(new Set()),
   getAgentDatasets: (...args: unknown[]) => mockGetAgentDatasets(...args),
   getAgentFunctions: (...args: unknown[]) => mockGetAgentFunctions(...args),
 }));

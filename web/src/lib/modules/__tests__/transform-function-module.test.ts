@@ -8,6 +8,7 @@ describe("transformFunctionModule", () => {
     );
     expect(result.depKeys).toEqual([]);
     expect(result.aliases).toEqual({});
+    expect(result.libAliases).toEqual({});
     expect(result.preamble.trim()).toBe("");
     expect(result.fnExpression).toContain("function");
     expect(result.fnExpression).toContain("return input.a + input.b");
@@ -69,5 +70,30 @@ export default function(input) { return helper(input.value); }`;
     const result = transformFunctionModule(code);
     expect(result.preamble).toContain("helper");
     expect(result.fnExpression).toContain("helper(input.value)");
+  });
+
+  it("extracts archon:lib imports into libAliases", () => {
+    const code = `import compileExpression from "archon:lib/compileExpression";
+export default function(input) { return compileExpression(input.expression); }`;
+    const result = transformFunctionModule(code);
+    expect(result.depKeys).toEqual([]);
+    expect(result.aliases).toEqual({});
+    expect(result.libAliases).toEqual({ compileExpression: "compileExpression" });
+  });
+
+  it("handles mixed archon:fn and archon:lib imports", () => {
+    const code = `import compileExpression from "archon:lib/compileExpression";
+import helper from "archon:fn/helper";
+export default function(input) { return helper(compileExpression(input.expr)); }`;
+    const result = transformFunctionModule(code);
+    expect(result.depKeys).toEqual(["helper"]);
+    expect(result.aliases).toEqual({ helper: "helper" });
+    expect(result.libAliases).toEqual({ compileExpression: "compileExpression" });
+  });
+
+  it("throws on unsupported module with updated error message", () => {
+    const code = `import fs from "fs";
+export default function() { return fs; }`;
+    expect(() => transformFunctionModule(code)).toThrow("archon:lib/<key>");
   });
 });

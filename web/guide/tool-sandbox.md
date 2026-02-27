@@ -55,6 +55,7 @@ handler 代码 (ES module)
 
 ```javascript
 import { wiki, dataset, fn, ontology } from "archon:context";
+import compileExpression from "archon:lib/compileExpression";
 
 export default async function(args) {
   const doc = await wiki.get(args.id);
@@ -62,7 +63,14 @@ export default async function(args) {
 }
 ```
 
-### 可用 Context API
+### 可用模块
+
+| 模块 | 用途 |
+|------|------|
+| `archon:context` | 运行时 API（wiki / dataset / fn / ontology） |
+| `archon:lib/<key>` | 宿主依赖（如 `compileExpression`） |
+
+### Context API
 
 - `wiki.get(key)` / `wiki.findByPrefix(prefix)` / `wiki.search(query)`
 - `dataset.get(key)` — 获取数据集

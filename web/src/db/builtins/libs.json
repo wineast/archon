@@ -1,0 +1,17 @@
+[
+  {
+    "key": "compileExpression",
+    "name": "Compile Expression",
+    "description": "将字符串表达式编译为可执行函数。支持算术运算、比较、条件逻辑、数学函数等。基于 filtrex 库。",
+    "importExample": "import compileExpression from \"archon:lib/compileExpression\";",
+    "signature": "(expression: string) => (data: Record<string, unknown>) => unknown",
+    "parameters": [
+      {
+        "name": "expression",
+        "type": "string",
+        "description": "表达式字符串，如 \"x + y * 2\"、\"if score >= 700 then 1 else 0\""
+      }
+    ],
+    "returns": "(data: Record<string, unknown>) => unknown — 接收变量对象，返回表达式计算结果"
+  }
+]
