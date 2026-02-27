@@ -109,6 +109,8 @@ export interface JudgeConfigSnapshotItem {
   name: string;
   isActive: boolean;
   dimensions: Dimension[];
+  promptTemplate?: string;
+  turnPromptTemplate?: string;
 }
 
 /* ─────────── Test Case Snapshot Items ─────────── */

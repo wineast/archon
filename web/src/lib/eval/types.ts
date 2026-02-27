@@ -95,7 +95,7 @@ export interface RuntimeJudgeConfig {
   dimensions: Dimension[];
 }
 
-/** Stored judge config data — only scoring dimensions */
+/** Stored judge config data — scoring dimensions + prompt templates */
 export interface JudgeConfigData {
   name: string;
   dimensions: Dimension[];
