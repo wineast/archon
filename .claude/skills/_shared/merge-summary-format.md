@@ -4,7 +4,26 @@ PR 和工作区合并请求共用此格式。按需包含条件 section，无则
 
 ```markdown
 ## Summary
-<1-5 个要点，每个要点说明 what + why>
+按 commit 类型分组（从 git log 的 conventional commit prefix 提取），每组用加粗标题，无则不展示该组：
+
+**Features**
+- <feat commit 对应的要点，说明 what + why>
+
+**Fixes**
+- <fix commit 对应的要点>
+
+**Refactors**
+- <refactor/chore commit 对应的要点>
+
+## UX Changes
+<仅当有用户可感知的变化时出现>
+- 界面新增/修改了什么、用户操作路径变化、交互行为变化
+- 写用户视角的描述，不写技术实现
+
+## DX Changes
+<仅当有开发者接口变化时出现>
+- DB schema 变更、API 接口变化、配置项变化、导出格式变化
+- 写开发者视角的描述，关注接口契约而非内部实现
 
 ## Database
 <仅当 diff 包含 drizzle/ 迁移文件或 schema.ts 变更时出现>
@@ -21,8 +40,10 @@ PR 和工作区合并请求共用此格式。按需包含条件 section，无则
   - **数据层面**：DB schema 不兼容变更、已有数据需要迁移、配置格式变更——影响已部署实例
 - 无 breaking change 时：写"无"并简要说明原因（如"纯 bug fix，行为收窄不扩展，无 API/数据变更"）
 
-## Screenshots
-<仅当有 UI 变更时出现>
+## E2E Videos
+<仅当运行了 E2E 测试且有视频录制时出现>
+- 每个 spec 对应一个视频链接，格式：`[spec 描述](/videos/<test-result-dir>/video.webm)`
+- serve-report.mjs 自动将 .webm/.mp4 链接转为内联 video 播放器
 
 ## Test plan
 <已通过的检查项：typecheck、test、e2e 等，以及手动验证步骤>
@@ -32,5 +53,5 @@ PR 和工作区合并请求共用此格式。按需包含条件 section，无则
 
 ## 写作原则
 
-- **Summary** 先说 why 再说 what，避免只罗列文件名
+- **Summary** 按 commit 类型分组（Features / Fixes / Refactors），先说 why 再说 what，避免只罗列文件名
 - **条件 section** 无则不展示，不要留空标题（Breaking changes 除外——它是必写 section）

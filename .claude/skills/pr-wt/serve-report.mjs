@@ -8,8 +8,8 @@
  */
 
 import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync, statSync, createReadStream } from "node:fs";
+import { join, extname } from "node:path";
 import { spawn, execSync } from "node:child_process";
 
 const CWD = process.cwd();
@@ -50,6 +50,11 @@ if (!mainRepoMatch || !wtNameMatch) {
 
 const MAIN_REPO = mainRepoMatch[1];
 const WT_NAME = wtNameMatch[1];
+
+// Test results: check worktree first, fallback to main repo
+const WT_TEST_RESULTS = join(CWD, "web", "test-results");
+const MAIN_TEST_RESULTS = join(MAIN_REPO, "web", "test-results");
+const TEST_RESULTS_DIR = existsSync(WT_TEST_RESULTS) ? WT_TEST_RESULTS : MAIN_TEST_RESULTS;
 
 // --- State ---
 
@@ -285,6 +290,23 @@ function buildHtml() {
   .status-failed { background: rgba(248, 81, 73, 0.15); color: var(--red); }
   .status-running { background: rgba(210, 153, 34, 0.15); color: var(--yellow); }
 
+  /* Video player */
+  .report video {
+    width: 100%;
+    max-width: 720px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    margin: 8px 0;
+  }
+  .video-item {
+    margin: 12px 0;
+  }
+  .video-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
   /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
@@ -326,6 +348,25 @@ function buildHtml() {
   // Render markdown
   const md = ${escapedMd};
   document.getElementById("report").innerHTML = marked.parse(md);
+
+  // Post-process: convert video links to inline <video> players
+  document.querySelectorAll(".report a[href]").forEach(a => {
+    const href = a.getAttribute("href");
+    if (href && /\\.(webm|mp4)$/i.test(href)) {
+      const container = document.createElement("div");
+      container.className = "video-item";
+      const label = document.createElement("div");
+      label.className = "video-label";
+      label.textContent = a.textContent;
+      const video = document.createElement("video");
+      video.src = href;
+      video.controls = true;
+      video.preload = "metadata";
+      container.appendChild(label);
+      container.appendChild(video);
+      a.parentNode.replaceChild(container, a);
+    }
+  });
 
   const terminal = document.getElementById("terminal");
   const termContent = document.getElementById("terminal-content");
@@ -466,6 +507,43 @@ const server = createServer((req, res) => {
     child.on("close", (code) => {
       deleteState = code === 0 ? "success" : "failed";
     });
+    return;
+  }
+
+  // Serve video/media files from web/test-results/
+  if (req.method === "GET" && req.url.startsWith("/videos/")) {
+    const relPath = decodeURIComponent(req.url.slice("/videos/".length));
+    const filePath = join(TEST_RESULTS_DIR, relPath);
+
+    // Security: prevent path traversal
+    if (!filePath.startsWith(TEST_RESULTS_DIR)) {
+      res.writeHead(403);
+      res.end("Forbidden");
+      return;
+    }
+
+    if (!existsSync(filePath) || !statSync(filePath).isFile()) {
+      res.writeHead(404);
+      res.end("File not found");
+      return;
+    }
+
+    const MIME_TYPES = {
+      ".webm": "video/webm",
+      ".mp4": "video/mp4",
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+    };
+    const ext = extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || "application/octet-stream";
+    const stat = statSync(filePath);
+
+    res.writeHead(200, {
+      "Content-Type": contentType,
+      "Content-Length": stat.size,
+    });
+    createReadStream(filePath).pipe(res);
     return;
   }
 

@@ -75,6 +75,17 @@ git diff <baseBranch>..HEAD --name-only | grep -E '\.spec\.ts$'
 3. 通过 `Read(output_file)` 定期查看日志判断进度
 4. 卡住时用 `TaskStop` 终止并用 Playwright MCP 检查浏览器状态
 5. 记录结果到报告
+6. **收集视频**：E2E 完成后扫描 `web/test-results/` 目录，找到所有 `video.webm` 文件，生成 E2E Videos section
+
+```bash
+# 收集视频文件路径
+find web/test-results -name "video.webm" -not -path "*/.playwright-artifacts-*/*" | sort
+```
+
+视频链接格式：`[<spec 描述>](/videos/<test-result-dir>/video.webm)`
+- `<test-result-dir>` 是相对于 `web/test-results/` 的路径
+- `<spec 描述>` 从目录名提取（Playwright 用 describe+test 名命名目录）
+- serve-report.mjs 的 `/videos/*` 路由会提供文件服务，页面自动将链接转为内联播放器
 
 如果无 spec 文件变更，跳过并在报告中标注"无 E2E 变更，跳过"。
 
@@ -101,7 +112,25 @@ git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
 > Generated: <时间>
 
 ## Summary
-<1-5 个要点>
+
+按 commit 类型分组，每组用加粗标题，无则不展示该组：
+
+**Features**
+- <feat commit 对应的要点>
+
+**Fixes**
+- <fix commit 对应的要点>
+
+**Refactors**
+- <refactor/chore commit 对应的要点>
+
+## UX Changes
+<条件出现——有用户可感知的变化时>
+- 界面新增/修改、操作路径变化、交互行为变化（用户视角）
+
+## DX Changes
+<条件出现——有开发者接口变化时>
+- DB schema、API 接口、配置项、导出格式变化（开发者视角）
 
 ## Changes
 <git log --oneline 列表>
@@ -114,6 +143,10 @@ git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
 <必写 section>
 - 有 breaking change：按三维度说明（用户/FDE、技术/API、数据）
 - 无 breaking change：写"无"并简要说明原因
+
+## E2E Videos
+<条件出现——运行了 E2E 且有视频录制时>
+- [spec 描述](/videos/<test-result-dir>/video.webm)
 
 ## Quality checks
 | Check | Result |
