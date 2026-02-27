@@ -17,9 +17,10 @@ PR 和工作区合并请求共用此格式。按需包含条件 section，无则
 
 ## UX Changes
 <仅当有用户可感知的变化时出现>
-- 界面新增/修改了什么、用户操作路径变化、交互行为变化
+- 每项用「原来 → 现在」对比格式，突出变化：原来是什么样 → 现在变成什么样
 - 写用户视角的描述，不写技术实现
 - E2E 视频紧跟对应的 UX 变更项，格式：`[▶ spec 描述](/videos/<test-result-dir>/video.webm)`
+- 视频下方附带编号步骤描述（从 spec 的 `test.step()` 提取），说明视频中每一步在做什么
 - serve-report.mjs 自动将 .webm/.mp4 链接转为内联 video 播放器
 
 ## DX Changes

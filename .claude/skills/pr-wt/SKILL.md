@@ -86,6 +86,7 @@ find web/test-results -name "video.webm" -not -path "*/.playwright-artifacts-*/*
 - `<test-result-dir>` 是相对于 `web/test-results/` 的路径
 - `<spec 描述>` 从目录名提取（Playwright 用 describe+test 名命名目录）
 - serve-report.mjs 的 `/videos/*` 路由会提供文件服务，页面自动将链接转为内联播放器
+- **视频下方附带编号步骤描述**（从 spec 的 `test.step()` 提取），说明视频中每一步在做什么
 
 如果无 spec 文件变更，跳过并在报告中标注"无 E2E 变更，跳过"。
 
@@ -126,8 +127,9 @@ git diff <baseBranch>..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
 
 ## UX Changes
 <条件出现——有用户可感知的变化时>
-- 界面新增/修改、操作路径变化、交互行为变化（用户视角）
+- 每项用「原来 → 现在」对比格式，突出变化（用户视角）
 - E2E 视频紧跟对应的变更项：[▶ spec 描述](/videos/<test-result-dir>/video.webm)
+- 视频下方附带编号步骤描述（从 spec 的 `test.step()` 提取）
 
 ## DX Changes
 <条件出现——有开发者接口变化时>
