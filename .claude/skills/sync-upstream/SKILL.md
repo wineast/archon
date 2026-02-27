@@ -31,10 +31,12 @@ git -C <上游路径> status --short
 
 ### 3. 暂存当前变更
 
+> **禁止使用 `git stash`**——stash 是跨 worktree 共享的，会污染其他工作区。
+
 ```bash
-# 如果有未提交变更，先 stash
 git status --short
-git stash   # 仅在有变更时执行
+# 如果有未提交变更，创建临时 commit
+git add -A && git commit -m "wip: temp commit before sync"   # 仅在有变更时执行
 ```
 
 ### 4. 合并上游分支
@@ -49,7 +51,8 @@ git merge <baseBranch>
 ### 5. 恢复暂存
 
 ```bash
-git stash pop   # 仅在第 3 步执行了 stash 时
+# 仅在第 3 步创建了临时 commit 时：撤销临时 commit，保留变更在工作区
+git reset HEAD~1
 ```
 
 ### 6. 依赖安装
