@@ -53,6 +53,21 @@ export default function(input) { return expr(input); }`;
     expect(result).toBe(20);
   });
 
+  it("resolves archon:lib import from deps in one-shot mode", async () => {
+    const { compileExpression } = await import("filtrex");
+    const code = `import compileExpression from "archon:lib/compileExpression";
+export default function(input) {
+  var expr = compileExpression(input.expression);
+  return expr(input.data);
+}`;
+    const result = await compileAndExecFn(
+      code,
+      { expression: "x + y * 2", data: { x: 10, y: 5 } },
+      { compileExpression }
+    );
+    expect(result).toBe(20);
+  });
+
   it("handles async functions", async () => {
     const code = `export default async function(input) { return input.value + 1; }`;
     const result = await compileAndExecFn(code, { value: 41 });
@@ -122,24 +137,6 @@ export default function(input) { return double({ value: double({ value: input.va
     }
   });
 
-  it("injects host deps into shared exec context", async () => {
-    const triple = (x: number) => x * 3;
-    const exec = await createFunctionsExec(
-      [
-        {
-          key: "calc",
-          code: `export default function(input) { return triple(input.value); }`,
-        },
-      ],
-      { triple }
-    );
-    try {
-      expect(exec.call("calc", { value: 7 })).toBe(21);
-    } finally {
-      exec.dispose();
-    }
-  });
-
   it("throws after dispose", async () => {
     const exec = await createFunctionsExec([
       {
@@ -165,25 +162,6 @@ export default function(input) { return double({ value: double({ value: input.va
     }
   });
 
-  it("uses compileExpression injected as global dep in shared exec context", async () => {
-    const { compileExpression } = await import("filtrex");
-    const exec = await createFunctionsExec(
-      [
-        {
-          key: "evaluate",
-          code: `var expr = compileExpression("x + y * 2");
-export default function(input) { return expr(input); }`,
-        },
-      ],
-      { compileExpression }
-    );
-    try {
-      expect(exec.call("evaluate", { x: 10, y: 5 })).toBe(20);
-    } finally {
-      exec.dispose();
-    }
-  });
-
   it("throws when module has no default export function", async () => {
     await expect(
       createFunctionsExec([
@@ -195,69 +173,210 @@ export default function(input) { return expr(input); }`,
     ).rejects.toThrow(CompilationError);
   });
 
-  it("import resolves to host dep when no compiled function exists for that key", async () => {
-    // Simulates the fix: builtin functions with host deps are excluded from
-    // compilation, so `import X from "archon:fn/X"` resolves to the host dep.
-    const { compileExpression } = await import("filtrex");
+  it("archon:fn resolves to compiled function only, not host dep", async () => {
+    // With namespace isolation, archon:fn/ only resolves to compiled functions.
+    // A compiled "wrapper" function is available via archon:fn/.
+    const rawDep = (x: number) => x * 2;
     const exec = await createFunctionsExec(
       [
         {
-          // This function imports compileExpression and uses the raw filtrex API
-          // (passing a string expression, getting back a filter function)
-          key: "engine",
-          code: `import compileExpression from "archon:fn/compileExpression";
-function evaluate(expr, data) {
-  var filter = compileExpression(expr);
-  return filter(data);
-}
-export default function(input) {
-  return evaluate(input.when, input.data);
-}`,
+          key: "wrapper",
+          code: `export default function(input) { return input.value + 100; }`,
+        },
+        {
+          // consumer imports wrapper via archon:fn/ — gets compiled function
+          key: "consumer",
+          code: `import wrapper from "archon:fn/wrapper";
+export default function(input) { return wrapper({ value: input.n }); }`,
         },
       ],
-      // compileExpression is injected as a host dep (raw filtrex function)
-      // and NOT as a compiled function record
-      { compileExpression }
+      { wrapper: rawDep } // host dep with same key — should NOT be resolved by archon:fn/
     );
     try {
-      const result = exec.call("engine", {
-        when: 'x > 10',
-        data: { x: 15 },
-      });
-      expect(result).toBe(true);
+      // consumer calls the compiled wrapper (value + 100), NOT the host dep (x * 2)
+      const result = exec.call("consumer", { n: 5 });
+      expect(result).toBe(105);
     } finally {
       exec.dispose();
     }
   });
 
-  it("compiled function shadows host dep when both exist (pre-fix behavior)", async () => {
-    // Demonstrates the issue: when a compiled function with key "myDep" exists
-    // AND a host dep with the same key exists, the import resolves to the
-    // compiled function — which may have a different API.
-    const rawDep = (x: number) => x * 2;
+  it("archon:lib resolves to host dep for any function", async () => {
+    const { compileExpression } = await import("filtrex");
     const exec = await createFunctionsExec(
       [
         {
-          // This compiled function wraps the host dep with a different API
-          key: "myDep",
-          code: `export default function(input) { return myDep(input.value); }`,
-        },
-        {
-          // This function imports myDep expecting the raw API (direct number arg)
-          key: "consumer",
-          code: `import myDep from "archon:fn/myDep";
-export default function(input) { return myDep(input.n); }`,
+          key: "compileExpression",
+          code: `import compileExpression from "archon:lib/compileExpression";
+export default function(input) {
+  var expr = compileExpression(input.expression);
+  return expr(input.data);
+}`,
         },
       ],
-      { myDep: rawDep }
+      { compileExpression },
     );
     try {
-      // consumer's import resolves to the compiled "myDep" function (wrapper),
-      // NOT the raw host dep. The wrapper expects { value: number }.
-      // Calling it with a number (input.n = 5) means input.value is undefined.
-      const result = exec.call("consumer", { n: 5 });
-      // wrapper calls rawDep(undefined) → NaN
-      expect(result).toBeNaN();
+      const result = exec.call("compileExpression", {
+        expression: "x + y * 2",
+        data: { x: 10, y: 5 },
+      });
+      expect(result).toBe(20);
+    } finally {
+      exec.dispose();
+    }
+  });
+
+  it("user function can use archon:lib to access host dep", async () => {
+    const myLib = (x: number) => x * 3;
+    const exec = await createFunctionsExec(
+      [
+        {
+          key: "user_fn",
+          code: `import myLib from "archon:lib/myLib";
+export default function(input) { return myLib(input.value); }`,
+        },
+      ],
+      { myLib },
+    );
+    try {
+      expect(exec.call("user_fn", { value: 7 })).toBe(21);
+    } finally {
+      exec.dispose();
+    }
+  });
+
+  it("builtin + user function coexist: builtin uses lib, user uses fn", async () => {
+    const { compileExpression } = await import("filtrex");
+
+    const exec = await createFunctionsExec(
+      [
+        {
+          // Builtin wrapper uses archon:lib/ to access raw filtrex
+          key: "compileExpression",
+          code: `import compileExpression from "archon:lib/compileExpression";
+export default function(input) {
+  var expr = compileExpression(input.expression);
+  return expr(input.data);
+}`,
+        },
+        {
+          // User function uses archon:fn/ to access the compiled wrapper
+          key: "pricing_engine",
+          code: `import compileExpression from "archon:fn/compileExpression";
+export default function(input) {
+  return compileExpression({ expression: input.formula, data: input.vars });
+}`,
+        },
+      ],
+      { compileExpression },
+    );
+    try {
+      // pricing_engine calls wrapper which calls raw filtrex
+      const result = exec.call("pricing_engine", {
+        formula: "x + y * 2",
+        vars: { x: 10, y: 5 },
+      });
+      expect(result).toBe(20);
+    } finally {
+      exec.dispose();
+    }
+  });
+
+  it("user function directly uses archon:lib (no builtin wrapper needed)", async () => {
+    // Verifies that user functions can bypass the builtin wrapper and use lib directly
+    const { compileExpression } = await import("filtrex");
+    const exec = await createFunctionsExec(
+      [
+        {
+          key: "my_calculator",
+          code: `import compileExpression from "archon:lib/compileExpression";
+export default function(input) {
+  var expr = compileExpression(input.expr);
+  return { result: expr(input.vars) };
+}`,
+        },
+      ],
+      { compileExpression },
+    );
+    try {
+      const result = exec.call("my_calculator", {
+        expr: "a * b + c",
+        vars: { a: 2, b: 3, c: 10 },
+      });
+      expect(result).toEqual({ result: 16 });
+    } finally {
+      exec.dispose();
+    }
+  });
+
+  it("multiple user functions each using archon:lib independently", async () => {
+    const toUpper = (s: string) => s.toUpperCase();
+    const reverse = (s: string) => s.split("").reverse().join("");
+    const exec = await createFunctionsExec(
+      [
+        {
+          key: "shout",
+          code: `import toUpper from "archon:lib/toUpper";
+export default function(input) { return toUpper(input.text); }`,
+        },
+        {
+          key: "flip",
+          code: `import reverse from "archon:lib/reverse";
+export default function(input) { return reverse(input.text); }`,
+        },
+      ],
+      { toUpper, reverse },
+    );
+    try {
+      expect(exec.call("shout", { text: "hello" })).toBe("HELLO");
+      expect(exec.call("flip", { text: "hello" })).toBe("olleh");
+    } finally {
+      exec.dispose();
+    }
+  });
+
+  it("archon:lib and archon:fn can be used together in one function", async () => {
+    const multiply = (a: number, b: number) => a * b;
+    const exec = await createFunctionsExec(
+      [
+        {
+          key: "add_ten",
+          code: `export default function(input) { return input.value + 10; }`,
+        },
+        {
+          key: "combo",
+          code: `import multiply from "archon:lib/multiply";
+import add_ten from "archon:fn/add_ten";
+export default function(input) {
+  var product = multiply(input.a, input.b);
+  return add_ten({ value: product });
+}`,
+        },
+      ],
+      { multiply },
+    );
+    try {
+      // multiply(3, 4) = 12, add_ten(12) = 22
+      expect(exec.call("combo", { a: 3, b: 4 })).toBe(22);
+    } finally {
+      exec.dispose();
+    }
+  });
+
+  it("archon:lib import for non-existent dep is silently ignored (returns undefined)", async () => {
+    const exec = await createFunctionsExec(
+      [
+        {
+          key: "try_missing",
+          code: `import missing from "archon:lib/nonExistent";
+export default function(input) { return typeof missing; }`,
+        },
+      ],
+      { someOtherDep: 42 }, // nonExistent is not in deps
+    );
+    try {
+      expect(exec.call("try_missing", {})).toBe("undefined");
     } finally {
       exec.dispose();
     }

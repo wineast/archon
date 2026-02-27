@@ -346,34 +346,4 @@ export async function getAgentFunctions(
   return [...privateRows, ...poolRows];
 }
 
-// ---------------------------------------------------------------------------
-// Builtin function helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Get the set of builtin function keys referenced by an agent.
- * Functions don't use the enabled field on refs (reserved for tools).
- * If a ref exists, the builtin dependency is available.
- */
-export async function getReferencedBuiltinFunctionKeys(
-  agentId: string,
-  versionId?: string,
-): Promise<Set<string>> {
-  const rows = await db
-    .select({ key: functions.key })
-    .from(agentResourceRefs)
-    .innerJoin(functions, eq(functions.id, agentResourceRefs.resourceId))
-    .where(
-      and(
-        ...(versionId
-          ? [eq(agentResourceRefs.versionId, versionId)]
-          : [eq(agentResourceRefs.agentId, agentId)]),
-        eq(agentResourceRefs.resourceType, "function"),
-        isNull(functions.agentId),
-        eq(functions.origin, "builtin"),
-      )
-    );
-
-  return new Set(rows.map((r) => r.key));
-}
 

@@ -19,38 +19,12 @@ import {
 import { inferDepsFromImports } from "@/lib/modules/detect";
 
 /**
- * All base dependencies available to functions (npm packages).
- * Used by test endpoints that always want all deps available.
+ * All host dependencies available to functions via `archon:lib/<key>` imports.
+ * Any function (builtin or user) can access these through the lib namespace.
  */
 export const ALL_BASE_DEPS: Record<string, unknown> = {
   compileExpression,
 };
-
-/**
- * Mapping: builtin function key → required dep keys from ALL_BASE_DEPS.
- * Used to build a filtered deps map based on enabled builtin function refs.
- */
-const BUILTIN_DEP_KEYS: Record<string, string[]> = {
-  compileExpression: ["compileExpression"],
-};
-
-/**
- * Build a filtered base deps map from enabled builtin function keys.
- * Only includes deps whose corresponding builtin function is enabled.
- */
-export function buildBaseDeps(
-  enabledBuiltinKeys: Set<string>,
-): Record<string, unknown> {
-  const deps: Record<string, unknown> = {};
-  for (const [builtinKey, depKeys] of Object.entries(BUILTIN_DEP_KEYS)) {
-    if (enabledBuiltinKeys.has(builtinKey)) {
-      for (const dk of depKeys) {
-        deps[dk] = ALL_BASE_DEPS[dk];
-      }
-    }
-  }
-  return deps;
-}
 
 /**
  * Extract function-level dependencies from ES module import statements.
@@ -126,6 +100,10 @@ function topoSort(records: FunctionRecord[]): FunctionRecord[] {
 /**
  * Resolve and compile a set of function records into a shared exec context.
  * Returns a map of key → sync wrapper function, plus the exec context for lifecycle management.
+ *
+ * @param rows - Function records to compile
+ * @param defsMap - Schema definitions for $ref resolution
+ * @param baseDeps - Host dependencies accessible via `archon:lib/<key>` imports
  */
 export async function resolveAndCompileFunctions(
   rows: FunctionRecord[],

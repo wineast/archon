@@ -134,6 +134,25 @@ declare module "archon:fn/${key}" {
 }
 
 /**
+ * Generate type declarations for host library dependencies.
+ *
+ * @param libKeys - Keys of host deps available via `archon:lib/<key>`
+ * @returns TypeScript declaration string for all `archon:lib/<key>` modules
+ */
+export function generateLibDeclarations(libKeys: string[]): string {
+  return libKeys
+    .map(
+      (key) => `
+declare module "archon:lib/${key}" {
+  const lib: (...args: unknown[]) => unknown;
+  export default lib;
+}
+`
+    )
+    .join("\n");
+}
+
+/**
  * Generate type declarations for agent-specific components.
  *
  * @param componentKeys - Keys of components available in the agent

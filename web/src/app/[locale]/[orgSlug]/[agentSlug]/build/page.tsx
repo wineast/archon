@@ -20,6 +20,7 @@ import {
   FlaskConicalIcon,
   FunctionSquareIcon,
   GavelIcon,
+  LibraryIcon,
   HistoryIcon,
   MessageSquareIcon,
   NetworkIcon,
@@ -80,6 +81,7 @@ import { useTrash } from "@/lib/trash/hooks";
 import { toggleSkillsFeature } from "@/lib/skills/hooks";
 import { JudgeConfigPanel } from "@/components/judge-config/judge-config-panel";
 import { EnvVarsPanel } from "@/components/env-vars/env-vars-panel";
+import { LibsPanel } from "@/components/libs/libs-panel";
 import { SupportBubble } from "@/components/support-bubble/support-bubble";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -100,6 +102,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   // ── L1: Content & logic (depend on L0) ──
   { value: "wiki", label: "wiki", icon: BookOpenIcon },
   { value: "functions", label: "functions", icon: FunctionSquareIcon },
+  { value: "libs", label: "libs", icon: LibraryIcon },
   { value: "components", label: "components", icon: PuzzleIcon },
   { value: "ontology", label: "ontology", icon: NetworkIcon },
   // ── L2: Capabilities (depend on L0 + L1) ──
@@ -314,6 +317,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
         return <McpServersPanel agentId={agent.id} />;
       case "functions":
         return <FunctionsPanel agentId={agent.id} />;
+      case "libs":
+        return <LibsPanel />;
       case "skills":
         return (
           <SkillsPanel

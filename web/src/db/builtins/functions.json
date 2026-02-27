@@ -3,7 +3,7 @@
     "key": "compileExpression",
     "name": "Compile Expression",
     "description": "Compiles a string expression (e.g. math formulas, conditional logic) into an executable function. Powered by the filtrex library.",
-    "code": "export default function(input) {\n  const expr = compileExpression(input.expression);\n  return expr(input.data);\n}",
+    "code": "import compileExpression from \"archon:lib/compileExpression\";\n\nexport default function(input) {\n  const expr = compileExpression(input.expression);\n  return expr(input.data);\n}",
     "parametersSchema": {
       "type": "object",
       "properties": {

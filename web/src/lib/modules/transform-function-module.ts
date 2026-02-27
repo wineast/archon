@@ -14,6 +14,8 @@ export interface TransformResult {
   depKeys: string[];
   /** Mapping from local alias to dep key: { localName: "depKey" } */
   aliases: Record<string, string>;
+  /** Mapping from local alias to lib key: { localName: "libKey" } (from archon:lib/<key>) */
+  libAliases: Record<string, string>;
   /** Top-level code before the export (e.g. var declarations, helper functions) */
   preamble: string;
   /** The extracted function expression string */
@@ -29,6 +31,7 @@ export interface TransformResult {
 export function transformFunctionModule(code: string): TransformResult {
   const depKeys: string[] = [];
   const aliases: Record<string, string> = {};
+  const libAliases: Record<string, string> = {};
   const preambleLines: string[] = [];
   const fnLines: string[] = [];
   let fnExpression: string | null = null;
@@ -48,14 +51,24 @@ export function transformFunctionModule(code: string): TransformResult {
       continue;
     }
 
-    // Match: unsupported import (any import not from archon:fn/*)
+    // Match: import X from "archon:lib/Y"
+    const libImport = trimmed.match(
+      /^import\s+(\w+)\s+from\s+["']archon:lib\/([^"']+)["']\s*;?\s*$/
+    );
+    if (libImport) {
+      const [, localName, key] = libImport;
+      libAliases[localName] = key;
+      continue;
+    }
+
+    // Match: unsupported import (any import not from archon:fn/* or archon:lib/*)
     const unsupportedImport = trimmed.match(
       /^import\s+.+\s+from\s+["']([^"']+)["']\s*;?\s*$/
     );
     if (unsupportedImport) {
       const mod = unsupportedImport[1];
       throw new Error(
-        `函数不支持模块 "${mod}"，只能使用 import X from "archon:fn/<key>"`
+        `函数不支持模块 "${mod}"，只能使用 import X from "archon:fn/<key>" 或 "archon:lib/<key>"`
       );
     }
 
@@ -101,5 +114,5 @@ export function transformFunctionModule(code: string): TransformResult {
     finalFnExpression = fnExpression;
   }
 
-  return { depKeys, aliases, preamble, fnExpression: finalFnExpression };
+  return { depKeys, aliases, libAliases, preamble, fnExpression: finalFnExpression };
 }

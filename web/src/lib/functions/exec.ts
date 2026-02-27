@@ -64,8 +64,13 @@ export async function compileAndExecFn(
   const depNames = Object.keys(deps ?? {});
   const depValues = Object.values(deps ?? {});
 
-  // Build alias injections for archon:fn imports
-  const aliasLines = Object.entries(transformed.aliases)
+  // Build alias injections for archon:fn imports (resolve from deps in one-shot mode)
+  const fnAliasLines = Object.entries(transformed.aliases)
+    .filter(([, key]) => depNames.includes(key))
+    .map(([alias, key]) => `var ${alias} = __deps[${depNames.indexOf(key)}];`);
+
+  // Build alias injections for archon:lib imports (resolve from deps)
+  const libAliasLines = Object.entries(transformed.libAliases)
     .filter(([, key]) => depNames.includes(key))
     .map(([alias, key]) => `var ${alias} = __deps[${depNames.indexOf(key)}];`);
 
@@ -73,8 +78,10 @@ export async function compileAndExecFn(
   const wrappedCode = [
     // Inject deps
     ...depNames.map((name, i) => `var ${name} = __deps[${i}];`),
-    // Inject import aliases
-    ...aliasLines,
+    // Inject fn import aliases
+    ...fnAliasLines,
+    // Inject lib import aliases
+    ...libAliasLines,
     // Preamble (top-level code like var declarations, helper functions)
     transformed.preamble,
     // Define and call the function
@@ -111,7 +118,7 @@ export interface FunctionsExec {
  * Code format: `import dep from "archon:fn/dep"; export default function(input) { ... }`
  *
  * @param records - Functions in dependency order
- * @param deps - Host dependencies (e.g. compileExpression)
+ * @param deps - Host dependencies (e.g. compileExpression), accessible via `archon:lib/` imports
  */
 export async function createFunctionsExec(
   records: Array<{ key: string; code: string }>,
@@ -139,41 +146,29 @@ export async function createFunctionsExec(
       );
     }
 
-    // Build dependency injection: both host deps and previously compiled functions
+    // Build dependency injection arrays
     const depNames: string[] = [];
     const depValues: unknown[] = [];
 
-    // Add host deps
+    // Add previously compiled functions (for archon:fn/ resolution)
+    for (const [key, fn] of compiledFns) {
+      depNames.push(key);
+      depValues.push(fn);
+    }
+
+    // Add host deps (for archon:lib/ resolution)
+    // Use a separate index range so fn and lib don't collide
+    const libStartIdx = depNames.length;
     if (deps) {
       for (const [name, value] of Object.entries(deps)) {
-        depNames.push(name);
+        depNames.push(`__lib_${name}`);
         depValues.push(value);
       }
     }
 
-    // Add previously compiled functions (accessible by key).
-    // If a compiled fn has the same key as a host dep, add it with a
-    // prefixed name so it can be found by alias resolution below.
-    for (const [key, fn] of compiledFns) {
-      if (!depNames.includes(key)) {
-        depNames.push(key);
-        depValues.push(fn);
-      } else {
-        // Same key exists in host deps — add with prefix for alias resolution
-        depNames.push(`__compiled_${key}`);
-        depValues.push(fn);
-      }
-    }
-
-    // Build import alias injections.
-    // archon:fn/ imports should resolve to compiled functions, not host deps.
-    const aliasLines = Object.entries(transformed.aliases)
+    // Build fn alias injections: archon:fn/ imports resolve to compiled functions only
+    const fnAliasLines = Object.entries(transformed.aliases)
       .map(([alias, key]) => {
-        // Prefer compiled function (may be prefixed if name-clashed with host dep)
-        const compiledIdx = depNames.indexOf(`__compiled_${key}`);
-        if (compiledIdx >= 0) {
-          return `var ${alias} = __deps[${compiledIdx}];`;
-        }
         const idx = depNames.indexOf(key);
         if (idx >= 0) {
           return `var ${alias} = __deps[${idx}];`;
@@ -182,11 +177,22 @@ export async function createFunctionsExec(
       })
       .filter((line): line is string => line !== null);
 
+    // Build lib alias injections: archon:lib/ imports resolve to host deps only
+    const libAliasLines = Object.entries(transformed.libAliases)
+      .map(([alias, key]) => {
+        const idx = depNames.indexOf(`__lib_${key}`);
+        if (idx >= 0) {
+          return `var ${alias} = __deps[${idx}];`;
+        }
+        return null;
+      })
+      .filter((line): line is string => line !== null);
+
     const wrappedCode = [
-      // Inject deps
-      ...depNames.map((name, i) => `var ${name} = __deps[${i}];`),
-      // Inject import aliases
-      ...aliasLines,
+      // Inject fn import aliases
+      ...fnAliasLines,
+      // Inject lib import aliases
+      ...libAliasLines,
       // Preamble (top-level code)
       transformed.preamble,
       // Define function and return it (not call it)

@@ -9,7 +9,9 @@
 | 命名空间 | 用途 | 适用场景 |
 |---------|------|---------|
 | `archon:fn/<key>` | 导入同 Agent 下的其他函数 | 函数 |
+| `archon:lib/<key>` | 导入宿主依赖（原始 npm 函数） | 函数 |
 | `archon:context` | 导入平台 API（wiki/dataset/fn/ontology） | 工具 Handler |
+| `archon:lib/<key>` | 导入宿主依赖（同函数层） | 工具 Handler |
 | `archon:react` | React core hooks | 组件 |
 | `archon:ui` | UI 组件（Badge, Table 等） | 组件 |
 | `archon:icons` | Lucide 图标 | 组件 |
@@ -30,6 +32,23 @@ export default function(input) {
 - `export default` 必须导出一个函数，接收 `input` 参数
 - 函数之间的依赖关系从 `archon:fn/<key>` 导入语句自动推断
 
+### archon:lib/<key>
+
+通过 `archon:lib/<key>` 导入宿主依赖（原始 npm 函数），所有函数均可使用。
+
+```js
+import compileExpression from "archon:lib/compileExpression";
+
+export default function(input) {
+  const expr = compileExpression(input.expression);
+  return expr(input.data);
+}
+```
+
+命名空间分工：
+- `archon:fn/<key>` → 编译后的函数（包装器），支持函数间依赖
+- `archon:lib/<key>` → 原始 npm 宿主依赖，所有函数可用
+
 ---
 
 ## 工具 Handler
@@ -44,11 +63,12 @@ export default async function(args) {
 }
 ```
 
-工具 Handler 支持一个虚拟模块：
+工具 Handler 支持两个虚拟模块：
 
 | 模块 | 用途 |
 |------|------|
 | `archon:context` | 运行时 API（wiki / dataset / fn / ontology） |
+| `archon:lib/<key>` | 宿主依赖（如 `compileExpression`），与函数层共享 |
 
 `archon:context` 可导出的成员：
 
@@ -99,11 +119,13 @@ export default function({ tool, isLoading }) {
 ```ts
 import {
   generateFnDeclarations,
+  generateLibDeclarations,
   generateComponentDeclarations,
 } from "@/lib/modules/archon-types";
 
 const declarations = [
   generateFnDeclarations(["calc", "format"]),
+  generateLibDeclarations(["compileExpression"]),
   generateComponentDeclarations(["product-card", "price-badge"]),
 ].join("\n");
 ```

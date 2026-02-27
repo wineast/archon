@@ -15,11 +15,10 @@ import {
   resolveAndCompileFunctions,
   getCachedFunctions,
   setCachedFunctions,
-  buildBaseDeps,
+  ALL_BASE_DEPS,
   type FunctionRecord,
 } from "@/lib/functions/compile";
 import {
-  getReferencedBuiltinFunctionKeys,
   getAgentDatasets,
   getAgentFunctions,
 } from "@/lib/pool/queries";
@@ -112,21 +111,15 @@ async function doCompileFunctions(agentId: string, versionId: string): Promise<M
   const allRows = await getAgentFunctions(agentId, versionId);
 
   const defsMap = await getDefsMap(agentId);
-  const enabledBuiltinKeys = await getReferencedBuiltinFunctionKeys(agentId, versionId);
-  const baseDeps = buildBaseDeps(enabledBuiltinKeys);
 
-  // Exclude builtin functions that have corresponding host deps from compilation.
-  // Their raw implementation is already injected via baseDeps; compiling them would
-  // create a wrapper with a different API that shadows the host dep during alias resolution.
   const fnRecords: FunctionRecord[] = allRows
-    .filter((r) => !enabledBuiltinKeys.has(r.key))
     .map((r) => ({
       key: r.key,
       code: r.code,
       parameters: r.parametersSchema ?? {},
     }));
 
-  const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, baseDeps);
+  const { fns, exec } = await resolveAndCompileFunctions(fnRecords, defsMap, ALL_BASE_DEPS);
   setCachedFunctions(agentId, versionId, fns, exec);
   return fns;
 }
