@@ -168,14 +168,20 @@ git worktree list --porcelain | head -1 | sed 's/worktree //'
 chmod +x .worktree/merge.sh
 ```
 
-### 9. 输出结果
+### 9. 启动报告查看器
+
+生成报告和脚本后，自动启动 Web 查看器并打开浏览器：
+
+```bash
+# 后台启动，不阻塞 Claude 会话
+node .claude/skills/pr-wt/serve-report.mjs
+# 用 Bash(run_in_background=true) 执行
+```
 
 向用户展示：
 
 1. REPORT.md 的核心内容（Summary + Quality checks）
-2. 提示用户：
-   - 查看完整报告：`cat .worktree/REPORT.md`
-   - 执行合并：`bash .worktree/merge.sh`
+2. 提示用户浏览器已打开报告页面，可在页面上操作合并和删除工作区
 
 ## 注意
 
