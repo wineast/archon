@@ -268,11 +268,6 @@ subagent prompt 模板：
 <make e2e 的摘要输出，如：1 passed>
 ```
 
-## Appendix
-<git log --oneline>
-<git diff --stat>
-<涉及文件摘要>
-
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
@@ -335,11 +330,21 @@ node .claude/skills/pr-wt/serve-report.mjs
 向用户展示：
 
 1. REPORT.md 的核心内容（Verdict + Summary）
-2. 提示用户浏览器已打开报告页面，可在页面上查看完整报告、操作合并和删除工作区
+2. 提示用户浏览器已打开报告页面
+
+报告查看器功能：
+- **左右双栏**：REQ.md（需求）| REPORT.md（报告），无需求文档时单栏
+- **Verdict 顶部横幅**：✅/⚠️/❌ 合并判定
+- **Acceptance Reviews**：评估者的独立回复，卡片式展示
+- **Actions 区域**：
+  - 上游 / 当前工作区的实时 git 状态（staged / modified / untracked / clean）
+  - Diff Commits 列表（类 GitHub PR，展示 commit hash、message、时间）
+  - Merge 按钮：两边都 clean + 无冲突时可用，直接执行 `wt-merge`
+  - Delete 按钮：合并成功后出现，删除工作区
 
 ## 注意
 
-- **不自动执行合并**——只生成脚本，由用户决定何时执行
-- **不自动删除工作区**——合并脚本执行后提示用户可选操作
+- **合并由用户在浏览器中点击 Merge 按钮触发**——两边都 clean 且无冲突时才可用
+- **不自动删除工作区**——合并成功后出现 Delete 按钮，由用户决定
 - 合并脚本复用 `make wt-merge`，不重复实现合并逻辑
 - `.worktree/` 目录已在 `.gitignore` 中，报告和脚本不会被提交
