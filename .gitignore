@@ -8,7 +8,7 @@ node_modules/
 .worktrees/
 
 # Worktree local config
-.worktree/meta.json
+.worktree/
 CLAUDE.local.md
 start.sh
 clarify-req-from-todo.sh
