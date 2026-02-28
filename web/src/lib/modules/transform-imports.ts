@@ -1,9 +1,8 @@
 /**
- * Transform `import` statements from `archon:*` modules into `__deps__` lookups.
+ * Transform `import` statements into `__deps__` lookups for `new Function()` execution.
  *
- * Used by the component system which runs in the browser via `new Function()`,
- * not in QuickJS. Since `new Function()` doesn't support ES module syntax,
- * we transform the imports into equivalent destructuring from a `__deps__` object.
+ * Since `new Function()` doesn't support ES module syntax, all import statements
+ * must be transformed or stripped before execution.
  *
  * Supported import forms:
  * - `import X from "archon:xxx"`                 → `const X = __deps__["archon:xxx"].default`
@@ -11,9 +10,18 @@
  * - `import { A as B } from "archon:xxx"`         → `const { A: B } = __deps__["archon:xxx"]`
  * - `import X, { A, B } from "archon:xxx"`        → both of the above
  *
+ * Bare module specifiers (e.g. `"react"`, `"lucide-react"`) are automatically
+ * remapped to their `archon:*` equivalents. Unknown modules are stripped.
+ *
  * Also transforms `export default function(...)` → strips `export default` and
  * captures the function for return.
  */
+
+/** Mapping of bare module specifiers to their archon:* equivalents. */
+const BARE_MODULE_ALIASES: Record<string, string> = {
+  react: "archon:react",
+  "lucide-react": "archon:icons",
+};
 
 interface TransformResult {
   /** Transformed code with imports replaced by __deps__ lookups */
@@ -23,7 +31,7 @@ interface TransformResult {
 }
 
 /**
- * Transform archon:* import statements into __deps__ destructuring.
+ * Transform import statements into __deps__ destructuring.
  *
  * @param source - Component source code with import/export statements
  * @returns Transformed code and set of referenced modules
@@ -33,16 +41,41 @@ export function transformImports(source: string): TransformResult {
   const lines: string[] = [];
   let hasExportDefault = false;
 
-  for (const line of source.split("\n")) {
+  // Pre-process: join multiline import statements into single lines.
+  // e.g. `import {\n  A,\n  B,\n} from "mod"` → `import { A, B, } from "mod"`
+  const normalized = joinMultilineImports(source);
+
+  for (const line of normalized.split("\n")) {
     const trimmed = line.trim();
 
-    // Match: import ... from "archon:..."
+    // Strip: import type ... (TypeScript type-only imports)
+    if (/^import\s+type\s+/.test(trimmed)) {
+      continue;
+    }
+
+    // Strip: side-effect-only imports (import "something")
+    if (/^import\s+["'][^"']+["']\s*;?\s*$/.test(trimmed)) {
+      continue;
+    }
+
+    // Match: import ... from "..."
     const importMatch = trimmed.match(
-      /^import\s+(.+?)\s+from\s+["'](archon:[^"']+)["']\s*;?\s*$/
+      /^import\s+(.+?)\s+from\s+["']([^"']+)["']\s*;?\s*$/
     );
 
     if (importMatch) {
-      const [, specifiers, moduleSpec] = importMatch;
+      const [, specifiers, rawModuleSpec] = importMatch;
+
+      // Resolve module specifier: archon:* pass through, bare names get remapped
+      const moduleSpec = rawModuleSpec.startsWith("archon:")
+        ? rawModuleSpec
+        : BARE_MODULE_ALIASES[rawModuleSpec];
+
+      if (!moduleSpec) {
+        // Unknown module — strip (can't resolve in new Function)
+        continue;
+      }
+
       modules.add(moduleSpec);
 
       // Parse the specifier(s)
@@ -85,6 +118,56 @@ export function transformImports(source: string): TransformResult {
   }
 
   return { code, modules };
+}
+
+// ── Multiline import joining ──
+
+/**
+ * Join multiline import statements into single lines so the line-by-line
+ * transformer can process them.
+ *
+ * Detects lines starting with `import` that contain an unmatched `{` (no closing `}`
+ * before `from`), and concatenates subsequent lines until the `from "..."` is found.
+ */
+function joinMultilineImports(source: string): string {
+  const rawLines = source.split("\n");
+  const result: string[] = [];
+  let buffer: string | null = null;
+
+  for (const line of rawLines) {
+    if (buffer !== null) {
+      // Accumulating a multiline import
+      buffer += " " + line.trim();
+      // Check if this line completes the import (contains `from "..."` or `from '...'`)
+      if (/from\s+["'][^"']+["']/.test(buffer)) {
+        result.push(buffer);
+        buffer = null;
+      }
+      continue;
+    }
+
+    const trimmed = line.trim();
+    // Detect start of a multiline import: starts with `import` but has no `from "..."` on same line
+    // Note: import type is NOT excluded here — multiline `import type { ... } from "mod"`
+    // must be joined first, then stripped by the main loop's single-line import type check.
+    if (
+      /^import\s+/.test(trimmed) &&
+      !(/from\s+["']/.test(trimmed)) &&
+      !(/^import\s+["']/.test(trimmed))
+    ) {
+      buffer = trimmed;
+      continue;
+    }
+
+    result.push(line);
+  }
+
+  // If buffer is still open (malformed import), flush it as-is
+  if (buffer !== null) {
+    result.push(buffer);
+  }
+
+  return result.join("\n");
 }
 
 // ── Specifier parsing ──
