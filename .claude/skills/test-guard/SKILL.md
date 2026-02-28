@@ -402,6 +402,10 @@ fixed_by: FIX_REPORT.md
 verified_by: VERIFY_REPORT.md
 guarded_by: 本报告
 ```
+
+## 过程备注
+
+{执行过程中捕获的学习信号。无则留空}
 ```
 
 ### 资源管理
@@ -483,22 +487,13 @@ echo "  make wt-delete NAME=$WT_NAME    # 删除工作区"
 5. 生成 `merge.sh`（覆盖 verify 版本，含归档逻辑）
 6. 启动 HTML 查看器
 
-### 3.5 启动报告查看器
+### 3.5 启动/更新报告查看器
 
 ```bash
-# 后台启动
-node .claude/skills/test-guard/serve-report.mjs
+node .claude/skills/shared/serve-defect-chain.mjs
 # 用 Bash(run_in_background=true) 执行
+# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
 ```
-
-查看器功能：
-- **四栏 Tab 切换**：缺陷报告 | 修复报告 | 验证报告 | 测试守护
-- **Verdict 顶部横幅**：✅/⚠️/❌ 合并裁定（来自验证报告）
-- **Actions 区域**：
-  - 上游 / 当前的实时 git 状态
-  - Merge 按钮：两边都 clean + 无冲突 + 不落后上游时可用
-  - Delete 按钮：合并成功后出现
-- **图片内联**：报告中的截图直接显示
 
 ## 执行规则
 
@@ -511,6 +506,7 @@ node .claude/skills/test-guard/serve-report.mjs
 7. **静态检查不跳过**：`make typecheck` + `make test` 必须通过
 8. **Traceability 必须完整**：每个测试文件头部注释链接回三份报告
 9. **遵循项目测试约定**：CLAUDE.md 中所有 E2E、Testing 相关规则
+10. **过程备注**：执行过程中遇到重试、惊讶、绕路、确认、环境等偏差信号时，记录到报告的「过程备注」节。格式：`[重试/惊讶/绕路/确认/环境] 简述`
 
 ## 推导路径总览
 

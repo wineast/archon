@@ -301,6 +301,10 @@ Reproduction  Coherence  Boundary
 
 ### 残留风险
 {如有，列出需后续跟进的事项；否则"无"}
+
+## 过程备注
+
+{执行过程中捕获的学习信号。无则留空}
 ```
 
 ### 报告自检清单
@@ -368,6 +372,12 @@ echo "✅ 合并完成"
 2. 用 `AskUserQuestion` 确认报告是否准确
 3. 确认后写入 `.worktree/VERIFY_REPORT.md`
 4. 生成 `merge.sh`
+5. 启动/更新报告查看器：
+   ```bash
+   node .claude/skills/shared/serve-defect-chain.mjs
+   # 用 Bash(run_in_background=true) 执行
+   # 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
+   ```
 
 ## 执行规则
 
@@ -379,6 +389,7 @@ echo "✅ 合并完成"
 6. **静态检查不跳过**：`make typecheck` + `make test` 必须通过
 7. **截图取证**：每个维度的验证都要截图
 8. **Verdict 有理有据**：判决必须基于四项验证证据，不可跳过
+9. **过程备注**：执行过程中遇到重试、惊讶、绕路、确认、环境等偏差信号时，记录到报告的「过程备注」节。格式：`[重试/惊讶/绕路/确认/环境] 简述`
 
 ## 与其他技能的协作
 

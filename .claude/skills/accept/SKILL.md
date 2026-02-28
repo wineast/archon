@@ -1,0 +1,447 @@
+---
+name: accept
+description: 验收实现。当用户说"验收"、"accept"、"验收报告"、"检查实现"、"能不能合并"（在需求链路中）等时调用。读取需求报告和实现报告，执行五维度验收，生成验收报告，启动 HTML 预览服务。
+allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write, Edit, mcp__playwright__*
+---
+
+读取需求报告 + 实现报告 → 五维度验收 → 生成验收报告 → 启动 HTML 预览。
+
+## 核心理念
+
+需求报告传递**契约**（要造什么），实现报告传递**声明**（造了什么），验收报告传递**判决**（造对了吗）。
+
+验收报告不是测试报告。"标准全过了"只是五分之一。标准是离散的检查点，用户体验是连续的旅程——每个检查点都过了，连起来走一遍可能不通顺。验收报告是**验收书**。
+
+### 三份文档的角色
+
+```
+需求报告 → 委托书（声明要什么）
+实现报告 → 施工报告（声明造了什么）
+验收报告 → 验收书（质证声明 + 裁定）
+```
+
+验收者不是实现者的助手，是独立的第三方裁判。
+
+### 与验证报告的本质区别
+
+```
+验证报告（缺陷链路终点）          验收报告（需求链路终点）
+────────────────────              ────────────────────
+审判对象：一个修复行为              审判对象：一个创造物
+核心问题："缺陷消除了吗？"          核心问题："需求满足了吗？"
+判据性质：客观（偏差存在/不存在）    判据性质：半主观（契约的解读有空间）
+灰色地带：极少（二元判定）          灰色地带：常见（光谱判定）
+```
+
+### 与实现报告的镜像关系
+
+```
+实现报告                           验收报告
+────────                           ────────
+Solution Design (方案)    ──验──→  Experience Validation
+  "怎么造的"                        "用起来顺吗"
+
+Design Rationale (决策)   ──验──→  Experience Validation
+  "为什么这样造"                    "这个决策带来了好体验还是差体验"
+
+Change Set (变更集)       ──验──→  Regression
+  "改了什么代码"                    "改的代码弄坏别的了吗"
+
+Traceability (需求追溯)   ──验──→  Criteria Verdict
+  "每条需求映射到哪"                "每条需求真的满足了吗"
+
+Known Gaps (已知缺口)     ──验──→  Gap Assessment
+  "什么没做到"                      "没做到的可接受吗"
+```
+
+实现报告的每个声明，都在验收报告中被逐一质证。
+
+## Phase 0: 读取输入报告
+
+### 操作
+
+1. 读取 `.worktree/REQ.md`，提取五要素：
+   - **Who**：使用者、使用场景
+   - **Why**：痛点、价值、不做的代价
+   - **What**：核心能力声明、Out of Scope
+   - **Acceptance**：验收标准清单
+   - **Constraint**：业务约束、技术约束、不可打破的现有行为
+
+2. 读取 `.worktree/IMPL_REPORT.md`，提取五要素：
+   - **Solution Design**：用户流程、系统架构、关键接口
+   - **Design Rationale**：设计决策及理由
+   - **Change Set**：新增/修改/删除的文件
+   - **Traceability**：需求追溯映射
+   - **Known Gaps**：未实现项、已知限制、技术债务
+
+3. 如果任一文件不存在，提示用户先运行 `/requirement` + `/implement`
+
+4. 向用户简要复述两份报告要点，进入验收
+
+## Phase 1: Criteria Verdict（标准裁定）
+
+### 目标
+逐条核对需求报告中的 Acceptance 标准。
+
+### 操作
+
+#### 1.1 检查环境
+检查 dev 服务器是否在运行：
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
+```
+如果存在 `.worktree/meta.json`，从中读取端口号；否则使用默认 3000。
+
+如果未运行：`make up`（`run_in_background=true`），轮询等待就绪，**最多 15s**。超时则 `make down` + `make up` 重启，仍失败则报错给用户。
+
+#### 1.2 逐条验证 Acceptance 标准
+- 从 REQ.md 提取所有 Acceptance 条目
+- 对每条标准用 Playwright 端到端验证
+- 每条记录三项：
+  - **结论**：✅ 通过 / ❌ 未通过 / ⚠️ 部分通过
+  - **证据**：怎么验的，看到了什么（截图）
+  - **偏差说明**（如有）：不通过或部分通过时，实际行为与标准的具体差异
+
+#### 1.3 "部分通过"判定
+当核心能力已实现但边界行为缺失时，标记为"部分通过"。例如：
+- 标准："筛选后列表刷新，状态保持"
+- 实际：筛选后列表刷新了（通过），但页码重置（部分缺失）
+- 判定：⚠️ 部分通过——核心能力有了，边界行为缺失
+
+### 截图命名
+- `.worktree/ACCEPT_REPORT.assets/accept-{简述}-criteria-{N}.png`
+
+## Phase 2: Experience Validation（体验验证）
+
+### 目标
+以 Who（用户角色）的视角走完整个使用旅程，验证标准之间的衔接。
+
+### 操作
+
+#### 2.1 按 Solution Design 的用户流程端到端走通
+- 用 Playwright 按实现报告描述的用户流程逐步操作
+- 不是逐条检查标准，而是作为真实用户连续使用
+
+#### 2.2 四个维度评估
+
+1. **Happy Path**：标准场景完整走通了吗？
+2. **流程衔接**：步骤之间的过渡自然吗？有没有需要额外操作的地方？
+3. **认知负荷**：用户能不能不看说明就会用？
+4. **异常恢复**：操作出错时能不能回到正轨？
+
+#### 2.3 判定
+- **通过**：连续使用流畅，无阻塞
+- **部分通过**：核心路径通，但有体验瑕疵（记录具体问题）
+- **未通过**：连续使用被阻断
+
+#### 2.4 反馈信号
+如果 Criteria Verdict 全部通过但 Experience Validation 发现问题，说明 REQ.md 的 Acceptance 标准有遗漏——记录在报告中作为反馈。
+
+### 截图命名
+- `.worktree/ACCEPT_REPORT.assets/accept-{简述}-exp-{N}.png`
+
+## Phase 3: Gap Assessment（缺口评估）
+
+### 目标
+对实现报告中声明的 Known Gaps 进行影响评估。
+
+### 操作
+
+#### 3.1 读取 IMPL_REPORT.md 的 Known Gaps
+
+三类缺口：
+- **未实现项**：REQ.md 中明确提到但未实现的
+- **已知限制**：实现了但有质量/性能/兼容性不足
+- **技术债务**：为赶工期做的妥协
+
+#### 3.2 对每个缺口评估
+
+- **影响面**：影响多少用户、多少场景
+- **严重度**：功能不可用 / 体验瑕疵 / 仅影响极端情况
+- **紧迫度**：必须合并前修复 / 可合并后跟进 / 可无限期搁置
+- **判定**：🚫 阻塞合并 / ✅ 不阻塞（记为 follow-up）
+
+#### 3.3 发现未声明的缺口
+如果验收过程中发现实现报告未声明的缺口：
+- 声明的缺口 → Gap Assessment（评估影响）
+- 未声明的缺口 → 标记为"发现的缺口"，需回溯：是需求理解偏差还是实现遗漏？
+
+#### 3.4 判定
+- **可接受**：所有缺口都不阻塞合并
+- **部分可接受**：有阻塞项但非核心功能
+- **不可接受**：存在阻塞核心功能的缺口
+
+## Phase 4: Regression Result（回归验证）
+
+### 目标
+确认新功能没有弄坏其他东西。
+
+### 操作
+
+#### 4.1 静态检查
+```bash
+make typecheck
+make test
+```
+
+#### 4.2 Change Set 定向验证
+- 按实现报告的 Change Set，检查修改触及的现有模块
+- 核心路径冒烟测试：系统最关键的 Happy Path
+- 需求报告 Constraint 中的"不可打破的现有行为"逐项确认
+
+#### 4.3 判定
+- **通过**：静态检查通过 + 现有功能无回归 + Constraint 未违反
+- **未通过**：发现回归问题或 Constraint 被违反
+
+### 截图命名
+- `.worktree/ACCEPT_REPORT.assets/accept-{简述}-regression-{N}.png`
+
+## Phase 5: 生成验收报告 + 合并脚本 + 启动预览
+
+### 五个不可约元素
+
+```
+                验收报告
+                   │
+        ┌──────────┼──────────┐
+        │          │          │
+   Criteria    Experience    Gap
+   Verdict    Validation   Assessment
+  (标准过了吗) (用得顺吗)  (缺口要紧吗)
+        │          │          │
+        └──────────┼──────────┘
+                   │
+         ┌─────────┴─────────┐
+         │                   │
+     Regression           Verdict
+     (旧的没坏吧)         (合不合并)
+```
+
+### 资源管理
+
+所有验收产物统一放在 `.worktree/` 下：
+```
+.worktree/
+├── REQ.md                             # 需求报告（输入）
+├── IMPL_REPORT.md                     # 实现报告（输入）
+├── IMPL_REPORT.assets/                # 实现截图（输入）
+├── ACCEPT_REPORT.md                   # 验收报告（输出）
+├── ACCEPT_REPORT.assets/              # 验收截图
+│   ├── accept-{简述}-criteria-{N}.png
+│   ├── accept-{简述}-exp-{N}.png
+│   └── accept-{简述}-regression-{N}.png
+└── merge.sh                           # 合并脚本（输出）
+```
+
+### 报告模板
+
+```markdown
+# 验收报告：{一句话标题}
+
+> 验收时间：{YYYY-MM-DD HH:mm}
+> 关联需求：[REQ.md](REQ.md)
+> 关联实现：[IMPL_REPORT.md](IMPL_REPORT.md)
+> 分支：`{branch}`
+
+## 1. Criteria Verdict（标准裁定）
+
+### 逐项核对
+
+| # | 验收标准 | 结论 | 偏差说明 |
+|---|----------|------|----------|
+| 1 | {Given..When..Then} | ✅ 通过 | — |
+| 2 | {Given..When..Then} | ⚠️ 部分通过 | {实际行为与标准的具体差异} |
+| 3 | {Given..When..Then} | ❌ 未通过 | {实际行为与标准的具体差异} |
+
+### 证据
+
+| 验证项 | 截图 |
+|--------|------|
+| {步骤描述} | ![criteria](ACCEPT_REPORT.assets/accept-{简述}-criteria-{N}.png) |
+
+### 结果
+{✅ 全部通过 / ⚠️ 部分通过（N/M 条） / ❌ 未通过}
+{一句话说明}
+
+## 2. Experience Validation（体验验证）
+
+### 用户旅程
+{以 Who 的视角描述连续使用过程}
+
+### 四维度评估
+
+| 维度 | 结果 | 说明 |
+|------|------|------|
+| Happy Path | ✅/⚠️/❌ | {具体说明} |
+| 流程衔接 | ✅/⚠️/❌ | {具体说明} |
+| 认知负荷 | ✅/⚠️/❌ | {具体说明} |
+| 异常恢复 | ✅/⚠️/❌ | {具体说明} |
+
+### 证据
+
+| 验证项 | 截图 |
+|--------|------|
+| {步骤描述} | ![exp](ACCEPT_REPORT.assets/accept-{简述}-exp-{N}.png) |
+
+### 标准覆盖反馈
+{如果体验验证发现了 Acceptance 标准未覆盖的问题，记录在此}
+
+### 结果
+{✅ 通过 / ⚠️ 部分通过 / ❌ 未通过}
+{一句话说明}
+
+## 3. Gap Assessment（缺口评估）
+
+### 声明的缺口
+
+| 缺口 | 类型 | 影响面 | 严重度 | 紧迫度 | 判定 |
+|------|------|--------|--------|--------|------|
+| {缺口描述} | 未实现/限制/债务 | {影响范围} | {功能不可用/体验瑕疵/极端情况} | {合并前/合并后/可搁置} | ✅/🚫 |
+
+### 发现的缺口
+{验收过程中发现的、实现报告未声明的缺口。无则写"无"}
+
+| 缺口 | 性质 | 判定 |
+|------|------|------|
+| {缺口描述} | {需求理解偏差/实现遗漏} | ✅/🚫 |
+
+### 结果
+{✅ 可接受 / ⚠️ 部分可接受 / ❌ 不可接受}
+{一句话说明}
+
+## 4. Regression Result（回归验证）
+
+### 静态检查
+- `make typecheck`：{通过/失败}
+- `make test`：{通过/失败（N 文件 / M 用例）}
+
+### Constraint 合规
+| # | 约束 | 结果 |
+|---|------|------|
+| 1 | {约束描述} | ✅ 未违反 / ❌ 已违反 |
+
+### Change Set 区域验证
+| 区域 | 实现报告声明 | 实际验证结果 |
+|------|-------------|-------------|
+| {区域 1} | {变更说明} | ✅ 正常 / ❌ 发现回归 |
+
+### 结果
+{✅ 通过 / ❌ 未通过}
+{一句话说明}
+
+## 5. Verdict（裁定）
+
+### 判决
+{✅ 合并 / ⚠️ 有条件合并 / ❌ 驳回}
+
+### 证据摘要
+- **Criteria Verdict**：{一句话}
+- **Experience Validation**：{一句话}
+- **Gap Assessment**：{一句话}
+- **Regression**：{一句话}
+
+### 阻塞项
+{必须修复后才能合并的问题。无则写"无"}
+
+### Follow-up 清单
+{合并后需跟进的事项——可接受的 Gap、体验优化建议等。无则写"无"}
+
+## 过程备注
+
+{执行过程中捕获的学习信号。无则留空}
+```
+
+### 报告自检清单
+
+- [ ] **Criteria Verdict**：REQ.md 的每条 Acceptance 标准都逐项核对了吗？截图附了吗？
+- [ ] **Experience Validation**：以 Who 的视角走完整个旅程了吗？四维度都评估了吗？
+- [ ] **Gap Assessment**：IMPL_REPORT.md 的每个 Known Gap 都评估了吗？有没有发现未声明的缺口？
+- [ ] **Regression**：静态检查跑了吗？Constraint 逐项确认了吗？
+- [ ] **Verdict**：证据摘要覆盖四项吗？阻塞项和 Follow-up 列清楚了吗？
+
+### 生成合并脚本
+
+如果 `.worktree/meta.json` 存在（工作区模式），生成 `.worktree/merge.sh`：
+
+```bash
+#!/bin/bash
+# 验收通过的合并脚本 — <工作区名称> → <baseBranch>
+# 验收报告: ACCEPT_REPORT.md
+# 生成时间: <时间>
+set -e
+
+MAIN_REPO="<主仓库绝对路径>"
+WT_NAME="<工作区名称>"
+
+echo "🔀 合并 $WT_NAME → <baseBranch>"
+make -C "$MAIN_REPO" wt-merge NAME="$WT_NAME"
+
+# 合并后检测 schema 变更
+if git -C "$MAIN_REPO" diff HEAD~1 --name-only | grep -qE "(drizzle/|db/schema\.ts)"; then
+    echo ""
+    echo "⚠️  检测到 schema 变更，请执行: make db-generate"
+fi
+
+echo ""
+echo "✅ 合并完成"
+echo "下一步（可选）："
+echo "  make wt-delete NAME=$WT_NAME    # 删除工作区"
+```
+
+如果不在工作区（无 meta.json），生成分支合并脚本：
+
+```bash
+#!/bin/bash
+# 验收通过的合并脚本 — <当前分支> → main
+# 验收报告: ACCEPT_REPORT.md
+set -e
+
+CURRENT_BRANCH="<当前分支>"
+TARGET_BRANCH="main"
+
+echo "🔀 合并 $CURRENT_BRANCH → $TARGET_BRANCH"
+git checkout "$TARGET_BRANCH"
+git merge --squash "$CURRENT_BRANCH"
+git commit -m "feat: <实现摘要>"
+
+echo ""
+echo "✅ 合并完成"
+```
+
+生成后设为可执行：`chmod +x .worktree/merge.sh`
+
+### 启动/更新报告查看器
+
+```bash
+node .claude/skills/shared/serve-req-chain.mjs
+# 用 Bash(run_in_background=true) 执行
+# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
+```
+
+### 流程
+
+1. 生成报告内容，展示给用户
+2. 用 `AskUserQuestion` 确认报告是否准确
+3. 确认后写入 `.worktree/ACCEPT_REPORT.md`
+4. 生成 `merge.sh`
+5. 启动 HTML 查看器，提示用户在浏览器中查看和操作
+
+## 执行规则
+
+1. **独立判断**：验收者是第三方裁判，不是实现者的助手。实现报告的声明都是"待质证假设"
+2. **必须逐条核对**：REQ.md 的每条 Acceptance 标准都要用 Playwright 实际验证，不能只看 IMPL_REPORT.md 的 Traceability
+3. **体验必须连续走**：不是逐条检查标准，而是作为真实用户连续使用，检验标准之间的衔接
+4. **缺口必须评估**：不信"影响不大"声明，独立判断每个 Known Gap 的影响
+5. **Constraint 必须验证**：不信"未违反"声明，抽检验证
+6. **静态检查不跳过**：`make typecheck` + `make test` 必须通过
+7. **截图取证**：关键验证步骤必须截图
+8. **Verdict 有理有据**：判决必须基于四项验证证据，不可跳过
+9. **灰色地带透明化**：部分通过的标准、体验瑕疵、可接受的缺口——都要明确记录，不能含糊
+10. **过程备注**：执行过程中遇到重试、惊讶、绕路、确认、环境等偏差信号时，记录到报告的「过程备注」节。格式：`[重试/惊讶/绕路/确认/环境] 简述`
+
+## 与其他技能的协作
+
+- **完整链条**：`/requirement` → 需求报告 → `/implement` → 实现报告 → `/accept` → 验收报告 → 合并
+- **在工作区中**：`/create-wt` → `/requirement` → `/implement` → `/accept`（验收报告中可直接合并）
+- **质量闸门**：验收报告是需求链路合并前的最后一道门，Verdict 决定是否放行
+- **与验证报告的区别**：`/verify` 用于缺陷链路（诊断→修复→验证），`/accept` 用于需求链路（需求→实现→验收）

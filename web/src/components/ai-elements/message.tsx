@@ -19,7 +19,11 @@ import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ExternalLinkIcon,
+} from "lucide-react";
 import {
   createContext,
   memo,
@@ -324,6 +328,35 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+/** Shared components override: external links open in new tab */
+export const streamdownComponents: ComponentProps<typeof Streamdown>["components"] =
+  {
+    a: ({ href, children, ...props }) => {
+      const isExternal =
+        href && (href.startsWith("http://") || href.startsWith("https://"));
+      return (
+        <a
+          href={href}
+          className={cn(
+            "font-medium underline underline-offset-auto",
+            isExternal && "inline-flex items-baseline gap-0.5",
+            props.className
+          )}
+          {...(isExternal && {
+            target: "_blank",
+            rel: "noopener noreferrer",
+          })}
+          {...props}
+        >
+          {children}
+          {isExternal && (
+            <ExternalLinkIcon className="inline-block size-3 self-center" />
+          )}
+        </a>
+      );
+    },
+  };
+
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
@@ -331,6 +364,7 @@ export const MessageResponse = memo(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
+      components={streamdownComponents}
       plugins={streamdownPlugins}
       {...props}
     />

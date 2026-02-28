@@ -15,7 +15,7 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write, Edit, mcp__
 3. **定位**：从症状追溯到根因，找到具体代码位置
 4. **报告**：输出标准化缺陷报告，含复现证据和修复方向
 
-与 `clarify-req` 的区别：`clarify-req` 问"要做什么"，`diagnose` 问"哪里坏了、为什么坏、怎么修"。
+与 `requirement` 的区别：`requirement` 是需求链路的委托书（"要造什么"），`diagnose` 是缺陷链路的起诉书（"哪里坏了"）。
 
 ## Phase 0: 采访——明晰问题
 
@@ -261,6 +261,10 @@ mcp__playwright__browser_install
 - **最小改动**：{具体改动范围}
 - **风险**：{可能影响的其他功能}
 - **验收标准**：Given {前置条件}, When {操作}, Then {预期结果}
+
+## 过程备注
+
+{执行过程中捕获的学习信号。无则留空}
 ```
 
 ### 报告自检清单
@@ -277,7 +281,13 @@ mcp__playwright__browser_install
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确、是否需要补充
 3. 确认后用 `Write` 写入文件
-4. 告知用户报告位置，并提示后续操作（如 `/create-wt` 创建工作区修复、直接修复等）
+4. 启动/更新报告查看器：
+   ```bash
+   node .claude/skills/shared/serve-defect-chain.mjs
+   # 用 Bash(run_in_background=true) 执行
+   # 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
+   ```
+5. 告知用户报告位置，并提示后续操作（如 `/create-wt` 创建工作区修复、直接修复等）
 
 ## 执行规则
 
@@ -290,6 +300,7 @@ mcp__playwright__browser_install
 7. **收敛而非发散**：每一轮都在缩小范围
 8. **尊重用户判断**：用户说"不是这个方向"就换方向
 9. **环境检查不遗漏**：Docker、服务、数据三件套确认后再复现
+10. **过程备注**：执行过程中遇到重试、惊讶、绕路、确认、环境等偏差信号时，记录到报告的「过程备注」节。格式：`[重试/惊讶/绕路/确认/环境] 简述`
 
 ## 与其他技能的协作
 

@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
-import { CalendarIcon, UserIcon } from "lucide-react";
+import { CalendarIcon, UserIcon, GitCompareArrowsIcon } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -9,9 +10,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
-import type { VersionDetail, AgentSnapshot } from "@/lib/versions/types";
+import type { VersionDetail, VersionListItem, AgentSnapshot } from "@/lib/versions/types";
+import { VersionDiffSheet } from "./version-diff-sheet";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -20,6 +23,10 @@ interface VersionDetailSheetProps {
   versionId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** All versions for the diff picker */
+  versions: VersionListItem[];
+  /** The current editing version ID (for "compare with current") */
+  editingVersionId: string | null;
 }
 
 function formatDateTime(dateStr: string) {
@@ -73,7 +80,11 @@ export function VersionDetailSheet({
   versionId,
   open,
   onOpenChange,
+  versions,
+  editingVersionId,
 }: VersionDetailSheetProps) {
+  const [diffOpen, setDiffOpen] = useState(false);
+
   const { data: detail, isLoading } = useSWR<VersionDetail>(
     versionId ? `/api/agents/${agentId}/versions/${versionId}` : null,
     fetcher
@@ -82,62 +93,85 @@ export function VersionDetailSheet({
   const snapshot = detail?.snapshot;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right">
-        <SheetHeader>
-          {detail ? (
-            <SheetTitle className="font-mono">
-              v{detail.version}
-            </SheetTitle>
-          ) : (
-            <SheetTitle>Version Detail</SheetTitle>
-          )}
-          <SheetDescription className="sr-only">
-            Version details
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right">
+          <SheetHeader>
+            {detail ? (
+              <SheetTitle className="font-mono">
+                v{detail.version}
+              </SheetTitle>
+            ) : (
+              <SheetTitle>Version Detail</SheetTitle>
+            )}
+            <SheetDescription className="sr-only">
+              Version details
+            </SheetDescription>
+          </SheetHeader>
 
-        {isLoading || !detail ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Spinner className="size-6" />
-          </div>
-        ) : (
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-4 px-4">
-              {/* Metadata */}
-              <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="size-3.5" />
-                  <span>{formatDateTime(detail.createdAt)}</span>
-                </div>
-                {(detail.creatorNickname || detail.creatorEmail) && (
+          {isLoading || !detail ? (
+            <div className="flex flex-1 items-center justify-center">
+              <Spinner className="size-6" />
+            </div>
+          ) : (
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="space-y-4 px-4">
+                {/* Metadata */}
+                <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <UserIcon className="size-3.5" />
-                    <span>
-                      {detail.creatorNickname || detail.creatorEmail}
-                    </span>
+                    <CalendarIcon className="size-3.5" />
+                    <span>{formatDateTime(detail.createdAt)}</span>
+                  </div>
+                  {(detail.creatorNickname || detail.creatorEmail) && (
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="size-3.5" />
+                      <span>
+                        {detail.creatorNickname || detail.creatorEmail}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Changelog */}
+                {detail.changelog && (
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">
+                      Changelog
+                    </p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {detail.changelog}
+                    </p>
                   </div>
                 )}
+
+                {/* Snapshot summary */}
+                {snapshot && <SnapshotSummary snapshot={snapshot} />}
+
+                {/* Compare button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setDiffOpen(true)}
+                >
+                  <GitCompareArrowsIcon className="mr-2 size-3.5" />
+                  Compare
+                </Button>
               </div>
+            </ScrollArea>
+          )}
+        </SheetContent>
+      </Sheet>
 
-              {/* Changelog */}
-              {detail.changelog && (
-                <div>
-                  <p className="mb-1 text-xs font-medium text-muted-foreground">
-                    Changelog
-                  </p>
-                  <p className="text-sm whitespace-pre-wrap">
-                    {detail.changelog}
-                  </p>
-                </div>
-              )}
-
-              {/* Snapshot summary */}
-              {snapshot && <SnapshotSummary snapshot={snapshot} />}
-            </div>
-          </ScrollArea>
-        )}
-      </SheetContent>
-    </Sheet>
+      <VersionDiffSheet
+        agentId={agentId}
+        fromVersionId={versionId}
+        fromVersionLabel={detail?.version ?? ""}
+        versions={versions}
+        editingVersionId={editingVersionId}
+        open={diffOpen}
+        onOpenChange={setDiffOpen}
+      />
+    </>
   );
 }

@@ -223,6 +223,10 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 Blast Radius 标记的影响区域走一遍，行为正常：
 - {验证项 1}：正常
 - {验证项 2}：正常
+
+## 过程备注
+
+{执行过程中捕获的学习信号。无则留空}
 ```
 
 ### 报告自检清单
@@ -238,7 +242,13 @@ Blast Radius 标记的影响区域走一遍，行为正常：
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确
 3. 确认后写入 `.worktree/FIX_REPORT.md`
-4. 告知用户后续操作（如 `/pr-wt` 提交合并、`/review-wt` 审查等）
+4. 启动/更新报告查看器：
+   ```bash
+   node .claude/skills/shared/serve-defect-chain.mjs
+   # 用 Bash(run_in_background=true) 执行
+   # 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
+   ```
+5. 告知用户后续操作（如 `/verify` 验证、`/test-guard` 守护等）
 
 ## 执行规则
 
@@ -249,6 +259,7 @@ Blast Radius 标记的影响区域走一遍，行为正常：
 5. **静态检查不跳过**：`make typecheck` + `make test` 必须通过
 6. **截图取证**：修复后的正向验证必须截图
 7. **环境启动不卡死**：15s 超时就 `make down` + `make up` 重启，仍失败报错
+8. **过程备注**：执行过程中遇到重试、惊讶、绕路、确认、环境等偏差信号时，记录到报告的「过程备注」节。格式：`[重试/惊讶/绕路/确认/环境] 简述`
 
 ## 与其他技能的协作
 

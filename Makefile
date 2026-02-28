@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test test-viewer e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
 
 # ============================================================
 # Setup
@@ -137,6 +137,10 @@ typecheck:
 
 test:
 	cd web && npm test
+
+## 链路报告查看器守护测试（Node.js 原生 test runner）
+test-viewer:
+	node --test .claude/skills/shared/__tests__/chain-viewer.test.mjs
 
 e2e:
 	cd web && npx playwright test
