@@ -598,6 +598,14 @@ export function startViewer(config) {
   .chain-node.report  { border: 1px solid rgba(188,140,255,0.3); }
   .tab-badge.report   { background: rgba(188,140,255,0.15); }
 
+  .chain-node.integrate, .tab-badge.integrate { background: rgba(210,153,34,0.1);  color: var(--yellow); }
+  .chain-node.integrate { border: 1px solid rgba(210,153,34,0.3); }
+  .tab-badge.integrate  { background: rgba(210,153,34,0.15); }
+
+  .chain-node.release,   .tab-badge.release   { background: rgba(63,185,80,0.1);   color: var(--green); }
+  .chain-node.release   { border: 1px solid rgba(63,185,80,0.3); }
+  .tab-badge.release    { background: rgba(63,185,80,0.15); }
+
   /* Tabs */
   .tab-bar {
     display: flex;
