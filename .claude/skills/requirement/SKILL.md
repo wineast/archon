@@ -113,12 +113,6 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
    - **技术约束**：从代码调研中提取——"我发现 XX 有 N 处调用，如果改接口都要跟着改"
    - **兼容约束**：现有行为哪些必须保持不变？
 
-4. **预期变更预览**
-   - UX：before → after
-   - DX：接口/API 变化（如有）
-   - Database：schema 变更（如有）
-   - Breaking Changes：不兼容变更穷举
-
 ## Phase 3: 输出需求报告
 
 ### 输出位置
@@ -228,28 +222,6 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 
 ### 不可打破的现有行为
 - {必须保持不变的现有功能/接口}
-
-## 预期变更
-
-### UX
-#### 现状
-{当前用户操作路径 / 界面}
-#### 目标
-{期望的用户操作路径 / 界面}
-
-### DX
-<条件——涉及接口/API 变更时展示>
-#### 现状
-{当前接口/调用方式}
-#### 目标
-{期望的接口/调用方式}
-
-### Database
-<条件——涉及 schema 变更时展示>
-{新增/修改的表和列}
-
-### Breaking Changes
-{不兼容变更穷举。无则写"无"}
 
 ## 参考
 - {相关代码路径、可复用模块、规范文档——从代码调研中提取}
