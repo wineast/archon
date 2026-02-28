@@ -67,14 +67,14 @@ export async function PATCH(
     );
   }
 
-  // Validate no circular dependency when data or key changes
+  // Validate no circular dependency when data or key changes (scoped to current version)
   if (body.data !== undefined || body.key !== undefined) {
     const agentId = existing.agentId;
-    if (agentId) {
+    if (agentId && existing.versionId) {
       const allRows = await db
         .select({ id: datasets.id, key: datasets.key, data: datasets.data })
         .from(datasets)
-        .where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt)));
+        .where(and(eq(datasets.versionId, existing.versionId), isNull(datasets.deletedAt)));
 
       const updatedRows = allRows.map((r) =>
         r.id === id

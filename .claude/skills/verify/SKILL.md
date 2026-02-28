@@ -366,7 +366,7 @@ echo "✅ 合并完成"
 
 ```bash
 # 后台启动
-node .claude/skills/verify/serve-report.mjs
+node .claude/skills/test-guard/serve-report.mjs
 # 用 Bash(run_in_background=true) 执行
 ```
 

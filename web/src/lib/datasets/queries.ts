@@ -160,9 +160,9 @@ export function validateNoCycle(
 }
 
 /**
- * Fetch all datasets for an agent.
+ * Fetch all datasets for an agent version.
  */
-export async function getDatasets(agentId: string) {
+export async function getDatasets(agentId: string, versionId: string) {
   return db
     .select({
       key: datasets.key,
@@ -170,7 +170,7 @@ export async function getDatasets(agentId: string) {
       data: datasets.data,
     })
     .from(datasets)
-    .where(and(eq(datasets.agentId, agentId), isNull(datasets.deletedAt)));
+    .where(and(eq(datasets.versionId, versionId), isNull(datasets.deletedAt)));
 }
 
 /**
@@ -226,9 +226,9 @@ export function resolveDatasets(
 }
 
 /**
- * Fetch and resolve all datasets for an agent.
+ * Fetch and resolve all datasets for an agent version.
  */
-export async function getResolvedDatasets(agentId: string) {
-  const rows = await getDatasets(agentId);
+export async function getResolvedDatasets(agentId: string, versionId: string) {
+  const rows = await getDatasets(agentId, versionId);
   return resolveDatasets(rows);
 }

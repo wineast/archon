@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Verify Report Web Viewer
+ * Report Chain Web Viewer
  * 独立 Node.js 脚本，零外部依赖。
- * 读取 .worktree/ 下的三份报告（DEFECT.md / FIX_REPORT.md / VERIFY_REPORT.md），
+ * 读取 .worktree/ 下的报告（DEFECT.md / FIX_REPORT.md / VERIFY_REPORT.md / TEST_SPEC.md），
  * 提供 Web 界面查看完整证据链、一键合并、删除工作区。
  *
  * Usage: node .claude/skills/verify/serve-report.mjs
@@ -23,6 +23,7 @@ const FIX_PATH = join(WORKTREE_DIR, "FIX_REPORT.md");
 const DEFECT_PATH = join(WORKTREE_DIR, "DEFECT.md");
 const MERGE_SH_PATH = join(WORKTREE_DIR, "merge.sh");
 const META_PATH = join(WORKTREE_DIR, "meta.json");
+const TEST_SPEC_PATH = join(WORKTREE_DIR, "TEST_SPEC.md");
 
 function readFile(path) {
   try { return readFileSync(path, "utf-8"); } catch { return null; }
@@ -148,14 +149,16 @@ function buildHtml() {
   const verifyMd = readFile(VERIFY_PATH) || "";
   const fixMd = readFile(FIX_PATH) || "";
   const defectMd = readFile(DEFECT_PATH) || "";
+  const testSpecMd = readFile(TEST_SPEC_PATH) || "";
   const hasMergeSh = existsSync(MERGE_SH_PATH);
+  const hasTestSpec = !!testSpecMd;
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Verify: ${title}</title>
+<title>${hasTestSpec ? 'Guard' : 'Verify'}: ${title}</title>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
 <style>
   :root {
@@ -233,6 +236,7 @@ function buildHtml() {
   .tab-badge.defect { background: rgba(248,81,73,0.15); color: var(--red); }
   .tab-badge.fix { background: rgba(210,153,34,0.15); color: var(--yellow); }
   .tab-badge.verify { background: rgba(63,185,80,0.15); color: var(--green); }
+  .tab-badge.guard { background: rgba(88,166,255,0.15); color: var(--accent); }
 
   /* Tab content */
   .tab-panel {
@@ -303,6 +307,7 @@ function buildHtml() {
   .chain-node.defect { background: rgba(248,81,73,0.1); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
   .chain-node.fix { background: rgba(210,153,34,0.1); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); }
   .chain-node.verify { background: rgba(63,185,80,0.1); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .chain-node.guard { background: rgba(88,166,255,0.1); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); }
   .chain-arrow { color: var(--text-muted); font-size: 16px; }
 
   /* Actions area */
@@ -486,6 +491,7 @@ function buildHtml() {
     <span class="chain-node fix">修复报告</span>
     <span class="chain-arrow">\u2192</span>
     <span class="chain-node verify">验证报告</span>
+    ${hasTestSpec ? '<span class="chain-arrow">\\u2192</span><span class="chain-node guard">测试守护</span>' : ''}
   </div>
 
   <!-- Verdict banner -->
@@ -499,9 +505,12 @@ function buildHtml() {
     <button class="tab-btn" data-tab="fix" onclick="switchTab('fix')">
       <span class="tab-badge fix">2</span> 修复报告
     </button>
-    <button class="tab-btn active" data-tab="verify" onclick="switchTab('verify')">
+    <button class="tab-btn${hasTestSpec ? '' : ' active'}" data-tab="verify" onclick="switchTab('verify')">
       <span class="tab-badge verify">3</span> 验证报告
     </button>
+    ${hasTestSpec ? `<button class="tab-btn active" data-tab="guard" onclick="switchTab('guard')">
+      <span class="tab-badge guard">4</span> 测试守护
+    </button>` : ''}
   </div>
 
   <!-- Tab panels -->
@@ -511,9 +520,12 @@ function buildHtml() {
   <div class="tab-panel" id="panel-fix">
     <div class="panel-body" id="content-fix"></div>
   </div>
-  <div class="tab-panel active" id="panel-verify">
+  <div class="tab-panel${hasTestSpec ? '' : ' active'}" id="panel-verify">
     <div class="panel-body" id="content-verify"></div>
   </div>
+  ${hasTestSpec ? `<div class="tab-panel active" id="panel-guard">
+    <div class="panel-body" id="content-guard"></div>
+  </div>` : ''}
 
   <!-- Actions -->
   <div class="actions" id="actions-area" ${hasMergeSh ? '' : 'style="display:none"'}>
@@ -565,7 +577,8 @@ function buildHtml() {
   const reports = {
     defect: ${JSON.stringify(defectMd)},
     fix: ${JSON.stringify(fixMd)},
-    verify: ${JSON.stringify(verifyMd)}
+    verify: ${JSON.stringify(verifyMd)},
+    guard: ${JSON.stringify(testSpecMd)}
   };
 
   // Rewrite image paths to /assets/ route
@@ -912,6 +925,15 @@ const server = createServer((req, res) => {
         ...upStatus,
       };
 
+      // Upstream ahead/behind relative to its remote tracking branch
+      try {
+        const upRemote = execSync(`git rev-parse --abbrev-ref ${baseBranch}@{upstream}`, { cwd: upstreamPath, encoding: "utf-8" }).trim();
+        const upAhead = execSync(`git rev-list ${upRemote}..${baseBranch} --count`, { cwd: upstreamPath, encoding: "utf-8" }).trim();
+        const upBehind = execSync(`git rev-list ${baseBranch}..${upRemote} --count`, { cwd: upstreamPath, encoding: "utf-8" }).trim();
+        result.upstream.ahead = parseInt(upAhead);
+        result.upstream.behind = parseInt(upBehind);
+      } catch {}
+
       // Commits between baseBranch and HEAD
       try {
         const logRaw = execSync(
@@ -1028,7 +1050,7 @@ const server = createServer((req, res) => {
 server.listen(0, () => {
   const port = server.address().port;
   const url = `http://localhost:${port}`;
-  console.log(`Verify Report Viewer: ${url}`);
+  console.log(`Report Viewer: ${url}`);
   console.log(`Branch: ${currentBranch} → ${baseBranch}`);
   console.log("Press Ctrl+C to stop.\n");
 
