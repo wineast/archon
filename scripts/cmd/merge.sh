@@ -89,6 +89,15 @@ cmd_merge() {
 
     # Squash 合并：将工作区所有 commit 压缩为 1 个
     if git merge --squash "$wt_branch"; then
+        # 检查 squash 后是否有实际变更
+        if git diff --cached --quiet 2>/dev/null; then
+            success "已经是最新，无需合并"
+            echo ""
+            echo "下一步（可选）："
+            echo "  make wt-delete NAME=$target    # 删除工作区"
+            return 0
+        fi
+
         # 收集工作区 commit 摘要作为 commit body
         local commit_log
         commit_log=$(git log "$base_branch".."$wt_branch" --oneline --no-merges 2>/dev/null || true)

@@ -705,6 +705,12 @@ function buildHtml() {
         } else if (mc.status === "conflict") {
           mergeCheckEl.className = "merge-check conflict";
           mergeCheckEl.textContent = "\\u274C 检测到合并冲突，需要先解决冲突再合并";
+        } else if (mc.status === "up_to_date") {
+          mergeCheckEl.className = "merge-check clean";
+          mergeCheckEl.textContent = "\\u2705 " + mc.message;
+          btnMerge.disabled = true;
+          btnMerge.textContent = "Already up to date";
+          deleteWrap.style.display = "";
         } else if (mc.status === "clean") {
           mergeCheckEl.className = "merge-check clean";
           mergeCheckEl.textContent = "\\u2705 可以合并";
@@ -951,6 +957,12 @@ const server = createServer((req, res) => {
         res.end(JSON.stringify({ status: "behind", behind: parseInt(behind), message: `落后上游 ${behind} 个 commit` }));
         return;
       }
+      // Check if there's actually anything to merge (diff between branches)
+      const diffCheck = execSync(`git diff ${baseBranch}..HEAD --quiet 2>/dev/null; echo $?`, { cwd: CWD, encoding: "utf-8", shell: true }).trim();
+      if (diffCheck === "0") {
+        res.end(JSON.stringify({ status: "up_to_date", message: "已经是最新，无需合并" }));
+        return;
+      }
       try {
         execSync(`git merge-tree --write-tree ${baseBranch} ${currentBranch}`, { cwd: CWD, encoding: "utf-8" });
         res.end(JSON.stringify({ status: "clean", message: "无冲突，可以合并" }));
@@ -974,13 +986,15 @@ const server = createServer((req, res) => {
       res.end("Already merged");
       return;
     }
-    if (!existsSync(MERGE_SH_PATH)) {
+    // Call worktree.sh directly (not through make) to avoid output buffering
+    const scriptPath = join(mainRepo, "scripts", "worktree.sh");
+    if (!existsSync(scriptPath) || !wtName) {
       res.writeHead(400);
-      res.end("merge.sh not found");
+      res.end("Cannot determine merge parameters");
       return;
     }
     mergeState = "running";
-    const child = sseExec("bash", [MERGE_SH_PATH], { cwd: CWD }, res);
+    const child = sseExec(scriptPath, ["merge", wtName], { cwd: mainRepo }, res);
     child.on("close", (code) => {
       mergeState = code === 0 ? "success" : "failed";
     });
@@ -999,7 +1013,8 @@ const server = createServer((req, res) => {
       return;
     }
     deleteState = "running";
-    const child = sseExec("make", ["-C", mainRepo, "wt-delete", `NAME=${wtName}`], {}, res);
+    const scriptPath = join(mainRepo, "scripts", "worktree.sh");
+    const child = sseExec(scriptPath, ["delete", wtName], { cwd: mainRepo }, res);
     child.on("close", (code) => {
       deleteState = code === 0 ? "success" : "failed";
     });
