@@ -10,6 +10,7 @@ import type {
   AgentFileSnapshotItem,
   EmbedTokenSnapshotItem,
 } from "@/lib/versions/types";
+import { CURRENT_EXPORT_VERSION } from "@/lib/versions/migrations";
 
 /** GET — export agent as ZIP (manifest.json + files/) */
 export async function GET(
@@ -80,7 +81,7 @@ export async function GET(
   }));
 
   const exportData: AgentExportData = {
-    exportVersion: 1,
+    exportVersion: CURRENT_EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     agent: {
       name: agent.name,
@@ -95,8 +96,8 @@ export async function GET(
       contextCompressionEnabled: agent.contextCompressionEnabled,
     },
     versions,
-    ...(filesMetadata.length > 0 ? { files: filesMetadata } : {}),
-    ...(embedTokensSnapshot.length > 0 ? { embedTokens: embedTokensSnapshot } : {}),
+    files: filesMetadata,
+    embedTokens: embedTokensSnapshot,
   };
 
   zip.file("manifest.json", JSON.stringify(exportData, null, 2));

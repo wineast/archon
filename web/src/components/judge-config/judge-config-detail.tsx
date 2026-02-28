@@ -8,6 +8,7 @@ import {
   Trash2Icon,
   PlusIcon,
   XIcon,
+  UndoIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -15,12 +16,17 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { MdEditor } from "@/components/editors/md-editor";
+import { GuideDialog } from "@/components/ui/guide-dialog";
 import type { JudgeConfigRow } from "@/db/schema";
 import type { Dimension } from "@/lib/eval/types";
+import { DEFAULT_PROMPT_TEMPLATE, DEFAULT_TURN_PROMPT_TEMPLATE } from "@/lib/eval/judge-prompt";
+import promptTemplateGuide from "../../../guide/judge-prompt-template.md";
+import turnPromptTemplateGuide from "../../../guide/judge-turn-prompt-template.md";
 
 interface JudgeConfigDetailProps {
   config: JudgeConfigRow;
-  onSave: (id: string, data: { name: string; dimensions: Dimension[] }) => Promise<void>;
+  onSave: (id: string, data: { name: string; dimensions: Dimension[]; promptTemplate?: string | null; turnPromptTemplate?: string | null }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onActivate: (id: string) => Promise<void>;
 }
@@ -35,6 +41,8 @@ export function JudgeConfigDetail({
   const [dimensions, setDimensions] = useState<(Dimension & { _id: string })[]>(
     config.dimensions.map((d) => ({ ...d, _id: nanoid() }))
   );
+  const [promptTemplate, setPromptTemplate] = useState(config.promptTemplate ?? "");
+  const [turnPromptTemplate, setTurnPromptTemplate] = useState(config.turnPromptTemplate ?? "");
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -43,12 +51,14 @@ export function JudgeConfigDetail({
 
   const isDirty = useMemo(() => {
     if (name !== config.name) return true;
+    if (promptTemplate !== (config.promptTemplate ?? "")) return true;
+    if (turnPromptTemplate !== (config.turnPromptTemplate ?? "")) return true;
     if (dimensions.length !== config.dimensions.length) return true;
     return dimensions.some((d, i) => {
       const orig = config.dimensions[i];
       return d.key !== orig.key || d.label !== orig.label || d.weight !== orig.weight || d.min !== orig.min || d.max !== orig.max;
     });
-  }, [name, dimensions, config]);
+  }, [name, promptTemplate, turnPromptTemplate, dimensions, config]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -56,11 +66,13 @@ export function JudgeConfigDetail({
       await onSave(config.id, {
         name,
         dimensions: dimensions.map(({ _id: _, ...rest }) => rest),
+        promptTemplate: promptTemplate || null,
+        turnPromptTemplate: turnPromptTemplate || null,
       });
     } finally {
       setSaving(false);
     }
-  }, [config.id, name, dimensions, onSave]);
+  }, [config.id, name, dimensions, promptTemplate, turnPromptTemplate, onSave]);
 
   const handleDelete = useCallback(async () => {
     setDeleting(true);
@@ -78,6 +90,8 @@ export function JudgeConfigDetail({
   const handleReset = useCallback(() => {
     setName(config.name);
     setDimensions(config.dimensions.map((d) => ({ ...d, _id: nanoid() })));
+    setPromptTemplate(config.promptTemplate ?? "");
+    setTurnPromptTemplate(config.turnPromptTemplate ?? "");
   }, [config]);
 
   const addDimension = useCallback(() => {
@@ -209,6 +223,62 @@ export function JudgeConfigDetail({
               <PlusIcon className="mr-1 size-3" />
               Add Dimension
             </Button>
+          </div>
+
+          {/* Prompt Template */}
+          <div data-testid="section-prompt-template">
+            <div className="flex items-center gap-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Prompt Template
+              </label>
+              <GuideDialog title="Prompt Template" content={promptTemplateGuide} />
+              {promptTemplate !== DEFAULT_PROMPT_TEMPLATE && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => setPromptTemplate(DEFAULT_PROMPT_TEMPLATE)}
+                  title="Restore default"
+                  data-testid="btn-restore-prompt-template"
+                >
+                  <UndoIcon className="size-3" />
+                </Button>
+              )}
+            </div>
+            <MdEditor
+              value={promptTemplate}
+              onChange={setPromptTemplate}
+              variables={["mode", "user_input", "expected_output", "actual_response", "conversation"]}
+              height="160px"
+              className="mt-1"
+            />
+          </div>
+
+          {/* Turn Prompt Template */}
+          <div data-testid="section-turn-prompt-template">
+            <div className="flex items-center gap-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Turn Prompt Template
+              </label>
+              <GuideDialog title="Turn Prompt Template" content={turnPromptTemplateGuide} />
+              {turnPromptTemplate !== DEFAULT_TURN_PROMPT_TEMPLATE && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => setTurnPromptTemplate(DEFAULT_TURN_PROMPT_TEMPLATE)}
+                  title="Restore default"
+                  data-testid="btn-restore-turn-prompt-template"
+                >
+                  <UndoIcon className="size-3" />
+                </Button>
+              )}
+            </div>
+            <MdEditor
+              value={turnPromptTemplate}
+              onChange={setTurnPromptTemplate}
+              variables={["mode", "user_input", "expected_output", "actual_response", "conversation"]}
+              height="120px"
+              className="mt-1"
+            />
           </div>
         </div>
       </ScrollArea>

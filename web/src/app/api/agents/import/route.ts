@@ -9,6 +9,7 @@ import { ensureUniqueSlug } from "@/lib/agents/slug";
 import { requireOrgRole } from "@/lib/auth/require-org-role";
 import { restoreSnapshot } from "@/lib/versions/snapshot";
 import { validateExportData, type AgentExportData } from "@/lib/versions/types";
+import { migrateExportData } from "@/lib/versions/migrations";
 
 /** Parse ZIP body → manifest + zip handle */
 async function parseZipBody(
@@ -51,6 +52,9 @@ export async function POST(req: Request) {
     );
   }
 
+  // Migrate old format to current version
+  body = migrateExportData(body as unknown as Record<string, unknown>) as unknown as AgentExportData;
+
   const slug = await ensureUniqueSlug(
     body.agent.slug || "imported-agent",
     orgId
@@ -63,15 +67,15 @@ export async function POST(req: Request) {
       .values({
         orgId,
         name: body.agent.name,
-        description: body.agent.description ?? "",
-        icon: body.agent.icon ?? "bot",
+        description: body.agent.description,
+        icon: body.agent.icon,
         slug,
-        isPublic: body.agent.isPublic ?? false,
-        mcpEnabled: body.agent.mcpEnabled ?? false,
-        memoryEnabled: body.agent.memoryEnabled ?? false,
-        ragEnabled: body.agent.ragEnabled ?? false,
-        skillsEnabled: body.agent.skillsEnabled ?? false,
-        contextCompressionEnabled: body.agent.contextCompressionEnabled ?? false,
+        isPublic: body.agent.isPublic,
+        mcpEnabled: body.agent.mcpEnabled,
+        memoryEnabled: body.agent.memoryEnabled,
+        ragEnabled: body.agent.ragEnabled,
+        skillsEnabled: body.agent.skillsEnabled,
+        contextCompressionEnabled: body.agent.contextCompressionEnabled,
       })
       .returning();
 
@@ -135,20 +139,20 @@ export async function POST(req: Request) {
       .where(eq(agents.id, agent.id));
 
     // 5. Restore embed tokens (generate new token values)
-    if (body.embedTokens?.length) {
+    if (body.embedTokens.length > 0) {
       await tx.insert(embedTokens).values(
         body.embedTokens.map((et) => ({
           agentId: agent.id,
           name: et.name,
           token: `et_${nanoid(32)}`,
-          allowedOrigins: et.allowedOrigins ?? [],
-          isActive: et.isActive ?? true,
+          allowedOrigins: et.allowedOrigins,
+          isActive: et.isActive,
         }))
       );
     }
 
     // 6. Restore files from ZIP
-    if (body.files?.length) {
+    if (body.files.length > 0) {
       await Promise.all(
         body.files.map(async (fileMeta) => {
           const zipEntry = zip.file(fileMeta.zipPath);

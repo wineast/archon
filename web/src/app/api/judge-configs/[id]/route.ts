@@ -34,6 +34,8 @@ export async function PUT(
       ...(body.key !== undefined && { key: body.key }),
       ...(body.name !== undefined && { name: body.name }),
       ...(body.dimensions !== undefined && { dimensions: body.dimensions }),
+      ...(body.promptTemplate !== undefined && { promptTemplate: body.promptTemplate }),
+      ...(body.turnPromptTemplate !== undefined && { turnPromptTemplate: body.turnPromptTemplate }),
     })
     .where(eq(judgeConfigs.id, id))
     .returning();

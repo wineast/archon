@@ -58,9 +58,14 @@ cmd_merge() {
         git checkout "$base_branch"
     fi
 
-    # 合并
-    if git merge "$wt_branch"; then
-        success "已合并 $wt_branch → $base_branch"
+    # Squash 合并：将工作区所有 commit 压缩为 1 个
+    if git merge --squash "$wt_branch"; then
+        # 收集工作区 commit 摘要作为 commit body
+        local commit_log
+        commit_log=$(git log "$base_branch".."$wt_branch" --oneline --no-merges 2>/dev/null || true)
+
+        git commit -m "feat($target): squash merge from $wt_branch" -m "$commit_log"
+        success "已合并 $wt_branch → $base_branch（squash）"
 
         # 检查依赖文件是否有变更，有则自动安装
         local merge_diff

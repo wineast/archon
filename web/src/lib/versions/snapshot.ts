@@ -335,6 +335,8 @@ export async function buildSnapshot(agentId: string, versionId: string, external
         name: j.name,
         isActive: j.isActive,
         dimensions: j.dimensions,
+        promptTemplate: j.promptTemplate,
+        turnPromptTemplate: j.turnPromptTemplate,
       })
     ),
     objectTypes: objectTypeRows.map(
@@ -532,7 +534,7 @@ export async function restoreSnapshot(
         name: tc.name,
         data: tc.data,
         tags: tc.tags,
-        scenario: (tc.scenario ?? "tool") as "tool" | "component",
+        scenario: tc.scenario as "tool" | "component",
       }))
     );
     if (compTCs.length > 0) {
@@ -572,7 +574,7 @@ export async function restoreSnapshot(
           url: t.url ?? null,
           componentId: t.componentKey ? compKeyToNewId.get(t.componentKey) ?? null : null,
           enabled: t.enabled,
-          uiHidden: t.uiHidden ?? false,
+          uiHidden: t.uiHidden,
           executionTarget: t.executionTarget,
         }))
       )
@@ -586,7 +588,7 @@ export async function restoreSnapshot(
         input: tc.input,
         expectedOutput: tc.expectedOutput,
         tags: tc.tags,
-        assertions: tc.assertions ?? [],
+        assertions: tc.assertions,
       }))
     );
     if (toolTCs.length > 0) {
@@ -692,8 +694,8 @@ export async function restoreSnapshot(
       quickActions: snapshot.chatConfig.quickActions,
       placeholder: snapshot.chatConfig.placeholder,
       suggestions: snapshot.chatConfig.suggestions,
-      enableVoice: snapshot.chatConfig.enableVoice ?? false,
-      enableAttachment: snapshot.chatConfig.enableAttachment ?? false,
+      enableVoice: snapshot.chatConfig.enableVoice,
+      enableAttachment: snapshot.chatConfig.enableAttachment,
     });
   }
 
@@ -741,6 +743,8 @@ export async function restoreSnapshot(
         name: j.name,
         isActive: j.isActive,
         dimensions: j.dimensions,
+        promptTemplate: j.promptTemplate,
+        turnPromptTemplate: j.turnPromptTemplate,
       }))
     );
   }

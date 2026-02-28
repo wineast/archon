@@ -20,7 +20,7 @@ const selectResults: unknown[][] = [
   // judgeModelConfig
   [{ id: "jmc-1", modelId: "gpt-4-judge", systemPrompt: "Judge this", temperature: 0.1, agentId: null }],
   // judgeConfig
-  [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }] }],
+  [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }], promptTemplate: "Custom prompt", turnPromptTemplate: null }],
 ];
 
 const limitMock = vi.fn(() => selectResults[selectCallIndex++]);
@@ -98,7 +98,7 @@ describe("POST /api/eval/run (create run)", () => {
     selectResults[0] = []; // concurrency: no running
     selectResults[1] = [{ id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null }];
     selectResults[2] = [{ id: "jmc-1", modelId: "gpt-4-judge", systemPrompt: "Judge this", temperature: 0.1, agentId: null }];
-    selectResults[3] = [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }] }];
+    selectResults[3] = [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }], promptTemplate: "Custom prompt", turnPromptTemplate: null }];
   });
 
   it("creates a run record and returns runId + chatModel + status", async () => {
@@ -217,6 +217,8 @@ describe("POST /api/eval/run (create run)", () => {
       judgeConfigSnapshot: {
         name: "Default",
         dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
+        promptTemplate: "Custom prompt",
+        turnPromptTemplate: null,
       },
     });
   });

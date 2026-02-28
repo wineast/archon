@@ -59,6 +59,12 @@ git diff origin/main..HEAD --name-only | grep -E '(drizzle/|db/schema\.ts)'
 
 # 是否包含 UI 变更（组件文件）
 git diff origin/main..HEAD --name-only | grep -E '\.(tsx|css)$' | head -5
+
+# 是否包含 guide 文档变更
+git diff origin/main..HEAD --name-only | grep -E '^web/guide/' | head -5
+
+# 是否包含导出格式迁移变更
+git diff origin/main..HEAD --name-only | grep -E '(versions/migrations/|versions/types\.ts|versions/snapshot\.ts)'
 ```
 
 ### 4. 推送当前分支
@@ -73,14 +79,46 @@ git push -u origin <当前分支名>
 
 用 `gh pr create`，**base 分支始终为 `main`**：
 
-摘要格式和各 section 规范遵循 `.claude/skills/_shared/merge-summary-format.md`。
-
 ```bash
 gh pr create --base main --head <当前分支名> --title "<标题>" --body "$(cat <<'EOF'
-<按 merge-summary-format.md 格式生成>
+## Verdict
+<✅/⚠️/❌> **<可以合并/有条件合并/不建议合并>** — <一句话理由>
+
+## Changes
+按维度分类列出实际变更，涉及 breaking change 的加 `⚠️ BREAKING` 标记
+
+### UX
+<条件——有用户可感知的变化时>
+### DX
+<条件——有开发者接口变化时>
+### Database
+<条件——有 schema 变更时>
+### Export Format
+<条件——有导出格式迁移变更时>
+### Guide
+<条件——有 guide 文档变更时>
+
+## Breaking Changes
+<必写——有则按三维度说明，无则写"无"并简要说明原因>
+
+## Verification
+✅ typecheck · ✅ X tests passed
+
+| | Count | Details |
+|---|---|---|
+| 新增 | +N | `test-file` |
+| 修改 | ~N | `test-file` |
+| 删除 | -N | — |
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
 )"
 ```
+
+**写作原则**：
+- Changes 按维度分类列出实际变更，子 section（UX/DX/Database/Export Format/Guide）无则不展示，不留空标题
+- Breaking Changes 必写（无则写"无"并说明原因）
+- Verification 是变更的自动化验证
 
 #### PR 标题规范
 - 70 字符以内

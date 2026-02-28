@@ -1,6 +1,7 @@
 import type { JsonSchema7 } from "@/lib/schemas/types";
 import type { Assertion, Dimension, EvalCaseMode, EvalTurn } from "@/lib/eval/types";
 import type { MemoryTypeDef, ResourceType } from "@/db/schema";
+import { CURRENT_EXPORT_VERSION } from "./migrations";
 
 /* ─────────── Snapshot Item Types (no id/agentId/createdAt/updatedAt) ─────────── */
 
@@ -14,7 +15,7 @@ export interface ToolSnapshotItem {
   url: string | null;
   componentKey: string | null;
   enabled: boolean;
-  uiHidden?: boolean;
+  uiHidden: boolean;
   executionTarget: "server" | "client" | "host";
   testCases: ToolTestCaseSnapshotItem[];
 }
@@ -109,6 +110,8 @@ export interface JudgeConfigSnapshotItem {
   name: string;
   isActive: boolean;
   dimensions: Dimension[];
+  promptTemplate: string | null;
+  turnPromptTemplate: string | null;
 }
 
 /* ─────────── Test Case Snapshot Items ─────────── */
@@ -118,7 +121,7 @@ export interface ToolTestCaseSnapshotItem {
   input: Record<string, unknown>;
   expectedOutput: unknown;
   tags: string[];
-  assertions?: Assertion[];
+  assertions: Assertion[];
 }
 
 export interface FunctionTestCaseSnapshotItem {
@@ -268,7 +271,7 @@ export interface AgentExportVersion {
 }
 
 export interface AgentExportData {
-  exportVersion: 1;
+  exportVersion: number;
   exportedAt: string;
   agent: {
     name: string;
@@ -278,13 +281,13 @@ export interface AgentExportData {
     isPublic: boolean;
     mcpEnabled: boolean;
     memoryEnabled: boolean;
-    ragEnabled?: boolean;
+    ragEnabled: boolean;
     skillsEnabled: boolean;
     contextCompressionEnabled: boolean;
   };
   versions: AgentExportVersion[];
-  files?: AgentFileSnapshotItem[];
-  embedTokens?: EmbedTokenSnapshotItem[];
+  files: AgentFileSnapshotItem[];
+  embedTokens: EmbedTokenSnapshotItem[];
 }
 
 /** Validate that the given value is a valid AgentExportData shape. */
@@ -293,7 +296,12 @@ export function validateExportData(
 ): data is AgentExportData {
   if (typeof data !== "object" || data === null) return false;
   const d = data as Record<string, unknown>;
-  if (d.exportVersion !== 1) return false;
+  if (
+    typeof d.exportVersion !== "number" ||
+    d.exportVersion < 1 ||
+    d.exportVersion > CURRENT_EXPORT_VERSION
+  )
+    return false;
   if (typeof d.agent !== "object" || d.agent === null) return false;
   const agent = d.agent as Record<string, unknown>;
   if (typeof agent.name !== "string" || !agent.name.trim()) return false;
