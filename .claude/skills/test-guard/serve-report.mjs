@@ -712,12 +712,20 @@ function buildHtml() {
       }
 
       fetch("/merge-check").then(r => r.json()).then(mc => {
-        if (mc.status === "behind") {
+        if (mc.status === "merged") {
+          mergeCheckEl.className = "merge-check clean";
+          mergeCheckEl.textContent = "\\u2705 " + mc.message;
+          btnMerge.disabled = true;
+          btnMerge.innerHTML = "Merged \\u2705";
+          deleteWrap.style.display = "";
+        } else if (mc.status === "behind") {
           mergeCheckEl.className = "merge-check behind";
           mergeCheckEl.textContent = "\\u26A0\\uFE0F " + mc.message + "，请先同步上游";
+          btnMerge.disabled = true;
         } else if (mc.status === "conflict") {
           mergeCheckEl.className = "merge-check conflict";
           mergeCheckEl.textContent = "\\u274C 检测到合并冲突，需要先解决冲突再合并";
+          btnMerge.disabled = true;
         } else if (mc.status === "up_to_date") {
           mergeCheckEl.className = "merge-check clean";
           mergeCheckEl.textContent = "\\u2705 " + mc.message;
@@ -731,6 +739,7 @@ function buildHtml() {
         } else {
           mergeCheckEl.className = "merge-check";
           mergeCheckEl.textContent = mc.message || "";
+          btnMerge.disabled = true;
         }
       });
     }).catch(() => {
@@ -969,6 +978,11 @@ const server = createServer((req, res) => {
 
   if (req.method === "GET" && req.url === "/merge-check") {
     res.writeHead(200, { "Content-Type": "application/json" });
+    // After successful merge, squash creates divergence — skip re-check
+    if (mergeState === "success") {
+      res.end(JSON.stringify({ status: "merged", message: "已合并" }));
+      return;
+    }
     if (!baseBranch || !currentBranch) {
       res.end(JSON.stringify({ status: "unknown", message: "Cannot determine branches" }));
       return;
@@ -1008,6 +1022,16 @@ const server = createServer((req, res) => {
       res.end("Already merged");
       return;
     }
+    // Server-side behind guard: prevent merge when worktree is behind upstream
+    try {
+      const behind = execSync(`git rev-list HEAD..${baseBranch} --count`, { cwd: CWD, encoding: "utf-8" }).trim();
+      if (behind !== "0") {
+        res.writeHead(409);
+        res.end(`Cannot merge: behind upstream by ${behind} commit(s). Sync first.`);
+        return;
+      }
+    } catch {}
+
     // Call worktree.sh directly (not through make) to avoid output buffering
     const scriptPath = join(mainRepo, "scripts", "worktree.sh");
     if (!existsSync(scriptPath) || !wtName) {
