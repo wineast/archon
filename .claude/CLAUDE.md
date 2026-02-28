@@ -194,3 +194,12 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 |------|------|
 | yarnb@qq.com | archon123456Aa. |
 
+### Worktree 中配置 AI 模型
+
+工作区的数据库独立于主仓库，新建工作区后需要配置 AI Provider API Key 才能使用聊天功能：
+
+1. DeepSeek API Key 存放在 `web/e2e/.env` 的 `E2E_DEEPSEEK_API_KEY` 字段
+2. 通过 UI 配置：组织设置 → API Keys → DeepSeek → 配置 → 填入 key
+3. 配置后还需要创建 Agent 并在构建页的 Model Config 中选择 DeepSeek 模型并激活
+4. E2E 测试中的完整配置流程参考 `web/e2e/eval-flow.spec.ts`
+

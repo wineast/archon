@@ -270,7 +270,7 @@ export function ChatPageContent({
     [agent.id, transportBodyExtras]
   );
 
-  const { messages, setMessages, sendMessage, status, addToolOutput } = useChat({
+  const { messages, setMessages, sendMessage, status, stop, addToolOutput } = useChat({
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: ({ toolCall }) => {
@@ -307,13 +307,14 @@ export function ChatPageContent({
   /* ── Session handlers ── */
 
   const handleNewChat = useCallback(() => {
+    stop();
     setMessages([]);
     sessionIdRef.current = null;
     setActiveSessionId(null);
     setShareId(null);
     isFirstMessageRef.current = true;
     setSessionParam(null);
-  }, [setMessages, setSessionParam]);
+  }, [stop, setMessages, setSessionParam]);
 
   const loadSessionMessages = useCallback(
     async (id: string) => {
