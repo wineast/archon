@@ -164,6 +164,27 @@ Snapshot 是版本资源的序列化表示，**仅用于导出/导入**。`agent
 - 导入：创建 agent → 逐个 insert agentVersions → 对每个版本调用 `restoreSnapshot(agentId, versionId, snapshot, tx)` 还原资源行
 - snapshot JSON 格式不变，保持向后兼容
 
+## 版本 Diff 对比
+
+版本详情 Sheet 中提供 "Compare" 按钮，支持选择两个版本对比差异。
+
+### 使用方式
+1. 在 Build 页面版本侧栏点击版本三点菜单 → "Detail"
+2. 在详情 Sheet 底部点击 "Compare"
+3. 从下拉选择器中选择另一个版本（支持 "Current (editing)" 选项）
+4. 查看两层 diff 视图：概览层（+N ~N -N）→ 展开层（字段级变化）
+
+### 技术实现
+- **API**：`GET /api/agents/[id]/versions/diff?from=<versionId>&to=<versionId>` — 并行构建两个快照，计算 diff 返回 `{ diff, summary }`
+- **Diff 引擎**：`src/lib/versions/diff.ts` — 纯函数 `computeSnapshotDiff(from, to)` 比较两个 `AgentSnapshot`，覆盖全部 16 种资源类型
+  - 数组资源（tools, functions 等）：通过 `key` 字段匹配，分类为 added/removed/modified
+  - 单例资源（chatConfig, memoryConfig）：逐字段比较，状态为 added/removed/modified/unchanged
+  - `testCases` 字段在比较时被跳过（噪声太多）
+- **UI 组件**：`src/components/versions/version-diff-sheet.tsx` — 三层折叠视图
+  - 概览层：按资源类型分组，显示 `+N ~N -N` 计数
+  - 资源层：展开后显示具体新增/删除/修改的资源列表
+  - 字段层：展开修改的资源，显示 `field: "old" → "new"` 变化
+
 ## 关键文件
 
 | 文件 | 说明 |
@@ -173,6 +194,9 @@ Snapshot 是版本资源的序列化表示，**仅用于导出/导入**。`agent
 | `src/lib/versions/resolve.ts` | versionId 解析工具（含 validateVersionBelongsToAgent、resolveVersionByRef） |
 | `src/lib/versions/mode.ts` | VersionMode 类型定义（hooks 和 ChatPageContent 使用） |
 | `src/lib/versions/snapshot.ts` | 快照构建/恢复（用于导出/导入） |
+| `src/lib/versions/diff.ts` | 版本 diff 引擎（`computeSnapshotDiff` + `buildDiffSummary`） |
 | `src/lib/pool/queries.ts` | Pool 资源查询（按 versionId 过滤） |
 | `src/components/chat-page-content.tsx` | 聊天页面共享组件（chat/preview/版本聊天共用） |
+| `src/components/versions/version-diff-sheet.tsx` | 版本 diff UI 组件 |
+| `src/app/api/agents/[id]/versions/diff/route.ts` | 版本 diff API |
 | `src/app/api/agents/[id]/versions/by-ref/route.ts` | 版本 ref 解析 API |

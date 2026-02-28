@@ -15,7 +15,7 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write, Edit, mcp__
 3. **定位**：从症状追溯到根因，找到具体代码位置
 4. **报告**：输出标准化缺陷报告，含复现证据和修复方向
 
-与 `clarify-req` 的区别：`clarify-req` 问"要做什么"，`diagnose` 问"哪里坏了、为什么坏、怎么修"。
+与 `requirement` 的区别：`requirement` 是需求链路的委托书（"要造什么"），`diagnose` 是缺陷链路的起诉书（"哪里坏了"）。
 
 ## Phase 0: 采访——明晰问题
 

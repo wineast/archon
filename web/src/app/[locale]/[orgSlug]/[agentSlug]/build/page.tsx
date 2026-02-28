@@ -540,6 +540,8 @@ function SettingsContent({ agent, orgSlug }: { agent: AgentRow; orgSlug: string 
           onOpenChange={(open) => {
             if (!open) setSheetVersionId(null);
           }}
+          versions={versions}
+          editingVersionId={editingVersionId}
         />
       )}
 
