@@ -6,7 +6,7 @@
  * 所有报告均为 optional，支持链路任意阶段启动。
  * 幂等：已有 viewer 进程运行时自动跳过。
  *
- * Usage: node .claude/skills/shared/serve-req-chain.mjs
+ * Usage: node scripts/serve-req-chain.mjs
  */
 
 import { startViewer } from "./report-viewer.mjs";

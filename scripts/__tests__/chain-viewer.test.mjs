@@ -5,7 +5,7 @@
  * 覆盖规约：CAP_GUARD.md
  * 测试层级：Integration + Unit (静态)
  *
- * 运行：node .claude/skills/shared/__tests__/chain-viewer.test.mjs
+ * 运行：node scripts/__tests__/chain-viewer.test.mjs
  *
  * 验证的核心能力：
  * - 需求链/缺陷链查看器正确渲染可用报告 + dimmed 节点
@@ -25,8 +25,8 @@ import http from "node:http";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-const PROJECT_ROOT = join(import.meta.dirname, "../../../..");
-const SHARED_DIR = join(PROJECT_ROOT, ".claude/skills/shared");
+const PROJECT_ROOT = join(import.meta.dirname, "../..");
+const SCRIPTS_DIR = join(PROJECT_ROOT, "scripts");
 const SKILLS_DIR = join(PROJECT_ROOT, ".claude/skills");
 
 /** HTTP GET with timeout */
@@ -182,7 +182,7 @@ describe("静态检查（Unit）", () => {
     console.log("  ✓ 8 个 SKILL.md 无旧路径引用");
   });
 
-  it("AC-5: 8 个 SKILL.md 正确引用 shared/ 脚本", () => {
+  it("AC-5: 8 个 SKILL.md 正确引用 scripts/ 脚本", () => {
     const reqChainSkills = ["requirement", "implement", "accept", "cap-guard"];
     const defectChainSkills = ["diagnose", "fix", "verify", "test-guard"];
 
@@ -200,11 +200,11 @@ describe("静态检查（Unit）", () => {
         `${dir}/SKILL.md 未引用 serve-defect-chain.mjs`
       );
     }
-    console.log("  ✓ 需求链 4 个 → serve-req-chain.mjs，缺陷链 4 个 → serve-defect-chain.mjs");
+    console.log("  ✓ 需求链 4 个 → scripts/serve-req-chain.mjs，缺陷链 4 个 → scripts/serve-defect-chain.mjs");
   });
 
   it("C-1: 零外部依赖——仅 node: 内置模块", () => {
-    const content = readFileSync(join(SHARED_DIR, "report-viewer.mjs"), "utf-8");
+    const content = readFileSync(join(SCRIPTS_DIR, "report-viewer.mjs"), "utf-8");
     const imports = content.match(/from\s+["']([^"']+)["']/g) || [];
     for (const imp of imports) {
       const mod = imp.match(/from\s+["']([^"']+)["']/)[1];
@@ -217,13 +217,13 @@ describe("静态检查（Unit）", () => {
   });
 
   it("C-2: 两链路脚本独立存在", () => {
-    assert.ok(existsSync(join(SHARED_DIR, "serve-req-chain.mjs")), "serve-req-chain.mjs 不存在");
-    assert.ok(existsSync(join(SHARED_DIR, "serve-defect-chain.mjs")), "serve-defect-chain.mjs 不存在");
+    assert.ok(existsSync(join(SCRIPTS_DIR, "serve-req-chain.mjs")), "serve-req-chain.mjs 不存在");
+    assert.ok(existsSync(join(SCRIPTS_DIR, "serve-defect-chain.mjs")), "serve-defect-chain.mjs 不存在");
     console.log("  ✓ serve-req-chain.mjs 和 serve-defect-chain.mjs 均存在");
   });
 
   it("C-3: SSE 使用原生 HTTP 实现", () => {
-    const content = readFileSync(join(SHARED_DIR, "report-viewer.mjs"), "utf-8");
+    const content = readFileSync(join(SCRIPTS_DIR, "report-viewer.mjs"), "utf-8");
     assert.ok(content.includes('"text/event-stream"'), "未找到 text/event-stream Content-Type");
     assert.ok(content.includes("sseClients"), "未找到 sseClients 管理");
     // 确认无第三方 SSE 库
@@ -233,7 +233,7 @@ describe("静态检查（Unit）", () => {
   });
 
   it("C-4: Actions 路由完整（merge-check/merge/delete）", () => {
-    const content = readFileSync(join(SHARED_DIR, "report-viewer.mjs"), "utf-8");
+    const content = readFileSync(join(SCRIPTS_DIR, "report-viewer.mjs"), "utf-8");
     assert.ok(content.includes('url === "/merge-check"'), '未找到 /merge-check 路由');
     assert.ok(content.includes('url === "/merge"'), '未找到 /merge 路由');
     assert.ok(content.includes('url === "/delete"'), '未找到 /delete 路由');
@@ -269,7 +269,7 @@ describe("静态检查（Unit）", () => {
   });
 
   it("C-7: Verdict 关键词检测完整", () => {
-    const content = readFileSync(join(SHARED_DIR, "report-viewer.mjs"), "utf-8");
+    const content = readFileSync(join(SCRIPTS_DIR, "report-viewer.mjs"), "utf-8");
     const failKw = ["驳回", "不足", "❌"];
     const warnKw = ["有条件", "部分", "⚠️"];
     for (const kw of failKw) {
@@ -285,8 +285,8 @@ describe("静态检查（Unit）", () => {
 // ── Integration Tests ────────────────────────────────────────────────────
 
 describe("集成测试（Integration）", () => {
-  const REQ_CHAIN_SCRIPT = join(SHARED_DIR, "serve-req-chain.mjs");
-  const DEFECT_CHAIN_SCRIPT = join(SHARED_DIR, "serve-defect-chain.mjs");
+  const REQ_CHAIN_SCRIPT = join(SCRIPTS_DIR, "serve-req-chain.mjs");
+  const DEFECT_CHAIN_SCRIPT = join(SCRIPTS_DIR, "serve-defect-chain.mjs");
 
   it("AC-1: 仅 REQ.md 时只有需求报告 tab + 其余节点 dimmed", async () => {
     const ctx = await startTestViewer(REQ_CHAIN_SCRIPT, {
@@ -548,7 +548,7 @@ describe("集成测试（Integration）", () => {
 // ── Journey Test ─────────────────────────────────────────────────────────
 
 describe("Journey: 需求链完整旅程", () => {
-  const REQ_CHAIN_SCRIPT = join(SHARED_DIR, "serve-req-chain.mjs");
+  const REQ_CHAIN_SCRIPT = join(SCRIPTS_DIR, "serve-req-chain.mjs");
   let ctx;
 
   after(() => {

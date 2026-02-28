@@ -140,7 +140,7 @@ test:
 
 ## 链路报告查看器守护测试（Node.js 原生 test runner）
 test-viewer:
-	node --test .claude/skills/shared/__tests__/chain-viewer.test.mjs
+	node --test scripts/__tests__/chain-viewer.test.mjs
 
 e2e:
 	cd web && npx playwright test

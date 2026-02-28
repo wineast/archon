@@ -244,7 +244,7 @@ Blast Radius 标记的影响区域走一遍，行为正常：
 3. 确认后写入 `.worktree/FIX_REPORT.md`
 4. 启动/更新报告查看器：
    ```bash
-   node .claude/skills/shared/serve-defect-chain.mjs
+   node scripts/serve-defect-chain.mjs
    # 用 Bash(run_in_background=true) 执行
    # 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
    ```

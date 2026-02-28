@@ -327,7 +327,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 3. 确认后写入 `.worktree/IMPL_REPORT.md`
 4. 启动/更新报告查看器：
    ```bash
-   node .claude/skills/shared/serve-req-chain.mjs
+   node scripts/serve-req-chain.mjs
    # 用 Bash(run_in_background=true) 执行
    # 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
    ```
