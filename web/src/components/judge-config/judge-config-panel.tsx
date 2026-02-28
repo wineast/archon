@@ -110,7 +110,7 @@ export function JudgeConfigPanel({ agentId }: { agentId: string }) {
             )}
           </div>
           {!activeConfig && (
-            <div className="border-t">
+            <div className="min-h-0 flex-1 overflow-y-auto border-t">
               <JudgeRecordsPanel agentId={agentId} />
             </div>
           )}
