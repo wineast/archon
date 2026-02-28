@@ -17,7 +17,7 @@ startViewer({
     { key: "fix", path: "FIX_REPORT.md", label: "修复报告", badge: "fix", optional: true },
     { key: "verify", path: "VERIFY_REPORT.md", label: "验证报告", badge: "verify", optional: true },
     { key: "guard", path: "TEST_SPEC.md", label: "守护规约", badge: "guard", optional: true },
-    { key: "report", path: "TEST_GUARD_REPORT.md", label: "守护报告", badge: "report", optional: true },
+    { key: "report", path: "TEST_SPEC_REPORT.md", label: "守护报告", badge: "report", optional: true },
   ],
   chain: [
     { key: "defect", label: "缺陷报告", cssClass: "defect" },
