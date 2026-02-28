@@ -15,10 +15,12 @@ export async function GET(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
+  const versionId = await resolveEditingVersionId(agentId);
+
   const rows = await db
     .select()
     .from(evalCases)
-    .where(and(eq(evalCases.agentId, agentId), isNull(evalCases.deletedAt)))
+    .where(and(eq(evalCases.agentId, agentId), eq(evalCases.versionId, versionId), isNull(evalCases.deletedAt)))
     .orderBy(evalCases.createdAt);
   return NextResponse.json(rows);
 }
