@@ -26,6 +26,7 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 
+import { streamdownComponents } from "./message";
 import { Shimmer } from "./shimmer";
 
 interface ReasoningContextValue {
@@ -217,7 +218,11 @@ export const ReasoningContent = memo(
       )}
       {...props}
     >
-      <Streamdown plugins={streamdownPlugins} {...props}>
+      <Streamdown
+        components={streamdownComponents}
+        plugins={streamdownPlugins}
+        {...props}
+      >
         {children}
       </Streamdown>
     </CollapsibleContent>
