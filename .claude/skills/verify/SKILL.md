@@ -1,10 +1,10 @@
 ---
 name: verify
-description: 验证修复。当用户说"验证"、"verify"、"检验修复"、"能不能合并"、"验收"等时调用。读取缺陷报告和修复报告，执行五维度验证，生成验证报告，启动 HTML 预览服务。
+description: 验证修复。当用户说"验证"、"verify"、"检验修复"、"能不能合并"、"验收"等时调用。读取缺陷报告和修复报告，执行五维度验证，生成验证报告。
 allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write, Edit, mcp__playwright__*
 ---
 
-读取缺陷报告 + 修复报告 → 五维度验证 → 生成验证报告 → 启动 HTML 预览。
+读取缺陷报告 + 修复报告 → 五维度验证 → 生成验证报告。
 
 ## 核心理念
 
@@ -362,30 +362,12 @@ echo "✅ 合并完成"
 
 生成后设为可执行：`chmod +x .worktree/merge.sh`
 
-### 启动报告查看器
-
-```bash
-# 后台启动
-node .claude/skills/test-guard/serve-report.mjs
-# 用 Bash(run_in_background=true) 执行
-```
-
-查看器功能：
-- **三栏 Tab 切换**：缺陷报告 | 修复报告 | 验证报告
-- **Verdict 顶部横幅**：✅/⚠️/❌ 合并裁定
-- **Actions 区域**：
-  - 上游 / 当前的实时 git 状态
-  - Merge 按钮：两边都 clean + 无冲突 + 不落后上游时可用
-  - Delete 按钮：合并成功后出现
-- **图片内联**：报告中的截图直接显示
-
 ### 流程
 
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确
 3. 确认后写入 `.worktree/VERIFY_REPORT.md`
 4. 生成 `merge.sh`
-5. 启动 HTML 查看器，提示用户在浏览器中查看和操作
 
 ## 执行规则
 
