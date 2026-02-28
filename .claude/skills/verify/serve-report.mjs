@@ -420,6 +420,54 @@ function buildHtml() {
   .wt-badge.ahead { background: rgba(63,185,80,0.12); color: var(--green); }
   .wt-badge.behind { background: rgba(248,81,73,0.12); color: var(--red); }
 
+  /* Commits */
+  .commits-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px; margin-top: 4px;
+  }
+  .commits-title {
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .commits-count {
+    font-size: 11px; padding: 1px 7px; border-radius: 10px;
+    background: rgba(88,166,255,0.12); color: var(--accent); font-weight: 500;
+  }
+  .commits-list {
+    border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; margin-bottom: 10px;
+  }
+  .commit-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .commit-row:last-child { border-bottom: none; }
+  .commit-hash {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px; color: var(--accent); font-weight: 500;
+    background: rgba(88,166,255,0.08); padding: 1px 6px;
+    border-radius: 4px; white-space: nowrap;
+  }
+  .commit-subject { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .commit-meta {
+    font-size: 11px; color: var(--text-muted); white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .diff-stat-details { margin-bottom: 10px; }
+  .diff-stat-summary {
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    padding: 4px 0; user-select: none;
+  }
+  .diff-stat-summary:hover { color: var(--text); }
+  .diff-stat-content {
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px; margin-top: 4px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px; color: var(--text-muted); overflow-x: auto;
+    line-height: 1.5;
+  }
+
   /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
@@ -485,6 +533,17 @@ function buildHtml() {
         <div class="wt-card-branch" id="wt-current-branch">...</div>
         <div class="wt-card-meta" id="wt-current-meta"></div>
       </div>
+    </div>
+    <div id="commits-section" style="display:none">
+      <div class="commits-header">
+        <span class="commits-title">Commits</span>
+        <span class="commits-count" id="commits-count"></span>
+      </div>
+      <div class="commits-list" id="commits-list"></div>
+      <details class="diff-stat-details" id="diff-stat-wrap" style="display:none">
+        <summary class="diff-stat-summary">Changed files</summary>
+        <pre class="diff-stat-content" id="diff-stat-content"></pre>
+      </details>
     </div>
     <div class="merge-check checking" id="merge-check">Checking...</div>
     <div class="btn-group">
@@ -595,6 +654,34 @@ function buildHtml() {
       if (data.current) {
         document.getElementById("wt-current-branch").textContent = data.current.branch || "?";
         document.getElementById("wt-current-meta").innerHTML = statusBadges(data.current);
+      }
+
+      // Render commits
+      const commitsSection = document.getElementById("commits-section");
+      const commitsList = document.getElementById("commits-list");
+      const commitsCount = document.getElementById("commits-count");
+      if (data.commits && data.commits.length > 0) {
+        commitsSection.style.display = "";
+        commitsCount.textContent = data.commits.length;
+        commitsList.innerHTML = data.commits.map(c =>
+          '<div class="commit-row">' +
+            '<span class="commit-hash">' + c.hash + '</span>' +
+            '<span class="commit-subject">' + c.subject.replace(/</g, "&lt;") + '</span>' +
+            '<span class="commit-meta"><span>' + c.author + '</span><span>' + c.date + '</span></span>' +
+          '</div>'
+        ).join("");
+      } else {
+        commitsSection.style.display = "none";
+      }
+
+      // Render diff stat
+      const diffStatWrap = document.getElementById("diff-stat-wrap");
+      const diffStatContent = document.getElementById("diff-stat-content");
+      if (data.diffStat) {
+        diffStatWrap.style.display = "";
+        diffStatContent.textContent = data.diffStat;
+      } else {
+        diffStatWrap.style.display = "none";
       }
 
       const curDirty = isDirty(data.current);
@@ -818,6 +905,33 @@ const server = createServer((req, res) => {
         path: upstreamPath,
         ...upStatus,
       };
+
+      // Commits between baseBranch and HEAD
+      try {
+        const logRaw = execSync(
+          `git log ${baseBranch}..HEAD --pretty=format:"%h|%s|%an|%ar" --no-merges`,
+          { cwd: CWD, encoding: "utf-8" }
+        ).trim();
+        result.commits = logRaw
+          ? logRaw.split("\n").map((line) => {
+              const [hash, subject, author, date] = line.split("|");
+              return { hash, subject, author, date };
+            })
+          : [];
+      } catch {
+        result.commits = [];
+      }
+
+      // Changed files between baseBranch and HEAD
+      try {
+        const diffRaw = execSync(
+          `git diff ${baseBranch}..HEAD --stat --stat-width=60`,
+          { cwd: CWD, encoding: "utf-8" }
+        ).trim();
+        result.diffStat = diffRaw || "";
+      } catch {
+        result.diffStat = "";
+      }
     } catch (e) {
       result.error = e.message;
     }
