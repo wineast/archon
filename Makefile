@@ -267,6 +267,10 @@ db-init:
 # Git Worktree
 # ============================================================
 
+## Worktree 管理界面（Web UI）
+wt-manage:
+	@node scripts/worktree-manager.mjs
+
 ## 列出所有 worktree
 wt-list:
 	@./scripts/worktree.sh list
