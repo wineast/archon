@@ -4,7 +4,7 @@ description: 问题追踪管理。当用户说"记个 issue"、"这是个 bug"�
 allowed-tools: Read, Write, Edit, Glob, Bash, Grep
 ---
 
-问题追踪技能——在 `issue/` 目录下维护问题列表。
+问题追踪技能——在 `issues/` 目录下维护问题列表。
 
 ## 定位：缺陷链路的种子（急诊初诊单）
 
@@ -32,7 +32,7 @@ Hypothesis 是 issue 最有价值的部分之一。一个错误的假设比没�
 ## 目录结构（文件夹即状态）
 
 ```
-issue/
+issues/
   open/       ← 待修复
   closed/     ← 已关闭
 ```
@@ -50,6 +50,8 @@ issue/
 ```markdown
 ---
 priority: P1
+status: open
+worktree:
 ---
 # {一句话症状描述}
 
@@ -66,6 +68,14 @@ priority: P1
 {基于当时上下文的因果推测——可以猜原因、猜位置、猜修复方向，错了没关系}
 ```
 
+### Frontmatter 字段
+
+| 字段 | 说明 |
+|------|------|
+| `priority` | P0-P3，见下方定义 |
+| `status` | 与所在文件夹一致：`open` / `closed` |
+| `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
+
 ### Priority 定义
 
 | 级别 | 含义 | 响应 |
@@ -80,6 +90,8 @@ priority: P1
 ```markdown
 ---
 priority: P1
+status: open
+worktree:
 ---
 # 数据集预览在模板中渲染为空
 
@@ -125,20 +137,20 @@ Hypothesis ──迁移──→        Root Cause（直觉 → 确认因果）
 
 ### 创建 Issue
 
-1. 确保 `issue/open/` 目录存在
-2. 按模板创建文件到 `issue/open/`
+1. 确保 `issues/open/` 目录存在
+2. 按模板创建文件到 `issues/open/`
 3. 确认：`已创建 issue — {Symptom 标题}`
 4. 根据性质提示可能的演化方向
 
 ### 查看 Issue
 
-列出 `issue/open/` 下所有文件。
+列出 `issues/open/` 下所有文件。
 
 ### 关闭 Issue
 
-将文件从 `issue/open/` 移动到 `issue/closed/`：
+将文件从 `issues/open/` 移动到 `issues/closed/`，同时更新 frontmatter `status: closed`：
 ```bash
-mv issue/open/{name}.md issue/closed/
+mv issues/open/{name}.md issues/closed/
 ```
 
 ### 删除 Issue
@@ -151,4 +163,5 @@ mv issue/open/{name}.md issue/closed/
 - Hypothesis 不要留空——错了比没有强，标注不确定即可
 - 四元素各司其职：Symptom 识别问题、Trigger 划定触发条件、Locale 缩小范围、Hypothesis 指引方向
 - 文件名不带编号
-- 状态完全由文件夹决定
+- 状态完全由文件夹决定，frontmatter `status` 字段与文件夹保持同步
+- 创建工作区后，在 frontmatter 中填写 `worktree` 字段关联

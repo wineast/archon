@@ -4,7 +4,7 @@ description: 待办事项管理。当用户说"记个待办"、"TODO"、"以后�
 allowed-tools: Read, Write, Edit, Glob, Bash
 ---
 
-待办事项管理技能——在 `.claude/skills/todo/` 目录下维护待办列表。
+待办事项管理技能——在 `todo/` 目录下维护待办列表。
 
 ## 定位：需求/优化链路的种子
 
@@ -22,7 +22,7 @@ Todo 是**记录层**——趁脑子里还有印象，30 秒内把一件事记�
 ## 目录结构（文件夹即状态）
 
 ```
-.claude/skills/todo/
+todo/
   pending/      ← 当前要做
   backlog/      ← 确认要做但不急，等条件成熟再提到 pending
   done/         ← 已完成
@@ -44,6 +44,8 @@ Todo 是**记录层**——趁脑子里还有印象，30 秒内把一件事记�
 ```markdown
 ---
 priority: P2
+status: pending
+worktree:
 ---
 # {一句话祈使句——做什么}
 
@@ -51,6 +53,14 @@ priority: P2
 
 > Anchor: {从哪开始——文件路径 / 页面 / 关联人 / PR / 讨论}
 ```
+
+### Frontmatter 字段
+
+| 字段 | 说明 |
+|------|------|
+| `priority` | P0-P3，见下方定义 |
+| `status` | 与所在文件夹一致：`pending` / `backlog` / `done` |
+| `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
 
 ### 三要素详解
 
@@ -110,6 +120,8 @@ Anchor 是地址，不是文档。告诉未来的你去哪里找更多信息：
 ```markdown
 ---
 priority: P2
+status: pending
+worktree:
 ---
 # 给 Dataset 编辑器加行号显示
 
@@ -135,34 +147,34 @@ Todo 不是终点，而是种子。根据 Context 的性质，todo 有四种演�
 
 ### 添加待办
 
-1. 确保 `.claude/skills/todo/pending/` 目录存在
-2. 按模板创建文件到 `.claude/skills/todo/pending/`
+1. 确保 `todo/pending/` 目录存在
+2. 按模板创建文件到 `todo/pending/`
 3. 确认：`已添加待办 — {Intent}`
 4. 根据 Context 性质，提示可能的演化方向
 
 ### 查看待办
 
-列出 `.claude/skills/todo/pending/` 和 `.claude/skills/todo/backlog/` 下所有文件。
+列出 `todo/pending/` 和 `todo/backlog/` 下所有文件。
 
 ### 完成待办
 
-将文件从 `pending/` 移动到 `done/`：
+将文件从 `pending/` 移动到 `done/`，同时更新 frontmatter `status: done`：
 ```bash
-mv .claude/skills/todo/pending/{name}.md .claude/skills/todo/done/
+mv todo/pending/{name}.md todo/done/
 ```
 
 ### 暂缓待办
 
-将文件从 `pending/` 移动到 `backlog/`：
+将文件从 `pending/` 移动到 `backlog/`，同时更新 frontmatter `status: backlog`：
 ```bash
-mv .claude/skills/todo/pending/{name}.md .claude/skills/todo/backlog/
+mv todo/pending/{name}.md todo/backlog/
 ```
 
 ### 激活待办
 
-将文件从 `backlog/` 移动到 `pending/`：
+将文件从 `backlog/` 移动到 `pending/`，同时更新 frontmatter `status: pending`：
 ```bash
-mv .claude/skills/todo/backlog/{name}.md .claude/skills/todo/pending/
+mv todo/backlog/{name}.md todo/pending/
 ```
 
 ### 删除待办
@@ -174,4 +186,5 @@ mv .claude/skills/todo/backlog/{name}.md .claude/skills/todo/pending/
 - 保持轻量——30 秒内完成，不要在 todo 阶段做分析
 - 三元素缺一不可：Intent 让未来知道干什么，Context 让未来知道为什么，Anchor 让未来知道从哪开始
 - 文件名不带编号
-- 状态完全由文件夹决定
+- 状态完全由文件夹决定，frontmatter `status` 字段与文件夹保持同步
+- 创建工作区后，在 frontmatter 中填写 `worktree` 字段关联
