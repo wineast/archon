@@ -273,39 +273,39 @@ wt-manage:
 
 ## 列出所有 worktree
 wt-list:
-	@./scripts/worktree.sh list
+	@node scripts/worktree.mjs list
 
 ## 创建 worktree（用法: make wt-create NAME=feature-xxx [BASE=main]）
 wt-create:
-	@./scripts/worktree.sh create $(NAME) $(BASE)
+	@node scripts/worktree.mjs create $(NAME) $(BASE)
 
 ## 同步上游分支到当前工作区
 wt-sync:
-	@./scripts/worktree.sh sync
+	@node scripts/worktree.mjs sync
 
 ## 合并工作区回 base 分支（用法: make wt-merge NAME=feature-xxx）
 wt-merge:
-	@./scripts/worktree.sh merge $(NAME)
+	@node scripts/worktree.mjs merge $(NAME)
 
 ## 删除 worktree（用法: make wt-delete NAME=feature-xxx）
 wt-delete:
-	@./scripts/worktree.sh delete $(NAME)
+	@node scripts/worktree.mjs delete $(NAME)
 
 ## 工作区静态环境初始化（link-env + db-local-env + npm install）
 wt-setup:
-	@./scripts/wt-setup.sh $(or $(DIR),.)
+	@node scripts/wt-setup.mjs $(or $(DIR),.)
 
 ## 工作区静态环境清理（wt-setup 的反向）
 wt-teardown:
-	@./scripts/wt-teardown.sh $(or $(DIR),.)
+	@node scripts/wt-teardown.mjs $(or $(DIR),.)
 
 ## 工作区数据初始化（db-push + seed）
 wt-init:
-	@./scripts/wt-init.sh $(or $(DIR),.)
+	@node scripts/wt-init.mjs $(or $(DIR),.)
 
 ## 工作区数据清理（wt-init 的反向）
 wt-fini:
-	@./scripts/wt-fini.sh $(or $(DIR),.)
+	@node scripts/wt-fini.mjs $(or $(DIR),.)
 
 # ============================================================
 # Fixtures

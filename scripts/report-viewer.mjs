@@ -1257,14 +1257,14 @@ export function startViewer(config) {
           res.end("Sync already running");
           return;
         }
-        const scriptPath = join(mainRepo, "scripts", "worktree.sh");
+        const scriptPath = join(mainRepo, "scripts", "worktree.mjs");
         if (!existsSync(scriptPath)) {
           res.writeHead(400);
-          res.end("Cannot find worktree.sh");
+          res.end("Cannot find worktree.mjs");
           return;
         }
         syncState = "running";
-        const child = sseExec(scriptPath, ["sync"], { cwd: CWD }, res);
+        const child = sseExec("node", [scriptPath, "sync"], { cwd: CWD }, res);
         child.on("close", (code) => {
           syncState = code === 0 ? "success" : "failed";
           // Reset to idle after a short delay so subsequent syncs are possible
@@ -1299,15 +1299,15 @@ export function startViewer(config) {
           }
         } catch {}
 
-        // Use worktree.sh for merge
-        const scriptPath = join(mainRepo, "scripts", "worktree.sh");
+        // Use worktree.mjs for merge
+        const scriptPath = join(mainRepo, "scripts", "worktree.mjs");
         if (!existsSync(scriptPath) || !wtName) {
           res.writeHead(400);
           res.end("Cannot determine merge parameters");
           return;
         }
         mergeState = "running";
-        const child = sseExec(scriptPath, ["merge", wtName], { cwd: mainRepo }, res);
+        const child = sseExec("node", [scriptPath, "merge", wtName], { cwd: mainRepo }, res);
         child.on("close", (code) => {
           mergeState = code === 0 ? "success" : "failed";
         });
