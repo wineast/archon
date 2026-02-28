@@ -60,17 +60,11 @@ kill_worktree_services() {
     local killed=0
 
     # 终止报告查看器（HTML 预览服务）
-    # 如果是 viewer 自身发起的删除（VIEWER_PID 已设置），跳过杀 viewer——
-    # viewer 会在删除完成后自行退出，避免 SSE 连接中断导致前端卡住
     if [ -f "$viewer_json" ]; then
         local viewer_pid=$(node -p "JSON.parse(require('fs').readFileSync('$viewer_json','utf-8')).pid" 2>/dev/null)
-        if [ -n "$viewer_pid" ] && [ "$viewer_pid" != "undefined" ]; then
-            if [ "$viewer_pid" = "$VIEWER_PID" ]; then
-                info "跳过终止 viewer（由 viewer 自身发起删除）"
-            elif kill -0 "$viewer_pid" 2>/dev/null; then
-                kill "$viewer_pid" 2>/dev/null || true
-                killed=$((killed + 1))
-            fi
+        if [ -n "$viewer_pid" ] && [ "$viewer_pid" != "undefined" ] && kill -0 "$viewer_pid" 2>/dev/null; then
+            kill "$viewer_pid" 2>/dev/null || true
+            killed=$((killed + 1))
         fi
     fi
 

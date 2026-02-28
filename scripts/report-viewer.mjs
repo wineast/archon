@@ -9,7 +9,7 @@
  *   defaultTab:    "last" | "<key>"
  *   requiredFile:  filename to validate at startup (e.g. "VERIFY_REPORT.md")
  *   verdictSource: key of the tab to extract verdict from
- *   actions:       boolean — enable merge/delete UI
+ *   actions:       boolean — enable merge UI
  *
  * Usage:
  *   import { startViewer } from "../shared/report-viewer.mjs";
@@ -139,7 +139,6 @@ export function startViewer(config) {
   /* ── State ──────────────────────────────────────────────────── */
 
   let mergeState = "idle";
-  let deleteState = "idle";
   let syncState = "idle";
 
   /* ── SSE helper ─────────────────────────────────────────────── */
@@ -310,9 +309,6 @@ export function startViewer(config) {
       <div id="btn-merge-wrap">
         <button class="btn btn-merge" id="btn-merge" onclick="doMerge()" disabled>Merge to upstream</button>
       </div>
-      <div id="btn-delete-wrap" style="display:none">
-        <button class="btn btn-delete" id="btn-delete" onclick="doDelete()">Delete worktree</button>
-      </div>
     </div>
     <div class="terminal" id="terminal">
       <div class="terminal-content" id="terminal-content"></div>
@@ -330,8 +326,6 @@ export function startViewer(config) {
   const btnMerge = document.getElementById("btn-merge");
   const btnSync = document.getElementById("btn-sync");
   const syncWrap = document.getElementById("btn-sync-wrap");
-  const btnDelete = document.getElementById("btn-delete");
-  const deleteWrap = document.getElementById("btn-delete-wrap");
   const mergeStatus = document.getElementById("merge-status");
 
   // --- Status helpers ---
@@ -413,7 +407,6 @@ export function startViewer(config) {
           mergeCheckEl.textContent = "\\u2705 " + mc.message;
           btnMerge.disabled = true;
           btnMerge.innerHTML = "Merged \\u2705";
-          deleteWrap.style.display = "";
         } else if (mc.status === "behind") {
           mergeCheckEl.className = "merge-check behind";
           mergeCheckEl.textContent = "\\u26A0\\uFE0F " + mc.message + "\\uFF0C\\u70B9\\u51FB Sync \\u540C\\u6B65\\u4E0A\\u6E38";
@@ -428,7 +421,6 @@ export function startViewer(config) {
           mergeCheckEl.textContent = "\\u2705 " + mc.message;
           btnMerge.disabled = true;
           btnMerge.textContent = "Already up to date";
-          deleteWrap.style.display = "";
         } else if (mc.status === "clean") {
           mergeCheckEl.className = "merge-check clean";
           mergeCheckEl.textContent = "\\u2705 \\u53EF\\u4EE5\\u5408\\u5E76";
@@ -539,7 +531,6 @@ export function startViewer(config) {
     if (ok) {
       setStatus(mergeStatus, "success", "Merged \\u2705");
       btnMerge.innerHTML = "Merged \\u2705";
-      deleteWrap.style.display = "";
       refreshState();
     } else {
       setStatus(mergeStatus, "failed", "Failed");
@@ -548,22 +539,7 @@ export function startViewer(config) {
     }
   }
 
-  // --- Delete ---
-  function doDelete() {
-    btnDelete.disabled = true;
-    btnDelete.innerHTML = '<span class="spinner"></span> Deleting...';
-    termContent.innerHTML = "";
-
-    runSSE("/delete", function(success) {
-      if (success) {
-        btnDelete.innerHTML = "Deleted \\u2705";
-        refreshState();
-      } else {
-        btnDelete.innerHTML = "Delete failed";
-        btnDelete.disabled = false;
-      }
-    });
-  }`
+  `
       : "";
 
     // ─ Assemble full HTML ─
@@ -794,8 +770,6 @@ export function startViewer(config) {
   .btn-sync:hover:not(:disabled) { background: #388bfd; }
   .btn-merge { background: #238636; border-color: #2ea043; color: #fff; }
   .btn-merge:hover:not(:disabled) { background: #2ea043; }
-  .btn-delete { background: #da3633; border-color: #f85149; color: #fff; }
-  .btn-delete:hover:not(:disabled) { background: #f85149; }
   .btn-group { display: flex; gap: 12px; align-items: center; }
 
   /* Terminal */
@@ -1340,37 +1314,6 @@ export function startViewer(config) {
         return;
       }
 
-      if (req.method === "POST" && req.url === "/delete") {
-        if (deleteState === "running") {
-          res.writeHead(409);
-          res.end("Delete already running");
-          return;
-        }
-        if (!wtName) {
-          res.writeHead(400);
-          res.end("Not in a worktree");
-          return;
-        }
-        deleteState = "running";
-        const scriptPath = join(mainRepo, "scripts", "worktree.sh");
-        const child = sseExec(
-          scriptPath,
-          ["delete", wtName],
-          { cwd: mainRepo, env: { ...process.env, VIEWER_PID: String(process.pid) } },
-          res
-        );
-        child.on("close", (code) => {
-          deleteState = code === 0 ? "success" : "failed";
-          // 删除成功后，viewer 自行退出（工作区已不存在）
-          if (code === 0) {
-            setTimeout(() => {
-              try { unlinkSync(VIEWER_JSON); } catch {}
-              process.exit(0);
-            }, 2000);
-          }
-        });
-        return;
-      }
     }
 
     res.writeHead(404);

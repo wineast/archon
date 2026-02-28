@@ -232,12 +232,11 @@ describe("静态检查（Unit）", () => {
     console.log("  ✓ SSE 使用原生 HTTP text/event-stream 实现");
   });
 
-  it("C-4: Actions 路由完整（merge-check/merge/delete）", () => {
+  it("C-4: Actions 路由完整（merge-check/merge）", () => {
     const content = readFileSync(join(SCRIPTS_DIR, "report-viewer.mjs"), "utf-8");
     assert.ok(content.includes('url === "/merge-check"'), '未找到 /merge-check 路由');
     assert.ok(content.includes('url === "/merge"'), '未找到 /merge 路由');
-    assert.ok(content.includes('url === "/delete"'), '未找到 /delete 路由');
-    console.log("  ✓ merge-check / merge / delete 路由均存在");
+    console.log("  ✓ merge-check / merge 路由均存在");
   });
 
   it("C-5: 旧 serve-report.mjs 文件已删除", () => {
