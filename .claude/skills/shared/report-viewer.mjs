@@ -243,10 +243,8 @@ export function startViewer(config) {
         ? rpts[rpts.length - 1]?.key
         : config.defaultTab;
 
-    // Available chain nodes (skip optional if report missing)
-    const chains = config.chain.filter(
-      (c) => !c.optional || rpts.some((r) => r.key === c.key)
-    );
+    // All chain nodes (always show, dimmed if report missing)
+    const chains = config.chain;
 
     // ─ Chain flow HTML ─
     const availKeys = new Set(rpts.map((r) => r.key));
