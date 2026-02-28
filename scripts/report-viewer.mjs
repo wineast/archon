@@ -150,6 +150,7 @@ export function startViewer(config) {
 
   let mergeState = "idle";
   let deleteState = "idle";
+  let syncState = "idle";
 
   /* ── SSE helper ─────────────────────────────────────────────── */
 
@@ -313,6 +314,9 @@ export function startViewer(config) {
     </div>
     <div class="merge-check checking" id="merge-check">Checking...</div>
     <div class="btn-group">
+      <div id="btn-sync-wrap" style="display:none">
+        <button class="btn btn-sync" id="btn-sync" onclick="doSync()">Sync upstream</button>
+      </div>
       <div id="btn-merge-wrap">
         <button class="btn btn-merge" id="btn-merge" onclick="doMerge()" disabled>Merge to upstream</button>
       </div>
@@ -334,6 +338,8 @@ export function startViewer(config) {
   const terminal = document.getElementById("terminal");
   const termContent = document.getElementById("terminal-content");
   const btnMerge = document.getElementById("btn-merge");
+  const btnSync = document.getElementById("btn-sync");
+  const syncWrap = document.getElementById("btn-sync-wrap");
   const btnDelete = document.getElementById("btn-delete");
   const deleteWrap = document.getElementById("btn-delete-wrap");
   const mergeStatus = document.getElementById("merge-status");
@@ -398,6 +404,8 @@ export function startViewer(config) {
       var curDirty = isDirty(data.current);
       var upDirty = isDirty(data.upstream);
 
+      syncWrap.style.display = "none";
+
       if (upDirty) {
         mergeCheckEl.className = "merge-check conflict";
         mergeCheckEl.textContent = "\\u26A0\\uFE0F \\u4E0A\\u6E38\\u6709\\u672A\\u63D0\\u4EA4\\u53D8\\u66F4\\uFF0C\\u8BF7\\u5148\\u53BB\\u4E0A\\u6E38\\u63D0\\u4EA4";
@@ -418,11 +426,12 @@ export function startViewer(config) {
           deleteWrap.style.display = "";
         } else if (mc.status === "behind") {
           mergeCheckEl.className = "merge-check behind";
-          mergeCheckEl.textContent = "\\u26A0\\uFE0F " + mc.message + "\\uFF0C\\u8BF7\\u5148\\u540C\\u6B65\\u4E0A\\u6E38";
+          mergeCheckEl.textContent = "\\u26A0\\uFE0F " + mc.message + "\\uFF0C\\u70B9\\u51FB Sync \\u540C\\u6B65\\u4E0A\\u6E38";
           btnMerge.disabled = true;
+          syncWrap.style.display = "";
         } else if (mc.status === "conflict") {
           mergeCheckEl.className = "merge-check conflict";
-          mergeCheckEl.textContent = "\\u274C \\u68C0\\u6D4B\\u5230\\u5408\\u5E76\\u51B2\\u7A81\\uFF0C\\u9700\\u8981\\u5148\\u89E3\\u51B3\\u51B2\\u7A81\\u518D\\u5408\\u5E76";
+          mergeCheckEl.textContent = "\\u274C \\u68C0\\u6D4B\\u5230\\u5408\\u5E76\\u51B2\\u7A81\\uFF0C\\u8BF7\\u6267\\u884C /resolve-conflicts \\u89E3\\u51B3";
           btnMerge.disabled = true;
         } else if (mc.status === "up_to_date") {
           mergeCheckEl.className = "merge-check clean";
@@ -502,6 +511,28 @@ export function startViewer(config) {
         read();
       });
     });
+  }
+
+  // --- Sync ---
+  async function doSync() {
+    btnSync.disabled = true;
+    btnSync.innerHTML = '<span class="spinner"></span> Syncing...';
+    termContent.innerHTML = "";
+
+    var ok = await new Promise(function(resolve) {
+      runSSE("/sync", resolve);
+    });
+
+    if (ok) {
+      btnSync.innerHTML = "Synced \\u2705";
+      syncWrap.style.display = "none";
+      refreshState();
+    } else {
+      btnSync.innerHTML = "Sync failed \\u2014 retry";
+      btnSync.disabled = false;
+      mergeCheckEl.className = "merge-check conflict";
+      mergeCheckEl.textContent = "\\u274C Sync \\u5931\\u8D25\\uFF0C\\u53EF\\u80FD\\u6709\\u51B2\\u7A81\\uFF0C\\u8BF7\\u6267\\u884C /resolve-conflicts \\u89E3\\u51B3";
+    }
   }
 
   // --- Merge ---
@@ -769,6 +800,8 @@ export function startViewer(config) {
     font-family: inherit;
   }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-sync { background: #1f6feb; border-color: #388bfd; color: #fff; }
+  .btn-sync:hover:not(:disabled) { background: #388bfd; }
   .btn-merge { background: #238636; border-color: #2ea043; color: #fff; }
   .btn-merge:hover:not(:disabled) { background: #2ea043; }
   .btn-delete { background: #da3633; border-color: #f85149; color: #fff; }
@@ -1251,6 +1284,28 @@ export function startViewer(config) {
         } catch (e) {
           res.end(JSON.stringify({ status: "unknown", message: e.message }));
         }
+        return;
+      }
+
+      if (req.method === "POST" && req.url === "/sync") {
+        if (syncState === "running") {
+          res.writeHead(409);
+          res.end("Sync already running");
+          return;
+        }
+        const scriptPath = join(mainRepo, "scripts", "worktree.sh");
+        if (!existsSync(scriptPath)) {
+          res.writeHead(400);
+          res.end("Cannot find worktree.sh");
+          return;
+        }
+        syncState = "running";
+        const child = sseExec(scriptPath, ["sync"], { cwd: CWD }, res);
+        child.on("close", (code) => {
+          syncState = code === 0 ? "success" : "failed";
+          // Reset to idle after a short delay so subsequent syncs are possible
+          setTimeout(() => { syncState = "idle"; }, 2000);
+        });
         return;
       }
 

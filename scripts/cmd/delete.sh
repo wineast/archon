@@ -48,8 +48,24 @@ cmd_delete() {
         cd "$PROJECT_ROOT"
     fi
 
-    # 执行 cleanup.sh
+    # 归档报告链到主仓库
     local wt_config_dir="$worktree_path/.worktree"
+    if [ -d "$wt_config_dir" ]; then
+        local archive_dir="$PROJECT_ROOT/.worktree/sub-worktrees/$target"
+        info "归档报告链到 $archive_dir ..."
+        mkdir -p "$archive_dir"
+        # 复制报告文件，排除运行时产物
+        for f in "$wt_config_dir"/*; do
+            local fname=$(basename "$f")
+            case "$fname" in
+                meta.json|merge.sh|.viewer.json|cleanup.sh) continue ;;
+            esac
+            cp -r "$f" "$archive_dir/" 2>/dev/null || true
+        done
+        success "报告链已归档"
+    fi
+
+    # 执行 cleanup.sh
     if [ -f "$wt_config_dir/cleanup.sh" ]; then
         info "执行清理脚本..."
         cd "$worktree_path"

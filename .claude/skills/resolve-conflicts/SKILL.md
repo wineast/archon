@@ -4,43 +4,29 @@ description: 解决合并冲突。当用户说"解决冲突"、"resolve conflict
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task
 ---
 
-将上游分支（baseBranch）合并到当前工作区分支，解决冲突后提交。
+解决当前 worktree 中已存在的合并冲突。
 
 ## 前置条件
 
-必须在 worktree 内执行（`.worktree/meta.json` 存在）。
+- 必须在 worktree 内执行（`.worktree/meta.json` 存在）
+- 工作区必须处于冲突状态（由 `make wt-sync` 或手动 `git merge` 产生）
+- 工作区不应有未提交变更（dirty 应在发起合并前处理）
 
 ## 流程
 
-### 1. 读取工作区信息
+### 1. 确认冲突状态
 
 ```bash
 cat .worktree/meta.json
 git branch --show-current
+git status
 ```
 
-获取 `baseBranch`、当前分支名。如果 meta.json 不存在，提示用户不在 worktree 中，终止。
+获取 `baseBranch`、当前分支名。确认工作区处于合并冲突状态（`git status` 显示 "You have unmerged paths"）。
 
-### 2. 自动提交未提交变更
+如果没有冲突，提示用户当前无需解决冲突，终止。
 
-```bash
-git status --short
-```
-
-> **禁止使用 `git stash`**——stash 是跨 worktree 共享的，会污染其他工作区。
-
-如果有未提交变更，自动 `git add -A && git commit -m "wip: auto-commit before conflict resolution"`。
-
-### 3. 执行合并
-
-```bash
-git merge <baseBranch>
-```
-
-- **无冲突**：合并成功，跳到步骤 6
-- **有冲突**：进入步骤 4
-
-### 4. 分析冲突文件
+### 2. 分析冲突文件
 
 ```bash
 git diff --name-only --diff-filter=U
@@ -57,7 +43,7 @@ git diff --name-only --diff-filter=U
    - 两侧改动同一处但互补 → 合并两侧意图
    - 两侧改动矛盾 → 优先保留当前工作区（ours），因为这是本次开发的目标
 
-### 5. 解决冲突
+### 3. 解决冲突
 
 对每个冲突文件：
 
@@ -69,10 +55,13 @@ git diff --name-only --diff-filter=U
 
 ```bash
 git add -A
-git commit --no-edit  # 使用自动生成的 merge commit message
 ```
 
-### 6. 验证
+根据冲突来源选择提交方式：
+- 如果是 `git merge` 产生的冲突（`git status` 显示 "All conflicts fixed but you are still merging"）：`git commit --no-edit`（使用自动生成的 merge commit message）
+- 其他情况：`git commit -m "resolve: merge conflicts with <baseBranch>"`
+
+### 4. 验证
 
 ```bash
 make typecheck
@@ -81,7 +70,7 @@ make test
 
 如果有失败，分析错误并修复（可能是合并引入的类型不匹配或测试断言变化），修复后重新提交。
 
-### 7. 依赖安装
+### 5. 依赖安装
 
 检测合并是否引入了依赖变更：
 
@@ -97,7 +86,7 @@ cd web && npm install
 
 ## 注意
 
-- **禁止 `git stash`**——与 sync-upstream 一致，stash 跨 worktree 共享
+- **禁止 `git stash`**——stash 跨 worktree 共享，会污染其他工作区
 - **冲突解决策略偏向 ours**——当前工作区的代码是本次开发目标，上游变更是背景
-- 解决完成后，PR 报告查看器（serve-report）刷新即可看到状态变为可合并
+- 解决完成后，报告查看器刷新即可看到状态更新
 - 如果冲突过于复杂（涉及大规模重构），向用户说明情况，列出冲突文件和建议的解决方向，等待确认
