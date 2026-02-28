@@ -110,19 +110,6 @@ make setup
 
 ---
 
-## 通过 Claude Code 技能使用
-
-除了直接使用 make 命令，也可以在 Claude Code 中通过 `/worktree` 技能操作，技能会额外处理：
-
-- **创建时**：基于 guide/ 文档变更分析需求 → 调研代码 → 生成 `start.sh` 启动脚本
-- **`start.sh`**：进入工作区后执行，自动启动 Claude Code 并注入任务描述
-
-```bash
-cd .worktrees/<name> && ./start.sh
-```
-
----
-
 ## 目录结构
 
 ```
@@ -134,7 +121,6 @@ archon/
 │   │   ├── .worktree/
 │   │   │   └── meta.json  # 工作区元数据
 │   │   ├── CLAUDE.local.md # Claude Code 本地配置
-│   │   ├── start.sh       # 启动脚本
 │   │   └── web/            # 项目代码
 │   └── feature-b/
 │       └── ...

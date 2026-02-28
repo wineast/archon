@@ -10,9 +10,6 @@ node_modules/
 # Worktree local config
 .worktree/
 CLAUDE.local.md
-start.sh
-clarify-req-from-todo.sh
-req.sh
 test-report.md
 .vercel
 .playwright-mcp
