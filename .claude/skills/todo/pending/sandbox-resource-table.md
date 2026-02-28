@@ -1,3 +1,6 @@
+---
+priority: P2
+---
 # 新建沙箱资源表（sandboxes）
 
 组织级独立表，不进 RESOURCE_TYPES，不走 agentResourceRefs。

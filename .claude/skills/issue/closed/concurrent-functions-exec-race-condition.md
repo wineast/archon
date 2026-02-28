@@ -1,21 +1,26 @@
+---
+priority: P1
+---
 # 并发工具调用导致 FunctionsExec 竞态条件 — "Exec context has been disposed"
 
-## 问题描述
+## Symptom（看到了什么）
 
 批量定价时，AI 并行调用 4 个定价工具（Ocean/Universe/Hermes/Radiant Portfolio），首次调用（冷缓存）3/4 失败，返回 `JS handler execution error: Exec context has been disposed`。仅最后完成编译的工具成功。第二次重试（热缓存）全部成功。
 
-## 复现链接
+复现链接：https://archon-nu-brown.vercel.app/zh/49b15cf9/gmcc-advisor-2/v/0.1.0/chat?session=ac6a93b9-7d9b-4999-9341-bb35d81f41d5
 
-https://archon-nu-brown.vercel.app/zh/49b15cf9/gmcc-advisor-2/v/0.1.0/chat?session=ac6a93b9-7d9b-4999-9341-bb35d81f41d5
+## Trigger（怎么触发的）
 
-## 涉及文件
+多个工具并行调用 `__context.fn()`，且为冷缓存（首次编译）场景。多个 ToolContext 实例并发触发同一 agentId 的函数编译，后完成的编译会 dispose 前一个的 exec context。
+
+## Locale（大概在哪）
 
 - `web/src/lib/tools/tool-context.ts` — `getCompiledFunctions()` 缺少并发编译锁
 - `web/src/lib/functions/compile.ts` — `setCachedFunctions()` 会 dispose 前一个 exec
 - `web/src/lib/functions/exec.ts` — `FunctionsExec.call()` 在 disposed 后抛错
 - `web/src/app/api/chat/tools/build-dynamic-tools.ts` — 每个工具独立创建 ToolContext
 
-## 分析
+## Hypothesis（猜是什么原因）
 
 ### 触发路径 1（本次复现的根因）：并发编译竞态
 
@@ -46,9 +51,7 @@ https://archon-nu-brown.vercel.app/zh/49b15cf9/gmcc-advisor-2/v/0.1.0/chat?sessi
 | `clearFunctionCache` | 用户在 chat 中编辑 function | 高 — 不需要并发，多 tab 即可 |
 | `disposeTemplateData` | `after()` 调度 + skill 模板含 fn 标签 | 低 — 条件苛刻 |
 
-## 修复方向
-
-### 路径 1 修复：全局 agentId 级 Promise 锁
+### 路径 1 修复方向：全局 agentId 级 Promise 锁
 
 在 `tool-context.ts` 中为 `getCompiledFunctions()` 添加全局 Promise 去重，确保同一 agentId 的并发编译只执行一次：
 
@@ -72,6 +75,6 @@ async function getCompiledFunctions(): Promise<Map<string, unknown>> {
 }
 ```
 
-### 路径 2 修复：`clearFunctionCache` 延迟 dispose
+### 路径 2 修复方向：`clearFunctionCache` 延迟 dispose
 
 `clearFunctionCache` 不应立即 dispose exec，而应标记为 stale。可考虑引用计数或 copy-on-read 语义：每个消费者获取 cache entry 时增加引用计数，释放时减少，归零时才真正 dispose。

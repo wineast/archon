@@ -1,3 +1,6 @@
+---
+priority: P2
+---
 # 聊天界面支持 AI 输出可点击链接
 
 系统提示词引导 AI 输出 `<a href="..." target="_blank">` 语法，聊天界面的 Markdown 渲染器需要支持将其渲染为真实可点击的超链接，支持 `target="_blank"` 新窗口打开等属性。

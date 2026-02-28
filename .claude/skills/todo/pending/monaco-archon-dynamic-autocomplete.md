@@ -1,3 +1,6 @@
+---
+priority: P1
+---
 # Monaco 编辑器接入 archon:* 动态类型补全
 
 `generateFnDeclarations` / `generateLibDeclarations` / `generateComponentDeclarations` 已在 `archon-types.ts` 中定义，但没有任何 `JsEditor` 调用方传入 `moduleDeclarations` prop。
