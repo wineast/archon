@@ -58,7 +58,7 @@ cmd_delete() {
         for f in "$wt_config_dir"/*; do
             local fname=$(basename "$f")
             case "$fname" in
-                meta.json|merge.sh|.viewer.json|cleanup.sh) continue ;;
+                meta.json|viewer.json|cleanup.sh) continue ;;
             esac
             cp -r "$f" "$archive_dir/" 2>/dev/null || true
         done

@@ -39,8 +39,7 @@ export function startViewer(config) {
   const CWD = process.cwd();
   const WT_DIR = join(CWD, ".worktree");
   const META = join(WT_DIR, "meta.json");
-  const MSH = join(WT_DIR, "merge.sh");
-  const VIEWER_JSON = join(WT_DIR, ".viewer.json");
+  const VIEWER_JSON = join(WT_DIR, "viewer.json");
 
   const rd = (p) => {
     try {
@@ -96,16 +95,7 @@ export function startViewer(config) {
 
   if (!baseBranch) baseBranch = "main";
 
-  // Parse merge.sh for MAIN_REPO and WT_NAME
-  if (existsSync(MSH)) {
-    const c = rd(MSH);
-    const mr = c.match(/^MAIN_REPO="(.+)"$/m);
-    const wn = c.match(/^WT_NAME="(.+)"$/m);
-    if (mr) mainRepo = mr[1];
-    if (wn) wtName = wn[1];
-  }
-
-  // Fallback: derive wtName from CWD path
+  // Derive wtName from CWD path
   if (!wtName) {
     const m = CWD.match(/\.worktrees[/\\]([^/\\]+)$/);
     if (m) wtName = m[1];
@@ -1366,11 +1356,18 @@ export function startViewer(config) {
         const child = sseExec(
           scriptPath,
           ["delete", wtName],
-          { cwd: mainRepo },
+          { cwd: mainRepo, env: { ...process.env, VIEWER_PID: String(process.pid) } },
           res
         );
         child.on("close", (code) => {
           deleteState = code === 0 ? "success" : "failed";
+          // 删除成功后，viewer 自行退出（工作区已不存在）
+          if (code === 0) {
+            setTimeout(() => {
+              try { unlinkSync(VIEWER_JSON); } catch {}
+              process.exit(0);
+            }, 2000);
+          }
         });
         return;
       }

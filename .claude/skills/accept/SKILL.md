@@ -230,7 +230,6 @@ make test
 │   ├── accept-{简述}-criteria-{N}.png
 │   ├── accept-{简述}-exp-{N}.png
 │   └── accept-{简述}-regression-{N}.png
-└── merge.sh                           # 合并脚本（输出）
 ```
 
 ### 报告模板
@@ -359,57 +358,6 @@ make test
 - [ ] **Regression**：静态检查跑了吗？Constraint 逐项确认了吗？
 - [ ] **Verdict**：证据摘要覆盖四项吗？阻塞项和 Follow-up 列清楚了吗？
 
-### 生成合并脚本
-
-如果 `.worktree/meta.json` 存在（工作区模式），生成 `.worktree/merge.sh`：
-
-```bash
-#!/bin/bash
-# 验收通过的合并脚本 — <工作区名称> → <baseBranch>
-# 验收报告: ACCEPT_REPORT.md
-# 生成时间: <时间>
-set -e
-
-MAIN_REPO="<主仓库绝对路径>"
-WT_NAME="<工作区名称>"
-
-echo "🔀 合并 $WT_NAME → <baseBranch>"
-make -C "$MAIN_REPO" wt-merge NAME="$WT_NAME"
-
-# 合并后检测 schema 变更
-if git -C "$MAIN_REPO" diff HEAD~1 --name-only | grep -qE "(drizzle/|db/schema\.ts)"; then
-    echo ""
-    echo "⚠️  检测到 schema 变更，请执行: make db-generate"
-fi
-
-echo ""
-echo "✅ 合并完成"
-echo "下一步（可选）："
-echo "  make wt-delete NAME=$WT_NAME    # 删除工作区"
-```
-
-如果不在工作区（无 meta.json），生成分支合并脚本：
-
-```bash
-#!/bin/bash
-# 验收通过的合并脚本 — <当前分支> → main
-# 验收报告: ACCEPT_REPORT.md
-set -e
-
-CURRENT_BRANCH="<当前分支>"
-TARGET_BRANCH="main"
-
-echo "🔀 合并 $CURRENT_BRANCH → $TARGET_BRANCH"
-git checkout "$TARGET_BRANCH"
-git merge --squash "$CURRENT_BRANCH"
-git commit -m "feat: <实现摘要>"
-
-echo ""
-echo "✅ 合并完成"
-```
-
-生成后设为可执行：`chmod +x .worktree/merge.sh`
-
 ### 启动/更新报告查看器
 
 ```bash
@@ -423,8 +371,7 @@ node scripts/serve-req-chain.mjs
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确
 3. 确认后写入 `.worktree/ACCEPT_REPORT.md`
-4. 生成 `merge.sh`
-5. 启动 HTML 查看器，提示用户在浏览器中查看和操作
+4. 启动 HTML 查看器，提示用户在浏览器中查看和操作
 
 ## 执行规则
 

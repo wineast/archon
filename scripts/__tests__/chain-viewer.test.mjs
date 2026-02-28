@@ -152,7 +152,7 @@ function cleanupViewer(ctx) {
   if (ctx.proc && !ctx.proc.killed) {
     ctx.proc.kill("SIGTERM");
   }
-  // Give process time to clean up .viewer.json
+  // Give process time to clean up viewer.json
   try {
     rmSync(ctx.tmpDir, { recursive: true, force: true });
   } catch {}
@@ -372,12 +372,12 @@ describe("集成测试（Integration）", () => {
       "REQ.md": "# 需求报告\n\n测试",
     });
     try {
-      // Verify .viewer.json exists
-      const viewerJson = join(ctx.wtDir, ".viewer.json");
-      assert.ok(existsSync(viewerJson), ".viewer.json 未创建");
+      // Verify viewer.json exists
+      const viewerJson = join(ctx.wtDir, "viewer.json");
+      assert.ok(existsSync(viewerJson), "viewer.json 未创建");
       const info = JSON.parse(readFileSync(viewerJson, "utf-8"));
-      assert.ok(info.pid, ".viewer.json 缺少 pid");
-      assert.ok(info.port, ".viewer.json 缺少 port");
+      assert.ok(info.pid, "viewer.json 缺少 pid");
+      assert.ok(info.port, "viewer.json 缺少 port");
 
       // Try to start again — should detect idempotent
       const ctx2 = await startTestViewer(REQ_CHAIN_SCRIPT, {}).catch((err) => {
@@ -386,14 +386,14 @@ describe("集成测试（Integration）", () => {
         return null;
       });
 
-      // Direct idempotent test: write .viewer.json with live PID into a new tmp dir
+      // Direct idempotent test: write viewer.json with live PID into a new tmp dir
       const tmpDir2 = mkdtempSync(join(tmpdir(), "viewer-idem-"));
       const wtDir2 = join(tmpDir2, ".worktree");
       mkdirSync(wtDir2);
       writeFileSync(join(wtDir2, "REQ.md"), "# Test");
       writeFileSync(join(wtDir2, "meta.json"), JSON.stringify({ baseBranch: "dev" }));
       writeFileSync(
-        join(wtDir2, ".viewer.json"),
+        join(wtDir2, "viewer.json"),
         JSON.stringify({ pid: ctx.proc.pid, port: ctx.port, url: ctx.url })
       );
 
@@ -469,16 +469,16 @@ describe("集成测试（Integration）", () => {
     }
   });
 
-  it("D-2: Stale .viewer.json 被清理后正常启动（退化围栏）", async () => {
+  it("D-2: Stale viewer.json 被清理后正常启动（退化围栏）", async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), "viewer-stale-"));
     const wtDir = join(tmpDir, ".worktree");
     mkdirSync(wtDir);
     writeFileSync(join(wtDir, "REQ.md"), "# 需求报告");
     writeFileSync(join(wtDir, "meta.json"), JSON.stringify({ baseBranch: "dev" }));
 
-    // Write .viewer.json with a dead PID (PID 1 is init, we use a high unlikely PID)
+    // Write viewer.json with a dead PID (PID 1 is init, we use a high unlikely PID)
     writeFileSync(
-      join(wtDir, ".viewer.json"),
+      join(wtDir, "viewer.json"),
       JSON.stringify({ pid: 999999, port: 99999, url: "http://localhost:99999" })
     );
 
@@ -493,7 +493,7 @@ describe("集成测试（Integration）", () => {
       // startTestViewer creates its own dir; let's test directly
     }
 
-    // Direct test: spawn viewer in our prepared dir with stale .viewer.json
+    // Direct test: spawn viewer in our prepared dir with stale viewer.json
     const result = await new Promise((resolve, reject) => {
       const proc = spawn("node", [REQ_CHAIN_SCRIPT], {
         cwd: tmpDir,
@@ -523,9 +523,9 @@ describe("集成测试（Integration）", () => {
       });
     });
 
-    assert.ok(result.started, `Stale .viewer.json 应被清理后正常启动，实际: ${result.stdout}`);
+    assert.ok(result.started, `Stale viewer.json 应被清理后正常启动，实际: ${result.stdout}`);
     rmSync(tmpDir, { recursive: true, force: true });
-    console.log("  ✓ D-2: Stale .viewer.json（死进程 PID）被清理后正常启动新服务");
+    console.log("  ✓ D-2: Stale viewer.json（死进程 PID）被清理后正常启动新服务");
   });
 
   it("/ping 端点返回正确响应", async () => {
@@ -613,7 +613,7 @@ describe("Journey: 需求链完整旅程", () => {
     writeFileSync(join(wtDir2, "REQ.md"), "# test");
     writeFileSync(join(wtDir2, "meta.json"), JSON.stringify({ baseBranch: "dev" }));
     writeFileSync(
-      join(wtDir2, ".viewer.json"),
+      join(wtDir2, "viewer.json"),
       JSON.stringify({ pid: ctx.proc.pid, port: ctx.port, url: ctx.url })
     );
     const idemResult = await new Promise((resolve) => {
@@ -629,13 +629,13 @@ describe("Journey: 需求链完整旅程", () => {
     assert.ok(idemResult.stdout.includes("already running"));
     rmSync(tmpDir2, { recursive: true, force: true });
 
-    // Step 8: 停止 → .viewer.json 清理
-    console.log("  Step 8: 停止查看器，验证 .viewer.json 清理");
-    const viewerJsonPath = join(ctx.wtDir, ".viewer.json");
-    assert.ok(existsSync(viewerJsonPath), "运行中应有 .viewer.json");
+    // Step 8: 停止 → viewer.json 清理
+    console.log("  Step 8: 停止查看器，验证 viewer.json 清理");
+    const viewerJsonPath = join(ctx.wtDir, "viewer.json");
+    assert.ok(existsSync(viewerJsonPath), "运行中应有 viewer.json");
     ctx.proc.kill("SIGTERM");
     await new Promise((r) => setTimeout(r, 500));
-    // After SIGTERM, cleanup should remove .viewer.json
+    // After SIGTERM, cleanup should remove viewer.json
     // (Note: process may not have time if tmpDir is already cleaned)
 
     console.log("  ✓ 完整旅程通过：启动 → 3 份报告递增 → 幂等 → 停止");

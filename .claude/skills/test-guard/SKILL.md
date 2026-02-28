@@ -483,8 +483,7 @@ guarded_by: TEST_SPEC.md + 本报告
 ├── VERIFY_REPORT.md                    # 验证报告（输入）
 ├── VERIFY_REPORT.assets/               # 验证截图
 ├── TEST_SPEC.md                        # 守护规约（输出）
-├── TEST_SPEC_REPORT.md                 # 守护报告（输出）
-└── merge.sh                            # 合并脚本
+└── TEST_SPEC_REPORT.md                 # 守护报告（输出）
 ```
 
 ### 规约自检清单
@@ -503,52 +502,7 @@ guarded_by: TEST_SPEC.md + 本报告
 - [ ] **Verdict**：判决与证据一致？
 - [ ] **Traceability**：测试文件头部注释链接回三份报告？
 
-### 3.3 生成合并脚本
-
-guard 是完整链的最后一步，负责生成最终的 merge.sh（覆盖 verify 生成的版本）。
-
-如果 `.worktree/meta.json` 存在（工作区模式），生成 `.worktree/merge.sh`：
-
-```bash
-#!/bin/bash
-# 守护通过的合并脚本 — <工作区名称> → <baseBranch>
-# 守护规约: TEST_SPEC.md
-# 守护报告: TEST_SPEC_REPORT.md
-# 生成时间: <时间>
-set -e
-
-MAIN_REPO="<主仓库绝对路径>"
-WT_NAME="<工作区名称>"
-WT_PATH="$MAIN_REPO/.worktrees/$WT_NAME"
-
-echo "🔀 合并 $WT_NAME → <baseBranch>"
-make -C "$MAIN_REPO" wt-merge NAME="$WT_NAME"
-
-# 合并后检测 schema 变更
-if git -C "$MAIN_REPO" diff HEAD~1 --name-only | grep -qE "(drizzle/|db/schema\.ts)"; then
-    echo ""
-    echo "⚠️  检测到 schema 变更，请执行: make db-generate"
-fi
-
-# 归档报告链到上游 .worktree/sub-worktrees/<name>/
-ARCHIVE_DIR="$MAIN_REPO/.worktree/sub-worktrees/$WT_NAME"
-if [ -d "$WT_PATH/.worktree" ]; then
-    mkdir -p "$ARCHIVE_DIR"
-    cp -r "$WT_PATH/.worktree/"* "$ARCHIVE_DIR/"
-    rm -f "$ARCHIVE_DIR/meta.json" "$ARCHIVE_DIR/merge.sh"
-    echo ""
-    echo "📦 报告链已归档到 .worktree/sub-worktrees/$WT_NAME/"
-fi
-
-echo ""
-echo "✅ 合并完成"
-echo "下一步（可选）："
-echo "  make wt-delete NAME=$WT_NAME    # 删除工作区"
-```
-
-生成后设为可执行：`chmod +x .worktree/merge.sh`
-
-### 3.6 流程
+### 3.3 流程
 
 1. 生成守护规约，展示给用户
 2. 用 `AskUserQuestion` 确认规约是否准确
@@ -556,8 +510,7 @@ echo "  make wt-delete NAME=$WT_NAME    # 删除工作区"
 4. 编写测试代码
 5. 运行测试
 6. 生成守护报告，写入 `.worktree/TEST_SPEC_REPORT.md`
-7. 生成 `merge.sh`（覆盖 verify 版本，含归档逻辑）
-8. 启动 HTML 查看器
+7. 启动 HTML 查看器
 
 ### 3.5 启动/更新报告查看器
 
