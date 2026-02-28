@@ -487,22 +487,13 @@ echo "  make wt-delete NAME=$WT_NAME    # 删除工作区"
 5. 生成 `merge.sh`（覆盖 verify 版本，含归档逻辑）
 6. 启动 HTML 查看器
 
-### 3.5 启动报告查看器
+### 3.5 启动/更新报告查看器
 
 ```bash
-# 后台启动
-node .claude/skills/test-guard/serve-report.mjs
+node .claude/skills/shared/serve-defect-chain.mjs
 # 用 Bash(run_in_background=true) 执行
+# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
 ```
-
-查看器功能：
-- **四栏 Tab 切换**：缺陷报告 | 修复报告 | 验证报告 | 测试守护
-- **Verdict 顶部横幅**：✅/⚠️/❌ 合并裁定（来自验证报告）
-- **Actions 区域**：
-  - 上游 / 当前的实时 git 状态
-  - Merge 按钮：两边都 clean + 无冲突 + 不落后上游时可用
-  - Delete 按钮：合并成功后出现
-- **图片内联**：报告中的截图直接显示
 
 ## 执行规则
 

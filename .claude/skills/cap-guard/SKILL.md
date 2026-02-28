@@ -371,18 +371,13 @@ make e2e
 {执行过程中捕获的学习信号。无则留空}
 ```
 
-### 启动报告查看器
+### 启动/更新报告查看器
 
 ```bash
-node .claude/skills/cap-guard/serve-report.mjs
+node .claude/skills/shared/serve-req-chain.mjs
 # 用 Bash(run_in_background=true) 执行
+# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
 ```
-
-查看器功能：
-- **四栏 Tab 切换**：需求报告 | 验收报告 | 守护规约 | 守护报告
-- **Verdict 顶部横幅**：✅/⚠️/❌ 守护裁定
-- **Coverage 仪表盘**：覆盖率可视化
-- **图片内联**：E2E 截图直接显示
 
 ### 流程
 

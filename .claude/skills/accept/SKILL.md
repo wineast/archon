@@ -410,23 +410,13 @@ echo "✅ 合并完成"
 
 生成后设为可执行：`chmod +x .worktree/merge.sh`
 
-### 启动报告查看器
+### 启动/更新报告查看器
 
 ```bash
-# 后台启动
-node .claude/skills/accept/serve-report.mjs
+node .claude/skills/shared/serve-req-chain.mjs
 # 用 Bash(run_in_background=true) 执行
+# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
 ```
-
-查看器功能：
-- **链路指示器**：需求报告 → 实现报告 → 验收报告
-- **三栏 Tab 切换**：需求报告 | 实现报告 | 验收报告
-- **Verdict 顶部横幅**：✅/⚠️/❌ 合并裁定
-- **Actions 区域**：
-  - 上游 / 当前的实时 git 状态
-  - Merge 按钮：两边都 clean + 无冲突 + 不落后上游时可用
-  - Delete 按钮：合并成功后出现
-- **图片内联**：报告中的截图直接显示
 
 ### 流程
 

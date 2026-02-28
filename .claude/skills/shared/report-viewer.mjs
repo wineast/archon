@@ -17,7 +17,15 @@
  */
 
 import { createServer } from "node:http";
-import { readFileSync, existsSync, statSync, createReadStream } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  existsSync,
+  statSync,
+  createReadStream,
+  watch,
+} from "node:fs";
 import { join, extname, resolve } from "node:path";
 import { spawn, execSync } from "node:child_process";
 
@@ -32,6 +40,7 @@ export function startViewer(config) {
   const WT_DIR = join(CWD, ".worktree");
   const META = join(WT_DIR, "meta.json");
   const MSH = join(WT_DIR, "merge.sh");
+  const VIEWER_JSON = join(WT_DIR, ".viewer.json");
 
   const rd = (p) => {
     try {
@@ -40,6 +49,26 @@ export function startViewer(config) {
       return null;
     }
   };
+
+  /* ── Idempotent start: check if viewer is already running ──── */
+
+  if (existsSync(VIEWER_JSON)) {
+    try {
+      const prev = JSON.parse(rd(VIEWER_JSON));
+      if (prev.pid) {
+        // Check if process is alive
+        process.kill(prev.pid, 0); // throws if dead
+        const url = `http://localhost:${prev.port}`;
+        console.log(`Report Viewer already running: ${url} (pid ${prev.pid})`);
+        process.exit(0);
+      }
+    } catch {
+      // Process dead or bad JSON — clean up stale file
+      try {
+        unlinkSync(VIEWER_JSON);
+      } catch {}
+    }
+  }
 
   /* ── Startup validation ─────────────────────────────────────── */
 
@@ -177,6 +206,30 @@ export function startViewer(config) {
     );
   }
 
+  /* ── SSE file-watch: push changes to connected browsers ────── */
+
+  const sseClients = new Set();
+
+  let watchDebounce = null;
+  try {
+    watch(WT_DIR, (eventType, filename) => {
+      if (!filename || !filename.endsWith(".md")) return;
+      if (watchDebounce) clearTimeout(watchDebounce);
+      watchDebounce = setTimeout(() => {
+        const msg = `data: ${JSON.stringify({ type: "file-change", file: filename })}\n\n`;
+        for (const client of sseClients) {
+          try {
+            client.write(msg);
+          } catch {
+            sseClients.delete(client);
+          }
+        }
+      }, 500);
+    });
+  } catch {
+    // fs.watch may fail on some systems; viewer still works, just no auto-refresh
+  }
+
   /* ── Build HTML ─────────────────────────────────────────────── */
 
   function buildHtml() {
@@ -196,10 +249,11 @@ export function startViewer(config) {
     );
 
     // ─ Chain flow HTML ─
+    const availKeys = new Set(rpts.map((r) => r.key));
     const chainHtml = chains
       .map(
         (c, i) =>
-          `<span class="chain-node ${c.cssClass}">${c.label}</span>` +
+          `<span class="chain-node ${c.cssClass}${availKeys.has(c.key) ? "" : " dimmed"}">${c.label}</span>` +
           (i < chains.length - 1
             ? '\n    <span class="chain-arrow">\u2192</span>'
             : "")
@@ -564,6 +618,7 @@ export function startViewer(config) {
     font-size: 12px;
   }
   .chain-arrow { color: var(--text-muted); font-size: 16px; }
+  .chain-node.dimmed { opacity: 0.3; }
 
   /* Chain node & tab badge colors */
   .chain-node.req,     .tab-badge.req     { background: rgba(88,166,255,0.1);  color: var(--accent); }
@@ -937,6 +992,18 @@ export function startViewer(config) {
     document.querySelectorAll(".tab-btn").forEach(function(b) { b.classList.toggle("active", b.dataset.tab === name); });
     document.querySelectorAll(".tab-panel").forEach(function(p) { p.classList.toggle("active", p.id === "panel-" + name); });
   }
+
+  // --- SSE auto-refresh on file changes ---
+  (function() {
+    var evtSource = new EventSource("/events");
+    evtSource.onmessage = function() {
+      location.reload();
+    };
+    evtSource.onerror = function() {
+      // Reconnect handled automatically by EventSource
+    };
+  })();
+
   ${actionsJs}
 <\/script>
 </body>
@@ -950,6 +1017,28 @@ export function startViewer(config) {
     if (req.method === "GET" && req.url === "/") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(buildHtml());
+      return;
+    }
+
+    // GET /ping → liveness check
+    if (req.method === "GET" && req.url === "/ping") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true, pid: process.pid }));
+      return;
+    }
+
+    // GET /events → SSE stream for file-change notifications
+    if (req.method === "GET" && req.url === "/events") {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      });
+      res.write(": connected\n\n");
+      sseClients.add(res);
+      req.on("close", () => {
+        sseClients.delete(res);
+      });
       return;
     }
 
@@ -1243,6 +1332,15 @@ export function startViewer(config) {
   server.listen(0, () => {
     const port = server.address().port;
     const url = `http://localhost:${port}`;
+
+    // Write PID/port for idempotent detection
+    try {
+      writeFileSync(
+        VIEWER_JSON,
+        JSON.stringify({ pid: process.pid, port, url }, null, 2)
+      );
+    } catch {}
+
     console.log(`Report Viewer: ${url}`);
     console.log(`Branch: ${currentBranch}${baseBranch ? " \u2192 " + baseBranch : ""}`);
     console.log("Press Ctrl+C to stop.\n");
@@ -1253,4 +1351,14 @@ export function startViewer(config) {
       console.log(`Open ${url} in your browser.`);
     }
   });
+
+  // Clean up .viewer.json on exit
+  function cleanup() {
+    try {
+      unlinkSync(VIEWER_JSON);
+    } catch {}
+    process.exit(0);
+  }
+  process.on("SIGINT", cleanup);
+  process.on("SIGTERM", cleanup);
 }
