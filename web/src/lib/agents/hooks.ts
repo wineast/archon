@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR, { type KeyedMutator } from "swr";
+import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
 import type { AgentRow, AgentRole } from "@/db/schema";
 
@@ -185,12 +186,17 @@ export async function importAgent(
   t: (key: string) => string
 ) {
   try {
-    const body = await file.arrayBuffer();
+    // Step 1: Upload ZIP directly to Vercel Blob (bypasses Vercel 4.5 MB body limit)
+    const blob = await upload(file.name, file, {
+      access: "public",
+      handleUploadUrl: "/api/agents/import/upload",
+    });
 
+    // Step 2: Tell import API to process the uploaded blob
     const res = await fetch(`/api/agents/import?orgId=${orgId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/octet-stream" },
-      body,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blobUrl: blob.url }),
     });
 
     if (!res.ok) {

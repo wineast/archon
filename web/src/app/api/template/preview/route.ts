@@ -19,9 +19,11 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
+  const versionId = await resolveEditingVersionId(agentId);
+
   if (mode === "dataset") {
     // Dataset data preview: only inject dataset context, no built-in vars / tool / ontology
-    const rows = await getDatasets(agentId);
+    const rows = await getDatasets(agentId, versionId);
     const { resolvedVars } = resolveDatasets(rows);
     let rendered: string;
     try {
@@ -37,7 +39,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ rendered });
   }
 
-  const versionId = await resolveEditingVersionId(agentId);
   const data = await gatherTemplateData(agentId, versionId);
   try {
     const rendered = await renderTemplate(text, data, hostContext ? { host: hostContext } : undefined);

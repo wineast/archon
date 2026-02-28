@@ -41,8 +41,8 @@ export async function POST(
   }
 
   // Load resolved dataset variables for template enum expansion
-  const { resolvedVars } = schema.agentId
-    ? await getResolvedDatasets(schema.agentId)
+  const { resolvedVars } = schema.agentId && schema.versionId
+    ? await getResolvedDatasets(schema.agentId, schema.versionId)
     : { resolvedVars: {} };
 
   // Build Zod schema and validate

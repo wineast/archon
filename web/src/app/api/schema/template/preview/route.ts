@@ -3,6 +3,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { processTemplate } from "@/lib/wiki/template";
 import { getResolvedDatasets } from "@/lib/datasets/queries";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
+import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { expandSchemaRefs } from "@/lib/schemas/resolve-inline";
 import { db } from "@/db";
 import { schemas } from "@/db/schema";
@@ -23,7 +24,8 @@ export async function POST(req: Request) {
   const ctx = await requireAgentRole(agentId, "viewer");
   if (ctx instanceof NextResponse) return ctx;
 
-  const { resolvedVars } = await getResolvedDatasets(agentId);
+  const versionId = await resolveEditingVersionId(agentId);
+  const { resolvedVars } = await getResolvedDatasets(agentId, versionId);
 
   const virtualDoc: WikiDocument = {
     id: "__schema_preview__",

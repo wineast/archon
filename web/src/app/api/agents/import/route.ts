@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { put } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { agents, agentFiles, agentMembers, agentVersions, embedTokens, orgs } from "@/db/schema";
@@ -10,6 +10,8 @@ import { requireOrgRole } from "@/lib/auth/require-org-role";
 import { restoreSnapshot } from "@/lib/versions/snapshot";
 import { validateExportData, type AgentExportData } from "@/lib/versions/types";
 import { migrateExportData } from "@/lib/versions/migrations";
+
+export const maxDuration = 60;
 
 /** Parse ZIP body → manifest + zip handle */
 async function parseZipBody(
@@ -33,12 +35,35 @@ export async function POST(req: Request) {
   const orgCtx = await requireOrgRole(orgId, "member");
   if (orgCtx instanceof NextResponse) return orgCtx;
 
+  // Read blobUrl from JSON body (ZIP was uploaded directly to Vercel Blob by the client)
+  let blobUrl: string;
+  try {
+    const json = await req.json();
+    blobUrl = json.blobUrl;
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
+  if (!blobUrl || typeof blobUrl !== "string") {
+    return NextResponse.json(
+      { error: "blobUrl is required" },
+      { status: 400 }
+    );
+  }
+
   let body: AgentExportData;
   let zip: JSZip;
   try {
-    const raw = await req.arrayBuffer();
+    const blobRes = await fetch(blobUrl);
+    if (!blobRes.ok) {
+      throw new Error(`Blob fetch failed: ${blobRes.status}`);
+    }
+    const raw = await blobRes.arrayBuffer();
     ({ data: body, zip } = await parseZipBody(raw));
   } catch {
+    await del(blobUrl).catch(() => {});
     return NextResponse.json(
       { error: "Invalid export file format" },
       { status: 400 }
@@ -178,6 +203,9 @@ export async function POST(req: Request) {
 
     return agent;
   });
+
+  // Clean up temporary blob
+  await del(blobUrl).catch(() => {});
 
   // Get org slug for response
   const [org] = await db

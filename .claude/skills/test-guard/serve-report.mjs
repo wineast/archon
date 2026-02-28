@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Verify Report Web Viewer
+ * Report Chain Web Viewer
  * 独立 Node.js 脚本，零外部依赖。
- * 读取 .worktree/ 下的三份报告（DEFECT.md / FIX_REPORT.md / VERIFY_REPORT.md），
+ * 读取 .worktree/ 下的报告（DEFECT.md / FIX_REPORT.md / VERIFY_REPORT.md / TEST_SPEC.md），
  * 提供 Web 界面查看完整证据链、一键合并、删除工作区。
  *
  * Usage: node .claude/skills/verify/serve-report.mjs
@@ -23,6 +23,7 @@ const FIX_PATH = join(WORKTREE_DIR, "FIX_REPORT.md");
 const DEFECT_PATH = join(WORKTREE_DIR, "DEFECT.md");
 const MERGE_SH_PATH = join(WORKTREE_DIR, "merge.sh");
 const META_PATH = join(WORKTREE_DIR, "meta.json");
+const TEST_SPEC_PATH = join(WORKTREE_DIR, "TEST_SPEC.md");
 
 function readFile(path) {
   try { return readFileSync(path, "utf-8"); } catch { return null; }
@@ -148,14 +149,16 @@ function buildHtml() {
   const verifyMd = readFile(VERIFY_PATH) || "";
   const fixMd = readFile(FIX_PATH) || "";
   const defectMd = readFile(DEFECT_PATH) || "";
+  const testSpecMd = readFile(TEST_SPEC_PATH) || "";
   const hasMergeSh = existsSync(MERGE_SH_PATH);
+  const hasTestSpec = !!testSpecMd;
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Verify: ${title}</title>
+<title>${hasTestSpec ? 'Guard' : 'Verify'}: ${title}</title>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
 <style>
   :root {
@@ -233,6 +236,7 @@ function buildHtml() {
   .tab-badge.defect { background: rgba(248,81,73,0.15); color: var(--red); }
   .tab-badge.fix { background: rgba(210,153,34,0.15); color: var(--yellow); }
   .tab-badge.verify { background: rgba(63,185,80,0.15); color: var(--green); }
+  .tab-badge.guard { background: rgba(88,166,255,0.15); color: var(--accent); }
 
   /* Tab content */
   .tab-panel {
@@ -303,6 +307,7 @@ function buildHtml() {
   .chain-node.defect { background: rgba(248,81,73,0.1); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
   .chain-node.fix { background: rgba(210,153,34,0.1); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); }
   .chain-node.verify { background: rgba(63,185,80,0.1); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .chain-node.guard { background: rgba(88,166,255,0.1); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); }
   .chain-arrow { color: var(--text-muted); font-size: 16px; }
 
   /* Actions area */
@@ -420,6 +425,54 @@ function buildHtml() {
   .wt-badge.ahead { background: rgba(63,185,80,0.12); color: var(--green); }
   .wt-badge.behind { background: rgba(248,81,73,0.12); color: var(--red); }
 
+  /* Commits */
+  .commits-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px; margin-top: 4px;
+  }
+  .commits-title {
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .commits-count {
+    font-size: 11px; padding: 1px 7px; border-radius: 10px;
+    background: rgba(88,166,255,0.12); color: var(--accent); font-weight: 500;
+  }
+  .commits-list {
+    border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; margin-bottom: 10px;
+  }
+  .commit-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .commit-row:last-child { border-bottom: none; }
+  .commit-hash {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px; color: var(--accent); font-weight: 500;
+    background: rgba(88,166,255,0.08); padding: 1px 6px;
+    border-radius: 4px; white-space: nowrap;
+  }
+  .commit-subject { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .commit-meta {
+    font-size: 11px; color: var(--text-muted); white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .diff-stat-details { margin-bottom: 10px; }
+  .diff-stat-summary {
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    padding: 4px 0; user-select: none;
+  }
+  .diff-stat-summary:hover { color: var(--text); }
+  .diff-stat-content {
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px; margin-top: 4px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px; color: var(--text-muted); overflow-x: auto;
+    line-height: 1.5;
+  }
+
   /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
@@ -438,6 +491,7 @@ function buildHtml() {
     <span class="chain-node fix">修复报告</span>
     <span class="chain-arrow">\u2192</span>
     <span class="chain-node verify">验证报告</span>
+    ${hasTestSpec ? '<span class="chain-arrow">\\u2192</span><span class="chain-node guard">测试守护</span>' : ''}
   </div>
 
   <!-- Verdict banner -->
@@ -451,9 +505,12 @@ function buildHtml() {
     <button class="tab-btn" data-tab="fix" onclick="switchTab('fix')">
       <span class="tab-badge fix">2</span> 修复报告
     </button>
-    <button class="tab-btn active" data-tab="verify" onclick="switchTab('verify')">
+    <button class="tab-btn${hasTestSpec ? '' : ' active'}" data-tab="verify" onclick="switchTab('verify')">
       <span class="tab-badge verify">3</span> 验证报告
     </button>
+    ${hasTestSpec ? `<button class="tab-btn active" data-tab="guard" onclick="switchTab('guard')">
+      <span class="tab-badge guard">4</span> 测试守护
+    </button>` : ''}
   </div>
 
   <!-- Tab panels -->
@@ -463,9 +520,12 @@ function buildHtml() {
   <div class="tab-panel" id="panel-fix">
     <div class="panel-body" id="content-fix"></div>
   </div>
-  <div class="tab-panel active" id="panel-verify">
+  <div class="tab-panel${hasTestSpec ? '' : ' active'}" id="panel-verify">
     <div class="panel-body" id="content-verify"></div>
   </div>
+  ${hasTestSpec ? `<div class="tab-panel active" id="panel-guard">
+    <div class="panel-body" id="content-guard"></div>
+  </div>` : ''}
 
   <!-- Actions -->
   <div class="actions" id="actions-area" ${hasMergeSh ? '' : 'style="display:none"'}>
@@ -485,6 +545,17 @@ function buildHtml() {
         <div class="wt-card-branch" id="wt-current-branch">...</div>
         <div class="wt-card-meta" id="wt-current-meta"></div>
       </div>
+    </div>
+    <div id="commits-section" style="display:none">
+      <div class="commits-header">
+        <span class="commits-title">Commits</span>
+        <span class="commits-count" id="commits-count"></span>
+      </div>
+      <div class="commits-list" id="commits-list"></div>
+      <details class="diff-stat-details" id="diff-stat-wrap" style="display:none">
+        <summary class="diff-stat-summary">Changed files</summary>
+        <pre class="diff-stat-content" id="diff-stat-content"></pre>
+      </details>
     </div>
     <div class="merge-check checking" id="merge-check">Checking...</div>
     <div class="btn-group">
@@ -506,7 +577,8 @@ function buildHtml() {
   const reports = {
     defect: ${JSON.stringify(defectMd)},
     fix: ${JSON.stringify(fixMd)},
-    verify: ${JSON.stringify(verifyMd)}
+    verify: ${JSON.stringify(verifyMd)},
+    guard: ${JSON.stringify(testSpecMd)}
   };
 
   // Rewrite image paths to /assets/ route
@@ -597,6 +669,34 @@ function buildHtml() {
         document.getElementById("wt-current-meta").innerHTML = statusBadges(data.current);
       }
 
+      // Render commits
+      const commitsSection = document.getElementById("commits-section");
+      const commitsList = document.getElementById("commits-list");
+      const commitsCount = document.getElementById("commits-count");
+      if (data.commits && data.commits.length > 0) {
+        commitsSection.style.display = "";
+        commitsCount.textContent = data.commits.length;
+        commitsList.innerHTML = data.commits.map(c =>
+          '<div class="commit-row">' +
+            '<span class="commit-hash">' + c.hash + '</span>' +
+            '<span class="commit-subject">' + c.subject.replace(/</g, "&lt;") + '</span>' +
+            '<span class="commit-meta"><span>' + c.author + '</span><span>' + c.date + '</span></span>' +
+          '</div>'
+        ).join("");
+      } else {
+        commitsSection.style.display = "none";
+      }
+
+      // Render diff stat
+      const diffStatWrap = document.getElementById("diff-stat-wrap");
+      const diffStatContent = document.getElementById("diff-stat-content");
+      if (data.diffStat) {
+        diffStatWrap.style.display = "";
+        diffStatContent.textContent = data.diffStat;
+      } else {
+        diffStatWrap.style.display = "none";
+      }
+
       const curDirty = isDirty(data.current);
       const upDirty = isDirty(data.upstream);
 
@@ -612,12 +712,26 @@ function buildHtml() {
       }
 
       fetch("/merge-check").then(r => r.json()).then(mc => {
-        if (mc.status === "behind") {
+        if (mc.status === "merged") {
+          mergeCheckEl.className = "merge-check clean";
+          mergeCheckEl.textContent = "\\u2705 " + mc.message;
+          btnMerge.disabled = true;
+          btnMerge.innerHTML = "Merged \\u2705";
+          deleteWrap.style.display = "";
+        } else if (mc.status === "behind") {
           mergeCheckEl.className = "merge-check behind";
           mergeCheckEl.textContent = "\\u26A0\\uFE0F " + mc.message + "，请先同步上游";
+          btnMerge.disabled = true;
         } else if (mc.status === "conflict") {
           mergeCheckEl.className = "merge-check conflict";
           mergeCheckEl.textContent = "\\u274C 检测到合并冲突，需要先解决冲突再合并";
+          btnMerge.disabled = true;
+        } else if (mc.status === "up_to_date") {
+          mergeCheckEl.className = "merge-check clean";
+          mergeCheckEl.textContent = "\\u2705 " + mc.message;
+          btnMerge.disabled = true;
+          btnMerge.textContent = "Already up to date";
+          deleteWrap.style.display = "";
         } else if (mc.status === "clean") {
           mergeCheckEl.className = "merge-check clean";
           mergeCheckEl.textContent = "\\u2705 可以合并";
@@ -625,6 +739,7 @@ function buildHtml() {
         } else {
           mergeCheckEl.className = "merge-check";
           mergeCheckEl.textContent = mc.message || "";
+          btnMerge.disabled = true;
         }
       });
     }).catch(() => {
@@ -818,6 +933,42 @@ const server = createServer((req, res) => {
         path: upstreamPath,
         ...upStatus,
       };
+
+      // Upstream ahead/behind relative to its remote tracking branch
+      try {
+        const upRemote = execSync(`git rev-parse --abbrev-ref ${baseBranch}@{upstream}`, { cwd: upstreamPath, encoding: "utf-8" }).trim();
+        const upAhead = execSync(`git rev-list ${upRemote}..${baseBranch} --count`, { cwd: upstreamPath, encoding: "utf-8" }).trim();
+        const upBehind = execSync(`git rev-list ${baseBranch}..${upRemote} --count`, { cwd: upstreamPath, encoding: "utf-8" }).trim();
+        result.upstream.ahead = parseInt(upAhead);
+        result.upstream.behind = parseInt(upBehind);
+      } catch {}
+
+      // Commits between baseBranch and HEAD
+      try {
+        const logRaw = execSync(
+          `git log ${baseBranch}..HEAD --pretty=format:"%h|%s|%an|%ar" --no-merges`,
+          { cwd: CWD, encoding: "utf-8" }
+        ).trim();
+        result.commits = logRaw
+          ? logRaw.split("\n").map((line) => {
+              const [hash, subject, author, date] = line.split("|");
+              return { hash, subject, author, date };
+            })
+          : [];
+      } catch {
+        result.commits = [];
+      }
+
+      // Changed files between baseBranch and HEAD
+      try {
+        const diffRaw = execSync(
+          `git diff ${baseBranch}..HEAD --stat --stat-width=60`,
+          { cwd: CWD, encoding: "utf-8" }
+        ).trim();
+        result.diffStat = diffRaw || "";
+      } catch {
+        result.diffStat = "";
+      }
     } catch (e) {
       result.error = e.message;
     }
@@ -827,6 +978,11 @@ const server = createServer((req, res) => {
 
   if (req.method === "GET" && req.url === "/merge-check") {
     res.writeHead(200, { "Content-Type": "application/json" });
+    // After successful merge, squash creates divergence — skip re-check
+    if (mergeState === "success") {
+      res.end(JSON.stringify({ status: "merged", message: "已合并" }));
+      return;
+    }
     if (!baseBranch || !currentBranch) {
       res.end(JSON.stringify({ status: "unknown", message: "Cannot determine branches" }));
       return;
@@ -835,6 +991,12 @@ const server = createServer((req, res) => {
       const behind = execSync(`git rev-list HEAD..${baseBranch} --count`, { cwd: CWD, encoding: "utf-8" }).trim();
       if (behind !== "0") {
         res.end(JSON.stringify({ status: "behind", behind: parseInt(behind), message: `落后上游 ${behind} 个 commit` }));
+        return;
+      }
+      // Check if there's actually anything to merge (diff between branches)
+      const diffCheck = execSync(`git diff ${baseBranch}..HEAD --quiet 2>/dev/null; echo $?`, { cwd: CWD, encoding: "utf-8", shell: true }).trim();
+      if (diffCheck === "0") {
+        res.end(JSON.stringify({ status: "up_to_date", message: "已经是最新，无需合并" }));
         return;
       }
       try {
@@ -860,13 +1022,25 @@ const server = createServer((req, res) => {
       res.end("Already merged");
       return;
     }
-    if (!existsSync(MERGE_SH_PATH)) {
+    // Server-side behind guard: prevent merge when worktree is behind upstream
+    try {
+      const behind = execSync(`git rev-list HEAD..${baseBranch} --count`, { cwd: CWD, encoding: "utf-8" }).trim();
+      if (behind !== "0") {
+        res.writeHead(409);
+        res.end(`Cannot merge: behind upstream by ${behind} commit(s). Sync first.`);
+        return;
+      }
+    } catch {}
+
+    // Call worktree.sh directly (not through make) to avoid output buffering
+    const scriptPath = join(mainRepo, "scripts", "worktree.sh");
+    if (!existsSync(scriptPath) || !wtName) {
       res.writeHead(400);
-      res.end("merge.sh not found");
+      res.end("Cannot determine merge parameters");
       return;
     }
     mergeState = "running";
-    const child = sseExec("bash", [MERGE_SH_PATH], { cwd: CWD }, res);
+    const child = sseExec(scriptPath, ["merge", wtName], { cwd: mainRepo }, res);
     child.on("close", (code) => {
       mergeState = code === 0 ? "success" : "failed";
     });
@@ -885,7 +1059,8 @@ const server = createServer((req, res) => {
       return;
     }
     deleteState = "running";
-    const child = sseExec("make", ["-C", mainRepo, "wt-delete", `NAME=${wtName}`], {}, res);
+    const scriptPath = join(mainRepo, "scripts", "worktree.sh");
+    const child = sseExec(scriptPath, ["delete", wtName], { cwd: mainRepo }, res);
     child.on("close", (code) => {
       deleteState = code === 0 ? "success" : "failed";
     });
@@ -899,7 +1074,7 @@ const server = createServer((req, res) => {
 server.listen(0, () => {
   const port = server.address().port;
   const url = `http://localhost:${port}`;
-  console.log(`Verify Report Viewer: ${url}`);
+  console.log(`Report Viewer: ${url}`);
   console.log(`Branch: ${currentBranch} → ${baseBranch}`);
   console.log("Press Ctrl+C to stop.\n");
 

@@ -52,12 +52,12 @@ export async function POST(req: Request) {
     data: body.data,
   };
 
-  // Validate no circular dependency
+  // Validate no circular dependency (scoped to current version)
   if (newRow.agentId) {
     const existing = await db
       .select({ key: datasets.key, data: datasets.data })
       .from(datasets)
-      .where(and(eq(datasets.agentId, newRow.agentId), isNull(datasets.deletedAt)));
+      .where(and(eq(datasets.versionId, versionId), isNull(datasets.deletedAt)));
     try {
       validateNoCycle([...existing, { key: newRow.key, data: newRow.data }]);
     } catch (e) {

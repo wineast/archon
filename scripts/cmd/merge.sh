@@ -38,7 +38,9 @@ cmd_merge() {
     local wt_branch
     wt_branch=$(git -C "$worktree_path" rev-parse --abbrev-ref HEAD)
 
-    # 检查工作区是否有未提交的更改
+    # ── 前置检查 ──────────────────────────────────────────────
+
+    # 1. 检查工作区是否有未提交的更改
     cd "$worktree_path"
     if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
         error "工作区有未提交的更改，请先提交或 stash"
@@ -47,9 +49,36 @@ cmd_merge() {
     fi
     cd "$PROJECT_ROOT"
 
+    # 2. 检查主仓库是否有未提交的更改
+    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+        error "主仓库有未提交的更改，请先提交或 stash"
+        git status --short
+        exit 1
+    fi
+
+    # 3. 检查工作区是否落后上游（上游有新 commit 未同步）
+    local behind_count
+    behind_count=$(git -C "$worktree_path" rev-list HEAD.."$base_branch" --count 2>/dev/null || echo "0")
+    if [ "$behind_count" != "0" ]; then
+        error "工作区落后上游 $behind_count 个 commit，请先同步: make wt-sync"
+        exit 1
+    fi
+
+    # 4. 合并冲突预检（避免 checkout 后才发现冲突）
+    if ! git merge-tree --write-tree "$base_branch" "$wt_branch" >/dev/null 2>&1; then
+        error "检测到合并冲突，请先在工作区中解决冲突"
+        echo ""
+        echo "提示："
+        echo "  cd $worktree_path"
+        echo "  git merge $base_branch    # 解决冲突后 commit"
+        exit 1
+    fi
+
+    # ── 执行合并 ──────────────────────────────────────────────
+
     info "合并 $wt_branch → $base_branch"
 
-    # 切到 base 分支
+    # 记录当前分支，合并失败时回退
     local current_branch
     current_branch=$(get_current_branch)
 
@@ -60,6 +89,15 @@ cmd_merge() {
 
     # Squash 合并：将工作区所有 commit 压缩为 1 个
     if git merge --squash "$wt_branch"; then
+        # 检查 squash 后是否有实际变更
+        if git diff --cached --quiet 2>/dev/null; then
+            success "已经是最新，无需合并"
+            echo ""
+            echo "下一步（可选）："
+            echo "  make wt-delete NAME=$target    # 删除工作区"
+            return 0
+        fi
+
         # 收集工作区 commit 摘要作为 commit body
         local commit_log
         commit_log=$(git log "$base_branch".."$wt_branch" --oneline --no-merges 2>/dev/null || true)
@@ -83,7 +121,11 @@ cmd_merge() {
         echo "下一步（可选）："
         echo "  make wt-delete NAME=$target    # 删除工作区"
     else
-        error "合并冲突，请手动解决后提交"
+        error "合并失败，回退到 $current_branch"
+        git merge --abort 2>/dev/null || true
+        if [ "$current_branch" != "$base_branch" ]; then
+            git checkout "$current_branch"
+        fi
         exit 1
     fi
 }
