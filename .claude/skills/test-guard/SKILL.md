@@ -402,6 +402,10 @@ fixed_by: FIX_REPORT.md
 verified_by: VERIFY_REPORT.md
 guarded_by: 本报告
 ```
+
+## 过程备注
+
+{执行过程中捕获的学习信号。无则留空}
 ```
 
 ### 资源管理
@@ -511,6 +515,7 @@ node .claude/skills/test-guard/serve-report.mjs
 7. **静态检查不跳过**：`make typecheck` + `make test` 必须通过
 8. **Traceability 必须完整**：每个测试文件头部注释链接回三份报告
 9. **遵循项目测试约定**：CLAUDE.md 中所有 E2E、Testing 相关规则
+10. **过程备注**：执行过程中遇到重试、惊讶、绕路、确认、环境等偏差信号时，记录到报告的「过程备注」节。格式：`[重试/惊讶/绕路/确认/环境] 简述`
 
 ## 推导路径总览
 
