@@ -10,7 +10,7 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write, Edit, mcp__
 
 集成报告是"货运清单"，发布检查是"质检报告 + 放行单"。
 
-与 accept/verify 的本质区别：accept/verify 审判单个功能/修复的质量，release 审判整批变更的集成质量——重点不是每个零件合不合格（子工作区已验收/验证），而是装配在一起能不能跑。
+与 accept/verify 的本质区别：accept/verify 审判单个功能/修复的质量，release 审判整批变更的集成质量——重点不是每个零件合不合格（各任务工作区已验收/验证），而是装配在一起能不能跑。
 
 ### 三份文档的角色
 
@@ -47,7 +47,7 @@ Verdict（合不合并）          Verdict（发不发布）
 ### 操作
 
 1. 读取 `.worktree/INTEGRATE.md`，提取四要素：
-   - **Scope**：包含的工作区、commit 范围
+   - **Scope**：包含的 merged 任务、commit 范围
    - **Additions**：新功能 + 缺陷修复
    - **Breaking**：Schema/API/行为变更
    - **Risk**：跨功能交互、未闭合缺口
@@ -101,7 +101,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 #### 2.2 从集成报告 Risk 推导验证场景
 - 读取 INTEGRATE.md 的 Risk 部分
 - 识别跨功能交互风险点
-- 设计 2-3 个交叉验证场景（覆盖不同工作区的变更交汇处）
+- 设计 2-3 个交叉验证场景（覆盖不同 merged 任务的变更交汇处）
 
 #### 2.3 用 Playwright 验证
 - 对每个场景端到端走通
@@ -144,8 +144,8 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 
 ### Release Notes
 从集成报告的 Additions 推导面向用户的变更日志：
-- 新功能：从 REQ.md 的 What 翻译为用户语言
-- 缺陷修复：从 DEFECT.md 的 Delta 翻译为用户语言
+- 新功能：从集成报告的 Additions → 新功能提取，翻译为用户语言
+- 缺陷修复：从集成报告的 Additions → 缺陷修复提取，翻译为用户语言
 - 其他：chore/refactor 归类
 
 ### Verdict 裁定规则
@@ -166,12 +166,13 @@ Regression 未通过 / Cross-feature 未通过 / Migration 阻塞
 所有发布检查产物统一放在 `.worktree/` 下：
 ```
 .worktree/
-├── INTEGRATE.md                       # 集成报告（输入）
+├── INTEGRATE.md                       # 集成报告（输入，由 /integrate 生成）
 ├── RELEASE_REPORT.md                  # 发布检查报告（输出）
-├── RELEASE_REPORT.assets/             # 发布检查截图
-│   └── release-cross-{N}.png
-└── sub-worktrees/                     # 子工作区归档（输入）
+└── RELEASE_REPORT.assets/             # 发布检查截图
+    └── release-cross-{N}.png
 ```
+
+各任务工作区的报告在 `.worktrees/{name}/.worktree/` 下（由集成报告引用，release 不直接读取）。
 
 ### 报告模板
 
@@ -323,7 +324,7 @@ node .claude/skills/release/serve-report.mjs
 
 1. **集成报告先行**：必须读取 INTEGRATE.md 作为输入，不从零开始分析
 2. **回归必须全量**：`make typecheck` + `make test` 不可跳过
-3. **交叉验证不能省**：即使每个子工作区都通过了验收/验证，组合后仍需验证
+3. **交叉验证不能省**：即使每个任务工作区都通过了验收/验证，组合后仍需验证
 4. **迁移安全是硬约束**：Schema 变更缺少迁移文件 → 阻塞发布
 5. **Release Notes 面向用户**：不是开发者 changelog，是用户能看懂的变更说明
 6. **Verdict 有理有据**：判决必须基于三项检查证据
@@ -335,4 +336,4 @@ node .claude/skills/release/serve-report.mjs
 - **完整链条**：`/integrate` → 集成报告 → `/release` → 发布检查 → PR → 合并
 - **上游依赖**：必须先有 INTEGRATE.md（由 `/integrate` 生成）
 - **PR 创建**：Verdict 为 ✅ 或 ⚠️ 时自动创建 PR
-- **与 `/accept`、`/verify` 的区别**：accept/verify 审判单个功能/修复，release 审判整批集成
+- **与 `/accept`、`/verify` 的区别**：accept/verify 审判单个任务工作区的功能/修复，release 审判整批 merged 任务的集成质量

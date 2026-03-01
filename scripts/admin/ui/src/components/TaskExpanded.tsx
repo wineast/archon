@@ -44,16 +44,18 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
     setLoading(true);
     if (hasWorktree) {
       try {
-        const fetches: Promise<any>[] = [fetchReportData(task.worktree!)];
-        if (!isCompleted) {
-          fetches.push(fetchReportStatus(task.worktree!), fetchMergeCheck(task.worktree!));
-        }
-        const results = await Promise.all(fetches);
-        setReportData(results[0]);
-        if (!isCompleted) {
-          setStatusData(results[1]);
-          setMergeCheckData(results[2]);
-        }
+        const [rd, sd, mc] = await Promise.all([
+          fetchReportData(task.worktree!),
+          fetchReportStatus(task.worktree!).catch(() => null),
+          task.status === "merged"
+            ? ({ status: "merged", message: "已合并" } as MergeCheckData)
+            : isCompleted
+              ? null
+              : fetchMergeCheck(task.worktree!).catch(() => null),
+        ]);
+        setReportData(rd);
+        if (sd) setStatusData(sd);
+        if (mc) setMergeCheckData(mc);
       } catch {
         // ignore
       }
@@ -222,8 +224,8 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
         </div>
       )}
 
-      {/* ── 分支对比（已完成不显示） ── */}
-      {hasWorktree && !isCompleted && statusData && mergeCheckData && (
+      {/* ── 分支对比 ── */}
+      {hasWorktree && statusData && mergeCheckData && (
         <div className="expanded-section">
           <div className="expanded-section-header">
             <div className="expanded-section-title">分支对比{pollBadge}</div>
@@ -232,6 +234,7 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
             worktreeName={task.worktree!}
             statusData={statusData}
             mergeCheckData={mergeCheckData}
+            readOnly={isCompleted}
             onSync={handleSync}
             onMerge={handleMerge}
             onGitAdd={handleGitAdd}

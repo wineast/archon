@@ -14,6 +14,7 @@ interface BranchComparisonProps {
   worktreeName: string;
   statusData: StatusData;
   mergeCheckData: MergeCheckData;
+  readOnly?: boolean;
   onSync: () => void;
   onMerge: () => void;
   onGitAdd: () => void;
@@ -261,6 +262,7 @@ export function BranchComparison({
   worktreeName,
   statusData,
   mergeCheckData,
+  readOnly = false,
   onSync,
   onMerge,
   onGitAdd,
@@ -328,12 +330,14 @@ export function BranchComparison({
 
       {/* 2. Working tree status */}
       <FileTreeView items={stagedItems} title="暂存区" source="staged" selectedFile={selectedFile} onFileClick={handleFileClick} action={
-        <button className="btn btn-xs" onClick={onCommit} title="AI 提交">
-          {terminals.includes("/commit") ? "✦ 提交中…" : "✦ commit"}
-        </button>
+        !readOnly ? (
+          <button className="btn btn-xs" onClick={onCommit} title="AI 提交">
+            {terminals.includes("/commit") ? "✦ 提交中…" : "✦ commit"}
+          </button>
+        ) : undefined
       } />
-      <FileTreeView items={workingItems} title="工作区" source="working" selectedFile={selectedFile} onFileClick={handleFileClick} action={addBtn} />
-      <FileTreeView items={untrackedItems} title="未跟踪" source="untracked" selectedFile={selectedFile} onFileClick={handleFileClick} action={addBtn} />
+      <FileTreeView items={workingItems} title="工作区" source="working" selectedFile={selectedFile} onFileClick={handleFileClick} action={!readOnly ? addBtn : undefined} />
+      <FileTreeView items={untrackedItems} title="未跟踪" source="untracked" selectedFile={selectedFile} onFileClick={handleFileClick} action={!readOnly ? addBtn : undefined} />
 
       {/* 3. Commit list */}
       {commits.length > 0 && (
@@ -370,33 +374,35 @@ export function BranchComparison({
       {/* 5. Merge action bar */}
       <div className="branch-compare-footer">
         <MergeStatusHint status={mergeStatus} message={mergeCheckData.message} />
-        <div className="branch-compare-actions">
-          {mergeStatus === "behind" && (
-            <button
-              className="btn btn-sm btn-sync"
-              disabled={isBusy}
-              onClick={onSync}
-            >
-              {syncState === "running" && <Spinner />}
-              <span>同步</span>
-            </button>
-          )}
-          {mergeStatus === "clean" && (
-            <button
-              className="btn btn-sm btn-merge"
-              disabled={isBusy}
-              onClick={onMerge}
-            >
-              {mergeState === "running" && <Spinner />}
-              <span>合并</span>
-            </button>
-          )}
-          {mergeStatus === "conflict" && (
-            <button className="btn btn-sm btn-merge" disabled>
-              <span>合并</span>
-            </button>
-          )}
-        </div>
+        {!readOnly && (
+          <div className="branch-compare-actions">
+            {mergeStatus === "behind" && (
+              <button
+                className="btn btn-sm btn-sync"
+                disabled={isBusy}
+                onClick={onSync}
+              >
+                {syncState === "running" && <Spinner />}
+                <span>同步</span>
+              </button>
+            )}
+            {mergeStatus === "clean" && (
+              <button
+                className="btn btn-sm btn-merge"
+                disabled={isBusy}
+                onClick={onMerge}
+              >
+                {mergeState === "running" && <Spinner />}
+                <span>合并</span>
+              </button>
+            )}
+            {mergeStatus === "conflict" && (
+              <button className="btn btn-sm btn-merge" disabled>
+                <span>合并</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
