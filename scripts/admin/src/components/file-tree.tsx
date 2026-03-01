@@ -170,8 +170,8 @@ function FileTreeNode({
     return (
       <div
         className={cn(
-          "flex cursor-pointer items-center gap-1.5 border-b border-border/50 px-3.5 py-1 text-[13px] transition-colors last:border-b-0 hover:bg-muted/50",
-          isSelected && "bg-accent"
+          "flex cursor-pointer items-center gap-1.5 border-b border-border/50 px-3.5 py-1 text-[13px] transition-colors last:border-b-0",
+          isSelected ? "bg-accent" : "hover:bg-muted/50"
         )}
         style={{ paddingLeft: `${14 + depth * 20}px` }}
         onClick={() => node.file && onFileClick(node.file.path, effectiveSource)}
