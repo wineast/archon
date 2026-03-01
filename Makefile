@@ -269,21 +269,22 @@ db-init:
 
 ## Admin 面板依赖安装
 admin-setup:
-	@cd scripts/admin/ui && npm install
+	@cd scripts/admin && pnpm install
 
 ## Admin 面板开发模式（Vite dev + API server）
 admin-dev:
-	@API_PORT=4100 PORT=4100 node scripts/admin/main.mjs &
-	@cd scripts/admin/ui && npm run dev
+	@PORT=4100 node --watch-path=scripts/admin/services --watch-path=scripts/admin/routes --watch-path=scripts/admin/main.mjs scripts/admin/main.mjs &
+	@cd scripts/admin/ui && pnpm run dev
 
 ## Admin 面板构建
 admin-build:
-	@cd scripts/admin/ui && npm run build
+	@cd scripts/admin/ui && pnpm run build
 
-## 统一管理面板（Tasks + Worktrees + Reports）
+## 生产模式（API server + Web server）
 admin:
-	@if [ ! -d scripts/admin/dist ]; then cd scripts/admin/ui && npm run build; fi
-	@node scripts/admin/main.mjs
+	@if [ ! -d scripts/admin/dist ]; then cd scripts/admin/ui && pnpm run build; fi
+	@PORT=4100 node scripts/admin/main.mjs &
+	@node scripts/admin/web.mjs
 
 ## 列出所有 worktree
 wt-list:

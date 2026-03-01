@@ -6,7 +6,7 @@
 
 import { readFileSync, existsSync, readdirSync, statSync, createReadStream } from "node:fs";
 import { join, extname } from "node:path";
-import { exec, parseGitStatus, parseWorktreeList, getCurrentBranch, getBaseBranch, findUpstreamPath, getAheadBehind, getCommitLog, getDiffStat, mergeCheck as gitMergeCheck } from "./git-ops.mjs";
+import { exec, parseGitStatus, parseWorktreeList, getCurrentBranch, getBaseBranch, findUpstreamPath, getAheadBehind, getCommitLog, getDiffStat, getChangedFiles, getFileStatus, mergeCheck as gitMergeCheck } from "./git-ops.mjs";
 
 // ── Chain Configs ───────────────────────────────────────────
 
@@ -134,6 +134,7 @@ export function scanWorktrees(WORKTREES_DIR) {
       name,
       path: wtPath,
       taskRef,
+      hasTerminal: false, // populated by buildData() from termManager
       meta,
       remoteUrl,
       reqChain: showReqChain,
@@ -201,6 +202,8 @@ export function readStatusData(wtName, WORKTREES_DIR, PROJECT_ROOT) {
 
     result.commits = getCommitLog(wtPath, baseBranch);
     result.diffStat = getDiffStat(wtPath, baseBranch);
+    result.changedFiles = getChangedFiles(wtPath, baseBranch);
+    result.files = getFileStatus(wtPath);
   } catch (e) {
     result.error = e.message;
   }

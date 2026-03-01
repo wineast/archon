@@ -71,7 +71,31 @@ export function getCommitLog(cwd, baseBranch) {
 }
 
 export function getDiffStat(cwd, baseBranch) {
-  return exec(`git diff ${baseBranch}..HEAD --stat --stat-width=60`, cwd);
+  return exec(`git diff ${baseBranch}...HEAD --stat --stat-width=60`, cwd);
+}
+
+export function getChangedFiles(cwd, baseBranch) {
+  const raw = exec(`git diff ${baseBranch}...HEAD --name-status`, cwd);
+  if (!raw) return [];
+  return raw.split("\n").filter(Boolean).map((line) => {
+    const [status, ...parts] = line.split("\t");
+    return { status: status.trim(), path: parts.join("\t") };
+  });
+}
+
+/**
+ * Parse `git status --short` into per-file entries.
+ * Returns [{ x, y, path }] where x=staging status, y=working tree status.
+ */
+export function getFileStatus(cwd) {
+  const raw = exec("git status --short", cwd);
+  if (!raw) return [];
+  return raw.split("\n").filter(Boolean).map((line) => {
+    const x = line[0];
+    const y = line[1];
+    const path = line.slice(3);
+    return { x, y, path };
+  });
 }
 
 export function mergeCheck(cwd, baseBranch, currentBranch) {

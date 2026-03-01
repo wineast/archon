@@ -1,10 +1,10 @@
 import { useState, useCallback, useMemo } from "react";
-import { useSSEListener } from "../hooks/use-sse";
 import { fetchTasksData } from "../api/client";
 import { Spinner } from "../components/Spinner";
 import { Pagination } from "../components/Pagination";
 import { TaskRow } from "../components/TaskRow";
 import { TaskExpanded } from "../components/TaskExpanded";
+import { Mermaid } from "../components/Mermaid";
 import type { Task, TasksData } from "../types";
 
 const PAGE_SIZE = 30;
@@ -57,20 +57,6 @@ export function TasksPanel() {
   // Initial load
   useState(() => {
     refresh();
-  });
-
-  // SSE
-  useSSEListener("tasks", (msg) => {
-    if (msg.type === "refresh" || msg.type === "tasks-refresh") {
-      refresh();
-    }
-  });
-
-  // Also listen for reports refresh to update expanded tasks
-  useSSEListener("reports", (msg) => {
-    if (msg.type === "refresh") {
-      refresh();
-    }
   });
 
   const stats = data?.stats;
@@ -182,58 +168,32 @@ export function TasksPanel() {
       {helpOpen && (
         <div className="help-panel">
           <div className="help-section">
-            <div className="help-title">任务生命周期</div>
-            <div className="help-flow">
-              <div className="help-flow-row">
-                <span className="help-flow-label">Todo</span>
-                <span className="badge badge-pending">pending</span>
-                <span className="help-arrow">&rarr;</span>
-                <span className="badge badge-backlog">backlog</span>
-                <span className="help-arrow">&rarr;</span>
-                <span className="badge badge-ready">ready</span>
-                <span className="help-arrow">&rarr;</span>
-                <span className="badge badge-running">running</span>
-                <span className="help-arrow">&rarr;</span>
-                <span className="badge badge-done">done</span>
-                <span className="help-arrow">/</span>
-                <span className="badge badge-cancelled">cancelled</span>
-              </div>
-              <div className="help-flow-row">
-                <span className="help-flow-label">Issue</span>
-                <span className="badge badge-open">open</span>
-                <span className="help-arrow">&rarr;</span>
-                <span className="badge badge-ready">ready</span>
-                <span className="help-arrow">&rarr;</span>
-                <span className="badge badge-running">running</span>
-                <span className="help-arrow">&rarr;</span>
-                <span className="badge badge-closed">closed</span>
-                <span className="help-arrow">/</span>
-                <span className="badge badge-wontfix">wontfix</span>
-              </div>
-            </div>
+            <div className="help-title">Todo 生命周期</div>
+            <Mermaid chart={`flowchart LR
+  pending([PENDING]) -->|就绪| backlog([BACKLOG])
+  backlog -->|就绪| ready([READY])
+  ready -->|派发| running([RUNNING])
+  running -->|完成| done([DONE])
+  pending -->|取消| cancelled([CANCELLED])
+  backlog -->|取消| cancelled
+  ready -->|取消| cancelled
+  running -->|取消| cancelled
+  ready -.->|post: 创建工作区| ready
+  running -.->|post: 启动终端对话| running
+  linkStyle 8,9 stroke:#e67e22,color:#e67e22`} />
           </div>
           <div className="help-section">
-            <div className="help-title">操作流程</div>
-            <div className="help-desc">
-              展开任务行查看 Timeline，每个任务经历 5 个阶段：
-            </div>
-            <div className="help-steps">
-              <div className="help-step"><strong>就绪</strong> &mdash; 将任务标记为可派发状态</div>
-              <div className="help-step"><strong>派发</strong> &mdash; 创建工作区 + 打开终端执行链路技能</div>
-              <div className="help-step"><strong>链路</strong> &mdash; 执行 req-chain / defect-chain，可重新打开终端</div>
-              <div className="help-step"><strong>合并</strong> &mdash; 同步上游变更，将工作区分支合并到 dev</div>
-              <div className="help-step"><strong>完成 / 关闭</strong> &mdash; 标记任务为已完成</div>
-            </div>
-          </div>
-          <div className="help-section">
-            <div className="help-title">列说明</div>
-            <div className="help-cols">
-              <span className="help-col"><strong>类型</strong> &mdash; 需求 (Todo) 或 缺陷 (Issue)</span>
-              <span className="help-col"><strong>优先级</strong> &mdash; P0~P3（P0 最高）</span>
-              <span className="help-col"><strong>状态</strong> &mdash; 当前生命周期阶段</span>
-              <span className="help-col"><strong>工作区</strong> &mdash; Git worktree 名称（派发后出现）</span>
-              <span className="help-col"><strong>链路</strong> &mdash; 技能链路进度指示</span>
-            </div>
+            <div className="help-title">Issue 生命周期</div>
+            <Mermaid chart={`flowchart LR
+  open([OPEN]) -->|就绪| ready([READY])
+  ready -->|派发| running([RUNNING])
+  running -->|关闭| closed([CLOSED])
+  open -->|不修| wontfix([WONTFIX])
+  ready -->|不修| wontfix
+  running -->|不修| wontfix
+  ready -.->|post: 创建工作区| ready
+  running -.->|post: 启动终端对话| running
+  linkStyle 6,7 stroke:#e67e22,color:#e67e22`} />
           </div>
         </div>
       )}
@@ -324,7 +284,7 @@ export function TasksPanel() {
                 <th>标题</th>
                 <th>状态</th>
                 <th>工作区</th>
-                <th>链路</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -367,7 +327,7 @@ function TaskRowWithExpanded({
 }) {
   return (
     <>
-      <TaskRow task={task} expanded={expanded} onToggle={onToggle} />
+      <TaskRow task={task} expanded={expanded} onToggle={onToggle} onRefresh={onRefresh} />
       {expanded && (
         <tr className="expanded-row">
           <td colSpan={7}>

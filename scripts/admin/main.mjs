@@ -10,12 +10,15 @@
 
 import { createServer } from "node:http";
 import { execSync } from "node:child_process";
-import { readFileSync, existsSync, watch } from "node:fs";
-import { join, extname } from "node:path";
-
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import { createTasksRouter } from "./routes/tasks.mjs";
 import { createWorktreesRouter } from "./routes/worktrees.mjs";
 import { createReportsRouter } from "./routes/reports.mjs";
+import { createTerminalManager } from "./services/terminal-manager.mjs";
+import { createTransitionHooks } from "./services/transition-hooks.mjs";
+import { scanTasks } from "./services/task-scanner.mjs";
+import { exec } from "./services/git-ops.mjs";
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -28,139 +31,73 @@ const ISSUES_DIR = join(PROJECT_ROOT, "issues");
 
 const dirs = { PROJECT_ROOT, WORKTREES_DIR, TODO_DIR, ISSUES_DIR };
 
-// ── SSE ──────────────────────────────────────────────────────
+// ── Terminal Manager ─────────────────────────────────────────
 
-const sseClients = new Set();
+const termManager = createTerminalManager();
 
-function broadcastSSE(payload) {
-  const data = `data: ${JSON.stringify(payload)}\n\n`;
-  for (const res of sseClients) {
-    try {
-      res.write(data);
-    } catch {
-      sseClients.delete(res);
-    }
+// ── Transition Hooks ─────────────────────────────────────────
+
+const hooks = createTransitionHooks();
+
+// Post-hook: →ready — 创建工作区 + 写入 TASK.md
+hooks.post({ to: "ready" }, async (ctx) => {
+  const { type, id, dirs: d } = ctx;
+  const { PROJECT_ROOT, WORKTREES_DIR, TODO_DIR, ISSUES_DIR } = d;
+
+  // 1. 创建工作区
+  const result = exec(
+    `node scripts/worktree/worktree.mjs create ${id}`,
+    PROJECT_ROOT,
+    { timeout: 60000 }
+  );
+  console.log(`[hook:running] Worktree created: ${result.split("\n").pop()}`);
+
+  const wtPath = join(WORKTREES_DIR, id);
+  if (!existsSync(wtPath)) {
+    throw new Error(`Worktree not found: ${wtPath}`);
   }
-}
+
+  // 2. 写入 TASK.md（去掉 frontmatter）
+  const tasks = scanTasks(PROJECT_ROOT, TODO_DIR, ISSUES_DIR);
+  const task = tasks.find((t) => t.id === id && t.type === type);
+  if (task) {
+    const raw = readFileSync(join(PROJECT_ROOT, task.path), "utf-8");
+    const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+    writeFileSync(join(wtPath, ".worktree", "TASK.md"), body);
+  }
+
+  // 3. 回写 worktree 字段到任务 frontmatter
+  const baseDir = type === "todo" ? TODO_DIR : ISSUES_DIR;
+  const filePath = join(baseDir, `${id}.md`);
+  let content = readFileSync(filePath, "utf-8");
+  if (/^worktree:/m.test(content)) {
+    content = content.replace(/^worktree:.*/m, `worktree: ${id}`);
+  } else {
+    content = content.replace(/\n---/, `\nworktree: ${id}\n---`);
+  }
+  writeFileSync(filePath, content);
+});
+
+// Post-hook: →running — 启动终端运行 chain
+hooks.post({ to: "running" }, async (ctx) => {
+  const { type, id, dirs: d } = ctx;
+  const wtPath = join(d.WORKTREES_DIR, id);
+  if (!existsSync(wtPath)) return;
+  const skill = type === "todo" ? "/req-chain" : "/defect-chain";
+  termManager.create(id, wtPath, `claude ${skill}`);
+});
 
 // ── Route modules ────────────────────────────────────────────
 
-const tasksRouter = createTasksRouter(dirs, broadcastSSE);
+const tasksRouter = createTasksRouter(dirs, termManager, hooks);
 const worktreesRouter = createWorktreesRouter(dirs);
 const reportsRouter = createReportsRouter(dirs);
-
-// ── Static file serving ──────────────────────────────────────
-
-const ADMIN_DIR = new URL(".", import.meta.url).pathname;
-const DIST_DIR = join(ADMIN_DIR, "dist");
-const USE_DIST = existsSync(join(DIST_DIR, "index.html"));
-const STATIC_DIR = USE_DIST ? DIST_DIR : ADMIN_DIR;
-
-const MIME_TYPES = {
-  ".html": "text/html; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".js": "application/javascript; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".ico": "image/x-icon",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2",
-};
-
-function serveStatic(req, res) {
-  const urlPath = new URL(req.url, "http://localhost").pathname;
-  let filePath;
-
-  if (urlPath === "/") {
-    filePath = join(STATIC_DIR, "index.html");
-  } else {
-    filePath = join(STATIC_DIR, urlPath);
-  }
-
-  // Security: prevent path traversal
-  if (!filePath.startsWith(STATIC_DIR)) {
-    return false;
-  }
-
-  if (!existsSync(filePath)) {
-    // SPA fallback: non-API, non-file requests return index.html
-    if (USE_DIST && !urlPath.startsWith("/api") && !extname(urlPath)) {
-      filePath = join(STATIC_DIR, "index.html");
-    } else {
-      return false;
-    }
-  }
-
-  const ext = extname(filePath);
-  const contentType = MIME_TYPES[ext] || "application/octet-stream";
-
-  try {
-    const content = readFileSync(filePath);
-    res.writeHead(200, { "Content-Type": contentType });
-    res.end(content);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// ── File watchers ────────────────────────────────────────────
-
-function setupWatchers() {
-  // Watch todo/ and issues/ root directories for task changes
-  let taskDebounce = null;
-  const notifyTasks = () => {
-    if (taskDebounce) return;
-    taskDebounce = setTimeout(() => {
-      taskDebounce = null;
-      broadcastSSE({ type: "refresh", section: "tasks" });
-    }, 500);
-  };
-
-  for (const dir of [TODO_DIR, ISSUES_DIR]) {
-    if (!existsSync(dir)) continue;
-    try {
-      watch(dir, { persistent: false }, notifyTasks);
-    } catch {}
-  }
-
-  // Watch worktrees for report changes
-  if (existsSync(WORKTREES_DIR)) {
-    let wtDebounce = null;
-    try {
-      watch(WORKTREES_DIR, { recursive: true, persistent: false }, (_, filename) => {
-        if (!filename) return;
-        if (wtDebounce) return;
-        wtDebounce = setTimeout(() => {
-          wtDebounce = null;
-          if (filename.endsWith(".md") || filename.endsWith(".json")) {
-            broadcastSSE({ type: "refresh", section: "reports" });
-            broadcastSSE({ type: "refresh", section: "tasks" });
-          }
-        }, 500);
-      });
-    } catch {}
-  }
-}
 
 // ── HTTP Server ──────────────────────────────────────────────
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   const path = url.pathname;
-
-  // SSE endpoint
-  if (path === "/api/events" && req.method === "GET") {
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
-    res.write('data: {"type":"connected"}\n\n');
-    sseClients.add(res);
-    req.on("close", () => sseClients.delete(res));
-    return;
-  }
 
   // API routes
   if (path.startsWith("/api/tasks/")) {
@@ -173,27 +110,13 @@ const server = createServer((req, res) => {
     if (reportsRouter(req, res, url)) return;
   }
 
-  // Static files
-  if (req.method === "GET" && serveStatic(req, res)) return;
-
   res.writeHead(404);
   res.end("Not found");
 });
 
 // ── Start ────────────────────────────────────────────────────
 
-setupWatchers();
-
-const port = parseInt(process.env.PORT || "0", 10);
+const port = parseInt(process.env.PORT || "4100", 10);
 server.listen(port, "127.0.0.1", () => {
-  const addr = server.address();
-  const url = `http://localhost:${addr.port}`;
-  console.log(`\n  Archon Admin: ${url}\n`);
-
-  // Auto-open in browser
-  try {
-    execSync(`open "${url}"`, { stdio: "ignore" });
-  } catch {
-    // Ignore if open fails (non-macOS)
-  }
+  console.log(`\n  Archon API: http://localhost:${server.address().port}\n`);
 });

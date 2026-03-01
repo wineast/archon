@@ -93,6 +93,17 @@ export function readTaskContent(PROJECT_ROOT, taskPath) {
   return readFileSync(fullPath, "utf-8");
 }
 
+// ── Status query ────────────────────────────────────────────
+
+export function getTaskStatus(type, id, TODO_DIR, ISSUES_DIR) {
+  const baseDir = type === "todo" ? TODO_DIR : ISSUES_DIR;
+  const filePath = join(baseDir, `${id}.md`);
+  if (!existsSync(filePath)) return null;
+  const content = readFileSync(filePath, "utf-8");
+  const fm = parseFrontmatter(content);
+  return fm.status || (type === "todo" ? "pending" : "open");
+}
+
 // ── Status mutation ─────────────────────────────────────────
 
 export function moveTaskStatus(type, id, to, TODO_DIR, ISSUES_DIR) {

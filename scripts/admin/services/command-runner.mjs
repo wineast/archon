@@ -103,19 +103,3 @@ export function sseShell(cmd, args, cwd, res) {
   return child;
 }
 
-/**
- * Open a macOS Terminal.app window running a command.
- */
-export function openTerminal(cwd, taskId, initialInput) {
-  const cmd = initialInput
-    ? `cd ${JSON.stringify(cwd)} && claude ${initialInput}`
-    : `cd ${JSON.stringify(cwd)} && claude`;
-  const script = `
-    tell application "Terminal"
-      activate
-      set newTab to do script ${JSON.stringify(cmd)}
-      set custom title of front window to ${JSON.stringify("Claude: " + taskId)}
-    end tell
-  `;
-  spawn("osascript", ["-e", script], { stdio: "ignore", detached: true }).unref();
-}

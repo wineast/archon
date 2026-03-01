@@ -1,35 +1,48 @@
+import { useState } from "react";
 import { Badge } from "./Badge";
+import { Spinner } from "./Spinner";
+import { moveTaskStatus } from "../api/client";
 import type { Task } from "../types";
-
-function esc(s: string | undefined): string {
-  if (!s) return "";
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function renderChain(chain?: Record<string, boolean>): string {
-  if (!chain) return "";
-  return Object.entries(chain)
-    .map(([k, present]) => {
-      const label = k.replace(/\.md$/, "");
-      const cls = present ? "present" : "missing";
-      const mark = present ? " \u2713" : " \u2717";
-      return `<span class="chain-dot ${cls}" title="${esc(label + mark)}"></span>`;
-    })
-    .join("");
-}
 
 interface TaskRowProps {
   task: Task;
   expanded: boolean;
   onToggle: () => void;
+  onRefresh: () => void;
 }
 
-export function TaskRow({ task, expanded, onToggle }: TaskRowProps) {
+// Next status transitions per (type, current status)
+const TODO_NEXT: Record<string, { to: string; label: string; cls: string }[]> = {
+  pending:  [{ to: "backlog", label: "Backlog", cls: "" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
+  backlog:  [{ to: "ready", label: "就绪", cls: "btn-ready" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
+  ready:    [{ to: "running", label: "Running", cls: "btn-primary" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
+  running:  [{ to: "done", label: "完成", cls: "btn-success" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
+};
+
+const ISSUE_NEXT: Record<string, { to: string; label: string; cls: string }[]> = {
+  open:     [{ to: "ready", label: "就绪", cls: "btn-ready" }, { to: "wontfix", label: "不修", cls: "btn-danger" }],
+  ready:    [{ to: "running", label: "Running", cls: "btn-primary" }, { to: "wontfix", label: "不修", cls: "btn-danger" }],
+  running:  [{ to: "closed", label: "关闭", cls: "btn-success" }, { to: "wontfix", label: "不修", cls: "btn-danger" }],
+};
+
+export function TaskRow({ task, expanded, onToggle, onRefresh }: TaskRowProps) {
+  const [busy, setBusy] = useState("");
+
+  const transitions = (task.type === "todo" ? TODO_NEXT : ISSUE_NEXT)[task.status] ?? [];
+
+  const run = async (to: string) => {
+    setBusy(to);
+    try {
+      await moveTaskStatus(task.type, task.id, to);
+      onRefresh();
+    } catch (e) {
+      alert(`操作失败: ${e instanceof Error ? e.message : e}`);
+    }
+    setBusy("");
+  };
+
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
   return (
     <tr
       className={`task-row${expanded ? " task-row-expanded" : ""}`}
@@ -67,11 +80,21 @@ export function TaskRow({ task, expanded, onToggle }: TaskRowProps) {
           <span style={{ color: "var(--text-muted)" }}>-</span>
         )}
       </td>
-      <td>
-        <div
-          className="chain-dots"
-          dangerouslySetInnerHTML={{ __html: renderChain(task.chain) }}
-        />
+      <td className="actions-cell" onClick={stop}>
+        {transitions.length > 0 && (
+          <div className="btn-group">
+            {transitions.map((t) => (
+              <button
+                key={t.to}
+                className={`btn btn-sm ${t.cls}`}
+                disabled={!!busy}
+                onClick={() => run(t.to)}
+              >
+                {busy === t.to && <Spinner />} {t.label}
+              </button>
+            ))}
+          </div>
+        )}
       </td>
     </tr>
   );

@@ -35,37 +35,22 @@ export function moveTaskStatus(
   });
 }
 
-export function dispatchTask(
-  type: string,
-  id: string
-): Promise<{ ok: boolean }> {
-  return fetchJSON("/api/tasks/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type, id }),
-  });
-}
-
-export function completeTask(
-  type: string,
-  id: string
-): Promise<{ ok: boolean }> {
-  return fetchJSON("/api/tasks/complete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type, id }),
-  });
-}
 
 export function openTerminal(
   worktree: string,
   skill: string
-): Promise<void> {
-  return fetch("/api/tasks/open-terminal", {
+): Promise<{ ok: boolean; activated: boolean }> {
+  return fetchJSON("/api/tasks/open-terminal", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ worktree, skill }),
-  }).then(() => undefined);
+  });
+}
+
+export function checkTerminal(
+  sessionId: string
+): Promise<{ exists: boolean }> {
+  return fetchJSON(`/api/tasks/terminal/${encodeURIComponent(sessionId)}`);
 }
 
 // ── Reports (inline per worktree) ─────────────────────────
@@ -80,4 +65,10 @@ export function fetchReportStatus(wt: string): Promise<StatusData> {
 
 export function fetchMergeCheck(wt: string): Promise<MergeCheckData> {
   return fetchJSON(`/api/reports/${encodeURIComponent(wt)}/merge-check`);
+}
+
+export function gitAdd(wt: string): Promise<{ ok: boolean }> {
+  return fetchJSON(`/api/reports/${encodeURIComponent(wt)}/git-add`, {
+    method: "POST",
+  });
 }

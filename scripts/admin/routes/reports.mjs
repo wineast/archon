@@ -67,6 +67,13 @@ export function createReportsRouter(dirs) {
       return true;
     }
 
+    // POST /api/reports/:wt/git-add
+    if (subPath === "git-add" && req.method === "POST") {
+      const result = exec("git add .", wtPath);
+      json(res, 200, { ok: true });
+      return true;
+    }
+
     // POST /api/reports/:wt/sync
     if (subPath === "sync" && req.method === "POST") {
       const scriptPath = join(PROJECT_ROOT, "scripts", "worktree.mjs");

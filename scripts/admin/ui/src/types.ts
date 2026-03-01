@@ -9,6 +9,7 @@ export interface Task {
   path: string;
   worktree?: string;
   chain?: Record<string, boolean>;
+  hasTerminal?: boolean;
 }
 
 export interface TaskStats {
@@ -59,24 +60,29 @@ export interface CommitInfo {
   date: string;
 }
 
+export interface ChangedFile {
+  status: string; // M=modified, A=added, D=deleted, R=renamed
+  path: string;
+}
+
+export interface FileStatusEntry {
+  x: string; // staging area status
+  y: string; // working tree status
+  path: string;
+}
+
 export interface StatusData {
   upstream: StatusCardData;
   current: StatusCardData;
   commits: CommitInfo[];
   diffStat: string;
+  changedFiles: ChangedFile[];
+  files: FileStatusEntry[];
 }
 
 export interface MergeCheckData {
   status: "clean" | "conflict" | "behind" | "up_to_date" | "merged";
   message: string;
-}
-
-// ── SSE types ───────────────────────────────────────────────
-
-export interface SSEMessage {
-  type: string;
-  section?: string;
-  data?: unknown;
 }
 
 export interface TerminalLine {
