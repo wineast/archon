@@ -163,6 +163,7 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
   return {
     wiki: {
       async get(id: string) {
+        if (!versionId) return null;
         // Try by UUID id first (only if it looks like a valid UUID)
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
         let row: { id: string; content: string; agentId: string | null } | undefined;
@@ -174,12 +175,12 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
               agentId: wikiDocuments.agentId,
             })
             .from(wikiDocuments)
-            .where(eq(wikiDocuments.id, id))
+            .where(and(eq(wikiDocuments.id, id), eq(wikiDocuments.versionId, versionId)))
             .limit(1)
             .then((rows) => rows[0]);
         }
         // Fallback: try by key
-        if (!row && agentId) {
+        if (!row) {
           row = await db
             .select({
               id: wikiDocuments.id,
@@ -189,7 +190,7 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
             .from(wikiDocuments)
             .where(
               and(
-                eq(wikiDocuments.agentId, agentId),
+                eq(wikiDocuments.versionId, versionId),
                 eq(wikiDocuments.key, id)
               )
             )
@@ -207,6 +208,7 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
       },
 
       async findByPrefix(prefix: string) {
+        if (!versionId) return [];
         const rows = await db
           .select({
             id: wikiDocuments.id,
@@ -214,7 +216,7 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
-          .where(like(wikiDocuments.key, `${prefix}%`));
+          .where(and(eq(wikiDocuments.versionId, versionId), like(wikiDocuments.key, `${prefix}%`)));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
           return { id: r.id, name: r.name, meta: Object.keys(meta).length > 0 ? meta : null, content };
@@ -222,6 +224,7 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
       },
 
       async search(query: string) {
+        if (!versionId) return [];
         const rows = await db
           .select({
             id: wikiDocuments.id,
@@ -229,7 +232,7 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
             content: wikiDocuments.content,
           })
           .from(wikiDocuments)
-          .where(ilike(wikiDocuments.content, `%${query}%`));
+          .where(and(eq(wikiDocuments.versionId, versionId), ilike(wikiDocuments.content, `%${query}%`)));
         return rows.map((r) => {
           const { meta, content } = parseWikiContent(r.content);
           return { id: r.id, name: r.name, meta: Object.keys(meta).length > 0 ? meta : null, content };
