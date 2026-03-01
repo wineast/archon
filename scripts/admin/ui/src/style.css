@@ -580,6 +580,7 @@ tr:hover td {
 
 .btn-sm { padding: 4px 10px; font-size: 11px; }
 .btn-xs { padding: 2px 8px; font-size: 10px; gap: 4px; }
+.btn-icon { padding: 2px 6px; font-size: 14px; line-height: 1; font-weight: 600; }
 
 .btn-ready {
   border-color: var(--accent);

@@ -146,6 +146,15 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
     }
   };
 
+  const handleCommit = async () => {
+    try {
+      await apiOpenTerminal(task.worktree!, "/commit");
+      setTerminalAlive(true);
+    } catch (e) {
+      console.error("[admin] commit terminal failed:", e);
+    }
+  };
+
   const isCompleted = ["done", "closed", "cancelled", "wontfix"].includes(task.status);
 
   // ── Render ──
@@ -206,6 +215,7 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
             onSync={handleSync}
             onMerge={handleMerge}
             onGitAdd={handleGitAdd}
+            onCommit={handleCommit}
             syncState={syncState}
             mergeState={mergeState}
             addState={addState}

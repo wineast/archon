@@ -8,6 +8,7 @@ interface BranchComparisonProps {
   onSync: () => void;
   onMerge: () => void;
   onGitAdd: () => void;
+  onCommit: () => void;
   syncState: "idle" | "running" | "success" | "failed";
   mergeState: "idle" | "running" | "success" | "failed";
   addState: "idle" | "running" | "success" | "failed";
@@ -219,6 +220,7 @@ export function BranchComparison({
   onSync,
   onMerge,
   onGitAdd,
+  onCommit,
   syncState,
   mergeState,
   addState,
@@ -236,7 +238,7 @@ export function BranchComparison({
   const changedItems = useMemo(() => normalizeChanged(changedFiles), [changedFiles]);
 
   const addBtn = (
-    <button className="btn btn-xs" disabled={addState === "running"} onClick={onGitAdd}>
+    <button className="btn btn-xs" disabled={addState === "running"} onClick={onGitAdd} title="git add">
       {addState === "running" ? <Spinner /> : null}
       <span>add</span>
     </button>
@@ -266,7 +268,9 @@ export function BranchComparison({
       </div>
 
       {/* 2. Working tree status */}
-      <FileTreeView items={stagedItems} title="暂存区" />
+      <FileTreeView items={stagedItems} title="暂存区" action={
+        <button className="btn btn-xs" onClick={onCommit} title="AI 提交">commit</button>
+      } />
       <FileTreeView items={workingItems} title="工作区" action={addBtn} />
       <FileTreeView items={untrackedItems} title="未跟踪" action={addBtn} />
 
