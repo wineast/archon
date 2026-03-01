@@ -320,6 +320,22 @@ export function buildChainStatus(
   return { chain, reports, verdictSource: config.verdictSource };
 }
 
+function readReviews(
+  wtDir: string
+): Array<{ filename: string; timestamp: string; content: string }> {
+  const reviewsDir = join(wtDir, "REVIEWS");
+  if (!existsSync(reviewsDir)) return [];
+  return readdirSync(reviewsDir)
+    .filter((f) => f.startsWith("REVIEW-") && f.endsWith(".md"))
+    .sort()
+    .map((f) => ({
+      filename: f,
+      timestamp: f.replace("REVIEW-", "").replace(".md", ""),
+      content: rd(join(reviewsDir, f)) ?? "",
+    }))
+    .filter((r) => r.content);
+}
+
 export function readReportData(wtName: string, WORKTREES_DIR: string) {
   const wtPath = join(WORKTREES_DIR, wtName);
   const wtDir = join(wtPath, ".worktree");
@@ -339,6 +355,7 @@ export function readReportData(wtName: string, WORKTREES_DIR: string) {
     verdictSource,
     branch,
     baseBranch,
+    reviews: readReviews(wtDir),
   };
 }
 

@@ -12,6 +12,7 @@ import {
   mergeWorktree as apiMerge,
 } from "@/lib/api";
 import { ReportViewer } from "./report-viewer";
+import { ReviewPanel } from "./review-panel";
 import { BranchComparison } from "./branch-comparison";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -128,6 +129,8 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
 
   const chainSkill =
     task.type === "todo" ? "/req-chain" : "/defect-chain";
+  const reviewSkill =
+    task.type === "todo" ? "/review-req" : "/review-defect";
 
   const handleOpenTerminal = async () => {
     try {
@@ -193,6 +196,18 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
     }
   };
 
+  const handleOpenReviewTerminal = async () => {
+    try {
+      await apiOpenTerminal(task.worktree!, reviewSkill);
+      setTerminals((prev) =>
+        prev.includes(reviewSkill) ? prev : [...prev, reviewSkill]
+      );
+      onRefresh();
+    } catch (e) {
+      console.error("[admin] review terminal failed:", e);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -245,6 +260,28 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
           </div>
           <ReportViewer
             reportData={reportData}
+            worktreeName={task.worktree!}
+          />
+        </div>
+      )}
+
+      {/* Reviews */}
+      {hasWorktree && reportData && (
+        <div>
+          <div className="mb-3 flex items-center justify-between border-b pb-1.5">
+            <div className="flex items-center text-[0.8rem] font-semibold uppercase tracking-wide text-muted-foreground">
+              评审{pollBadge}
+            </div>
+            {!isCompleted && (
+              <Button variant="outline" size="sm" onClick={handleOpenReviewTerminal}>
+                {terminals.includes(reviewSkill)
+                  ? "\u2726 评审中\u2026"
+                  : "\u2726 发起评审"}
+              </Button>
+            )}
+          </div>
+          <ReviewPanel
+            reviews={reportData.reviews ?? []}
             worktreeName={task.worktree!}
           />
         </div>

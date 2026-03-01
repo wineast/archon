@@ -36,6 +36,12 @@ export interface ChainNode {
   available: boolean;
 }
 
+export interface ReviewEntry {
+  filename: string;
+  timestamp: string; // "20260301-143000"
+  content: string;
+}
+
 export interface ReportData {
   chain: ChainNode[];
   reports: Record<string, string>;
@@ -43,6 +49,7 @@ export interface ReportData {
   baseBranch?: string;
   verdictSource?: string;
   chainType?: "req" | "defect";
+  reviews?: ReviewEntry[];
 }
 
 export interface StatusCardData {
