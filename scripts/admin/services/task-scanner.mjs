@@ -58,6 +58,7 @@ export function scanTasks(PROJECT_ROOT, TODO_DIR, ISSUES_DIR) {
         priority: fm.priority || "P3",
         status: fm.status || "pending",
         worktree: fm.worktree || "",
+        merged: fm.merged === "true",
         path: relative(PROJECT_ROOT, filePath),
       });
     }
@@ -77,6 +78,7 @@ export function scanTasks(PROJECT_ROOT, TODO_DIR, ISSUES_DIR) {
         priority: fm.priority || "P3",
         status: fm.status || "open",
         worktree: fm.worktree || "",
+        merged: fm.merged === "true",
         path: relative(PROJECT_ROOT, filePath),
       });
     }
@@ -133,8 +135,9 @@ export function moveTaskStatus(type, id, to, TODO_DIR, ISSUES_DIR) {
     } else {
       content = content.replace(/\n---/, `\nstatus: ${to}\n---`);
     }
-    // Clear worktree field when leaving running state
-    if (to !== "running" && /^worktree:/m.test(content)) {
+    // Clear worktree field only when moving back (not to terminal states)
+    const terminal = ["done", "closed", "cancelled", "wontfix"];
+    if (to !== "running" && !terminal.includes(to) && /^worktree:/m.test(content)) {
       content = content.replace(/^worktree:.*\n?/m, "");
     }
   } else {
@@ -143,4 +146,41 @@ export function moveTaskStatus(type, id, to, TODO_DIR, ISSUES_DIR) {
   writeFileSync(filePath, content);
 
   return { ok: true, moved: true, from, to };
+}
+
+// ── Merge completion ────────────────────────────────────────
+
+export function markTaskMerged(id, TODO_DIR, ISSUES_DIR) {
+  // Find task file — worktree name = task id
+  let filePath = join(TODO_DIR, `${id}.md`);
+  let type = "todo";
+  if (!existsSync(filePath)) {
+    filePath = join(ISSUES_DIR, `${id}.md`);
+    type = "issue";
+  }
+  if (!existsSync(filePath)) return { error: `Task not found: ${id}` };
+
+  let content = readFileSync(filePath, "utf-8");
+  const terminalStatus = type === "todo" ? "done" : "closed";
+
+  const hasFm = /^---\r?\n[\s\S]*?\r?\n---/.test(content);
+  if (hasFm) {
+    // Set status
+    if (/^status:/m.test(content)) {
+      content = content.replace(/^(status:).*/m, `$1 ${terminalStatus}`);
+    } else {
+      content = content.replace(/\n---/, `\nstatus: ${terminalStatus}\n---`);
+    }
+    // Set merged: true
+    if (/^merged:/m.test(content)) {
+      content = content.replace(/^(merged:).*/m, `$1 true`);
+    } else {
+      content = content.replace(/\n---/, `\nmerged: true\n---`);
+    }
+  } else {
+    content = `---\nstatus: ${terminalStatus}\nmerged: true\n---\n${content}`;
+  }
+
+  writeFileSync(filePath, content);
+  return { ok: true, type, status: terminalStatus };
 }

@@ -8,6 +8,7 @@ export interface Task {
   priority: string;
   path: string;
   worktree?: string;
+  merged?: boolean;
   chain?: Record<string, boolean>;
   hasTerminal?: boolean;
 }

@@ -180,7 +180,8 @@ export function TasksPanel() {
   running -->|取消| cancelled
   ready -.->|post: 创建工作区| ready
   running -.->|post: 启动终端对话| running
-  linkStyle 8,9 stroke:#e67e22,color:#e67e22`} />
+  merge((合并成功)) -.->|post: merged+done| done
+  linkStyle 8,9,10 stroke:#e67e22,color:#e67e22`} />
           </div>
           <div className="help-section">
             <div className="help-title">Issue 生命周期</div>
@@ -193,7 +194,8 @@ export function TasksPanel() {
   running -->|不修| wontfix
   ready -.->|post: 创建工作区| ready
   running -.->|post: 启动终端对话| running
-  linkStyle 6,7 stroke:#e67e22,color:#e67e22`} />
+  merge((合并成功)) -.->|post: merged+closed| closed
+  linkStyle 6,7,8 stroke:#e67e22,color:#e67e22`} />
           </div>
         </div>
       )}

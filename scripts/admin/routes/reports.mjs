@@ -12,10 +12,11 @@ import {
   serveAsset,
 } from "../services/worktree-scanner.mjs";
 import { exec, getBaseBranch } from "../services/git-ops.mjs";
+import { markTaskMerged } from "../services/task-scanner.mjs";
 import { execSync } from "node:child_process";
 
 export function createReportsRouter(dirs) {
-  const { PROJECT_ROOT, WORKTREES_DIR } = dirs;
+  const { PROJECT_ROOT, WORKTREES_DIR, TODO_DIR, ISSUES_DIR } = dirs;
   const mergeStates = new Map();
 
   function json(res, status, data) {
@@ -115,7 +116,9 @@ export function createReportsRouter(dirs) {
       try {
         execSync(`node ${scriptPath} merge ${wtName}`, { cwd: PROJECT_ROOT, timeout: 60000, stdio: "pipe" });
         mergeStates.set(wtName, "success");
-        json(res, 200, { ok: true });
+        // Mark task as merged: merged: true + status → done/closed
+        const taskResult = markTaskMerged(wtName, TODO_DIR, ISSUES_DIR);
+        json(res, 200, { ok: true, task: taskResult });
       } catch (e) {
         mergeStates.set(wtName, "failed");
         json(res, 500, { ok: false, error: e.stderr?.toString() || e.message });

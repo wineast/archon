@@ -34,22 +34,26 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
   const [taskDetailHtml, setTaskDetailHtml] = useState("");
   const [terminalAlive, setTerminalAlive] = useState(task.hasTerminal ?? false);
   const pollingRef = useRef(false);
+  const [lastPoll, setLastPoll] = useState<string>("");
 
   const hasWorktree = !!task.worktree;
+  const isCompleted = ["done", "closed", "cancelled", "wontfix"].includes(task.status);
 
   // Full initial load (with loading spinner)
   const loadData = useCallback(async () => {
     setLoading(true);
     if (hasWorktree) {
       try {
-        const [rd, sd, mc] = await Promise.all([
-          fetchReportData(task.worktree!),
-          fetchReportStatus(task.worktree!),
-          fetchMergeCheck(task.worktree!),
-        ]);
-        setReportData(rd);
-        setStatusData(sd);
-        setMergeCheckData(mc);
+        const fetches: Promise<any>[] = [fetchReportData(task.worktree!)];
+        if (!isCompleted) {
+          fetches.push(fetchReportStatus(task.worktree!), fetchMergeCheck(task.worktree!));
+        }
+        const results = await Promise.all(fetches);
+        setReportData(results[0]);
+        if (!isCompleted) {
+          setStatusData(results[1]);
+          setMergeCheckData(results[2]);
+        }
       } catch {
         // ignore
       }
@@ -65,7 +69,7 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
       // ignore
     }
     setLoading(false);
-  }, [task.worktree, task.path, hasWorktree]);
+  }, [task.worktree, task.path, hasWorktree, isCompleted]);
 
   useEffect(() => {
     loadData();
@@ -86,18 +90,19 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
       setReportData(rd);
       setStatusData(sd);
       setMergeCheckData(mc);
+      setLastPoll(new Date().toLocaleTimeString());
     } catch {
       // ignore
     }
     pollingRef.current = false;
   }, [task.worktree, hasWorktree, mergeState]);
 
-  // Polling interval
+  // Polling interval (skip for completed tasks)
   useEffect(() => {
-    if (!hasWorktree) return;
+    if (!hasWorktree || isCompleted) return;
     const id = setInterval(poll, POLL_INTERVAL);
     return () => clearInterval(id);
-  }, [poll, hasWorktree]);
+  }, [poll, hasWorktree, isCompleted]);
 
   useEffect(() => {
     setTerminalAlive(task.hasTerminal ?? false);
@@ -163,8 +168,6 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
     }
   };
 
-  const isCompleted = ["done", "closed", "cancelled", "wontfix"].includes(task.status);
-
   // ── Render ──
 
   if (loading) {
@@ -177,8 +180,18 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
     );
   }
 
+  const isPolling = hasWorktree && !isCompleted;
+
   return (
     <div className="task-expanded">
+      {/* ── 轮询状态 ── */}
+      {isPolling && (
+        <div className="poll-indicator">
+          <span className="poll-dot" />
+          <span>轮询中{lastPoll ? ` · ${lastPoll}` : ""}</span>
+        </div>
+      )}
+
       {/* ── 任务详情 ── */}
       {taskDetailHtml && (
         <div className="expanded-section">
@@ -208,8 +221,8 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
         </div>
       )}
 
-      {/* ── 分支对比 ── */}
-      {hasWorktree && statusData && mergeCheckData && (
+      {/* ── 分支对比（已完成不显示） ── */}
+      {hasWorktree && !isCompleted && statusData && mergeCheckData && (
         <div className="expanded-section">
           <div className="expanded-section-title">分支对比</div>
           <BranchComparison

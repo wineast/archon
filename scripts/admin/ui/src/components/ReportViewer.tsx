@@ -28,9 +28,12 @@ export function ReportViewer({ reportData, worktreeName, onVerdict }: ReportView
     }
     renderedReports.current = rendered;
 
-    // Default to last available tab
+    // Only auto-select tab on initial load or if current tab is no longer available
     const available = reportData.chain.filter((c) => c.available);
-    setActiveTab(available.length ? available[available.length - 1]!.key : null);
+    setActiveTab((prev) => {
+      if (prev && available.some((c) => c.key === prev)) return prev;
+      return available.length ? available[available.length - 1]!.key : null;
+    });
 
     // Extract verdict
     extractVerdict(rendered);
