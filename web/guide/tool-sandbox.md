@@ -21,7 +21,7 @@
 | 禁止的导入 | `import ... from "非archon:*"` |
 | 原型链逃逸 | `constructor.constructor` |
 
-扫描失败时抛出可读错误信息，阻止代码执行。
+扫描失败时抛出可读错误信息，阻止代码执行。**代码无法被 acorn 解析时（语法错误），扫描器同样返回失败（fail-closed 策略），不会放行到执行阶段。**
 
 ## 执行流程
 
@@ -80,6 +80,10 @@ export default async function(args) {
 ## 数据模型
 
 `tools` 表的 `sandboxMode` 字段保留（数据库不删列），但 UI 中已隐藏选择器，运行时忽略该字段。
+
+## 测试端点授权
+
+`/api/tools/test` 和 `/api/functions/test` 端点允许在不保存到数据库的情况下测试代码执行。这两个端点要求请求体携带 `agentId`，并通过 `requireAgentRole(agentId, "editor")` 验证调用者有目标 Agent 的 editor 权限后才允许执行代码。
 
 ## 测试要点
 
