@@ -19,9 +19,7 @@ allowed-tools: Read, Glob, Skill
 
 ### 1. 读取任务信息
 
-读取 `.worktree/task.json`，校验 `type` 必须是 `"todo"`。如果不是，停止并告知用户任务类型不匹配。
-
-读取 `.worktree/TASK.md` 获取任务描述。
+读取 `.worktree/TASK.md` 获取任务描述。如果文件不存在，停止并告知用户缺少任务描述。
 
 ### 2. 检查链路进度
 
@@ -51,4 +49,4 @@ allowed-tools: Read, Glob, Skill
 
 - **幂等**：已完成的步骤直接跳过
 - **失败即停**：任何步骤的产出文件缺失则中断链路
-- **类型校验**：仅接受 `type: "todo"` 的任务
+- **入口文件**：`.worktree/TASK.md` 是唯一的任务输入

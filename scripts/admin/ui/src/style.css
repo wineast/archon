@@ -325,6 +325,8 @@ tr:hover td {
   margin-bottom: 0;
   padding-bottom: 0;
   border-bottom: none;
+  display: flex;
+  align-items: center;
 }
 .expanded-section-title {
   font-size: 0.8rem;
@@ -342,12 +344,15 @@ tr:hover td {
 }
 
 .poll-indicator {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-muted);
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 8px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
 }
 
 .poll-dot {

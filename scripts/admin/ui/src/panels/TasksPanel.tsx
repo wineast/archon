@@ -194,32 +194,26 @@ export function TasksPanel() {
           <div className="help-section">
             <div className="help-title">Todo 生命周期</div>
             <Mermaid chart={`flowchart LR
-  pending([PENDING]) -->|就绪| backlog([BACKLOG])
+  pending([PENDING]) -->|排期| backlog([BACKLOG])
   backlog -->|就绪| ready([READY])
-  ready -->|派发| running([RUNNING])
   pending -->|取消| cancelled([CANCELLED])
   backlog -->|取消| cancelled
   ready -->|取消| cancelled
-  running -->|取消| cancelled
   ready -.->|post: 创建工作区| ready
-  running -.->|post: 启动终端对话| running
   merge((合并成功)) -.->|post: status→merged| merged([MERGED])
   style merge fill:#6366f1,stroke:#4f46e5,color:#fff
-  linkStyle 7,8,9 stroke:#e67e22,color:#e67e22`} />
+  linkStyle 5,6 stroke:#e67e22,color:#e67e22`} />
           </div>
           <div className="help-section">
             <div className="help-title">Issue 生命周期</div>
             <Mermaid chart={`flowchart LR
   open([OPEN]) -->|就绪| ready([READY])
-  ready -->|派发| running([RUNNING])
   open -->|不修| wontfix([WONTFIX])
   ready -->|不修| wontfix
-  running -->|不修| wontfix
   ready -.->|post: 创建工作区| ready
-  running -.->|post: 启动终端对话| running
   merge((合并成功)) -.->|post: status→merged| merged([MERGED])
   style merge fill:#6366f1,stroke:#4f46e5,color:#fff
-  linkStyle 5,6,7 stroke:#e67e22,color:#e67e22`} />
+  linkStyle 3,4 stroke:#e67e22,color:#e67e22`} />
           </div>
         </div>
       )}

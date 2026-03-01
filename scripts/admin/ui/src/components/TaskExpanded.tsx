@@ -182,6 +182,13 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
 
   const isPolling = hasWorktree && !isCompleted;
 
+  const pollBadge = isPolling && lastPoll ? (
+    <div className="poll-indicator">
+      <span className="poll-dot" />
+      <span>{lastPoll}</span>
+    </div>
+  ) : null;
+
   return (
     <div className="task-expanded">
       {/* ── 任务详情 ── */}
@@ -199,16 +206,10 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
       {hasWorktree && reportData && (
         <div className="expanded-section">
           <div className="expanded-section-header">
-            <div className="expanded-section-title">报告</div>
-            {isPolling && (
-              <div className="poll-indicator">
-                <span className="poll-dot" />
-                <span>轮询中{lastPoll ? ` · ${lastPoll}` : ""}</span>
-              </div>
-            )}
+            <div className="expanded-section-title">报告{pollBadge}</div>
             {!isCompleted && (
               <button className="btn btn-sm" onClick={handleOpenTerminal}>
-                {terminalAlive ? "激活终端" : "打开终端"}
+                ✦ 生成报告
               </button>
             )}
           </div>
@@ -222,7 +223,9 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
       {/* ── 分支对比（已完成不显示） ── */}
       {hasWorktree && !isCompleted && statusData && mergeCheckData && (
         <div className="expanded-section">
-          <div className="expanded-section-title">分支对比</div>
+          <div className="expanded-section-header">
+            <div className="expanded-section-title">分支对比{pollBadge}</div>
+          </div>
           <BranchComparison
             statusData={statusData}
             mergeCheckData={mergeCheckData}
