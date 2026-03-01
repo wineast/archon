@@ -9,6 +9,7 @@ interface BranchComparisonProps {
   onMerge: () => void;
   onGitAdd: () => void;
   onCommit: () => void;
+  terminals: string[];
   syncState: "idle" | "running" | "success" | "failed";
   mergeState: "idle" | "running" | "success" | "failed";
   addState: "idle" | "running" | "success" | "failed";
@@ -221,6 +222,7 @@ export function BranchComparison({
   onMerge,
   onGitAdd,
   onCommit,
+  terminals,
   syncState,
   mergeState,
   addState,
@@ -273,7 +275,9 @@ export function BranchComparison({
 
       {/* 2. Working tree status */}
       <FileTreeView items={stagedItems} title="暂存区" action={
-        <button className="btn btn-xs" onClick={onCommit} title="AI 提交">commit</button>
+        <button className="btn btn-xs" onClick={onCommit} title="AI 提交">
+          {terminals.includes("/commit") ? "✦ 提交中…" : "✦ commit"}
+        </button>
       } />
       <FileTreeView items={workingItems} title="工作区" action={addBtn} />
       <FileTreeView items={untrackedItems} title="未跟踪" action={addBtn} />

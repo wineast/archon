@@ -16,12 +16,15 @@ export function createTasksRouter(dirs, termManager, hooks) {
 
     for (const task of tasks) {
       task.chain = null;
-      task.hasTerminal = false;
+      task.terminals = [];
       if (task.worktree) {
         const wt = worktrees.find((w) => w.name === task.worktree);
         if (wt) {
           task.chain = wt.reqChain || wt.defectChain || null;
-          task.hasTerminal = termManager.has(task.worktree);
+          // Verify and collect active terminal sessions for this worktree
+          const prefix = `${task.worktree}::`;
+          task.terminals = termManager.verifyByPrefix(prefix)
+            .map((key) => key.slice(prefix.length)); // "wt::skill" → "skill"
         }
       }
     }
@@ -32,7 +35,7 @@ export function createTasksRouter(dirs, termManager, hooks) {
       stats: {
         total: tasks.length,
         ready: tasks.filter((t) => t.status === "ready").length,
-        running: tasks.filter((t) => t.status === "running").length,
+        active: tasks.filter((t) => t.status === "ready" && t.worktree).length,
         completed: tasks.filter((t) => ["done", "closed", "merged", "cancelled", "wontfix"].includes(t.status)).length,
         todoCount: tasks.filter((t) => t.type === "todo").length,
         issueCount: tasks.filter((t) => t.type === "issue").length,
@@ -123,14 +126,16 @@ export function createTasksRouter(dirs, termManager, hooks) {
             json(res, 404, { error: `Worktree not found: ${worktree}` });
             return;
           }
+          // Session key = worktree::skill (independent terminals per operation)
+          const sessionId = skill ? `${worktree}::${skill}` : worktree;
           // Try to activate existing window first
-          if (termManager.has(worktree) && termManager.activate(worktree)) {
+          if (termManager.has(sessionId) && termManager.activate(sessionId)) {
             json(res, 200, { ok: true, activated: true });
             return;
           }
           // Open new terminal
           const initialCommand = skill ? `claude ${skill}` : undefined;
-          termManager.create(worktree, wtPath, initialCommand);
+          termManager.create(sessionId, wtPath, initialCommand);
           json(res, 200, { ok: true, activated: false });
         } catch (e) {
           json(res, 500, { error: e.message });

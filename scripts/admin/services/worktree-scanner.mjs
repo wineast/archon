@@ -134,7 +134,7 @@ export function scanWorktrees(WORKTREES_DIR) {
       name,
       path: wtPath,
       taskRef,
-      hasTerminal: false, // populated by buildData() from termManager
+      terminals: [], // populated by buildData() from termManager
       meta,
       remoteUrl,
       reqChain: showReqChain,

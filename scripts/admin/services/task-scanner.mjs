@@ -109,8 +109,8 @@ export function getTaskStatus(type, id, TODO_DIR, ISSUES_DIR) {
 // ── Status mutation ─────────────────────────────────────────
 
 export function moveTaskStatus(type, id, to, TODO_DIR, ISSUES_DIR) {
-  const validTodo = ["pending", "ready", "running", "backlog", "done", "merged", "cancelled"];
-  const validIssue = ["open", "ready", "running", "closed", "merged", "wontfix"];
+  const validTodo = ["pending", "ready", "backlog", "done", "merged", "cancelled"];
+  const validIssue = ["open", "ready", "closed", "merged", "wontfix"];
   const allowed = type === "todo" ? validTodo : validIssue;
   if (!allowed.includes(to)) {
     return { error: `Invalid target status: ${to}` };
@@ -135,9 +135,9 @@ export function moveTaskStatus(type, id, to, TODO_DIR, ISSUES_DIR) {
     } else {
       content = content.replace(/\n---/, `\nstatus: ${to}\n---`);
     }
-    // Clear worktree field only when moving back (not to terminal states)
+    // Clear worktree field only when moving back (not to ready/terminal states)
     const terminal = ["done", "closed", "merged", "cancelled", "wontfix"];
-    if (to !== "running" && !terminal.includes(to) && /^worktree:/m.test(content)) {
+    if (to !== "ready" && !terminal.includes(to) && /^worktree:/m.test(content)) {
       content = content.replace(/^worktree:.*\n?/m, "");
     }
   } else {

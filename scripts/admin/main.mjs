@@ -76,15 +76,10 @@ hooks.post({ to: "ready" }, async (ctx) => {
     content = content.replace(/\n---/, `\nworktree: ${id}\n---`);
   }
   writeFileSync(filePath, content);
-});
 
-// Post-hook: →running — 启动终端运行 chain
-hooks.post({ to: "running" }, async (ctx) => {
-  const { type, id, dirs: d } = ctx;
-  const wtPath = join(d.WORKTREES_DIR, id);
-  if (!existsSync(wtPath)) return;
+  // 4. 启动终端运行 chain
   const skill = type === "todo" ? "/req-chain" : "/defect-chain";
-  termManager.create(id, wtPath, `claude ${skill}`);
+  termManager.create(`${id}::${skill}`, wtPath, `claude ${skill}`);
 });
 
 // ── Route modules ────────────────────────────────────────────

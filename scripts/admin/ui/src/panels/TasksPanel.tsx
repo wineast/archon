@@ -61,9 +61,9 @@ export function TasksPanel() {
       const d = await fetchTasksData();
       setData(d);
 
-      // Auto-expand running tasks
+      // Auto-expand active tasks (ready with worktree = chain running)
       const runningIds = new Set(
-        d.tasks.filter((t) => t.status === "running").map((t) => t.id)
+        d.tasks.filter((t) => t.status === "ready" && t.worktree).map((t) => t.id)
       );
       setExpandedIds((prev) => {
         const next = new Set(prev);
@@ -91,12 +91,12 @@ export function TasksPanel() {
       { id: "all", label: "全部", count: s.total },
       { id: "todo", label: "Todo", count: s.todoCount },
       { id: "issues", label: "Issue", count: s.issueCount },
-      { id: "running", label: "运行中", count: s.running },
+      { id: "active", label: "进行中", count: s.active },
     ];
   }, [data]);
 
-  const TODO_STATUSES = ["pending", "backlog", "ready", "running", "merged", "cancelled"];
-  const ISSUE_STATUSES = ["open", "ready", "running", "merged", "wontfix"];
+  const TODO_STATUSES = ["pending", "backlog", "ready", "merged", "cancelled"];
+  const ISSUE_STATUSES = ["open", "ready", "merged", "wontfix"];
   const ALL_STATUSES = [...new Set([...TODO_STATUSES, ...ISSUE_STATUSES])];
 
   const statusOptions = useMemo(() => {
@@ -111,8 +111,8 @@ export function TasksPanel() {
     if (currentTab === "todo") tasks = tasks.filter((t) => t.type === "todo");
     else if (currentTab === "issues")
       tasks = tasks.filter((t) => t.type === "issue");
-    else if (currentTab === "running")
-      tasks = tasks.filter((t) => t.status === "running");
+    else if (currentTab === "active")
+      tasks = tasks.filter((t) => t.status === "ready" && t.worktree);
 
     if (currentFilter !== "all") {
       tasks = tasks.filter((t) => t.priority === currentFilter);
@@ -170,7 +170,7 @@ export function TasksPanel() {
         <div>
           <h1>Archon Admin</h1>
           <div className="subtitle">
-            任务: {stats!.total} &middot; 运行中: {stats!.running} &middot;
+            任务: {stats!.total} &middot; 进行中: {stats!.active} &middot;
             就绪: {stats!.ready}
           </div>
         </div>
@@ -196,24 +196,26 @@ export function TasksPanel() {
             <Mermaid chart={`flowchart LR
   pending([PENDING]) -->|排期| backlog([BACKLOG])
   backlog -->|就绪| ready([READY])
+  ready -->|退回| backlog
   pending -->|取消| cancelled([CANCELLED])
   backlog -->|取消| cancelled
   ready -->|取消| cancelled
-  ready -.->|post: 创建工作区| ready
+  ready -.->|post: 创建工作区 + 启动链路| ready
   merge((合并成功)) -.->|post: status→merged| merged([MERGED])
   style merge fill:#6366f1,stroke:#4f46e5,color:#fff
-  linkStyle 5,6 stroke:#e67e22,color:#e67e22`} />
+  linkStyle 6,7 stroke:#e67e22,color:#e67e22`} />
           </div>
           <div className="help-section">
             <div className="help-title">Issue 生命周期</div>
             <Mermaid chart={`flowchart LR
   open([OPEN]) -->|就绪| ready([READY])
+  ready -->|退回| open
   open -->|不修| wontfix([WONTFIX])
   ready -->|不修| wontfix
-  ready -.->|post: 创建工作区| ready
+  ready -.->|post: 创建工作区 + 启动链路| ready
   merge((合并成功)) -.->|post: status→merged| merged([MERGED])
   style merge fill:#6366f1,stroke:#4f46e5,color:#fff
-  linkStyle 3,4 stroke:#e67e22,color:#e67e22`} />
+  linkStyle 4,5 stroke:#e67e22,color:#e67e22`} />
           </div>
         </div>
       )}
@@ -229,8 +231,8 @@ export function TasksPanel() {
           <div className="stat-label">就绪</div>
         </div>
         <div className="stat">
-          <div className="stat-value">{stats!.running}</div>
-          <div className="stat-label">运行中</div>
+          <div className="stat-value">{stats!.active}</div>
+          <div className="stat-label">进行中</div>
         </div>
         <div className="stat">
           <div className="stat-value">{stats!.completed}</div>

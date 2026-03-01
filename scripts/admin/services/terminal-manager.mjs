@@ -2,11 +2,15 @@
  * Terminal Manager — macOS Terminal.app window management.
  *
  * 用 AppleScript 打开/激活 Terminal.app 窗口。
- * 内存 Map 记录 taskId → { windowId, tabIndex }。
+ * 内存 Map 记录 taskId → { windowId, cwd }。
  * 用窗口 ID 追踪，不依赖自定义标题（标题会被进程覆盖）。
+ * 持久化到 /tmp 文件，服务重启后自动恢复。
  */
 
 import { execSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+
+const PERSIST_PATH = "/tmp/archon-admin-terminal-sessions.json";
 
 function osascript(script) {
   try {
@@ -23,6 +27,45 @@ function osascript(script) {
 export function createTerminalManager() {
   /** @type {Map<string, { windowId: string, cwd: string }>} */
   const sessions = new Map();
+
+  // ── Persistence ──
+
+  function save() {
+    try {
+      const data = Object.fromEntries(sessions);
+      writeFileSync(PERSIST_PATH, JSON.stringify(data));
+    } catch {
+      // ignore
+    }
+  }
+
+  function restore() {
+    try {
+      const data = JSON.parse(readFileSync(PERSIST_PATH, "utf-8"));
+      for (const [id, session] of Object.entries(data)) {
+        sessions.set(id, session);
+      }
+    } catch {
+      // file not found or corrupt — start fresh
+    }
+
+    // Verify each restored session — remove stale ones
+    for (const [id] of [...sessions]) {
+      if (!verify(id)) {
+        sessions.delete(id);
+      }
+    }
+    save();
+    const count = sessions.size;
+    if (count > 0) {
+      console.log(`[terminal] Restored ${count} session(s) from disk`);
+    }
+  }
+
+  // Restore on startup
+  restore();
+
+  // ── Core operations ──
 
   /**
    * Open a new Terminal.app window with optional command.
@@ -48,6 +91,7 @@ end tell
 
     if (windowId) {
       sessions.set(taskId, { windowId, cwd });
+      save();
       console.log(`[terminal] Opened Terminal.app for ${taskId} (window ${windowId})`);
     } else {
       console.error(`[terminal] Failed to open Terminal.app for ${taskId}`);
@@ -89,6 +133,7 @@ end tell
     // Window was closed by user
     console.log(`[terminal] Window ${session.windowId} not found for ${taskId}, removing session`);
     sessions.delete(taskId);
+    save();
     return false;
   }
 
@@ -119,17 +164,35 @@ end tell
 
     console.log(`[terminal] Window ${session.windowId} gone for ${taskId}, cleaning up`);
     sessions.delete(taskId);
+    save();
     return false;
   }
 
   /** Remove session from memory. */
   function destroy(taskId) {
     sessions.delete(taskId);
+    save();
   }
 
   /** Remove session by taskId. */
   function destroyByTaskId(taskId) {
     sessions.delete(taskId);
+    save();
+  }
+
+  /**
+   * Verify and list active session keys matching a prefix.
+   * Used to find all terminals for a worktree (e.g., prefix = "my-wt::").
+   */
+  function verifyByPrefix(prefix) {
+    const result = [];
+    for (const [id] of [...sessions]) {
+      if (!id.startsWith(prefix)) continue;
+      if (verify(id)) {
+        result.push(id);
+      }
+    }
+    return result;
   }
 
   /** List all tracked sessions. */
@@ -141,5 +204,5 @@ end tell
     }));
   }
 
-  return { create, activate, has, verify, destroy, destroyByTaskId, list };
+  return { create, activate, has, verify, verifyByPrefix, destroy, destroyByTaskId, list };
 }

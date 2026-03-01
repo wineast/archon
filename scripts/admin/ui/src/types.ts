@@ -10,13 +10,13 @@ export interface Task {
   worktree?: string;
   merged?: boolean;
   chain?: Record<string, boolean>;
-  hasTerminal?: boolean;
+  terminals?: string[]; // active skill names, e.g. ["/defect-chain", "/commit"]
 }
 
 export interface TaskStats {
   total: number;
   ready: number;
-  running: number;
+  active: number;
   completed: number;
   todoCount: number;
   issueCount: number;

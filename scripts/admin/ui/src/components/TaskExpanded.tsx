@@ -32,7 +32,7 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
   const [addState, setAddState] = useState<"idle" | "running" | "success" | "failed">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [taskDetailHtml, setTaskDetailHtml] = useState("");
-  const [terminalAlive, setTerminalAlive] = useState(task.hasTerminal ?? false);
+  const [terminals, setTerminals] = useState<string[]>(task.terminals ?? []);
   const pollingRef = useRef(false);
   const [lastPoll, setLastPoll] = useState<string>("");
 
@@ -105,14 +105,15 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
   }, [poll, hasWorktree, isCompleted]);
 
   useEffect(() => {
-    setTerminalAlive(task.hasTerminal ?? false);
-  }, [task.hasTerminal]);
+    setTerminals(task.terminals ?? []);
+  }, [task.terminals]);
+
+  const chainSkill = task.type === "todo" ? "/req-chain" : "/defect-chain";
 
   const handleOpenTerminal = async () => {
-    const skill = task.type === "todo" ? "/req-chain" : "/defect-chain";
     try {
-      await apiOpenTerminal(task.worktree!, skill);
-      setTerminalAlive(true);
+      await apiOpenTerminal(task.worktree!, chainSkill);
+      setTerminals((prev) => prev.includes(chainSkill) ? prev : [...prev, chainSkill]);
       onRefresh();
     } catch (e) {
       console.error("[admin] open-terminal failed:", e);
@@ -162,7 +163,8 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
   const handleCommit = async () => {
     try {
       await apiOpenTerminal(task.worktree!, "/commit");
-      setTerminalAlive(true);
+      setTerminals((prev) => prev.includes("/commit") ? prev : [...prev, "/commit"]);
+      onRefresh();
     } catch (e) {
       console.error("[admin] commit terminal failed:", e);
     }
@@ -209,7 +211,7 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
             <div className="expanded-section-title">报告{pollBadge}</div>
             {!isCompleted && (
               <button className="btn btn-sm" onClick={handleOpenTerminal}>
-                ✦ 生成报告
+                {terminals.includes(chainSkill) ? "✦ 生成报告中…" : "✦ 生成报告"}
               </button>
             )}
           </div>
@@ -233,6 +235,7 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
             onMerge={handleMerge}
             onGitAdd={handleGitAdd}
             onCommit={handleCommit}
+            terminals={terminals}
             syncState={syncState}
             mergeState={mergeState}
             addState={addState}

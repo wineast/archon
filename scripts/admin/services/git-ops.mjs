@@ -84,16 +84,17 @@ export function getChangedFiles(cwd, baseBranch) {
 }
 
 /**
- * Parse `git status --short` into per-file entries.
+ * Parse `git status --short -u` into per-file entries.
  * Returns [{ x, y, path }] where x=staging status, y=working tree status.
+ * -u lists individual untracked files instead of directories.
  */
 export function getFileStatus(cwd) {
-  const raw = exec("git status --short", cwd);
+  const raw = exec("git status --short -u", cwd);
   if (!raw) return [];
   return raw.split("\n").filter(Boolean).map((line) => {
     const x = line[0];
     const y = line[1];
-    const path = line.slice(3);
+    const path = line.slice(3).replace(/\/+$/, "");
     return { x, y, path };
   });
 }
