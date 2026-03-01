@@ -167,14 +167,14 @@ export const DEFECT_CHAIN: ChainConfig = {
     },
     {
       key: "guard",
-      path: "TEST_SPEC.md",
+      path: "TEST_GUARD.md",
       label: "守护规约",
       badge: "guard",
       optional: true,
     },
     {
       key: "report",
-      path: "TEST_SPEC_REPORT.md",
+      path: "TEST_GUARD_REPORT.md",
       label: "守护报告",
       badge: "report",
       optional: true,
@@ -249,8 +249,8 @@ export function scanWorktrees(WORKTREES_DIR: string): ScannedWorktree[] {
       "DEFECT.md": existsSync(join(wtDir, "DEFECT.md")),
       "FIX_REPORT.md": existsSync(join(wtDir, "FIX_REPORT.md")),
       "VERIFY_REPORT.md": existsSync(join(wtDir, "VERIFY_REPORT.md")),
-      "TEST_SPEC.md": existsSync(join(wtDir, "TEST_SPEC.md")),
-      "TEST_SPEC_REPORT.md": existsSync(join(wtDir, "TEST_SPEC_REPORT.md")),
+      "TEST_GUARD.md": existsSync(join(wtDir, "TEST_GUARD.md")),
+      "TEST_GUARD_REPORT.md": existsSync(join(wtDir, "TEST_GUARD_REPORT.md")),
     };
 
     const taskType = taskRef?.type;

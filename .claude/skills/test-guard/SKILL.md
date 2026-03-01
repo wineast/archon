@@ -319,7 +319,7 @@ make test
 - 修复测试代码（不修改业务代码——如果业务代码有问题，应回到 `/fix`）
 - 重新运行直到通过
 
-### 3.2 生成守护规约（TEST_SPEC.md）
+### 3.2 生成守护规约（TEST_GUARD.md）
 
 Phase 1 推导完成、用户确认后写入。规约一旦锁定，后续不再修改。
 
@@ -388,7 +388,7 @@ Phase 1 推导完成、用户确认后写入。规约一旦锁定，后续不再
 | Blast Shield #1 | {test name} | {Level} | ⏳ |
 ```
 
-### 3.3 生成守护报告（TEST_SPEC_REPORT.md）
+### 3.3 生成守护报告（TEST_GUARD_REPORT.md）
 
 测试执行完毕后生成。
 
@@ -398,7 +398,7 @@ Phase 1 推导完成、用户确认后写入。规约一旦锁定，后续不再
 # 测试守护报告：{一句话标题}
 
 > 执行时间：{YYYY-MM-DD HH:mm}
-> 关联规约：[TEST_SPEC.md](TEST_SPEC.md)
+> 关联规约：[TEST_GUARD.md](TEST_GUARD.md)
 > 分支：`{branch}`
 
 ## 1. 规约概要
@@ -458,7 +458,7 @@ Phase 1 推导完成、用户确认后写入。规约一旦锁定，后续不再
 origin: DEFECT.md
 fixed_by: FIX_REPORT.md
 verified_by: VERIFY_REPORT.md
-guarded_by: TEST_SPEC.md + 本报告
+guarded_by: TEST_GUARD.md + 本报告
 ```
 
 ### 新增测试文件
@@ -482,8 +482,8 @@ guarded_by: TEST_SPEC.md + 本报告
 ├── FIX_REPORT.assets/                  # 修复截图
 ├── VERIFY_REPORT.md                    # 验证报告（输入）
 ├── VERIFY_REPORT.assets/               # 验证截图
-├── TEST_SPEC.md                        # 守护规约（输出）
-└── TEST_SPEC_REPORT.md                 # 守护报告（输出）
+├── TEST_GUARD.md                        # 守护规约（输出）
+└── TEST_GUARD_REPORT.md                 # 守护报告（输出）
 ```
 
 ### 规约自检清单
@@ -506,10 +506,10 @@ guarded_by: TEST_SPEC.md + 本报告
 
 1. 生成守护规约，展示给用户
 2. 用 `AskUserQuestion` 确认规约是否准确
-3. 确认后写入 `.worktree/TEST_SPEC.md`
+3. 确认后写入 `.worktree/TEST_GUARD.md`
 4. 编写测试代码
 5. 运行测试
-6. 生成守护报告，写入 `.worktree/TEST_SPEC_REPORT.md`
+6. 生成守护报告，写入 `.worktree/TEST_GUARD_REPORT.md`
 
 ## 执行规则
 

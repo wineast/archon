@@ -284,8 +284,8 @@ issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.worktree/ �
 ├── DEFECT.md                        # 缺陷报告
 ├── FIX_REPORT.md                    # 修复报告
 ├── VERIFY_REPORT.md                 # 验证报告（Verdict 源）
-├── TEST_SPEC.md                     # 守护规约（可选）
-└── TEST_SPEC_REPORT.md              # 守护报告（可选）
+├── TEST_GUARD.md                     # 守护规约（可选）
+└── TEST_GUARD_REPORT.md              # 守护报告（可选）
 ```
 
 ## 与其他技能的协作

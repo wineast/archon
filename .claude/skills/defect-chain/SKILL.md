@@ -13,7 +13,7 @@ allowed-tools: Read, Glob, Skill
 | 1. 诊断 | `/diagnose` | `.worktree/DEFECT.md` |
 | 2. 修复 | `/fix` | `.worktree/FIX_REPORT.md` |
 | 3. 验证 | `/verify` | `.worktree/VERIFY_REPORT.md` |
-| 4. 守护 | `/test-guard` | `.worktree/TEST_SPEC.md` + `TEST_SPEC_REPORT.md` |
+| 4. 守护 | `/test-guard` | `.worktree/TEST_GUARD.md` + `TEST_GUARD_REPORT.md` |
 
 ## 执行流程
 
@@ -27,7 +27,7 @@ allowed-tools: Read, Glob, Skill
 - `.worktree/DEFECT.md` 存在 → 步骤 1 已完成
 - `.worktree/FIX_REPORT.md` 存在 → 步骤 2 已完成
 - `.worktree/VERIFY_REPORT.md` 存在 → 步骤 3 已完成
-- `.worktree/TEST_SPEC.md` 且 `.worktree/TEST_SPEC_REPORT.md` 都存在 → 步骤 4 已完成
+- `.worktree/TEST_GUARD.md` 且 `.worktree/TEST_GUARD_REPORT.md` 都存在 → 步骤 4 已完成
 
 输出当前进度摘要（哪些步骤已完成，从哪一步开始）。
 
