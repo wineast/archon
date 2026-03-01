@@ -6,7 +6,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 // ── Shell exec ──────────────────────────────────────────────
@@ -169,6 +169,49 @@ export function findUpstreamPath(cwd, baseBranch, projectRoot) {
     }
   } catch {}
   return projectRoot;
+}
+
+// ── File diff ───────────────────────────────────────────────
+
+/**
+ * Get unified diff for a single file.
+ * @param {string} cwd - worktree path
+ * @param {string} baseBranch - e.g. "dev"
+ * @param {string} filePath - relative file path
+ * @param {"committed"|"staged"|"working"|"untracked"} source
+ * @returns {string} unified diff text
+ */
+export function getFileDiff(cwd, baseBranch, filePath, source) {
+  switch (source) {
+    case "committed":
+      return exec(`git diff ${baseBranch}...HEAD -- "${filePath}"`, cwd, { timeout: 30000 });
+    case "staged":
+      return exec(`git diff --cached -- "${filePath}"`, cwd, { timeout: 30000 });
+    case "working":
+      return exec(`git diff -- "${filePath}"`, cwd, { timeout: 30000 });
+    case "untracked": {
+      const fullPath = join(cwd, filePath);
+      if (!existsSync(fullPath)) return "";
+      const stat = statSync(fullPath);
+      if (stat.isDirectory()) return "";
+      // Binary check: read first 8KB, look for null bytes
+      const buf = Buffer.alloc(8192);
+      const fd = require("node:fs").openSync(fullPath, "r");
+      const bytesRead = require("node:fs").readSync(fd, buf, 0, 8192, 0);
+      require("node:fs").closeSync(fd);
+      if (buf.subarray(0, bytesRead).includes(0)) {
+        return `diff --git a/${filePath} b/${filePath}\nnew file\nBinary file`;
+      }
+      const content = readFileSync(fullPath, "utf-8");
+      const lines = content.split("\n");
+      // Remove trailing empty line from final newline
+      if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+      const plusLines = lines.map((l) => `+${l}`).join("\n");
+      return `diff --git a/${filePath} b/${filePath}\nnew file mode 100644\n--- /dev/null\n+++ b/${filePath}\n@@ -0,0 +1,${lines.length} @@\n${plusLines}`;
+    }
+    default:
+      return "";
+  }
 }
 
 /**

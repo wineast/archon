@@ -229,6 +229,7 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
             <div className="expanded-section-title">分支对比{pollBadge}</div>
           </div>
           <BranchComparison
+            worktreeName={task.worktree!}
             statusData={statusData}
             mergeCheckData={mergeCheckData}
             onSync={handleSync}

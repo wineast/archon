@@ -1175,6 +1175,166 @@ tr:hover td {
   min-width: auto;
 }
 
+/* ── File click ──────────────────────────────────────────── */
+
+.ft-file-clickable {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.ft-file-clickable:hover {
+  background: #edf0f5;
+}
+.ft-file-selected {
+  background: var(--accent-light) !important;
+}
+
+/* ── Diff Panel ─────────────────────────────────────────── */
+
+.diff-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+
+.diff-header-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.diff-header-path {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diff-header-source {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.diff-body {
+  max-height: 500px;
+  overflow: auto;
+}
+
+.diff-loading,
+.diff-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.diff-error {
+  padding: 12px;
+  color: var(--red);
+  font-size: 12px;
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  table-layout: fixed;
+}
+
+.diff-table td {
+  padding: 0;
+  border: none;
+  border-bottom: none;
+  vertical-align: top;
+}
+
+.diff-line-num {
+  width: 48px;
+  min-width: 48px;
+  text-align: right;
+  padding: 0 8px 0 0 !important;
+  color: var(--text-dim);
+  user-select: none;
+  font-size: 11px;
+  border-right: 1px solid var(--border);
+}
+
+.diff-line-num-new {
+  padding-right: 6px !important;
+}
+
+.diff-line-content {
+  padding: 0 8px !important;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.diff-line-prefix {
+  display: inline-block;
+  width: 12px;
+  user-select: none;
+  color: var(--text-dim);
+}
+
+/* Line type colors */
+.diff-line-add {
+  background: #e6ffec;
+}
+.diff-line-add .diff-line-content {
+  color: #1a7f37;
+}
+.diff-line-add .diff-line-prefix {
+  color: #1a7f37;
+}
+
+.diff-line-del {
+  background: #ffebe9;
+}
+.diff-line-del .diff-line-content {
+  color: #cf222e;
+}
+.diff-line-del .diff-line-prefix {
+  color: #cf222e;
+}
+
+.diff-line-ctx {
+  background: var(--bg);
+}
+
+.diff-line-hunk {
+  background: #ddf4ff;
+}
+.diff-line-hunk .diff-line-content {
+  color: #0969da;
+  font-weight: 600;
+}
+
+.diff-line-header {
+  background: var(--bg-subtle);
+}
+.diff-line-header .diff-line-content {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 /* ── Mermaid ─────────────────────────────────────────────── */
 
 .mermaid-container {

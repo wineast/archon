@@ -91,3 +91,14 @@ export function mergeWorktree(wt: string): Promise<{ ok: boolean }> {
     method: "POST",
   });
 }
+
+export function fetchFileDiff(
+  wt: string,
+  filePath: string,
+  source: "committed" | "staged" | "working" | "untracked"
+): Promise<{ diff: string; filePath: string }> {
+  const params = new URLSearchParams({ path: filePath, source });
+  return fetchJSON(
+    `/api/reports/${encodeURIComponent(wt)}/file-diff?${params}`
+  );
+}

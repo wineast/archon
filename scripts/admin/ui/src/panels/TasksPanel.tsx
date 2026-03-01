@@ -196,14 +196,16 @@ export function TasksPanel() {
             <Mermaid chart={`flowchart LR
   pending([PENDING]) -->|排期| backlog([BACKLOG])
   backlog -->|就绪| ready([READY])
+  backlog -->|退回| pending
   ready -->|退回| backlog
   pending -->|取消| cancelled([CANCELLED])
   backlog -->|取消| cancelled
   ready -->|取消| cancelled
+  cancelled -->|退回| pending
   ready -.->|post: 创建工作区 + 启动链路| ready
   merge((合并成功)) -.->|post: status→merged| merged([MERGED])
   style merge fill:#6366f1,stroke:#4f46e5,color:#fff
-  linkStyle 6,7 stroke:#e67e22,color:#e67e22`} />
+  linkStyle 8,9 stroke:#e67e22,color:#e67e22`} />
           </div>
           <div className="help-section">
             <div className="help-title">Issue 生命周期</div>
@@ -212,10 +214,11 @@ export function TasksPanel() {
   ready -->|退回| open
   open -->|不修| wontfix([WONTFIX])
   ready -->|不修| wontfix
+  wontfix -->|退回| open
   ready -.->|post: 创建工作区 + 启动链路| ready
   merge((合并成功)) -.->|post: status→merged| merged([MERGED])
   style merge fill:#6366f1,stroke:#4f46e5,color:#fff
-  linkStyle 4,5 stroke:#e67e22,color:#e67e22`} />
+  linkStyle 5,6 stroke:#e67e22,color:#e67e22`} />
           </div>
         </div>
       )}

@@ -1,8 +1,17 @@
 import { useState, useMemo } from "react";
 import { Spinner } from "./Spinner";
+import { DiffPanel } from "./DiffPanel";
 import type { StatusData, MergeCheckData, ChangedFile, FileStatusEntry } from "../types";
 
+type DiffSource = "committed" | "staged" | "working" | "untracked";
+
+interface SelectedFile {
+  path: string;
+  source: DiffSource;
+}
+
 interface BranchComparisonProps {
+  worktreeName: string;
   statusData: StatusData;
   mergeCheckData: MergeCheckData;
   onSync: () => void;
@@ -158,7 +167,16 @@ function normalizeChanged(files: ChangedFile[]): FileItem[] {
 
 // ── FileTree component ──
 
-function FileTreeView({ items, title, action }: { items: FileItem[]; title: string; action?: React.ReactNode }) {
+interface FileTreeViewProps {
+  items: FileItem[];
+  title: string;
+  action?: React.ReactNode;
+  source: DiffSource;
+  selectedFile: SelectedFile | null;
+  onFileClick: (path: string, source: DiffSource) => void;
+}
+
+function FileTreeView({ items, title, action, source, selectedFile, onFileClick }: FileTreeViewProps) {
   const tree = useMemo(() => buildFileTree(items), [items]);
 
   if (items.length === 0) return null;
@@ -171,21 +189,38 @@ function FileTreeView({ items, title, action }: { items: FileItem[]; title: stri
       </div>
       <div className="git-file-list">
         {tree.map((node) => (
-          <FileTreeNode key={node.fullPath} node={node} depth={0} />
+          <FileTreeNode
+            key={node.fullPath}
+            node={node}
+            depth={0}
+            source={source}
+            selectedFile={selectedFile}
+            onFileClick={onFileClick}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function FileTreeNode({ node, depth }: { node: TreeNode; depth: number }) {
+interface FileTreeNodeProps {
+  node: TreeNode;
+  depth: number;
+  source: DiffSource;
+  selectedFile: SelectedFile | null;
+  onFileClick: (path: string, source: DiffSource) => void;
+}
+
+function FileTreeNode({ node, depth, source, selectedFile, onFileClick }: FileTreeNodeProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   if (!node.isDir) {
+    const isSelected = selectedFile?.path === node.file?.path && selectedFile?.source === source;
     return (
       <div
-        className={`git-file-item ${node.file?.statusCls ?? ""}`}
+        className={`git-file-item ft-file-clickable ${node.file?.statusCls ?? ""} ${isSelected ? "ft-file-selected" : ""}`}
         style={{ paddingLeft: `${14 + depth * 20}px` }}
+        onClick={() => node.file && onFileClick(node.file.path, source)}
       >
         <span className="ft-icon">📄</span>
         <span className="git-file-path">{node.name}</span>
@@ -207,7 +242,14 @@ function FileTreeNode({ node, depth }: { node: TreeNode; depth: number }) {
       </div>
       {!collapsed &&
         node.children.map((child) => (
-          <FileTreeNode key={child.fullPath} node={child} depth={depth + 1} />
+          <FileTreeNode
+            key={child.fullPath}
+            node={child}
+            depth={depth + 1}
+            source={source}
+            selectedFile={selectedFile}
+            onFileClick={onFileClick}
+          />
         ))}
     </>
   );
@@ -216,6 +258,7 @@ function FileTreeNode({ node, depth }: { node: TreeNode; depth: number }) {
 // ── Main component ──
 
 export function BranchComparison({
+  worktreeName,
   statusData,
   mergeCheckData,
   onSync,
@@ -235,6 +278,16 @@ export function BranchComparison({
   const isBusy = syncState === "running" || mergeState === "running";
   const upstreamDirty = (upstream.staged || 0) + (upstream.unstaged || 0) > 0;
   const currentDirty = (current.staged || 0) + (current.unstaged || 0) > 0;
+
+  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+
+  const handleFileClick = (path: string, source: DiffSource) => {
+    if (selectedFile?.path === path && selectedFile?.source === source) {
+      setSelectedFile(null);
+    } else {
+      setSelectedFile({ path, source });
+    }
+  };
 
   const stagedItems = useMemo(() => normalizeStaged(files), [files]);
   const workingItems = useMemo(() => normalizeWorking(files), [files]);
@@ -274,13 +327,13 @@ export function BranchComparison({
       </div>
 
       {/* 2. Working tree status */}
-      <FileTreeView items={stagedItems} title="暂存区" action={
+      <FileTreeView items={stagedItems} title="暂存区" source="staged" selectedFile={selectedFile} onFileClick={handleFileClick} action={
         <button className="btn btn-xs" onClick={onCommit} title="AI 提交">
           {terminals.includes("/commit") ? "✦ 提交中…" : "✦ commit"}
         </button>
       } />
-      <FileTreeView items={workingItems} title="工作区" action={addBtn} />
-      <FileTreeView items={untrackedItems} title="未跟踪" action={addBtn} />
+      <FileTreeView items={workingItems} title="工作区" source="working" selectedFile={selectedFile} onFileClick={handleFileClick} action={addBtn} />
+      <FileTreeView items={untrackedItems} title="未跟踪" source="untracked" selectedFile={selectedFile} onFileClick={handleFileClick} action={addBtn} />
 
       {/* 3. Commit list */}
       {commits.length > 0 && (
@@ -302,7 +355,17 @@ export function BranchComparison({
       )}
 
       {/* 4. Changed files (committed vs base) */}
-      <FileTreeView items={changedItems} title="已提交变更" />
+      <FileTreeView items={changedItems} title="已提交变更" source="committed" selectedFile={selectedFile} onFileClick={handleFileClick} />
+
+      {/* 4.5. Diff panel */}
+      {selectedFile && (
+        <DiffPanel
+          worktreeName={worktreeName}
+          filePath={selectedFile.path}
+          source={selectedFile.source}
+          onClose={() => setSelectedFile(null)}
+        />
+      )}
 
       {/* 5. Merge action bar */}
       <div className="branch-compare-footer">

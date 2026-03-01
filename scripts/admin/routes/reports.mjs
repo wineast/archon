@@ -11,7 +11,7 @@ import {
   readMergeCheck,
   serveAsset,
 } from "../services/worktree-scanner.mjs";
-import { exec, getBaseBranch } from "../services/git-ops.mjs";
+import { exec, getBaseBranch, getFileDiff } from "../services/git-ops.mjs";
 import { markTaskMerged } from "../services/task-scanner.mjs";
 import { execSync } from "node:child_process";
 
@@ -123,6 +123,25 @@ export function createReportsRouter(dirs) {
         mergeStates.set(wtName, "failed");
         json(res, 500, { ok: false, error: e.stderr?.toString() || e.message });
       }
+      return true;
+    }
+
+    // GET /api/reports/:wt/file-diff?path=xxx&source=committed
+    if (subPath === "file-diff" && req.method === "GET") {
+      const filePath = url.searchParams.get("path");
+      const source = url.searchParams.get("source") || "committed";
+      if (!filePath) {
+        json(res, 400, { error: "Missing path parameter" });
+        return true;
+      }
+      const validSources = ["committed", "staged", "working", "untracked"];
+      if (!validSources.includes(source)) {
+        json(res, 400, { error: `Invalid source: ${source}` });
+        return true;
+      }
+      const baseBranch = getBaseBranch(wtDir);
+      const diff = getFileDiff(wtPath, baseBranch, filePath, source);
+      json(res, 200, { diff, filePath });
       return true;
     }
 
