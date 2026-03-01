@@ -19,20 +19,17 @@ Todo 是**记录层**——趁脑子里还有印象，30 秒内把一件事记�
 - **Todo**：需求/优化种子——"要做一件事"，轻量记录，30 秒内完成
 - **Issue**：缺陷种子——"有什么东西坏了"，需要捕获症状和触发条件，~5 分钟
 
-## 目录结构（文件夹即状态）
+## 目录结构（扁平 + frontmatter 状态）
 
 ```
 todo/
-  pending/      ← 当前要做
-  backlog/      ← 确认要做但不急，等条件成熟再提到 pending
-  done/         ← 已完成
+  {name}.md     ← 所有待办直接铺平在根目录
 ```
 
-- 一个待办一个文件，文件通过所在文件夹表示状态
-- 状态变更 = 移动文件到对应文件夹
-- **pending**：当前阶段该做的，可以随时创建工作区开工
-- **backlog**：确认有价值但当前不做，通常是等功能上线、等规模增长、等需求明确后才做
-- **done**：已完成
+- 一个待办一个文件，所有 `.md` 文件直接放在 `todo/` 根目录
+- **frontmatter `status` 字段是唯一状态源**，不再有子文件夹
+- 状态变更 = 修改文件内 frontmatter 的 `status` 值（文件不移动）
+- 有效状态值：`pending`（当前要做）、`backlog`（不急）、`ready`（就绪待派发）、`running`（执行中）、`done`（已完成）
 
 ## 待办文件规范
 
@@ -59,7 +56,7 @@ worktree:
 | 字段 | 说明 |
 |------|------|
 | `priority` | P0-P3，见下方定义 |
-| `status` | 与所在文件夹一致：`pending` / `backlog` / `done` |
+| `status` | 唯一状态源：`pending` / `backlog` / `ready` / `running` / `done` |
 | `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
 
 ### 三要素详解
@@ -147,35 +144,26 @@ Todo 不是终点，而是种子。根据 Context 的性质，todo 有四种演�
 
 ### 添加待办
 
-1. 确保 `todo/pending/` 目录存在
-2. 按模板创建文件到 `todo/pending/`
+1. 确保 `todo/` 目录存在
+2. 按模板创建文件到 `todo/`（frontmatter `status: pending`）
 3. 确认：`已添加待办 — {Intent}`
 4. 根据 Context 性质，提示可能的演化方向
 
 ### 查看待办
 
-列出 `todo/pending/` 和 `todo/backlog/` 下所有文件。
+列出 `todo/` 下所有 `.md` 文件，按 frontmatter `status` 筛选。
 
 ### 完成待办
 
-将文件从 `pending/` 移动到 `done/`，同时更新 frontmatter `status: done`：
-```bash
-mv todo/pending/{name}.md todo/done/
-```
+编辑文件 frontmatter，将 `status` 改为 `done`（文件不移动）。
 
 ### 暂缓待办
 
-将文件从 `pending/` 移动到 `backlog/`，同时更新 frontmatter `status: backlog`：
-```bash
-mv todo/pending/{name}.md todo/backlog/
-```
+编辑文件 frontmatter，将 `status` 改为 `backlog`（文件不移动）。
 
 ### 激活待办
 
-将文件从 `backlog/` 移动到 `pending/`，同时更新 frontmatter `status: pending`：
-```bash
-mv todo/backlog/{name}.md todo/pending/
-```
+编辑文件 frontmatter，将 `status` 改为 `pending`（文件不移动）。
 
 ### 删除待办
 
@@ -186,5 +174,5 @@ mv todo/backlog/{name}.md todo/pending/
 - 保持轻量——30 秒内完成，不要在 todo 阶段做分析
 - 三元素缺一不可：Intent 让未来知道干什么，Context 让未来知道为什么，Anchor 让未来知道从哪开始
 - 文件名不带编号
-- 状态完全由文件夹决定，frontmatter `status` 字段与文件夹保持同步
+- 状态完全由 frontmatter `status` 字段决定，文件不移动
 - 创建工作区后，在 frontmatter 中填写 `worktree` 字段关联

@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test test-viewer e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip admin
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test test-viewer e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip admin admin-setup admin-dev admin-build
 
 # ============================================================
 # Setup
@@ -267,25 +267,23 @@ db-init:
 # Admin Panel
 # ============================================================
 
+## Admin 面板依赖安装
+admin-setup:
+	@cd scripts/admin/ui && npm install
+
+## Admin 面板开发模式（Vite dev + API server）
+admin-dev:
+	@API_PORT=4100 PORT=4100 node scripts/admin/main.mjs &
+	@cd scripts/admin/ui && npm run dev
+
+## Admin 面板构建
+admin-build:
+	@cd scripts/admin/ui && npm run build
+
 ## 统一管理面板（Tasks + Worktrees + Reports）
 admin:
-	@node scripts/admin/admin.mjs
-
-# ============================================================
-# Task Manager
-# ============================================================
-
-## Todo/Issue 只读看板 + 心跳调度（Web UI）
-task-manage:
-	@node scripts/admin/task-manager.mjs
-
-# ============================================================
-# Git Worktree
-# ============================================================
-
-## Worktree 管理界面（Web UI）
-wt-manage:
-	@node scripts/admin/worktree-manager.mjs
+	@if [ ! -d scripts/admin/dist ]; then cd scripts/admin/ui && npm run build; fi
+	@node scripts/admin/main.mjs
 
 ## 列出所有 worktree
 wt-list:

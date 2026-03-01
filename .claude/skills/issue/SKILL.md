@@ -29,16 +29,17 @@ Hypothesis 是 issue 最有价值的部分之一。一个错误的假设比没�
 - 不确定就标注"不确定"，但不要留空
 - 多个可能就都列出来
 
-## 目录结构（文件夹即状态）
+## 目录结构（扁平 + frontmatter 状态）
 
 ```
 issues/
-  open/       ← 待修复
-  closed/     ← 已关闭
+  {name}.md     ← 所有 issue 直接铺平在根目录
 ```
 
-- 一个问题一个文件，文件通过所在文件夹表示状态
-- 状态变更 = 移动文件到对应文件夹
+- 一个问题一个文件，所有 `.md` 文件直接放在 `issues/` 根目录
+- **frontmatter `status` 字段是唯一状态源**，不再有子文件夹
+- 状态变更 = 修改文件内 frontmatter 的 `status` 值（文件不移动）
+- 有效状态值：`open`（待修复）、`ready`（就绪待派发）、`running`（执行中）、`closed`（已关闭）
 
 ## Issue 文件规范
 
@@ -73,7 +74,7 @@ worktree:
 | 字段 | 说明 |
 |------|------|
 | `priority` | P0-P3，见下方定义 |
-| `status` | 与所在文件夹一致：`open` / `closed` |
+| `status` | 唯一状态源：`open` / `ready` / `running` / `closed` |
 | `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
 
 ### Priority 定义
@@ -137,21 +138,18 @@ Hypothesis ──迁移──→        Root Cause（直觉 → 确认因果）
 
 ### 创建 Issue
 
-1. 确保 `issues/open/` 目录存在
-2. 按模板创建文件到 `issues/open/`
+1. 确保 `issues/` 目录存在
+2. 按模板创建文件到 `issues/`（frontmatter `status: open`）
 3. 确认：`已创建 issue — {Symptom 标题}`
 4. 根据性质提示可能的演化方向
 
 ### 查看 Issue
 
-列出 `issues/open/` 下所有文件。
+列出 `issues/` 下所有 `.md` 文件，按 frontmatter `status` 筛选。
 
 ### 关闭 Issue
 
-将文件从 `issues/open/` 移动到 `issues/closed/`，同时更新 frontmatter `status: closed`：
-```bash
-mv issues/open/{name}.md issues/closed/
-```
+编辑文件 frontmatter，将 `status` 改为 `closed`（文件不移动）。
 
 ### 删除 Issue
 
@@ -163,5 +161,5 @@ mv issues/open/{name}.md issues/closed/
 - Hypothesis 不要留空——错了比没有强，标注不确定即可
 - 四元素各司其职：Symptom 识别问题、Trigger 划定触发条件、Locale 缩小范围、Hypothesis 指引方向
 - 文件名不带编号
-- 状态完全由文件夹决定，frontmatter `status` 字段与文件夹保持同步
+- 状态完全由 frontmatter `status` 字段决定，文件不移动
 - 创建工作区后，在 frontmatter 中填写 `worktree` 字段关联

@@ -17,3 +17,10 @@ screenshots/
 .logs/
 /data/fixtures/
 embed-umi-demo/
+
+# Local task data
+todo/
+issues/
+
+# Admin panel build output
+scripts/admin/dist/

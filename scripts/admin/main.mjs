@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
  * Archon Admin — Unified local management panel
- * Combines Tasks, Worktrees, and Reports into a single UI.
- * Zero external dependencies. Alpine.js + marked via CDN.
+ * Task-centric workflow view.
  *
  * Usage:
- *   node scripts/admin/admin.mjs
+ *   node scripts/admin/main.mjs
  *   make admin
  */
 
@@ -53,31 +52,43 @@ const reportsRouter = createReportsRouter(dirs);
 // ── Static file serving ──────────────────────────────────────
 
 const ADMIN_DIR = new URL(".", import.meta.url).pathname;
+const DIST_DIR = join(ADMIN_DIR, "dist");
+const USE_DIST = existsSync(join(DIST_DIR, "index.html"));
+const STATIC_DIR = USE_DIST ? DIST_DIR : ADMIN_DIR;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
 };
 
 function serveStatic(req, res) {
-  let filePath;
   const urlPath = new URL(req.url, "http://localhost").pathname;
+  let filePath;
 
   if (urlPath === "/") {
-    filePath = join(ADMIN_DIR, "index.html");
+    filePath = join(STATIC_DIR, "index.html");
   } else {
-    // Map URL to file path within admin/
-    filePath = join(ADMIN_DIR, urlPath);
+    filePath = join(STATIC_DIR, urlPath);
   }
 
   // Security: prevent path traversal
-  if (!filePath.startsWith(ADMIN_DIR)) {
+  if (!filePath.startsWith(STATIC_DIR)) {
     return false;
   }
 
   if (!existsSync(filePath)) {
-    return false;
+    // SPA fallback: non-API, non-file requests return index.html
+    if (USE_DIST && !urlPath.startsWith("/api") && !extname(urlPath)) {
+      filePath = join(STATIC_DIR, "index.html");
+    } else {
+      return false;
+    }
   }
 
   const ext = extname(filePath);
@@ -96,19 +107,7 @@ function serveStatic(req, res) {
 // ── File watchers ────────────────────────────────────────────
 
 function setupWatchers() {
-  // Watch todo/issues for task changes
-  const taskDirs = [
-    join(TODO_DIR, "pending"),
-    join(TODO_DIR, "ready"),
-    join(TODO_DIR, "running"),
-    join(TODO_DIR, "backlog"),
-    join(TODO_DIR, "done"),
-    join(ISSUES_DIR, "open"),
-    join(ISSUES_DIR, "ready"),
-    join(ISSUES_DIR, "running"),
-    join(ISSUES_DIR, "closed"),
-  ];
-
+  // Watch todo/ and issues/ root directories for task changes
   let taskDebounce = null;
   const notifyTasks = () => {
     if (taskDebounce) return;
@@ -118,7 +117,7 @@ function setupWatchers() {
     }, 500);
   };
 
-  for (const dir of taskDirs) {
+  for (const dir of [TODO_DIR, ISSUES_DIR]) {
     if (!existsSync(dir)) continue;
     try {
       watch(dir, { persistent: false }, notifyTasks);
