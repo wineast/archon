@@ -106,11 +106,12 @@ mv .worktree/RELEASE_REPORT.assets/ releases/vN/ 2>/dev/null || true
 rm -rf .worktrees/{name}
 ```
 
-### 9. 提交归档
+### 9. 提交归档并打 tag
 
 ```bash
 git add releases/vN/ todo/ issues/
 git commit -m "chore: archive release vN"
+git tag vN
 ```
 
 ### 10. 输出归档摘要

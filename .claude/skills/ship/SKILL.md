@@ -14,7 +14,8 @@ allowed-tools: Read, Glob, Skill, AskUserQuestion, Bash
 | 2. 发布 | `/release` | `.worktree/RELEASE_REPORT.md` + PR |
 | 3. 评审 | 人工确认 | 用户决定是否合并 |
 | 4. 合并 | `gh pr merge` | PR 合并到 main |
-| 5. 归档 | `/archive` | `releases/vN/` |
+| 5. 归档 | `/archive` | `releases/vN/` + git tag |
+| 6. 发布内容 | `/release-notes` | `SOCIAL.md` + `SLIDES.md` + `SCRIPT.md` |
 
 ## 执行流程
 
@@ -73,7 +74,11 @@ gh pr view {number} --json state --jq '.state'
 
 调用 `/archive` 技能，将本次发布涉及的任务和报告移入 `releases/vN/`。
 
-### 7. 完成总结
+### 7. 发布内容（步骤 6）
+
+调用 `/release-notes` 技能，从 `releases/vN/` 生成社交媒体文案、PPT 大纲、视频脚本。
+
+### 8. 完成总结
 
 输出链路完成总结，列出每个步骤的状态。
 
