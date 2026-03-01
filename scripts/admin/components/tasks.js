@@ -6,6 +6,11 @@ document.addEventListener('alpine:init', () => {
     currentTab: 'all',
     currentFilter: 'all',
     loading: true,
+    detailTask: null,
+    detailHtml: '',
+    detailLoading: false,
+    page: 1,
+    pageSize: 30,
 
     init() {
       this.refresh();
@@ -49,7 +54,7 @@ document.addEventListener('alpine:init', () => {
       ];
     },
 
-    get filteredTasks() {
+    get allFilteredTasks() {
       if (!this.data) return [];
       let tasks = this.data.tasks.slice();
       if (this.currentTab === 'todo') tasks = tasks.filter((t) => t.type === 'todo');
@@ -71,6 +76,23 @@ document.addEventListener('alpine:init', () => {
       return tasks;
     },
 
+    get filteredTasks() {
+      const start = (this.page - 1) * this.pageSize;
+      return this.allFilteredTasks.slice(start, start + this.pageSize);
+    },
+
+    get totalPages() {
+      return Math.max(1, Math.ceil(this.allFilteredTasks.length / this.pageSize));
+    },
+
+    get totalFiltered() {
+      return this.allFilteredTasks.length;
+    },
+
+    prevPage() { if (this.page > 1) this.page--; },
+    nextPage() { if (this.page < this.totalPages) this.page++; },
+    resetPage() { this.page = 1; },
+
     get reversedLogs() {
       if (!this.data || !this.data.scheduler.logs) return [];
       return this.data.scheduler.logs.slice().reverse();
@@ -91,6 +113,31 @@ document.addEventListener('alpine:init', () => {
       return task.type === 'todo'
         ? ['pending', 'backlog'].includes(task.folder)
         : ['open'].includes(task.folder);
+    },
+
+    async openDetail(task) {
+      this.detailTask = task;
+      this.detailHtml = '';
+      this.detailLoading = true;
+      try {
+        const r = await fetch('/api/tasks/detail/' + encodeURIComponent(task.path));
+        const d = await r.json();
+        let text = d.content || '';
+        // Strip frontmatter
+        text = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+        if (text && typeof marked !== 'undefined') {
+          this.detailHtml = marked.parse(text);
+        } else {
+          this.detailHtml = '<pre>' + esc(text || 'Empty') + '</pre>';
+        }
+      } catch {
+        this.detailHtml = '<p style="color:var(--red)">Failed to load</p>';
+      }
+      this.detailLoading = false;
+    },
+
+    closeDetail() {
+      this.detailTask = null;
     },
 
     async toggleScheduler() {

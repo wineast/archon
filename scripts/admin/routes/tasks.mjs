@@ -397,6 +397,22 @@ export function createTasksRouter(dirs, broadcastSSE) {
       return true;
     }
 
+    // Task detail content
+    const detailMatch = path.match(/^\/api\/tasks\/detail\/(.+)$/);
+    if (detailMatch && req.method === "GET") {
+      const taskPath = decodeURIComponent(detailMatch[1]);
+      const fullPath = join(PROJECT_ROOT, taskPath);
+      if (!fullPath.startsWith(PROJECT_ROOT) || !existsSync(fullPath)) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Not found" }));
+        return true;
+      }
+      const content = readFileSync(fullPath, "utf-8");
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ content }));
+      return true;
+    }
+
     if (path === "/api/tasks/scheduler/toggle" && req.method === "POST") {
       const enabled = scheduler.toggle();
       res.writeHead(200, { "Content-Type": "application/json" });

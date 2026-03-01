@@ -63,7 +63,7 @@
         <!-- Tabs -->
         <div class="tabs">
           <template x-for="t in tabs" :key="t.id">
-            <button class="tab" :class="{ active: currentTab === t.id }" @click="currentTab = t.id">
+            <button class="tab" :class="{ active: currentTab === t.id }" @click="currentTab = t.id; page = 1">
               <span x-text="t.label"></span>
               <span class="count" x-text="t.count"></span>
             </button>
@@ -74,7 +74,7 @@
         <div class="filter-bar" x-show="currentTab !== 'logs'">
           <label>Priority:</label>
           <template x-for="f in ['all', 'P0', 'P1', 'P2', 'P3']" :key="f">
-            <button class="filter-btn" :class="{ active: currentFilter === f }" @click="currentFilter = f" x-text="f === 'all' ? 'All' : f"></button>
+            <button class="filter-btn" :class="{ active: currentFilter === f }" @click="currentFilter = f; page = 1" x-text="f === 'all' ? 'All' : f"></button>
           </template>
         </div>
 
@@ -89,7 +89,7 @@
             </tr></thead>
             <tbody>
               <template x-for="t in filteredTasks" :key="t.id">
-                <tr>
+                <tr class="task-row" @click="openDetail(t)" style="cursor:pointer;">
                   <td>
                     <span class="badge" :class="t.type === 'todo' ? 'badge-todo' : 'badge-issue'" x-text="t.type === 'todo' ? 'Todo' : 'Issue'"></span>
                   </td>
@@ -101,7 +101,7 @@
                   <td><span class="badge" :class="'badge-' + t.status" x-text="t.status"></span></td>
                   <td>
                     <template x-if="t.worktree">
-                      <a class="wt-link" href="#" @click.prevent="$root.querySelector('[x-data]').panel = 'reports'" x-text="t.worktree"></a>
+                      <a class="wt-link" href="#" @click.stop.prevent="$root.querySelector('[x-data]').panel = 'reports'" x-text="t.worktree"></a>
                     </template>
                     <template x-if="!t.worktree">
                       <span style="color:var(--text-muted)">-</span>
@@ -110,18 +110,25 @@
                   <td><div class="chain-dots" x-html="renderChain(t.chain)"></div></td>
                   <td>
                     <template x-if="t.remoteUrl">
-                      <a class="remote-link" :href="t.remoteUrl" target="_blank">&#x1F517; Open</a>
+                      <a class="remote-link" :href="t.remoteUrl" target="_blank" @click.stop>&#x1F517; Open</a>
                     </template>
                   </td>
                   <td>
                     <template x-if="canMarkReady(t)">
-                      <button class="btn btn-sm btn-ready" @click="moveStatus(t, 'ready')" title="Mark as Ready">Ready</button>
+                      <button class="btn btn-sm btn-ready" @click.stop="moveStatus(t, 'ready')" title="Mark as Ready">Ready</button>
                     </template>
                   </td>
                 </tr>
               </template>
             </tbody>
           </table>
+
+          <!-- Pagination -->
+          <div class="pagination" x-show="totalPages > 1">
+            <button class="btn btn-sm" :disabled="page <= 1" @click="prevPage()">&larr; Prev</button>
+            <span class="page-info" x-text="page + ' / ' + totalPages + '  (' + totalFiltered + ' items)'"></span>
+            <button class="btn btn-sm" :disabled="page >= totalPages" @click="nextPage()">Next &rarr;</button>
+          </div>
         </div>
 
         <!-- Logs Tab -->
@@ -139,6 +146,28 @@
                   <span :class="'log-' + entry.level" x-text="entry.msg"></span>
                 </div>
               </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task Detail Panel -->
+        <div class="detail-overlay" x-show="detailTask" @click.self="closeDetail()" x-cloak>
+          <div class="detail-panel">
+            <div class="detail-header">
+              <button class="detail-close" @click="closeDetail()">&times;</button>
+              <div class="detail-title-row">
+                <span class="badge" :class="detailTask?.type === 'todo' ? 'badge-todo' : 'badge-issue'" x-text="detailTask?.type === 'todo' ? 'Todo' : 'Issue'"></span>
+                <span class="priority" :class="detailTask?.priority?.toLowerCase()" x-text="detailTask?.priority"></span>
+                <span class="detail-title" x-text="detailTask?.title"></span>
+              </div>
+              <div class="detail-meta">
+                <span class="badge" :class="'badge-' + detailTask?.status" x-text="detailTask?.status"></span>
+                <span style="color:var(--text-muted);font-size:0.8em" x-text="detailTask?.path"></span>
+              </div>
+            </div>
+            <div class="detail-body">
+              <div x-show="detailLoading" class="empty-state" style="padding:40px;"><span class="spinner"></span></div>
+              <div x-show="!detailLoading" class="md-content" x-html="detailHtml"></div>
             </div>
           </div>
         </div>
@@ -231,7 +260,7 @@
               <table>
                 <thead><tr><th style="width:30px"></th><th>Branch</th><th>Last Commit</th><th>Date</th><th>Actions</th></tr></thead>
                 <tbody>
-                  <template x-for="b in data.orphanBranches" :key="b.branch">
+                  <template x-for="b in pagedMergedBranches" :key="b.branch">
                     <tr>
                       <td><input type="checkbox" class="check" :checked="selectedBranches.has(b.branch)" @change="toggleBranch(b.branch)"></td>
                       <td><span class="branch-name" x-text="b.branch"></span></td>
@@ -244,6 +273,13 @@
                   </template>
                 </tbody>
               </table>
+
+              <!-- Pagination -->
+              <div class="pagination" x-show="mergedTotalPages > 1">
+                <button class="btn btn-sm" :disabled="mergedPage <= 1" @click="mergedPrev()">&larr; Prev</button>
+                <span class="page-info" x-text="mergedPage + ' / ' + mergedTotalPages + '  (' + data.orphanBranches.length + ' items)'"></span>
+                <button class="btn btn-sm" :disabled="mergedPage >= mergedTotalPages" @click="mergedNext()">Next &rarr;</button>
+              </div>
             </div>
           </template>
         </div>

@@ -6,6 +6,8 @@ document.addEventListener('alpine:init', () => {
     currentTab: 'worktrees',
     loading: true,
     selectedBranches: new Set(),
+    mergedPage: 1,
+    mergedPageSize: 30,
 
     init() {
       this.refresh();
@@ -37,6 +39,20 @@ document.addEventListener('alpine:init', () => {
       if (!this.data) return 0;
       return this.data.worktrees.filter((w) => w.merged).length;
     },
+
+    get pagedMergedBranches() {
+      if (!this.data) return [];
+      const start = (this.mergedPage - 1) * this.mergedPageSize;
+      return this.data.orphanBranches.slice(start, start + this.mergedPageSize);
+    },
+
+    get mergedTotalPages() {
+      if (!this.data) return 1;
+      return Math.max(1, Math.ceil(this.data.orphanBranches.length / this.mergedPageSize));
+    },
+
+    mergedPrev() { if (this.mergedPage > 1) this.mergedPage--; },
+    mergedNext() { if (this.mergedPage < this.mergedTotalPages) this.mergedPage++; },
 
     toggleBranch(branch) {
       if (this.selectedBranches.has(branch)) {
