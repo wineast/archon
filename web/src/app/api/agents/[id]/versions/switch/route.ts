@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
 import { agents, agentVersions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 
 /**
@@ -28,11 +28,16 @@ export async function POST(
     );
   }
 
-  // Verify target version exists
+  // Verify target version exists and belongs to this agent
   const [targetVersion] = await db
     .select({ id: agentVersions.id })
     .from(agentVersions)
-    .where(eq(agentVersions.id, targetVersionId))
+    .where(
+      and(
+        eq(agentVersions.id, targetVersionId),
+        eq(agentVersions.agentId, agentId)
+      )
+    )
     .limit(1);
 
   if (!targetVersion) {
