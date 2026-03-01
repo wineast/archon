@@ -307,7 +307,7 @@ const scheduler = {
     // 1. Create worktree
     try {
       const createResult = exec(
-        `node scripts/worktree.mjs create ${taskId}`,
+        `node scripts/worktree/worktree.mjs create ${taskId}`,
         { timeout: 60000 }
       );
       this.log("info", `Worktree created for "${taskId}": ${createResult.split("\n").pop()}`);

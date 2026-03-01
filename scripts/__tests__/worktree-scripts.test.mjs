@@ -22,23 +22,24 @@ import { execSync, spawnSync } from "node:child_process";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 const SCRIPTS_DIR = join(PROJECT_ROOT, "scripts");
-const CMD_DIR = join(SCRIPTS_DIR, "cmd");
+const WT_DIR = join(SCRIPTS_DIR, "worktree");
+const CMD_DIR = join(WT_DIR, "cmd");
 
 // ── 文件存在性 ──────────────────────────────────────────────
 
 describe("文件存在性", () => {
   const expectedFiles = [
-    "scripts/worktree.mjs",
-    "scripts/wt-init.mjs",
-    "scripts/wt-fini.mjs",
-    "scripts/wt-setup.mjs",
-    "scripts/wt-teardown.mjs",
-    "scripts/cmd/_helpers.mjs",
-    "scripts/cmd/list.mjs",
-    "scripts/cmd/create.mjs",
-    "scripts/cmd/delete.mjs",
-    "scripts/cmd/merge.mjs",
-    "scripts/cmd/sync.mjs",
+    "scripts/worktree/worktree.mjs",
+    "scripts/worktree/lifecycle/wt-init.mjs",
+    "scripts/worktree/lifecycle/wt-fini.mjs",
+    "scripts/worktree/lifecycle/wt-setup.mjs",
+    "scripts/worktree/lifecycle/wt-teardown.mjs",
+    "scripts/worktree/cmd/_helpers.mjs",
+    "scripts/worktree/cmd/list.mjs",
+    "scripts/worktree/cmd/create.mjs",
+    "scripts/worktree/cmd/delete.mjs",
+    "scripts/worktree/cmd/merge.mjs",
+    "scripts/worktree/cmd/sync.mjs",
   ];
 
   for (const file of expectedFiles) {
@@ -71,11 +72,11 @@ describe("文件存在性", () => {
 
 describe("文件可执行权限", () => {
   const executableFiles = [
-    "scripts/worktree.mjs",
-    "scripts/wt-init.mjs",
-    "scripts/wt-fini.mjs",
-    "scripts/wt-setup.mjs",
-    "scripts/wt-teardown.mjs",
+    "scripts/worktree/worktree.mjs",
+    "scripts/worktree/lifecycle/wt-init.mjs",
+    "scripts/worktree/lifecycle/wt-fini.mjs",
+    "scripts/worktree/lifecycle/wt-setup.mjs",
+    "scripts/worktree/lifecycle/wt-teardown.mjs",
   ];
 
   for (const file of executableFiles) {
@@ -91,11 +92,11 @@ describe("文件可执行权限", () => {
 
 describe("Shebang 检查", () => {
   const topLevelScripts = [
-    "scripts/worktree.mjs",
-    "scripts/wt-init.mjs",
-    "scripts/wt-fini.mjs",
-    "scripts/wt-setup.mjs",
-    "scripts/wt-teardown.mjs",
+    "scripts/worktree/worktree.mjs",
+    "scripts/worktree/lifecycle/wt-init.mjs",
+    "scripts/worktree/lifecycle/wt-fini.mjs",
+    "scripts/worktree/lifecycle/wt-setup.mjs",
+    "scripts/worktree/lifecycle/wt-teardown.mjs",
   ];
 
   for (const file of topLevelScripts) {
@@ -227,7 +228,7 @@ describe("cmd/sync.mjs 导出", () => {
 
 describe("worktree.mjs CLI", () => {
   const run = (args) =>
-    spawnSync("node", [join(SCRIPTS_DIR, "worktree.mjs"), ...args], {
+    spawnSync("node", [join(WT_DIR, "worktree.mjs"), ...args], {
       encoding: "utf-8",
       cwd: PROJECT_ROOT,
     });
@@ -295,40 +296,40 @@ describe("worktree.mjs CLI", () => {
 describe("Makefile 引用一致性", () => {
   const makefile = readFileSync(join(PROJECT_ROOT, "Makefile"), "utf-8");
 
-  it("wt-list 使用 node scripts/worktree.mjs", () => {
-    assert.ok(makefile.includes("node scripts/worktree.mjs list"));
+  it("wt-list 使用 node scripts/worktree/worktree.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/worktree.mjs list"));
   });
 
-  it("wt-create 使用 node scripts/worktree.mjs", () => {
-    assert.ok(makefile.includes("node scripts/worktree.mjs create"));
+  it("wt-create 使用 node scripts/worktree/worktree.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/worktree.mjs create"));
   });
 
-  it("wt-sync 使用 node scripts/worktree.mjs", () => {
-    assert.ok(makefile.includes("node scripts/worktree.mjs sync"));
+  it("wt-sync 使用 node scripts/worktree/worktree.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/worktree.mjs sync"));
   });
 
-  it("wt-merge 使用 node scripts/worktree.mjs", () => {
-    assert.ok(makefile.includes("node scripts/worktree.mjs merge"));
+  it("wt-merge 使用 node scripts/worktree/worktree.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/worktree.mjs merge"));
   });
 
-  it("wt-delete 使用 node scripts/worktree.mjs", () => {
-    assert.ok(makefile.includes("node scripts/worktree.mjs delete"));
+  it("wt-delete 使用 node scripts/worktree/worktree.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/worktree.mjs delete"));
   });
 
-  it("wt-setup 使用 node scripts/wt-setup.mjs", () => {
-    assert.ok(makefile.includes("node scripts/wt-setup.mjs"));
+  it("wt-setup 使用 node scripts/worktree/lifecycle/wt-setup.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/lifecycle/wt-setup.mjs"));
   });
 
-  it("wt-teardown 使用 node scripts/wt-teardown.mjs", () => {
-    assert.ok(makefile.includes("node scripts/wt-teardown.mjs"));
+  it("wt-teardown 使用 node scripts/worktree/lifecycle/wt-teardown.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/lifecycle/wt-teardown.mjs"));
   });
 
-  it("wt-init 使用 node scripts/wt-init.mjs", () => {
-    assert.ok(makefile.includes("node scripts/wt-init.mjs"));
+  it("wt-init 使用 node scripts/worktree/lifecycle/wt-init.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/lifecycle/wt-init.mjs"));
   });
 
-  it("wt-fini 使用 node scripts/wt-fini.mjs", () => {
-    assert.ok(makefile.includes("node scripts/wt-fini.mjs"));
+  it("wt-fini 使用 node scripts/worktree/lifecycle/wt-fini.mjs", () => {
+    assert.ok(makefile.includes("node scripts/worktree/lifecycle/wt-fini.mjs"));
   });
 
   it("无残留 .sh 引用（worktree 相关）", () => {

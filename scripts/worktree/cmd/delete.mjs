@@ -69,8 +69,8 @@ export async function cmdDelete(target) {
   killWorktreeServices(worktreePath);
 
   // Run wt-fini and wt-teardown
-  execInherit(`node "${join(PROJECT_ROOT, "scripts", "wt-fini.mjs")}" "${worktreePath}"`);
-  execInherit(`node "${join(PROJECT_ROOT, "scripts", "wt-teardown.mjs")}" "${worktreePath}"`);
+  execInherit(`node "${join(PROJECT_ROOT, "scripts", "worktree", "lifecycle", "wt-fini.mjs")}" "${worktreePath}"`);
+  execInherit(`node "${join(PROJECT_ROOT, "scripts", "worktree", "lifecycle", "wt-teardown.mjs")}" "${worktreePath}"`);
 
   // Remove worktree
   info(`删除 worktree: ${worktreePath}`);

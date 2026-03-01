@@ -5,7 +5,7 @@
  * Zero external dependencies. Alpine.js + marked via CDN.
  *
  * Usage:
- *   node scripts/admin.mjs
+ *   node scripts/admin/admin.mjs
  *   make admin
  */
 
@@ -14,9 +14,9 @@ import { execSync } from "node:child_process";
 import { readFileSync, existsSync, watch } from "node:fs";
 import { join, extname } from "node:path";
 
-import { createTasksRouter } from "./admin/routes/tasks.mjs";
-import { createWorktreesRouter } from "./admin/routes/worktrees.mjs";
-import { createReportsRouter } from "./admin/routes/reports.mjs";
+import { createTasksRouter } from "./routes/tasks.mjs";
+import { createWorktreesRouter } from "./routes/worktrees.mjs";
+import { createReportsRouter } from "./routes/reports.mjs";
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ const reportsRouter = createReportsRouter(dirs);
 
 // ── Static file serving ──────────────────────────────────────
 
-const ADMIN_DIR = join(PROJECT_ROOT, "scripts", "admin");
+const ADMIN_DIR = new URL(".", import.meta.url).pathname;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",

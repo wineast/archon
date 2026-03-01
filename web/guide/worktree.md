@@ -40,12 +40,12 @@ make setup
 
 1. **vercel-check** — 确保 `web/.vercel` 存在
 2. **db-up** — 启动 Docker PostgreSQL
-3. **wt-setup**（`scripts/wt-setup.mjs`）— 静态环境初始化：
+3. **wt-setup**（`scripts/worktree/lifecycle/wt-setup.mjs`）— 静态环境初始化：
    - wt-meta — 创建 `.worktree/meta.json`（主仓库端口 3000）
    - link-env — 创建 `.env.local` symlink
    - db-local-env — 生成 `.env.development.local`（指向独立数据库）
    - npm install
-4. **wt-init**（`scripts/wt-init.mjs`）— 数据初始化：
+4. **wt-init**（`scripts/worktree/lifecycle/wt-init.mjs`）— 数据初始化：
    - db-push + seed
 
 ### 创建工作区

@@ -101,8 +101,8 @@ export function cmdCreate(branchName, baseBranch) {
     WT_INNGEST_PORT: String(inngestPort),
     WT_BASE_BRANCH: baseBranch,
   };
-  execInherit(`node "${join(PROJECT_ROOT, "scripts", "wt-setup.mjs")}" "${worktreePath}"`, { env });
-  execInherit(`node "${join(PROJECT_ROOT, "scripts", "wt-init.mjs")}" "${worktreePath}"`);
+  execInherit(`node "${join(PROJECT_ROOT, "scripts", "worktree", "lifecycle", "wt-setup.mjs")}" "${worktreePath}"`, { env });
+  execInherit(`node "${join(PROJECT_ROOT, "scripts", "worktree", "lifecycle", "wt-init.mjs")}" "${worktreePath}"`);
   success("工作区环境初始化完成");
 
   // Generate CLAUDE.local.md from template

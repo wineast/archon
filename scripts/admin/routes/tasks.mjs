@@ -244,7 +244,7 @@ function createScheduler(dirs, broadcastSSE) {
 
       try {
         const createResult = exec(
-          `node scripts/worktree.mjs create ${taskId}`,
+          `node scripts/worktree/worktree.mjs create ${taskId}`,
           PROJECT_ROOT,
           { timeout: 60000 }
         );
