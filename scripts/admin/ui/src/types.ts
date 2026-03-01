@@ -81,7 +81,7 @@ export interface StatusData {
 }
 
 export interface MergeCheckData {
-  status: "clean" | "conflict" | "behind" | "up_to_date" | "merged";
+  status: "clean" | "conflict" | "behind" | "up_to_date" | "merged" | "dirty";
   message: string;
 }
 

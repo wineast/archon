@@ -211,7 +211,7 @@ export function readStatusData(wtName, WORKTREES_DIR, PROJECT_ROOT) {
   return result;
 }
 
-export function readMergeCheck(wtName, WORKTREES_DIR, mergeStates) {
+export function readMergeCheck(wtName, WORKTREES_DIR, PROJECT_ROOT, mergeStates) {
   if (mergeStates.get(wtName) === "success") {
     return { status: "merged", message: "已合并" };
   }
@@ -223,6 +223,21 @@ export function readMergeCheck(wtName, WORKTREES_DIR, mergeStates) {
 
   if (!baseBranch || !currentBranch) {
     return { status: "unknown", message: "Cannot determine branches" };
+  }
+
+  // 工作区有未提交变更时不可合并
+  const wtStatus = parseGitStatus(wtPath);
+  if (wtStatus.staged > 0 || wtStatus.unstaged > 0) {
+    return { status: "dirty", message: "工作区有未提交的变更" };
+  }
+
+  // 上游仓库有未提交变更时不可合并
+  const upstreamPath = findUpstreamPath(wtPath, baseBranch, PROJECT_ROOT);
+  if (upstreamPath) {
+    const upStatus = parseGitStatus(upstreamPath);
+    if (upStatus.staged > 0 || upStatus.unstaged > 0) {
+      return { status: "dirty", message: "上游仓库有未提交的变更" };
+    }
   }
 
   return gitMergeCheck(wtPath, baseBranch, currentBranch);

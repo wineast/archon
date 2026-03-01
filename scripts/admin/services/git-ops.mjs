@@ -59,7 +59,7 @@ export function getCurrentBranch(cwd) {
 
 export function getCommitLog(cwd, baseBranch) {
   const logRaw = exec(
-    `git log ${baseBranch}..HEAD --pretty=format:"%h|%s|%an|%ar" --no-merges`,
+    `git log ${baseBranch}..HEAD --pretty=format:"%h|%s|%an|%ar"`,
     cwd
   );
   return logRaw

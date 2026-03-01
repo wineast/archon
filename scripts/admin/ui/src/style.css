@@ -1349,6 +1349,15 @@ tr:hover td {
 .git-badge.ahead { background: var(--green-bg); color: var(--green); }
 .git-badge.behind { background: var(--red-bg); color: var(--red); }
 
+.dirty-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--yellow-bg);
+  color: var(--yellow);
+}
+
 .git-file-section {
   margin-bottom: 10px;
 }

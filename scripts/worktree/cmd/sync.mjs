@@ -60,13 +60,13 @@ export function cmdSync() {
     }
   }
 
-  // Merge
-  info(`合并 ${baseBranch}...`);
+  // Rebase
+  info(`变基到 ${baseBranch}...`);
   try {
-    execInherit(`git merge "${baseBranch}"`);
-    success("合并成功");
+    execInherit(`git rebase "${baseBranch}"`);
+    success("变基成功");
   } catch {
-    error("合并有冲突，请执行 /resolve-conflicts 解决");
+    error("变基有冲突，请解决后执行 git rebase --continue");
     process.exit(1);
   }
 

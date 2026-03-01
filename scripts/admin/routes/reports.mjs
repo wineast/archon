@@ -62,7 +62,7 @@ export function createReportsRouter(dirs) {
 
     // GET /api/reports/:wt/merge-check
     if (subPath === "merge-check" && req.method === "GET") {
-      const data = readMergeCheck(wtName, WORKTREES_DIR, mergeStates);
+      const data = readMergeCheck(wtName, WORKTREES_DIR, PROJECT_ROOT, mergeStates);
       json(res, 200, data);
       return true;
     }

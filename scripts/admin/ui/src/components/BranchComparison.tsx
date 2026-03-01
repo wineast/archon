@@ -231,6 +231,8 @@ export function BranchComparison({
 
   const mergeStatus = mergeCheckData.status;
   const isBusy = syncState === "running" || mergeState === "running";
+  const upstreamDirty = (upstream.staged || 0) + (upstream.unstaged || 0) > 0;
+  const currentDirty = (current.staged || 0) + (current.unstaged || 0) > 0;
 
   const stagedItems = useMemo(() => normalizeStaged(files), [files]);
   const workingItems = useMemo(() => normalizeWorking(files), [files]);
@@ -251,11 +253,13 @@ export function BranchComparison({
         <div className="branch-compare-side">
           <span className="branch-compare-label">base</span>
           <span className="git-branch-name">{baseBranch}</span>
+          {upstreamDirty && <span className="dirty-badge" title="上游有未提交变更">dirty</span>}
         </div>
         <span className="branch-compare-arrow">...</span>
         <div className="branch-compare-side">
           <span className="branch-compare-label">head</span>
           <span className="git-branch-name">{headBranch}</span>
+          {currentDirty && <span className="dirty-badge" title="工作区有未提交变更">dirty</span>}
         </div>
         <div className="branch-compare-badges">
           {current.ahead > 0 && (
@@ -345,6 +349,7 @@ function MergeStatusHint({
     clean: { icon: "\u2713", cls: "status-clean", fallback: "可以合并，无冲突" },
     behind: { icon: "\u26A0", cls: "status-behind", fallback: "落后上游，请先同步" },
     conflict: { icon: "\u2717", cls: "status-conflict", fallback: "存在合并冲突，请手动解决" },
+    dirty: { icon: "\u26A0", cls: "status-behind", fallback: "有未提交的变更，请先提交" },
     up_to_date: { icon: "\u2139", cls: "status-uptodate", fallback: "分支已是最新" },
     merged: { icon: "\u2713", cls: "status-merged", fallback: "已合并" },
   };
