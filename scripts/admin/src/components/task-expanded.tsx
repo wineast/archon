@@ -7,6 +7,7 @@ import {
   fetchMergeCheck,
   fetchTaskDetail,
   openTerminal as apiOpenTerminal,
+  checkTerminal as apiCheckTerminal,
   gitAdd as apiGitAdd,
   syncWorktree as apiSync,
   mergeWorktree as apiMerge,
@@ -47,6 +48,8 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
   const [terminals, setTerminals] = useState<string[]>(
     task.terminals ?? []
   );
+  const terminalsRef = useRef(terminals);
+  terminalsRef.current = terminals;
   const pollingRef = useRef(false);
   const [lastPoll, setLastPoll] = useState<string>("");
 
@@ -110,6 +113,28 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
       setReportData(rd);
       setStatusData(sd);
       setMergeCheckData(mc);
+
+      // Verify terminals still alive
+      const cur = terminalsRef.current;
+      if (cur.length > 0) {
+        const checks = await Promise.all(
+          cur.map(async (skill) => {
+            try {
+              const { exists } = await apiCheckTerminal(
+                `${task.worktree}::${skill}`
+              );
+              return exists ? skill : null;
+            } catch {
+              return skill; // keep on error
+            }
+          })
+        );
+        const alive = checks.filter(Boolean) as string[];
+        if (alive.length !== cur.length) {
+          setTerminals(alive);
+        }
+      }
+
       setLastPoll(new Date().toLocaleTimeString());
     } catch {
       // ignore
