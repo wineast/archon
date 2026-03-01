@@ -444,6 +444,20 @@ export function createTasksRouter(dirs, broadcastSSE) {
             res.end(JSON.stringify({ ok: true, moved: false }));
             return;
           }
+          // Update frontmatter status field
+          let content = readFileSync(srcPath, "utf-8");
+          const hasFm = /^---\r?\n[\s\S]*?\r?\n---/.test(content);
+          if (hasFm) {
+            if (/^status:/m.test(content)) {
+              content = content.replace(/^(status:).*/m, `$1 ${to}`);
+            } else {
+              content = content.replace(/\n---/, `\nstatus: ${to}\n---`);
+            }
+          } else {
+            content = `---\nstatus: ${to}\n---\n${content}`;
+          }
+          writeFileSync(srcPath, content);
+          // Move file to target folder
           const destDir = join(baseDir, to);
           mkdirSync(destDir, { recursive: true });
           const destPath = join(destDir, `${id}.md`);
