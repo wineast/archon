@@ -22,5 +22,6 @@ embed-umi-demo/
 todo/
 issues/
 
-# Admin panel build output
+# Admin panel
+scripts/admin/.next/
 scripts/admin/dist/
