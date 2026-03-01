@@ -168,11 +168,10 @@ export function moveTaskStatus(
     "pending",
     "ready",
     "backlog",
-    "done",
     "merged",
     "cancelled",
   ];
-  const validIssue = ["open", "ready", "closed", "merged", "wontfix"];
+  const validIssue = ["open", "ready", "merged", "wontfix"];
   const allowed = type === "todo" ? validTodo : validIssue;
   if (!allowed.includes(to)) {
     return { error: `Invalid target status: ${to}` };
@@ -198,7 +197,7 @@ export function moveTaskStatus(
       content = content.replace(/\n---/, `\nstatus: ${to}\n---`);
     }
     // Clear worktree field only when moving back (not to ready/terminal states)
-    const terminal = ["done", "closed", "merged", "cancelled", "wontfix"];
+    const terminal = ["merged", "cancelled", "wontfix"];
     if (
       to !== "ready" &&
       !terminal.includes(to) &&

@@ -39,7 +39,7 @@ issues/
 - 一个问题一个文件，所有 `.md` 文件直接放在 `issues/` 根目录
 - **frontmatter `status` 字段是唯一状态源**，不再有子文件夹
 - 状态变更 = 修改文件内 frontmatter 的 `status` 值（文件不移动）
-- 有效状态值：`open`（待修复）、`ready`（就绪待派发）、`running`（执行中）、`closed`（已关闭）
+- 有效状态值：`open`（待修复）、`ready`（就绪待派发）、`merged`（已合并，待归档）、`wontfix`（不修）
 
 ## Issue 文件规范
 
@@ -74,7 +74,7 @@ worktree:
 | 字段 | 说明 |
 |------|------|
 | `priority` | P0-P3，见下方定义 |
-| `status` | 唯一状态源：`open` / `ready` / `running` / `closed` |
+| `status` | 唯一状态源：`open` / `ready` / `merged` / `wontfix` |
 | `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
 
 ### Priority 定义
@@ -116,7 +116,7 @@ Issue 不是终点，而是种子。根据 Symptom 和 Hypothesis 的性质，is
 1. **→ 缺陷报告**：Symptom 是功能错误 + Hypothesis 指向代码缺陷 → `/diagnose` 深度诊断，输出 DEFECT.md
 2. **→ 优化报告**：Symptom 是"太慢"/"太卡" → 可升级为性能优化任务
 3. **→ 降级 Todo**：Symptom 是"不好用"但不是错 → 降级为 todo，走需求/优化链路
-4. **→ 关闭**：调查后发现是预期行为或已修复 → 移入 closed/
+4. **→ 关闭**：调查后发现是预期行为或已修复 → 改为 `wontfix` 或删除文件
 
 **衔接提示**：创建 issue 后，根据性质主动提示用户：
 - "这个看起来是代码缺陷，要不要 `/diagnose` 深入排查？"
@@ -149,7 +149,7 @@ Hypothesis ──迁移──→        Root Cause（直觉 → 确认因果）
 
 ### 关闭 Issue
 
-编辑文件 frontmatter，将 `status` 改为 `closed`（文件不移动）。
+编辑文件 frontmatter，将 `status` 改为 `wontfix`（文件不移动）。
 
 ### 删除 Issue
 

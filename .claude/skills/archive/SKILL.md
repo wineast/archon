@@ -1,94 +1,138 @@
 ---
 name: archive
-description: 发布归档。PR 合并到 main 后调用。将本次发布涉及的 merged 任务推进到终态（done/closed），打上 release 标签，清理集成/发布报告。当用户说"归档"、"archive"、"发布完成"、"PR 已合并"等时调用。
+description: 发布归档。PR 合并到 main 后调用。将本次发布涉及的任务和报告移入 releases/vN/ 目录，清理已合并的工作区。当用户说"归档"、"archive"、"发布完成"、"PR 已合并"等时调用。
 allowed-tools: Read, Glob, Grep, Bash, Edit
 ---
 
-PR 合并后归档：推进任务终态 + 打 release 标签 + 清理报告文件。
+PR 合并后归档：创建版本目录 + 移动任务文件 + 归档工作区报告 + 清理工作区。
 
 ## 核心理念
 
-`/integrate` 扫描 `status: merged` 的任务，`/release` 基于集成报告做发布检查。PR 合并到 main 后，这些任务必须推进到终态，否则下次 `/integrate` 会重复扫描到它们。
+`/integrate` 扫描 `todo/` 和 `issues/` 中 `status: merged` 的任务。PR 合并到 main 后，这些任务必须从活跃目录中移走，否则下次 `/integrate` 会重复扫描。
 
-归档 = 版本封存。每次归档用日期标记（如 `2026-03-02`），记录在任务 frontmatter 的 `release` 字段中。
+归档 = 物理隔离 + 版本封存。每次归档创建一个 `releases/vN/` 目录，将任务文件、工作区报告、集成/发布报告全部移入，形成自包含的版本快照。
+
+## 目录结构
+
+```
+releases/
+  v1/                          ← 第一次发布
+    todo/                      ← 本次发布的 todo 任务文件
+      chat-link-rendering.md
+    issues/                    ← 本次发布的 issue 任务文件
+      cross-agent-wiki-data-leak.md
+    worktrees/                 ← 工作区报告（仅 .worktree/ 目录，不含代码）
+      chat-link-rendering/
+        .worktree/
+          REQ.md
+          IMPL_REPORT.md
+          ACCEPT_REPORT.md
+      cross-agent-wiki-data-leak/
+        .worktree/
+          DEFECT.md
+          FIX_REPORT.md
+          VERIFY_REPORT.md
+    INTEGRATE.md               ← 集成报告
+    RELEASE_REPORT.md          ← 发布报告
+    RELEASE_REPORT.assets/     ← 发布报告截图（如有）
+  v2/                          ← 第二次发布
+    ...
+```
 
 ## 执行流程
 
 ### 1. 确认 PR 已合并
 
-检查 dev→main 的 PR 状态：
+检查 dev→main 的最近 merged PR：
 
 ```bash
-# 列出最近的 merged PR（dev→main）
 gh pr list --base main --head dev --state merged --limit 1 --json number,mergedAt,title
 ```
 
-如果没有找到 merged PR，提示用户确认 PR 是否已合并。
+如果没有找到 merged PR，提示用户确认。
 
-### 2. 读取集成报告
+### 2. 确定版本号
 
-读取 `.worktree/INTEGRATE.md`，从 Scope 部分提取本次发布涉及的任务列表。
+扫描 `releases/` 目录，找到最大的 `vN`，新版本为 `v{N+1}`。如果 `releases/` 不存在则从 `v1` 开始。
+
+### 3. 读取集成报告
+
+读取 `.worktree/INTEGRATE.md`，从 Scope 部分提取本次发布涉及的任务列表（任务 ID + 类型 + 工作区名称）。
 
 如果 `.worktree/INTEGRATE.md` 不存在，停止并告知用户缺少集成报告。
 
-### 3. 推进任务状态
-
-对每个涉及的 `status: merged` 任务：
-
-- **todo 类型**：`merged` → `done`
-- **issue 类型**：`merged` → `closed`
-
-同时在 frontmatter 中添加 `release` 字段，值为当天日期（`YYYY-MM-DD`）。
-
-修改方式：直接编辑任务文件的 frontmatter：
-```yaml
-# 修改前
----
-priority: P0
-status: merged
-worktree: xxx
-merged: true
----
-
-# 修改后
----
-priority: P0
-status: done          # 或 closed（issue）
-worktree: xxx
-merged: true
-release: 2026-03-02   # 本次发布日期
----
-```
-
-### 4. 清理报告文件
-
-删除本次发布的集成/发布报告（为下次腾位）：
+### 4. 创建版本目录
 
 ```bash
-rm -f .worktree/INTEGRATE.md
-rm -f .worktree/RELEASE_REPORT.md
-rm -rf .worktree/RELEASE_REPORT.assets/
+mkdir -p releases/vN/todo releases/vN/issues releases/vN/worktrees
 ```
 
-### 5. 同步远程
+### 5. 移动任务文件
+
+对每个涉及的任务：
 
 ```bash
-git add todo/ issues/
-git commit -m "chore: archive release $(date +%Y-%m-%d)"
+# todo 类型
+mv todo/{id}.md releases/vN/todo/
+
+# issue 类型
+mv issues/{id}.md releases/vN/issues/
 ```
 
-清理报告文件不需要提交（`.worktree/` 已 gitignore）。
+### 6. 归档工作区报告
 
-### 6. 输出归档摘要
+对每个涉及的工作区：
 
-| 任务 | 类型 | 原状态 | 新状态 | Release |
-|------|------|--------|--------|---------|
-| xxx  | todo | merged | done   | 2026-03-02 |
-| yyy  | issue | merged | closed | 2026-03-02 |
+```bash
+# 仅复制 .worktree/ 报告目录（不含代码）
+mkdir -p releases/vN/worktrees/{name}
+cp -r .worktrees/{name}/.worktree releases/vN/worktrees/{name}/
+```
+
+### 7. 移动集成/发布报告
+
+```bash
+mv .worktree/INTEGRATE.md releases/vN/
+mv .worktree/RELEASE_REPORT.md releases/vN/
+# 如果有截图
+mv .worktree/RELEASE_REPORT.assets/ releases/vN/ 2>/dev/null || true
+```
+
+### 8. 清理已合并的工作区
+
+对每个涉及的工作区，删除完整的 worktree 目录（代码已合并，报告已归档）：
+
+```bash
+rm -rf .worktrees/{name}
+```
+
+### 9. 提交归档
+
+```bash
+git add releases/vN/ todo/ issues/
+git commit -m "chore: archive release vN"
+```
+
+### 10. 输出归档摘要
+
+```
+📦 Release vN 归档完成
+
+已归档任务：
+| 任务 | 类型 | 标题 |
+|------|------|------|
+| xxx  | todo | ... |
+| yyy  | issue | ... |
+
+已归档工作区报告：{N} 个
+已清理工作区：{N} 个
+版本目录：releases/vN/
+```
 
 ## 关键约束
 
 - **仅操作本次发布涉及的任务**：从 INTEGRATE.md 的 Scope 提取任务列表，不是扫描所有 `merged` 任务
-- **幂等**：已经是 `done`/`closed` 的任务跳过
-- **不可逆**：归档后任务不会回到 `merged`，如需重新发布需要新建任务
-- **release 标签**：使用日期格式 `YYYY-MM-DD`，同一天多次发布用同一个标签
+- **幂等**：如果任务文件已不在 `todo/` 或 `issues/`（已被移走），跳过
+- **报告先归档再清理**：必须先 `cp` 报告到版本目录，再 `rm` 工作区
+- **不可逆**：归档后任务不会回到活跃目录
+- **版本号递增**：自动从 `releases/` 目录推断下一个版本号

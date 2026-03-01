@@ -29,7 +29,7 @@ todo/
 - 一个待办一个文件，所有 `.md` 文件直接放在 `todo/` 根目录
 - **frontmatter `status` 字段是唯一状态源**，不再有子文件夹
 - 状态变更 = 修改文件内 frontmatter 的 `status` 值（文件不移动）
-- 有效状态值：`pending`（当前要做）、`backlog`（不急）、`ready`（就绪待派发）、`running`（执行中）、`done`（已完成）
+- 有效状态值：`pending`（当前要做）、`backlog`（不急）、`ready`（就绪待派发）、`merged`（已合并，待归档）、`cancelled`（已取消）
 
 ## 待办文件规范
 
@@ -56,7 +56,7 @@ worktree:
 | 字段 | 说明 |
 |------|------|
 | `priority` | P0-P3，见下方定义 |
-| `status` | 唯一状态源：`pending` / `backlog` / `ready` / `running` / `done` |
+| `status` | 唯一状态源：`pending` / `backlog` / `ready` / `merged` / `cancelled` |
 | `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
 
 ### 三要素详解
@@ -133,7 +133,7 @@ Todo 不是终点，而是种子。根据 Context 的性质，todo 有四种演�
 
 1. **→ 需求报告**：Context 涉及新功能/新能力 → `/clarify-req` 澄清需求，输出 REQ.md
 2. **→ 优化报告**：Context 涉及性能/体验改善 → 可升级为优化任务
-3. **→ 直接完成**：改个文案、调个样式 → 直接动手，移入 done/
+3. **→ 直接完成**：改个文案、调个样式 → 直接动手，完成后删除文件
 4. **→ 废弃**：想清楚后发现不需要做 → 删除文件
 
 **衔接提示**：创建 todo 后，如果 Context 明显指向某条链路，主动提示用户：
@@ -152,10 +152,6 @@ Todo 不是终点，而是种子。根据 Context 的性质，todo 有四种演�
 ### 查看待办
 
 列出 `todo/` 下所有 `.md` 文件，按 frontmatter `status` 筛选。
-
-### 完成待办
-
-编辑文件 frontmatter，将 `status` 改为 `done`（文件不移动）。
 
 ### 暂缓待办
 

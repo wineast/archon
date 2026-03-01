@@ -41,8 +41,6 @@ const STATUS_ORDER: Record<string, number> = {
   pending: 3,
   backlog: 4,
   merged: 5,
-  done: 5,
-  closed: 5,
   cancelled: 6,
   wontfix: 6,
 };
@@ -234,7 +232,9 @@ export function TasksPanel() {
   cancelled -->|退回| pending
   ready -.->|post: 创建工作区 + 启动链路| ready
   merge((合并成功)) -.->|post: status→merged| merged([MERGED])
+  merged -.->|/archive| archived([📦 releases/vN/])
   style merge fill:#6366f1,stroke:#4f46e5,color:#fff
+  style archived fill:#f0fdf4,stroke:#86efac,color:#166534
   linkStyle 8,9 stroke:#e67e22,color:#e67e22`}
             />
           </div>
@@ -251,7 +251,9 @@ export function TasksPanel() {
   wontfix -->|退回| open
   ready -.->|post: 创建工作区 + 启动链路| ready
   merge((合并成功)) -.->|post: status→merged| merged([MERGED])
+  merged -.->|/archive| archived([📦 releases/vN/])
   style merge fill:#6366f1,stroke:#4f46e5,color:#fff
+  style archived fill:#f0fdf4,stroke:#86efac,color:#166534
   linkStyle 5,6 stroke:#e67e22,color:#e67e22`}
             />
           </div>

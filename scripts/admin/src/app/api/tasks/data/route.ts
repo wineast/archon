@@ -35,7 +35,7 @@ export async function GET() {
       ready: tasks.filter((t) => t.status === "ready").length,
       active: tasks.filter((t) => t.status === "ready" && t.worktree).length,
       completed: tasks.filter((t) =>
-        ["done", "closed", "merged", "cancelled", "wontfix"].includes(t.status)
+        ["merged", "cancelled", "wontfix"].includes(t.status)
       ).length,
       todoCount: tasks.filter((t) => t.type === "todo").length,
       issueCount: tasks.filter((t) => t.type === "issue").length,

@@ -55,8 +55,6 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
 
   const hasWorktree = !!task.worktree;
   const isCompleted = [
-    "done",
-    "closed",
     "merged",
     "cancelled",
     "wontfix",

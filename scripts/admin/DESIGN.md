@@ -23,8 +23,8 @@ worktree: cross-agent-wiki-data-leak-no-agentid-filter
 ### 任务状态机
 
 ```
-pending → backlog → ready → running → done/closed
-                                    → cancelled/wontfix
+pending → backlog → ready → merged → /archive → releases/vN/
+                          → cancelled/wontfix
 ```
 
 | 状态 | 含义 |
@@ -32,9 +32,10 @@ pending → backlog → ready → running → done/closed
 | `pending` | 新建，未评审 |
 | `backlog` | 已评审，暂不处理 |
 | `ready` | 已评审，可以派发 |
-| `running` | 已派发，工作区正在处理 |
-| `done` / `closed` | 任务完成（todo→done，issue→closed） |
+| `merged` | 工作区已合并到上游分支 |
 | `cancelled` / `wontfix` | 终态，不再处理 |
+
+**归档**：`merged` 任务通过 `/archive` 技能移入 `releases/vN/` 目录（物理隔离），不再使用 `done`/`closed` 状态。
 
 ### 工作区（Worktree）
 
