@@ -15,7 +15,7 @@ allowed-tools: Read, Glob, Skill, AskUserQuestion, Bash
 | 3. 评审 | 人工确认 | 用户决定是否合并 |
 | 4. 合并 | `gh pr merge` | PR 合并到 main |
 | 5. 归档 | `/archive` | `releases/vN/` + git tag |
-| 6. 发布内容 | `/release-notes` | `SOCIAL.md` + `SLIDES.md` + `SCRIPT.md` |
+| 6. 发布内容 | `/release-notes` | `SOCIAL.md` + `DEMO.md` |
 
 ## 执行流程
 
