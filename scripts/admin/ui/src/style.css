@@ -347,6 +347,18 @@ tr:hover td {
   flex-wrap: wrap;
 }
 
+.error-banner {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: var(--radius);
+  font-size: 12px;
+  white-space: pre-wrap;
+  cursor: pointer;
+}
+
 .btn-primary {
   background: var(--accent);
   color: #fff;

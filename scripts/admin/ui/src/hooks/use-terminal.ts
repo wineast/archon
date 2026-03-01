@@ -18,52 +18,64 @@ export function useTerminal() {
       return new Promise((resolve) => {
         resolveRef.current = resolve;
 
-        fetch(url, { method: "POST" }).then((res) => {
-          const reader = res.body!.getReader();
-          const decoder = new TextDecoder();
-          let buf = "";
+        fetch(url, { method: "POST" })
+          .then((res) => {
+            if (!res.ok) {
+              appendLine(`Error: ${res.status} ${res.statusText}`, "stderr");
+              resolve(false);
+              resolveRef.current = null;
+              return;
+            }
+            const reader = res.body!.getReader();
+            const decoder = new TextDecoder();
+            let buf = "";
 
-          const read = (): void => {
-            reader.read().then((result) => {
-              if (result.done) {
-                resolve(true);
-                resolveRef.current = null;
-                return;
-              }
-              buf += decoder.decode(result.value, { stream: true });
-              const parts = buf.split("\n\n");
-              buf = parts.pop()!;
-              for (const part of parts) {
-                const line = part.replace(/^data: /, "");
-                if (!line) continue;
-                try {
-                  const msg = JSON.parse(line);
-                  if (msg.type === "stdout") {
-                    appendLine(msg.data, "stdout");
-                  } else if (msg.type === "stderr") {
-                    appendLine(msg.data, "stderr");
-                  } else if (msg.type === "exit") {
-                    if (msg.data === 0) {
-                      appendLine("\nDone (exit 0)", "exit-success");
-                    } else {
-                      appendLine("\nFailed (exit " + msg.data + ")", "exit-fail");
-                    }
-                    resolve(msg.data === 0);
-                    resolveRef.current = null;
-                  } else if (msg.type === "error") {
-                    appendLine("Error: " + msg.data, "stderr");
-                    resolve(false);
-                    resolveRef.current = null;
-                  }
-                } catch {
-                  // ignore parse errors
+            const read = (): void => {
+              reader.read().then((result) => {
+                if (result.done) {
+                  resolve(true);
+                  resolveRef.current = null;
+                  return;
                 }
-              }
-              read();
-            });
-          };
-          read();
-        });
+                buf += decoder.decode(result.value, { stream: true });
+                const parts = buf.split("\n\n");
+                buf = parts.pop()!;
+                for (const part of parts) {
+                  const line = part.replace(/^data: /, "");
+                  if (!line) continue;
+                  try {
+                    const msg = JSON.parse(line);
+                    if (msg.type === "stdout") {
+                      appendLine(msg.data, "stdout");
+                    } else if (msg.type === "stderr") {
+                      appendLine(msg.data, "stderr");
+                    } else if (msg.type === "exit") {
+                      if (msg.data === 0) {
+                        appendLine("\nDone (exit 0)", "exit-success");
+                      } else {
+                        appendLine("\nFailed (exit " + msg.data + ")", "exit-fail");
+                      }
+                      resolve(msg.data === 0);
+                      resolveRef.current = null;
+                    } else if (msg.type === "error") {
+                      appendLine("Error: " + msg.data, "stderr");
+                      resolve(false);
+                      resolveRef.current = null;
+                    }
+                  } catch {
+                    // ignore parse errors
+                  }
+                }
+                read();
+              });
+            };
+            read();
+          })
+          .catch((err) => {
+            appendLine(`Error: ${err.message}`, "stderr");
+            resolve(false);
+            resolveRef.current = null;
+          });
       });
     },
     [appendLine]

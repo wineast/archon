@@ -12,7 +12,7 @@ import {
   serveAsset,
 } from "../services/worktree-scanner.mjs";
 import { exec, getBaseBranch } from "../services/git-ops.mjs";
-import { sseExec } from "../services/command-runner.mjs";
+import { execSync } from "node:child_process";
 
 export function createReportsRouter(dirs) {
   const { PROJECT_ROOT, WORKTREES_DIR } = dirs;
@@ -76,26 +76,24 @@ export function createReportsRouter(dirs) {
 
     // POST /api/reports/:wt/sync
     if (subPath === "sync" && req.method === "POST") {
-      const scriptPath = join(PROJECT_ROOT, "scripts", "worktree.mjs");
+      const scriptPath = join(PROJECT_ROOT, "scripts", "worktree", "worktree.mjs");
       if (!existsSync(scriptPath)) {
-        res.writeHead(400);
-        res.end("Cannot find worktree.mjs");
+        json(res, 400, { ok: false, error: "Cannot find worktree.mjs" });
         return true;
       }
-      sseExec("node", [scriptPath, "sync"], { cwd: wtPath }, res);
+      try {
+        execSync(`node ${scriptPath} sync`, { cwd: wtPath, timeout: 30000, stdio: "pipe" });
+        json(res, 200, { ok: true });
+      } catch (e) {
+        json(res, 500, { ok: false, error: e.stderr?.toString() || e.message });
+      }
       return true;
     }
 
     // POST /api/reports/:wt/merge
     if (subPath === "merge" && req.method === "POST") {
-      if (mergeStates.get(wtName) === "running") {
-        res.writeHead(409);
-        res.end("Merge already running");
-        return true;
-      }
       if (mergeStates.get(wtName) === "success") {
-        res.writeHead(409);
-        res.end("Already merged");
+        json(res, 409, { ok: false, error: "Already merged" });
         return true;
       }
 
@@ -103,24 +101,25 @@ export function createReportsRouter(dirs) {
       try {
         const behind = exec(`git rev-list HEAD..${baseBranch} --count`, wtPath);
         if (behind !== "0") {
-          res.writeHead(409);
-          res.end(`Cannot merge: behind upstream by ${behind} commit(s). Sync first.`);
+          json(res, 409, { ok: false, error: `落后上游 ${behind} 个 commit，请先同步` });
           return true;
         }
       } catch {}
 
-      const scriptPath = join(PROJECT_ROOT, "scripts", "worktree.mjs");
+      const scriptPath = join(PROJECT_ROOT, "scripts", "worktree", "worktree.mjs");
       if (!existsSync(scriptPath)) {
-        res.writeHead(400);
-        res.end("Cannot determine merge parameters");
+        json(res, 400, { ok: false, error: "Cannot find worktree.mjs" });
         return true;
       }
 
-      mergeStates.set(wtName, "running");
-      const child = sseExec("node", [scriptPath, "merge", wtName], { cwd: PROJECT_ROOT }, res);
-      child.on("close", (code) => {
-        mergeStates.set(wtName, code === 0 ? "success" : "failed");
-      });
+      try {
+        execSync(`node ${scriptPath} merge ${wtName}`, { cwd: PROJECT_ROOT, timeout: 60000, stdio: "pipe" });
+        mergeStates.set(wtName, "success");
+        json(res, 200, { ok: true });
+      } catch (e) {
+        mergeStates.set(wtName, "failed");
+        json(res, 500, { ok: false, error: e.stderr?.toString() || e.message });
+      }
       return true;
     }
 

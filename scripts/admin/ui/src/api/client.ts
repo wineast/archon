@@ -7,7 +7,14 @@ import type {
 
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body.error) msg = body.error;
+    } catch {}
+    throw new Error(msg);
+  }
   return res.json() as Promise<T>;
 }
 
@@ -69,6 +76,18 @@ export function fetchMergeCheck(wt: string): Promise<MergeCheckData> {
 
 export function gitAdd(wt: string): Promise<{ ok: boolean }> {
   return fetchJSON(`/api/reports/${encodeURIComponent(wt)}/git-add`, {
+    method: "POST",
+  });
+}
+
+export function syncWorktree(wt: string): Promise<{ ok: boolean }> {
+  return fetchJSON(`/api/reports/${encodeURIComponent(wt)}/sync`, {
+    method: "POST",
+  });
+}
+
+export function mergeWorktree(wt: string): Promise<{ ok: boolean }> {
+  return fetchJSON(`/api/reports/${encodeURIComponent(wt)}/merge`, {
     method: "POST",
   });
 }

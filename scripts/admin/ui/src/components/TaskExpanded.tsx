@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useTerminal } from "../hooks/use-terminal";
 import {
   fetchReportData,
   fetchReportStatus,
@@ -7,10 +6,11 @@ import {
   fetchTaskDetail,
   openTerminal as apiOpenTerminal,
   gitAdd as apiGitAdd,
+  syncWorktree as apiSync,
+  mergeWorktree as apiMerge,
 } from "../api/client";
 import { ReportViewer } from "./ReportViewer";
 import { BranchComparison } from "./BranchComparison";
-import { Terminal } from "./Terminal";
 import { Spinner } from "./Spinner";
 import type { Task, ReportData, StatusData, MergeCheckData } from "../types";
 import { marked } from "marked";
@@ -30,9 +30,9 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
   const [mergeState, setMergeState] = useState<"idle" | "running" | "success" | "failed">("idle");
   const [syncState, setSyncState] = useState<"idle" | "running" | "success" | "failed">("idle");
   const [addState, setAddState] = useState<"idle" | "running" | "success" | "failed">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
   const [taskDetailHtml, setTaskDetailHtml] = useState("");
   const [terminalAlive, setTerminalAlive] = useState(task.hasTerminal ?? false);
-  const terminal = useTerminal();
   const pollingRef = useRef(false);
 
   const hasWorktree = !!task.worktree;
@@ -116,33 +116,41 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
 
   const handleSync = async () => {
     setSyncState("running");
-    const ok = await terminal.run(
-      `/api/reports/${encodeURIComponent(task.worktree!)}/sync`
-    );
-    setSyncState(ok ? "success" : "failed");
-    if (ok) poll();
+    setErrorMsg("");
+    try {
+      await apiSync(task.worktree!);
+      setSyncState("success");
+      poll();
+    } catch (e: any) {
+      setSyncState("failed");
+      setErrorMsg(e.message);
+    }
   };
 
   const handleMerge = async () => {
     setMergeState("running");
-    const ok = await terminal.run(
-      `/api/reports/${encodeURIComponent(task.worktree!)}/merge`
-    );
-    setMergeState(ok ? "success" : "failed");
-    if (ok) {
+    setErrorMsg("");
+    try {
+      await apiMerge(task.worktree!);
+      setMergeState("success");
       poll();
       onRefresh();
+    } catch (e: any) {
+      setMergeState("failed");
+      setErrorMsg(e.message);
     }
   };
 
   const handleGitAdd = async () => {
     setAddState("running");
+    setErrorMsg("");
     try {
       await apiGitAdd(task.worktree!);
       setAddState("success");
       poll();
-    } catch {
+    } catch (e: any) {
       setAddState("failed");
+      setErrorMsg(e.message);
     }
   };
 
@@ -197,11 +205,6 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
             reportData={reportData}
             worktreeName={task.worktree!}
           />
-          <Terminal
-            visible={terminal.visible}
-            lines={terminal.lines}
-            onClose={terminal.close}
-          />
         </div>
       )}
 
@@ -220,6 +223,11 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
             mergeState={mergeState}
             addState={addState}
           />
+          {errorMsg && (
+            <div className="error-banner" onClick={() => setErrorMsg("")}>
+              {errorMsg}
+            </div>
+          )}
         </div>
       )}
     </div>
