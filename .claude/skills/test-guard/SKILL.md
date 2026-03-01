@@ -510,15 +510,6 @@ guarded_by: TEST_SPEC.md + 本报告
 4. 编写测试代码
 5. 运行测试
 6. 生成守护报告，写入 `.worktree/TEST_SPEC_REPORT.md`
-7. 启动 HTML 查看器
-
-### 3.5 启动/更新报告查看器
-
-```bash
-node scripts/serve-defect-chain.mjs
-# 用 Bash(run_in_background=true) 执行
-# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
-```
 
 ## 执行规则
 

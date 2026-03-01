@@ -343,7 +343,7 @@ describe("Makefile 引用一致性", () => {
 // ── report-viewer.mjs 引用一致性 ────────────────────────────
 
 describe("report-viewer.mjs 引用一致性", () => {
-  const viewer = readFileSync(join(SCRIPTS_DIR, "report-viewer.mjs"), "utf-8");
+  const viewer = readFileSync(join(SCRIPTS_DIR, "admin", "report-viewer.mjs"), "utf-8");
 
   it("使用 worktree.mjs 而非 worktree.sh", () => {
     assert.ok(viewer.includes("worktree.mjs"));

@@ -358,20 +358,11 @@ make test
 - [ ] **Regression**：静态检查跑了吗？Constraint 逐项确认了吗？
 - [ ] **Verdict**：证据摘要覆盖四项吗？阻塞项和 Follow-up 列清楚了吗？
 
-### 启动/更新报告查看器
-
-```bash
-node scripts/serve-req-chain.mjs
-# 用 Bash(run_in_background=true) 执行
-# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
-```
-
 ### 流程
 
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确
 3. 确认后写入 `.worktree/ACCEPT_REPORT.md`
-4. 启动 HTML 查看器，提示用户在浏览器中查看和操作
 
 ## 执行规则
 

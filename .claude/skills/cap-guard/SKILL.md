@@ -371,14 +371,6 @@ make e2e
 {执行过程中捕获的学习信号。无则留空}
 ```
 
-### 启动/更新报告查看器
-
-```bash
-node scripts/serve-req-chain.mjs
-# 用 Bash(run_in_background=true) 执行
-# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
-```
-
 ### 流程
 
 1. 生成守护规约，展示给用户
@@ -387,7 +379,6 @@ node scripts/serve-req-chain.mjs
 4. 执行测试
 5. 生成守护报告
 6. 写入 `.worktree/CAP_GUARD.md` 和 `.worktree/CAP_GUARD_REPORT.md`
-7. 启动 HTML 查看器
 
 ## 执行规则
 

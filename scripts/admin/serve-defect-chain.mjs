@@ -6,7 +6,7 @@
  * 所有报告均为 optional，支持链路任意阶段启动。
  * 幂等：已有 viewer 进程运行时自动跳过。
  *
- * Usage: node scripts/serve-defect-chain.mjs
+ * Usage: node scripts/admin/serve-defect-chain.mjs
  */
 
 import { startViewer } from "./report-viewer.mjs";

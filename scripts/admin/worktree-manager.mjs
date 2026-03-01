@@ -5,7 +5,7 @@
  * Zero external dependencies.
  *
  * Usage:
- *   node scripts/worktree-manager.mjs
+ *   node scripts/admin/worktree-manager.mjs
  *   make wt-manage
  */
 

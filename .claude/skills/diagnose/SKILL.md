@@ -281,13 +281,7 @@ mcp__playwright__browser_install
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确、是否需要补充
 3. 确认后用 `Write` 写入文件
-4. 启动/更新报告查看器：
-   ```bash
-   node scripts/serve-defect-chain.mjs
-   # 用 Bash(run_in_background=true) 执行
-   # 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
-   ```
-5. 告知用户报告位置，并提示后续操作（如 `/create-wt` 创建工作区修复、直接修复等）
+4. 告知用户报告位置，并提示后续操作（如 `/create-wt` 创建工作区修复、直接修复等）
 
 ## 执行规则
 

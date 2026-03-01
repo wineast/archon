@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archon Admin</title>
+<link rel="stylesheet" href="/style.css">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="/app.js"></script>
+<script src="/components/terminal.js"></script>
+<script src="/components/tasks.js"></script>
+<script src="/components/worktrees.js"></script>
+<script src="/components/reports.js"></script>
+</head>
+<body x-data="{ panel: 'tasks' }">
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-header">Archon Admin</div>
+  <div class="sidebar-nav">
+    <button class="nav-btn" :class="{ active: panel === 'tasks' }" @click="panel = 'tasks'">
+      <span class="icon">&#x1F4CB;</span> Tasks
+    </button>
+    <button class="nav-btn" :class="{ active: panel === 'worktrees' }" @click="panel = 'worktrees'">
+      <span class="icon">&#x1F333;</span> Worktrees
+    </button>
+    <button class="nav-btn" :class="{ active: panel === 'reports' }" @click="panel = 'reports'">
+      <span class="icon">&#x1F4C4;</span> Reports
+    </button>
+  </div>
+</nav>
+
+<!-- Content -->
+<main class="content">
+
+  <!-- ═══════════ Tasks Panel ═══════════ -->
+  <div x-show="panel === 'tasks'" x-data="tasksPanel" class="panel-container">
+    <template x-if="loading">
+      <div class="empty-state"><span class="spinner"></span></div>
+    </template>
+    <template x-if="!loading && data">
+      <div>
+        <div class="header-row">
+          <div>
+            <h1>Tasks</h1>
+            <div class="subtitle" x-text="'Tasks: ' + stats.total + ' \u00B7 Running: ' + stats.running + '/' + data.scheduler.maxConcurrent + ' \u00B7 Ready: ' + stats.ready"></div>
+          </div>
+          <div class="header-actions">
+            <button class="btn" :class="data.scheduler.enabled ? 'btn-success' : ''" @click="toggleScheduler()" x-text="data.scheduler.enabled ? 'Scheduler ON' : 'Scheduler OFF'"></button>
+            <button class="refresh-btn" @click="refresh()" title="Refresh">&#x21bb;</button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+          <div class="stat"><div class="stat-value" x-text="stats.total"></div><div class="stat-label">Total</div></div>
+          <div class="stat"><div class="stat-value" x-text="stats.ready"></div><div class="stat-label">Ready</div></div>
+          <div class="stat"><div class="stat-value" x-text="stats.running"></div><div class="stat-label">Running</div></div>
+          <div class="stat"><div class="stat-value" x-text="stats.completed"></div><div class="stat-label">Completed</div></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <template x-for="t in tabs" :key="t.id">
+            <button class="tab" :class="{ active: currentTab === t.id }" @click="currentTab = t.id">
+              <span x-text="t.label"></span>
+              <span class="count" x-text="t.count"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Filter -->
+        <div class="filter-bar" x-show="currentTab !== 'logs'">
+          <label>Priority:</label>
+          <template x-for="f in ['all', 'P0', 'P1', 'P2', 'P3']" :key="f">
+            <button class="filter-btn" :class="{ active: currentFilter === f }" @click="currentFilter = f" x-text="f === 'all' ? 'All' : f"></button>
+          </template>
+        </div>
+
+        <!-- Tasks Table -->
+        <div x-show="currentTab !== 'logs'">
+          <div x-show="filteredTasks.length === 0" class="empty-state">
+            <div class="icon">&#x1F4CB;</div>No tasks found
+          </div>
+          <table x-show="filteredTasks.length > 0">
+            <thead><tr>
+              <th>Type</th><th>P</th><th>Title</th><th>Status</th><th>WT</th><th>Chain</th><th>Remote</th><th></th>
+            </tr></thead>
+            <tbody>
+              <template x-for="t in filteredTasks" :key="t.id">
+                <tr>
+                  <td>
+                    <span class="badge" :class="t.type === 'todo' ? 'badge-todo' : 'badge-issue'" x-text="t.type === 'todo' ? 'Todo' : 'Issue'"></span>
+                  </td>
+                  <td><span class="priority" :class="t.priority.toLowerCase()" x-text="t.priority"></span></td>
+                  <td class="title-cell">
+                    <span class="title-text" :title="t.title" x-text="t.title"></span>
+                    <div style="font-size:0.75em;color:var(--text-muted)" x-text="t.id"></div>
+                  </td>
+                  <td><span class="badge" :class="'badge-' + t.status" x-text="t.status"></span></td>
+                  <td>
+                    <template x-if="t.worktree">
+                      <a class="wt-link" href="#" @click.prevent="$root.querySelector('[x-data]').panel = 'reports'" x-text="t.worktree"></a>
+                    </template>
+                    <template x-if="!t.worktree">
+                      <span style="color:var(--text-muted)">-</span>
+                    </template>
+                  </td>
+                  <td><div class="chain-dots" x-html="renderChain(t.chain)"></div></td>
+                  <td>
+                    <template x-if="t.remoteUrl">
+                      <a class="remote-link" :href="t.remoteUrl" target="_blank">&#x1F517; Open</a>
+                    </template>
+                  </td>
+                  <td>
+                    <template x-if="canMarkReady(t)">
+                      <button class="btn btn-sm btn-ready" @click="moveStatus(t, 'ready')" title="Mark as Ready">Ready</button>
+                    </template>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Logs Tab -->
+        <div x-show="currentTab === 'logs'">
+          <div class="log-panel">
+            <div class="log-header">
+              <span>Scheduler Logs</span>
+              <button class="btn" @click="refreshLogs()" style="padding:2px 8px;font-size:0.75em;">Refresh</button>
+            </div>
+            <div class="log-content">
+              <div x-show="reversedLogs.length === 0" style="color:var(--text-muted);text-align:center;padding:20px;">No logs yet</div>
+              <template x-for="entry in reversedLogs" :key="entry.time + entry.msg">
+                <div class="log-entry">
+                  <span class="log-time" x-text="formatLogTime(entry.time)"></span>
+                  <span :class="'log-' + entry.level" x-text="entry.msg"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- ═══════════ Worktrees Panel ═══════════ -->
+  <div x-show="panel === 'worktrees'" x-data="worktreesPanel" class="panel-container">
+    <template x-if="loading">
+      <div class="empty-state"><span class="spinner"></span></div>
+    </template>
+    <template x-if="!loading && data">
+      <div x-data="terminal">
+        <div class="header-row">
+          <div>
+            <h1>Worktrees</h1>
+            <div class="subtitle" x-text="'Project: ' + data.projectRoot.split('/').pop() + ' \u2022 Branch: ' + data.currentBranch"></div>
+          </div>
+          <button class="refresh-btn" @click="refresh()" title="Refresh">&#x21bb;</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+          <div class="stat"><div class="stat-value" x-text="data.worktrees.length"></div><div class="stat-label">Active Worktrees</div></div>
+          <div class="stat"><div class="stat-value" x-text="data.orphanBranches.length"></div><div class="stat-label">Merged Branches</div></div>
+          <div class="stat"><div class="stat-value" x-text="data.unmergedBranches.length"></div><div class="stat-label">Unmerged Branches</div></div>
+          <div class="stat"><div class="stat-value" x-text="readyToDelete"></div><div class="stat-label">Ready to Delete</div></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <template x-for="t in tabs" :key="t.id">
+            <button class="tab" :class="{ active: currentTab === t.id }" @click="currentTab = t.id">
+              <span x-text="t.label"></span>
+              <span class="count" x-text="t.count"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Active Worktrees -->
+        <div x-show="currentTab === 'worktrees'">
+          <div x-show="data.worktrees.length === 0" class="empty-state">
+            <div class="icon">&#x1F333;</div>No active worktrees
+          </div>
+          <table x-show="data.worktrees.length > 0">
+            <thead><tr><th>Name</th><th>Branch</th><th>Last Commit</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <template x-for="wt in data.worktrees" :key="wt.name">
+                <tr>
+                  <td>
+                    <strong x-text="wt.name"></strong>
+                    <div style="font-size:0.8em;color:var(--text-muted)" x-text="'base: ' + wt.baseBranch"></div>
+                  </td>
+                  <td><span class="branch-name" x-text="wt.branch"></span></td>
+                  <td>
+                    <span class="commit-hash" x-text="wt.head"></span>
+                    <span class="commit-msg" x-text="wt.subject"></span>
+                    <div class="commit-date" x-text="wt.date"></div>
+                  </td>
+                  <td>
+                    <template x-if="wt.merged"><span class="badge badge-merged">&#x2705; Merged</span></template>
+                    <template x-if="!wt.merged && wt.ahead > 0"><span class="badge badge-ahead" x-text="'+' + wt.ahead + ' ahead'"></span></template>
+                    <template x-if="wt.dirty"><span class="badge badge-dirty">Dirty</span></template>
+                    <template x-if="!wt.dirty"><span class="badge badge-clean">Clean</span></template>
+                    <template x-if="wt.running"><span class="badge badge-running" x-text="'\u25CF Running :' + wt.devPort"></span></template>
+                  </td>
+                  <td class="actions-cell">
+                    <button class="btn btn-danger" @click="deleteWorktree(wt.name, $data)">Delete</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Merged Branches -->
+        <div x-show="currentTab === 'merged'">
+          <div x-show="data.orphanBranches.length === 0" class="empty-state">
+            <div class="icon">&#x2728;</div>No orphaned merged branches &mdash; all clean!
+          </div>
+          <template x-if="data.orphanBranches.length > 0">
+            <div>
+              <div class="bulk-actions">
+                <input type="checkbox" class="check" @change="toggleAllMerged($event.target.checked)">
+                <span class="info"><span x-text="selectedBranches.size"></span> selected</span>
+                <button class="btn btn-danger" :disabled="selectedBranches.size === 0" @click="bulkDelete($data)">Delete Selected</button>
+                <button class="btn btn-danger" @click="deleteAllMerged($data)" x-text="'Delete All (' + data.orphanBranches.length + ')'"></button>
+              </div>
+              <table>
+                <thead><tr><th style="width:30px"></th><th>Branch</th><th>Last Commit</th><th>Date</th><th>Actions</th></tr></thead>
+                <tbody>
+                  <template x-for="b in data.orphanBranches" :key="b.branch">
+                    <tr>
+                      <td><input type="checkbox" class="check" :checked="selectedBranches.has(b.branch)" @change="toggleBranch(b.branch)"></td>
+                      <td><span class="branch-name" x-text="b.branch"></span></td>
+                      <td><span class="commit-msg" x-text="b.subject"></span></td>
+                      <td><span class="commit-date" x-text="b.dateRel + ' (' + b.date + ')'"></span></td>
+                      <td class="actions-cell">
+                        <button class="btn btn-danger" @click="deleteBranch(b.branch, $data)">Delete</button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+
+        <!-- Unmerged Branches -->
+        <div x-show="currentTab === 'unmerged'">
+          <div x-show="data.unmergedBranches.length === 0" class="empty-state">
+            <div class="icon">&#x1F4E6;</div>No orphaned unmerged branches
+          </div>
+          <table x-show="data.unmergedBranches.length > 0">
+            <thead><tr><th>Branch</th><th>Last Commit</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody>
+              <template x-for="b in data.unmergedBranches" :key="b.branch">
+                <tr>
+                  <td><span class="branch-name" x-text="b.branch"></span></td>
+                  <td><span class="commit-msg" x-text="b.subject"></span></td>
+                  <td><span class="commit-date" x-text="b.dateRel + ' (' + b.date + ')'"></span></td>
+                  <td class="actions-cell">
+                    <button class="btn btn-danger" @click="forceDeleteBranch(b.branch, $data)">Force Delete</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Shared Terminal -->
+        <div class="terminal" :class="{ visible: visible }">
+          <div class="terminal-header">
+            <span>Terminal</span>
+            <button class="btn" @click="close()" style="padding:2px 8px;font-size:0.75em;">Close</button>
+          </div>
+          <div class="terminal-content" x-ref="termContent">
+            <template x-for="(line, i) in lines" :key="i">
+              <div :class="line.cls" x-text="line.text"></div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- ═══════════ Reports Panel ═══════════ -->
+  <div x-show="panel === 'reports'" x-data="reportsPanel" style="height:100%;">
+    <template x-if="loading">
+      <div class="empty-state"><span class="spinner"></span></div>
+    </template>
+    <template x-if="!loading">
+      <div class="reports-layout">
+        <!-- Left: Worktree List -->
+        <div class="reports-sidebar">
+          <div style="padding:0 16px 12px;font-size:0.75em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Worktrees</div>
+          <div x-show="worktrees.length === 0" style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.85em;">No reports found</div>
+          <template x-for="wt in worktrees" :key="wt.name">
+            <div class="wt-list-item" :class="{ active: selectedWt === wt.name }" @click="selectWt(wt.name)">
+              <span class="chain-type" :class="wt.chainType" x-text="wt.chainType === 'req' ? 'REQ' : 'DEF'"></span>
+              <span x-text="wt.name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+            </div>
+          </template>
+        </div>
+
+        <!-- Right: Report Content -->
+        <div class="reports-main">
+          <div x-show="!selectedWt" class="empty-state" style="padding-top:100px;">
+            <div class="icon">&#x1F4C4;</div>
+            Select a worktree to view reports
+          </div>
+
+          <template x-if="selectedWt && reportData">
+            <div x-data="terminal">
+              <!-- Chain Flow -->
+              <div class="chain-flow">
+                <template x-for="(c, i) in reportData.chain" :key="c.key">
+                  <span>
+                    <span class="chain-node" :class="[c.cssClass, !c.available ? 'dimmed' : '']" x-text="c.label"></span>
+                    <template x-if="i < reportData.chain.length - 1">
+                      <span class="chain-arrow">&rarr;</span>
+                    </template>
+                  </span>
+                </template>
+              </div>
+
+              <!-- Verdict Banner -->
+              <div x-show="verdictHtml" :class="verdictClass" x-html="verdictHtml"></div>
+
+              <!-- Tab Bar -->
+              <div class="report-tab-bar">
+                <template x-for="(c, i) in reportData.chain.filter(c => c.available)" :key="c.key">
+                  <button class="report-tab-btn" :class="{ active: activeTab === c.key }" @click="switchTab(c.key)">
+                    <span class="tab-badge" :class="c.cssClass" x-text="i + 1"></span>
+                    <span x-text="c.label"></span>
+                  </button>
+                </template>
+              </div>
+
+              <!-- Tab Panels -->
+              <template x-for="c in reportData.chain.filter(c => c.available)" :key="c.key">
+                <div class="report-tab-panel" :class="{ active: activeTab === c.key }">
+                  <div class="panel-body md-content" :id="'report-content-' + c.key"></div>
+                </div>
+              </template>
+
+              <!-- Actions -->
+              <div class="report-actions" x-show="reportData.branch">
+                <div class="report-actions-header">
+                  <span class="report-actions-title">Actions</span>
+                  <template x-if="mergeState === 'success'"><span class="status status-success">Merged &#x2705;</span></template>
+                  <template x-if="mergeState === 'failed'"><span class="status status-failed">Failed</span></template>
+                </div>
+
+                <!-- Status Cards -->
+                <div class="wt-status" x-show="statusData">
+                  <div class="wt-card">
+                    <div class="wt-card-header">&uarr; Upstream</div>
+                    <div class="wt-card-branch" x-text="statusData?.upstream?.branch || '...'"></div>
+                    <div class="wt-card-meta" x-html="statusBadges(statusData?.upstream)"></div>
+                  </div>
+                  <div class="wt-card">
+                    <div class="wt-card-header">&#x25CF; Current</div>
+                    <div class="wt-card-branch" x-text="statusData?.current?.branch || '...'"></div>
+                    <div class="wt-card-meta" x-html="statusBadges(statusData?.current)"></div>
+                  </div>
+                </div>
+
+                <!-- Commits -->
+                <div x-show="statusData?.commits?.length > 0">
+                  <div class="commits-header">
+                    <span class="commits-title">Commits</span>
+                    <span class="commits-count" x-text="statusData?.commits?.length"></span>
+                  </div>
+                  <div class="commits-list">
+                    <template x-for="c in (statusData?.commits || [])" :key="c.hash">
+                      <div class="commit-row">
+                        <span class="commit-hash" x-text="c.hash"></span>
+                        <span class="commit-subject" x-text="c.subject"></span>
+                        <span class="commit-meta">
+                          <span x-text="c.author"></span>
+                          <span x-text="c.date"></span>
+                        </span>
+                      </div>
+                    </template>
+                  </div>
+                  <details class="diff-stat-details" x-show="statusData?.diffStat">
+                    <summary class="diff-stat-summary">Changed files</summary>
+                    <pre class="diff-stat-content" x-text="statusData?.diffStat"></pre>
+                  </details>
+                </div>
+
+                <!-- Merge Check -->
+                <div :class="mergeCheckClass" x-text="mergeCheckMessage"></div>
+
+                <!-- Buttons -->
+                <div class="btn-group">
+                  <div x-show="showSync">
+                    <button class="btn btn-sync" :disabled="syncState === 'running'" @click="doSync($data)">
+                      <template x-if="syncState === 'running'"><span class="spinner"></span></template>
+                      <span x-text="syncState === 'running' ? 'Syncing...' : (syncState === 'success' ? 'Synced \u2705' : 'Sync upstream')"></span>
+                    </button>
+                  </div>
+                  <div>
+                    <button class="btn btn-merge" :disabled="!canMerge || mergeState === 'running'" @click="doMerge($data)">
+                      <template x-if="mergeState === 'running'"><span class="spinner"></span></template>
+                      <span x-text="mergeState === 'running' ? 'Merging...' : (mergeState === 'success' ? 'Merged \u2705' : 'Merge to upstream')"></span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Terminal -->
+                <div class="terminal" :class="{ visible: visible }" style="margin-top:12px;">
+                  <div class="terminal-content" x-ref="termContent">
+                    <template x-for="(line, i) in lines" :key="i">
+                      <div :class="line.cls" x-text="line.text"></div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div x-show="selectedWt && loadingReport" class="empty-state">
+            <span class="spinner"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</main>
+
+</body>
+</html>
