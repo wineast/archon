@@ -53,6 +53,24 @@ function parseTitle(content) {
   return m ? m[1].trim() : "(untitled)";
 }
 
+// ── Terminal ─────────────────────────────────────────────────
+
+function openTerminal(cwd, taskId, initialInput) {
+  // Use osascript to open a new Terminal.app window
+  // The script: cd to worktree, set title, run claude with skill
+  const cmd = initialInput
+    ? `cd ${JSON.stringify(cwd)} && claude ${initialInput}`
+    : `cd ${JSON.stringify(cwd)} && claude`;
+  const script = `
+    tell application "Terminal"
+      activate
+      set newTab to do script ${JSON.stringify(cmd)}
+      set custom title of front window to ${JSON.stringify("Claude: " + taskId)}
+    end tell
+  `;
+  spawn("osascript", ["-e", script], { stdio: "ignore", detached: true }).unref();
+}
+
 // ── Data Layer ───────────────────────────────────────────────
 
 function scanTasks(PROJECT_ROOT, TODO_DIR, ISSUES_DIR) {
@@ -147,16 +165,38 @@ function scanWorktrees(WORKTREES_DIR) {
       "TEST_SPEC_REPORT.md": existsSync(join(wtDir, "TEST_SPEC_REPORT.md")),
     };
 
-    const hasReq = Object.values(reqChain).some(Boolean);
-    const hasDefect = Object.values(defectChain).some(Boolean);
+    // Determine chain by task type; fallback to file-presence detection
+    const taskType = taskRef?.type;
+    let showReqChain = null;
+    let showDefectChain = null;
+    if (taskType === "todo") {
+      showReqChain = reqChain;
+    } else if (taskType === "issue") {
+      showDefectChain = defectChain;
+    } else {
+      // No task.json or unknown type — show whichever has files
+      if (Object.values(reqChain).some(Boolean)) showReqChain = reqChain;
+      if (Object.values(defectChain).some(Boolean)) showDefectChain = defectChain;
+    }
+
+    // Read persisted remote URL
+    let remoteUrl = "";
+    const remotePath = join(wtDir, "remote.json");
+    if (existsSync(remotePath)) {
+      try {
+        const rd = JSON.parse(readFileSync(remotePath, "utf-8"));
+        remoteUrl = rd.url || "";
+      } catch {}
+    }
 
     result.push({
       name,
       path: wtPath,
       taskRef,
       meta,
-      reqChain: hasReq ? reqChain : null,
-      defectChain: hasDefect ? defectChain : null,
+      remoteUrl,
+      reqChain: showReqChain,
+      defectChain: showDefectChain,
     });
   }
 
@@ -175,7 +215,6 @@ function createScheduler(dirs, broadcastSSE) {
     maxConcurrent: 5,
     scanInterval: 30000,
     timer: null,
-    running: new Map(),
     logs: [],
 
     log(level, msg) {
@@ -213,24 +252,18 @@ function createScheduler(dirs, broadcastSSE) {
     },
 
     tick() {
-      for (const [taskId, info] of this.running) {
-        if (info.process && info.process.exitCode !== null) {
-          this.log("info", `Task "${taskId}" process exited (code ${info.process.exitCode})`);
-          this.running.delete(taskId);
-          broadcastSSE({ type: "refresh", section: "tasks" });
-        }
-      }
-
-      if (this.running.size >= this.maxConcurrent) {
-        this.log("debug", `At capacity (${this.running.size}/${this.maxConcurrent}), skipping`);
-        return;
-      }
-
       const tasks = scanTasks(PROJECT_ROOT, TODO_DIR, ISSUES_DIR).filter((t) => t.status === "ready");
       if (!tasks.length) return;
 
+      // Limit concurrent dispatches
+      const runningCount = scanTasks(PROJECT_ROOT, TODO_DIR, ISSUES_DIR).filter((t) => t.status === "running").length;
+      if (runningCount >= this.maxConcurrent) {
+        this.log("debug", `At capacity (${runningCount}/${this.maxConcurrent}), skipping`);
+        return;
+      }
+
       tasks.sort((a, b) => a.priority.localeCompare(b.priority));
-      const slots = this.maxConcurrent - this.running.size;
+      const slots = this.maxConcurrent - runningCount;
       const toDispatch = tasks.slice(0, slots);
 
       for (const task of toDispatch) {
@@ -268,6 +301,15 @@ function createScheduler(dirs, broadcastSSE) {
         this.log("error", `Failed to write task.json: ${e.message}`);
       }
 
+      // Write TASK.md (task body without frontmatter) for chain skills
+      try {
+        const taskContent = readFileSync(join(PROJECT_ROOT, task.path), "utf-8");
+        const taskBody = taskContent.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+        writeFileSync(join(wtDir, "TASK.md"), taskBody);
+      } catch (e) {
+        this.log("error", `Failed to write TASK.md: ${e.message}`);
+      }
+
       const taskFilePath = join(PROJECT_ROOT, task.path);
       try {
         let content = readFileSync(taskFilePath, "utf-8");
@@ -280,59 +322,46 @@ function createScheduler(dirs, broadcastSSE) {
           return fm;
         });
         writeFileSync(taskFilePath, content);
+        // Move file to running folder
+        const baseDir = task.type === "todo" ? TODO_DIR : ISSUES_DIR;
+        const runningDir = join(baseDir, "running");
+        mkdirSync(runningDir, { recursive: true });
+        const destPath = join(runningDir, `${taskId}.md`);
+        if (taskFilePath !== destPath) {
+          renameSync(taskFilePath, destPath);
+        }
       } catch (e) {
         this.log("error", `Failed to update task frontmatter: ${e.message}`);
       }
 
-      const skill = task.type === "todo" ? "/requirement" : "/diagnose";
-      this.log("info", `Spawning claude ${skill} in ${wtPath}`);
+      // Open a terminal window with claude in the worktree
+      const skill = task.type === "todo" ? "/req-chain" : "/defect-chain";
+      this.log("info", `Opening terminal for "${taskId}" in ${wtPath}`);
 
       try {
-        const child = spawn("claude", ["--print", skill], {
-          cwd: wtPath,
-          env: { ...process.env, FORCE_COLOR: "0" },
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-
-        const info = { process: child, worktree: taskId, remoteUrl: "" };
-        this.running.set(taskId, info);
-
-        child.stdout.on("data", (d) => {
-          const text = d.toString();
-          const urlMatch = text.match(/https?:\/\/[^\s]+/);
-          if (urlMatch && !info.remoteUrl) {
-            info.remoteUrl = urlMatch[0];
-            this.log("info", `Remote URL for "${taskId}": ${info.remoteUrl}`);
-            broadcastSSE({ type: "refresh", section: "tasks" });
-          }
-        });
-
-        child.on("error", (err) => {
-          this.log("error", `Process error for "${taskId}": ${err.message}`);
-          this.rollbackStatus(task);
-          this.running.delete(taskId);
-          broadcastSSE({ type: "refresh", section: "tasks" });
-        });
-
-        child.on("close", (code) => {
-          this.log("info", `Task "${taskId}" completed (exit ${code})`);
-          this.running.delete(taskId);
-          broadcastSSE({ type: "refresh", section: "tasks" });
-        });
-
+        openTerminal(wtPath, taskId, skill);
+        this.log("info", `Terminal opened for "${taskId}"`);
         broadcastSSE({ type: "refresh", section: "tasks" });
       } catch (e) {
-        this.log("error", `Failed to spawn claude for "${taskId}": ${e.message}`);
+        this.log("error", `Failed to open terminal for "${taskId}": ${e.message}`);
         this.rollbackStatus(task);
       }
     },
 
     rollbackStatus(task) {
-      const taskFilePath = join(PROJECT_ROOT, task.path);
+      // Move back to ready folder and update frontmatter
+      const baseDir = task.type === "todo" ? TODO_DIR : ISSUES_DIR;
+      const runningPath = join(baseDir, "running", `${task.id}.md`);
+      const readyPath = join(baseDir, "ready", `${task.id}.md`);
+      const filePath = existsSync(runningPath) ? runningPath : join(PROJECT_ROOT, task.path);
       try {
-        let content = readFileSync(taskFilePath, "utf-8");
+        let content = readFileSync(filePath, "utf-8");
         content = content.replace(/^status:.*/m, "status: ready");
-        writeFileSync(taskFilePath, content);
+        writeFileSync(filePath, content);
+        if (filePath !== readyPath) {
+          mkdirSync(join(baseDir, "ready"), { recursive: true });
+          renameSync(filePath, readyPath);
+        }
         this.log("info", `Rolled back "${task.id}" status to ready`);
       } catch (e) {
         this.log("error", `Failed to rollback status for "${task.id}": ${e.message}`);
@@ -355,13 +384,10 @@ export function createTasksRouter(dirs, broadcastSSE) {
 
     for (const task of tasks) {
       task.chain = null;
-      task.remoteUrl = "";
       if (task.worktree) {
         const wt = worktrees.find((w) => w.name === task.worktree);
         if (wt) {
           task.chain = wt.reqChain || wt.defectChain || null;
-          const running = scheduler.running.get(task.id);
-          if (running?.remoteUrl) task.remoteUrl = running.remoteUrl;
         }
       }
     }
@@ -372,7 +398,7 @@ export function createTasksRouter(dirs, broadcastSSE) {
       scheduler: {
         enabled: scheduler.enabled,
         maxConcurrent: scheduler.maxConcurrent,
-        runningCount: scheduler.running.size,
+        runningCount: tasks.filter((t) => t.status === "running").length,
         readyCount: tasks.filter((t) => t.status === "ready").length,
         logs: scheduler.logs,
       },
@@ -417,6 +443,49 @@ export function createTasksRouter(dirs, broadcastSSE) {
       const enabled = scheduler.toggle();
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ enabled }));
+      return true;
+    }
+
+    if (path === "/api/tasks/scheduler/config" && req.method === "GET") {
+      const runningTasks = scanTasks(PROJECT_ROOT, TODO_DIR, ISSUES_DIR).filter((t) => t.status === "running");
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        enabled: scheduler.enabled,
+        maxConcurrent: scheduler.maxConcurrent,
+        scanInterval: scheduler.scanInterval,
+        runningCount: runningTasks.length,
+        runningTasks: runningTasks.map((t) => ({
+          id: t.id,
+          type: t.type,
+          worktree: t.worktree,
+        })),
+      }));
+      return true;
+    }
+
+    if (path === "/api/tasks/scheduler/config" && req.method === "POST") {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        try {
+          const cfg = JSON.parse(body);
+          if (typeof cfg.maxConcurrent === "number" && cfg.maxConcurrent >= 1 && cfg.maxConcurrent <= 20) {
+            scheduler.maxConcurrent = cfg.maxConcurrent;
+          }
+          if (typeof cfg.scanInterval === "number" && cfg.scanInterval >= 5000 && cfg.scanInterval <= 300000) {
+            const wasRunning = scheduler.enabled;
+            if (wasRunning) scheduler.stop();
+            scheduler.scanInterval = cfg.scanInterval;
+            if (wasRunning) scheduler.start();
+          }
+          scheduler.log("info", `Config updated: maxConcurrent=${scheduler.maxConcurrent}, scanInterval=${scheduler.scanInterval}ms`);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true, maxConcurrent: scheduler.maxConcurrent, scanInterval: scheduler.scanInterval }));
+        } catch (e) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
       return true;
     }
 
@@ -481,6 +550,30 @@ export function createTasksRouter(dirs, broadcastSSE) {
           broadcastSSE({ type: "refresh", section: "tasks" });
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ ok: true, moved: true, from: srcFolder, to }));
+        } catch (e) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return true;
+    }
+
+    // Open terminal for a task's worktree
+    if (path === "/api/tasks/open-terminal" && req.method === "POST") {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        try {
+          const { worktree, skill } = JSON.parse(body);
+          const wtPath = join(WORKTREES_DIR, worktree);
+          if (!existsSync(wtPath)) {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: `Worktree not found: ${worktree}` }));
+            return;
+          }
+          openTerminal(wtPath, worktree, skill || "");
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
         } catch (e) {
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: e.message }));

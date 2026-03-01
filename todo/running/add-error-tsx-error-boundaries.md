@@ -1,5 +1,7 @@
 ---
 priority: P1
+status: running
+worktree: add-error-tsx-error-boundaries
 ---
 # 在关键路由添加 Next.js error.tsx 错误边界
 
