@@ -15,14 +15,14 @@ interface TaskRowProps {
 const TODO_NEXT: Record<string, { to: string; label: string; cls: string }[]> = {
   pending:  [{ to: "backlog", label: "Backlog", cls: "" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
   backlog:  [{ to: "ready", label: "就绪", cls: "btn-ready" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
-  ready:    [{ to: "running", label: "Running", cls: "btn-primary" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
-  running:  [{ to: "done", label: "完成", cls: "btn-success" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
+  ready:    [{ to: "running", label: "派发", cls: "btn-primary" }, { to: "cancelled", label: "取消", cls: "btn-danger" }],
+  running:  [{ to: "cancelled", label: "取消", cls: "btn-danger" }],
 };
 
 const ISSUE_NEXT: Record<string, { to: string; label: string; cls: string }[]> = {
   open:     [{ to: "ready", label: "就绪", cls: "btn-ready" }, { to: "wontfix", label: "不修", cls: "btn-danger" }],
-  ready:    [{ to: "running", label: "Running", cls: "btn-primary" }, { to: "wontfix", label: "不修", cls: "btn-danger" }],
-  running:  [{ to: "closed", label: "关闭", cls: "btn-success" }, { to: "wontfix", label: "不修", cls: "btn-danger" }],
+  ready:    [{ to: "running", label: "派发", cls: "btn-primary" }, { to: "wontfix", label: "不修", cls: "btn-danger" }],
+  running:  [{ to: "wontfix", label: "不修", cls: "btn-danger" }],
 };
 
 export function TaskRow({ task, expanded, onToggle, onRefresh }: TaskRowProps) {

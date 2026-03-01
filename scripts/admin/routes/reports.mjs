@@ -116,7 +116,7 @@ export function createReportsRouter(dirs) {
       try {
         execSync(`node ${scriptPath} merge ${wtName}`, { cwd: PROJECT_ROOT, timeout: 60000, stdio: "pipe" });
         mergeStates.set(wtName, "success");
-        // Mark task as merged: merged: true + status → done/closed
+        // Mark task as merged: merged: true + status → merged
         const taskResult = markTaskMerged(wtName, TODO_DIR, ISSUES_DIR);
         json(res, 200, { ok: true, task: taskResult });
       } catch (e) {

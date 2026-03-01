@@ -85,8 +85,3 @@ export interface MergeCheckData {
   status: "clean" | "conflict" | "behind" | "up_to_date" | "merged" | "dirty";
   message: string;
 }
-
-export interface TerminalLine {
-  text: string;
-  cls: string;
-}

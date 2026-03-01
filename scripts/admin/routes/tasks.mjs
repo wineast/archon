@@ -33,7 +33,7 @@ export function createTasksRouter(dirs, termManager, hooks) {
         total: tasks.length,
         ready: tasks.filter((t) => t.status === "ready").length,
         running: tasks.filter((t) => t.status === "running").length,
-        completed: tasks.filter((t) => ["done", "closed", "cancelled", "wontfix"].includes(t.status)).length,
+        completed: tasks.filter((t) => ["done", "closed", "merged", "cancelled", "wontfix"].includes(t.status)).length,
         todoCount: tasks.filter((t) => t.type === "todo").length,
         issueCount: tasks.filter((t) => t.type === "issue").length,
       },

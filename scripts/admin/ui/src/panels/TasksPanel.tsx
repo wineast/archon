@@ -8,16 +8,35 @@ import { Mermaid } from "../components/Mermaid";
 import type { Task, TasksData } from "../types";
 
 const PAGE_SIZE = 30;
+
+// ── URL query helpers ──
+
+function getQuery() {
+  return new URLSearchParams(window.location.search);
+}
+
+function setQuery(params: Record<string, string>) {
+  const q = getQuery();
+  for (const [k, v] of Object.entries(params)) {
+    if (!v || v === "all") q.delete(k);
+    else q.set(k, v);
+  }
+  const qs = q.toString();
+  const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+  history.replaceState(null, "", url);
+}
+
 const STATUS_ORDER: Record<string, number> = {
   running: 0,
   ready: 1,
   open: 2,
   pending: 3,
   backlog: 4,
+  merged: 5,
   done: 5,
-  closed: 6,
-  cancelled: 7,
-  wontfix: 7,
+  closed: 5,
+  cancelled: 6,
+  wontfix: 6,
 };
 
 const ICON_HELP = (
@@ -27,11 +46,14 @@ const ICON_HELP = (
 export function TasksPanel() {
   const [data, setData] = useState<TasksData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentTab, setCurrentTab] = useState("all");
-  const [currentFilter, setCurrentFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentTab, setCurrentTab] = useState(() => getQuery().get("tab") || "all");
+  const [currentFilter, setCurrentFilter] = useState(() => getQuery().get("priority") || "all");
+  const [statusFilter, setStatusFilter] = useState(() => getQuery().get("status") || "all");
   const [page, setPage] = useState(1);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    const raw = getQuery().get("expanded");
+    return raw ? new Set(raw.split(",").filter(Boolean)) : new Set();
+  });
   const [helpOpen, setHelpOpen] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -46,6 +68,7 @@ export function TasksPanel() {
       setExpandedIds((prev) => {
         const next = new Set(prev);
         for (const id of runningIds) next.add(id);
+        setQuery({ expanded: [...next].join(",") });
         return next;
       });
     } catch {
@@ -72,8 +95,8 @@ export function TasksPanel() {
     ];
   }, [data]);
 
-  const TODO_STATUSES = ["pending", "backlog", "ready", "running", "done", "cancelled"];
-  const ISSUE_STATUSES = ["open", "ready", "running", "closed", "wontfix"];
+  const TODO_STATUSES = ["pending", "backlog", "ready", "running", "merged", "cancelled"];
+  const ISSUE_STATUSES = ["open", "ready", "running", "merged", "wontfix"];
   const ALL_STATUSES = [...new Set([...TODO_STATUSES, ...ISSUE_STATUSES])];
 
   const statusOptions = useMemo(() => {
@@ -122,6 +145,7 @@ export function TasksPanel() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      setQuery({ expanded: [...next].join(",") });
       return next;
     });
   };
@@ -173,29 +197,29 @@ export function TasksPanel() {
   pending([PENDING]) -->|就绪| backlog([BACKLOG])
   backlog -->|就绪| ready([READY])
   ready -->|派发| running([RUNNING])
-  running -->|完成| done([DONE])
   pending -->|取消| cancelled([CANCELLED])
   backlog -->|取消| cancelled
   ready -->|取消| cancelled
   running -->|取消| cancelled
   ready -.->|post: 创建工作区| ready
   running -.->|post: 启动终端对话| running
-  merge((合并成功)) -.->|post: merged+done| done
-  linkStyle 8,9,10 stroke:#e67e22,color:#e67e22`} />
+  merge((合并成功)) -.->|post: status→merged| merged([MERGED])
+  style merge fill:#6366f1,stroke:#4f46e5,color:#fff
+  linkStyle 7,8,9 stroke:#e67e22,color:#e67e22`} />
           </div>
           <div className="help-section">
             <div className="help-title">Issue 生命周期</div>
             <Mermaid chart={`flowchart LR
   open([OPEN]) -->|就绪| ready([READY])
   ready -->|派发| running([RUNNING])
-  running -->|关闭| closed([CLOSED])
   open -->|不修| wontfix([WONTFIX])
   ready -->|不修| wontfix
   running -->|不修| wontfix
   ready -.->|post: 创建工作区| ready
   running -.->|post: 启动终端对话| running
-  merge((合并成功)) -.->|post: merged+closed| closed
-  linkStyle 6,7,8 stroke:#e67e22,color:#e67e22`} />
+  merge((合并成功)) -.->|post: status→merged| merged([MERGED])
+  style merge fill:#6366f1,stroke:#4f46e5,color:#fff
+  linkStyle 5,6,7 stroke:#e67e22,color:#e67e22`} />
           </div>
         </div>
       )}
@@ -230,6 +254,7 @@ export function TasksPanel() {
               setCurrentTab(t.id);
               setStatusFilter("all");
               setPage(1);
+              setQuery({ tab: t.id, status: "" });
             }}
           >
             <span>{t.label}</span>
@@ -248,6 +273,7 @@ export function TasksPanel() {
             onClick={() => {
               setCurrentFilter(f);
               setPage(1);
+              setQuery({ priority: f });
             }}
           >
             {f === "all" ? "全部" : f}
@@ -263,6 +289,7 @@ export function TasksPanel() {
             onClick={() => {
               setStatusFilter(f);
               setPage(1);
+              setQuery({ status: f });
             }}
           >
             {f === "all" ? "全部" : f}

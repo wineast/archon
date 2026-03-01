@@ -109,8 +109,8 @@ export function getTaskStatus(type, id, TODO_DIR, ISSUES_DIR) {
 // ── Status mutation ─────────────────────────────────────────
 
 export function moveTaskStatus(type, id, to, TODO_DIR, ISSUES_DIR) {
-  const validTodo = ["pending", "ready", "running", "backlog", "done", "cancelled"];
-  const validIssue = ["open", "ready", "running", "closed", "wontfix"];
+  const validTodo = ["pending", "ready", "running", "backlog", "done", "merged", "cancelled"];
+  const validIssue = ["open", "ready", "running", "closed", "merged", "wontfix"];
   const allowed = type === "todo" ? validTodo : validIssue;
   if (!allowed.includes(to)) {
     return { error: `Invalid target status: ${to}` };
@@ -136,7 +136,7 @@ export function moveTaskStatus(type, id, to, TODO_DIR, ISSUES_DIR) {
       content = content.replace(/\n---/, `\nstatus: ${to}\n---`);
     }
     // Clear worktree field only when moving back (not to terminal states)
-    const terminal = ["done", "closed", "cancelled", "wontfix"];
+    const terminal = ["done", "closed", "merged", "cancelled", "wontfix"];
     if (to !== "running" && !terminal.includes(to) && /^worktree:/m.test(content)) {
       content = content.replace(/^worktree:.*\n?/m, "");
     }
@@ -161,7 +161,7 @@ export function markTaskMerged(id, TODO_DIR, ISSUES_DIR) {
   if (!existsSync(filePath)) return { error: `Task not found: ${id}` };
 
   let content = readFileSync(filePath, "utf-8");
-  const terminalStatus = type === "todo" ? "done" : "closed";
+  const terminalStatus = "merged";
 
   const hasFm = /^---\r?\n[\s\S]*?\r?\n---/.test(content);
   if (hasFm) {

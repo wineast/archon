@@ -37,7 +37,7 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
   const [lastPoll, setLastPoll] = useState<string>("");
 
   const hasWorktree = !!task.worktree;
-  const isCompleted = ["done", "closed", "cancelled", "wontfix"].includes(task.status);
+  const isCompleted = ["done", "closed", "merged", "cancelled", "wontfix"].includes(task.status);
 
   // Full initial load (with loading spinner)
   const loadData = useCallback(async () => {
@@ -184,14 +184,6 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
 
   return (
     <div className="task-expanded">
-      {/* ── 轮询状态 ── */}
-      {isPolling && (
-        <div className="poll-indicator">
-          <span className="poll-dot" />
-          <span>轮询中{lastPoll ? ` · ${lastPoll}` : ""}</span>
-        </div>
-      )}
-
       {/* ── 任务详情 ── */}
       {taskDetailHtml && (
         <div className="expanded-section">
@@ -208,6 +200,12 @@ export function TaskExpanded({ task, onRefresh }: TaskExpandedProps) {
         <div className="expanded-section">
           <div className="expanded-section-header">
             <div className="expanded-section-title">报告</div>
+            {isPolling && (
+              <div className="poll-indicator">
+                <span className="poll-dot" />
+                <span>轮询中{lastPoll ? ` · ${lastPoll}` : ""}</span>
+              </div>
+            )}
             {!isCompleted && (
               <button className="btn btn-sm" onClick={handleOpenTerminal}>
                 {terminalAlive ? "激活终端" : "打开终端"}
