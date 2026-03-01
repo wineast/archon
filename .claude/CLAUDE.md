@@ -123,6 +123,11 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 详见 `web/guide/production-database.md`
 - **查询版本化资源（tools、functions、components、datasets、wiki、schemas 等）时必须加 `versionId` 过滤**——这些资源按 version 隔离，缺少 `versionId` 条件会导致跨 Agent/跨版本数据混入。标准模式：`eq(table.versionId, versionId)` + 其他条件（如 `eq(table.enabled, true)`, `isNull(table.deletedAt)`）
 
+### 导出格式迁移（Export Migrations）
+- 迁移文件在 `web/src/lib/versions/migrations/`，当前版本 `CURRENT_EXPORT_VERSION`，详见 `web/guide/agent-export-import.md`
+- **与 DB 迁移不同**：导出迁移是手写代码，没有 `db-push` 式的旁路，必须有迁移文件才能测试 import 流程，因此**工作区内正常编写迁移文件 + 递增版本号**
+- **并行工作区可能产生版本号重复**（如两个工作区都写了 v2→v3），合并到 dev 时 git 不一定报冲突，由 `/integrate` 和 `/release` 技能检测并重排序修复
+
 ### 资源共享池
 - **所有资源都必须存在于数据库中**，禁止前端硬编码资源列表（如 `BUILTIN_FUNCTIONS`、`BUILTIN_COMPONENTS` 常量）
 - 内置资源（如 system tools、compileExpression、Badge/Spinner/Table/Tooltip）必须作为 `origin: "builtin"` 的池资源存入数据库

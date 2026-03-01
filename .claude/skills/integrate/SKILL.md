@@ -120,6 +120,16 @@ issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.worktree/ �
    - 对比 commit 列表（squash merge commit 通常包含工作区名称，如 `feat({worktree-name}): squash merge from ...`）
    - 不属于任何工作区的 commit（如 chore、refactor）单独列出
 
+5. **导出格式迁移版本碰撞检测**
+   ```bash
+   # 检查是否有多个 commit 修改了迁移注册文件
+   git log main..dev --oneline -- 'web/src/lib/versions/migrations/index.ts'
+   ```
+   - 如果多个 commit（来自不同工作区）都修改了 `index.ts`（递增 `CURRENT_EXPORT_VERSION`），可能存在版本号碰撞
+   - 并行工作区各自创建不同文件名的迁移文件（如 `0003_add_foo.ts` 和 `0003_add_bar.ts`），git 不报冲突，但两个迁移都声明 `fromVersion=2→toVersion=3`，导致迁移链断裂
+   - 检测方法：读取 `web/src/lib/versions/migrations/index.ts`，检查是否有多个迁移声明相同的 `fromVersion`
+   - 碰撞时在 Breaking 中标注为 ⚠️ 需修复，在 Risk 中列为发布阻塞项
+
 ## Phase 2: 聚合四元素
 
 ### 目标
@@ -144,7 +154,8 @@ issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.worktree/ �
 #### 2.3 Breaking（破坏性变更）
 - **Schema 变更**：`git diff main..dev -- 'web/src/db/schema.ts' 'drizzle/'` 是否有修改
 - **API 变更**：`git diff main..dev -- 'web/src/app/api/'` 是否有接口变更
-- **导出格式变更**：是否影响 fixture 导入导出
+- **导出格式迁移**：`git diff main..dev -- 'web/src/lib/versions/migrations/' 'web/src/lib/versions/types.ts'` 是否有变更（迁移文件新增 / `CURRENT_EXPORT_VERSION` 递增 / snapshot 类型定义修改）
+  - **版本碰撞检测**：如果 Phase 1 步骤 5 发现多个工作区 commit 都修改了 `index.ts`，检查迁移链是否断裂——两个迁移文件声明相同的 `fromVersion`，或 `CURRENT_EXPORT_VERSION` 被多次递增到相同值。碰撞时标注为 ⚠️ 需在 dev 上重排序修复后才能发布
 - **行为变更**：从各工作区报告的 Constraint / Breaking Changes 聚合
 
 #### 2.4 Risk（风险）

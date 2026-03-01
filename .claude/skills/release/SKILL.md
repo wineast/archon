@@ -131,14 +131,25 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 - 如果 schema 有变更但无迁移文件 → 需要 `make db-generate`
 - 如果已有迁移文件 → 检查是否与 schema 一致
 
-#### 3.3 导出格式兼容性
-- 如果集成报告的 Breaking 中有导出格式变更
-- 评估旧格式数据是否仍可导入
+#### 3.3 导出格式迁移
+- 检查 `web/src/lib/versions/migrations/` 是否有新增迁移文件
+- 检查 `CURRENT_EXPORT_VERSION` 是否递增
+- **迁移链完整性验证**：
+  1. 读取 `web/src/lib/versions/migrations/index.ts`，提取所有注册的迁移及 `CURRENT_EXPORT_VERSION`
+  2. 验证迁移链连续性：每个迁移的 `fromVersion` 必须等于前一个迁移的 `toVersion`，最后一个迁移的 `toVersion` 必须等于 `CURRENT_EXPORT_VERSION`
+  3. 如果发现版本号碰撞（如两个迁移都声明 `fromVersion=2→toVersion=3`）→ **阻塞发布**，需在 dev 上修复：
+     - 保留先合并的迁移不变（按 git log 时间顺序判断）
+     - 重排后合并的迁移：重命名文件序号（如 `0003_add_bar.ts` → `0004_add_bar.ts`）、修改 `fromVersion`/`toVersion` 使链连续
+     - 更新 `index.ts` 注册顺序和 `CURRENT_EXPORT_VERSION`
+     - 如果 `types.ts` 两侧都新增了字段，保留双方
+     - 提交修复后重新验证
+- 如果 snapshot 类型定义有变更（`web/src/lib/versions/types.ts`）但无对应迁移文件 → 需要在 dev 上补写
+- 运行导出迁移相关测试：`make test -- --testPathPattern=versions`
 
 #### 3.4 判定
-- **安全**：无 schema 变更 / 迁移文件完整且安全
-- **需注意**：有 schema 变更但影响可控
-- **阻塞**：迁移文件缺失 / 存在危险的 schema 变更
+- **安全**：无 schema 变更 + 无导出格式变更 / 迁移文件完整且安全
+- **需注意**：有变更但影响可控（如新增可选字段）
+- **阻塞**：DB 迁移文件缺失 / 导出迁移文件缺失 / 存在危险的破坏性变更
 
 ## Phase 4: 生成 Release Notes + 报告 + 创建 PR
 

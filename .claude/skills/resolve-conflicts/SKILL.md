@@ -84,6 +84,23 @@ git diff HEAD~1 --name-only | grep -E "package(-lock)?\.json"
 cd web && npm install
 ```
 
+## 特殊冲突类型
+
+### 导出格式迁移冲突（`web/src/lib/versions/migrations/`）
+
+当多个工作区并行递增了同一个 `CURRENT_EXPORT_VERSION`（如都写了 v2→v3），合并时会冲突。处理步骤：
+
+1. **保留先合并的迁移文件不变**（已在 dev 上，属于 theirs）
+2. **重排序当前工作区的迁移文件**：
+   - 重命名文件序号（如 `0003_add_bar.ts` → `0004_add_bar.ts`）
+   - 修改内部 `fromVersion` 为 dev 上已有的最新版本号，`toVersion` 再 +1
+3. **更新 `migrations/index.ts`**：注册所有迁移文件，`CURRENT_EXPORT_VERSION` 设为最新的 `toVersion`
+4. **合并 `types.ts`**：如果两边都新增了字段，保留双方的字段定义
+
+示例：dev 上已有 `0003_add_foo.ts`（v2→v3），当前工作区也有 `0003_add_bar.ts`（v2→v3）
+- → 将当前工作区的改为 `0004_add_bar.ts`（v3→v4）
+- → `CURRENT_EXPORT_VERSION = 4`
+
 ## 注意
 
 - **禁止 `git stash`**——stash 跨 worktree 共享，会污染其他工作区
