@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test test-viewer e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip admin admin-setup admin-dev admin-build
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test test-viewer e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip admin admin-setup admin-dev admin-build static-storybook static-demo-umi deploy-storybook deploy-demo-umi
 
 # ============================================================
 # Setup
@@ -318,6 +318,32 @@ wt-init:
 ## 工作区数据清理（wt-init 的反向）
 wt-fini:
 	@node scripts/worktree/lifecycle/wt-fini.mjs $(or $(DIR),.)
+
+# ============================================================
+# Fixtures
+# ============================================================
+
+# ============================================================
+# Static Assets (Cloudflare Pages)
+# ============================================================
+
+## 构建 Storybook → .static-dist/storybook/
+static-storybook:
+	@node scripts/build-static.mjs storybook
+
+## 构建 Umi Demo → .static-dist/demo-umi/
+static-demo-umi:
+	@node scripts/build-static.mjs demo-umi
+
+## 部署 Storybook → archon-storybook.pages.dev
+deploy-storybook:
+	@if [ ! -d .static-dist/storybook ]; then echo "❌ 请先 make static-storybook"; exit 1; fi
+	@npx wrangler pages deploy .static-dist/storybook --project-name=archon-storybook
+
+## 部署 Umi Demo → archon-demo-umi.pages.dev
+deploy-demo-umi:
+	@if [ ! -d .static-dist/demo-umi ]; then echo "❌ 请先 make static-demo-umi"; exit 1; fi
+	@npx wrangler pages deploy .static-dist/demo-umi --project-name=archon-demo-umi
 
 # ============================================================
 # Fixtures
