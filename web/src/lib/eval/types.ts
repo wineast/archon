@@ -58,7 +58,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   injected?: boolean;
-  toolCalls?: Array<{ name: string; args: Record<string, unknown> }>;
+  toolCalls?: Array<{ name: string; args: Record<string, unknown>; result?: unknown }>;
 }
 
 export interface TurnResult {

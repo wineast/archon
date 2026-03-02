@@ -204,7 +204,7 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
           role: "assistant",
           content: chatResponse,
           toolCalls: allToolCalls.length > 0
-            ? allToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args }))
+            ? allToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args, result: tc.result }))
             : undefined,
         });
 
@@ -224,7 +224,7 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
             role: turn.role,
             content: turn.content,
             injected: i < lastUserIndex || (i === lastUserIndex ? false : i < turns.length - 1),
-            toolCalls: turn.toolCalls?.map((tc) => ({ name: tc.name, args: tc.args })),
+            toolCalls: turn.toolCalls?.map((tc) => ({ name: tc.name, args: tc.args, result: tc.result })),
           });
         }
         for (let i = 0; i < chatMessages.length; i++) {
@@ -252,7 +252,7 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
           role: "assistant",
           content: chatResponse,
           toolCalls: allToolCalls.length > 0
-            ? allToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args }))
+            ? allToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args, result: tc.result }))
             : undefined,
         });
 
@@ -269,7 +269,7 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
               role: "assistant",
               content: turn.content,
               injected: true,
-              toolCalls: turn.toolCalls?.map((tc) => ({ name: tc.name, args: tc.args })),
+              toolCalls: turn.toolCalls?.map((tc) => ({ name: tc.name, args: tc.args, result: tc.result })),
             });
           } else {
             history.push({ role: "user", content: turn.content });
@@ -295,7 +295,7 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
               role: "assistant",
               content: assistantResponse,
               toolCalls: turnToolCalls.length > 0
-                ? turnToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args }))
+                ? turnToolCalls.map((tc) => ({ name: tc.toolName, args: tc.args, result: tc.result }))
                 : undefined,
             });
 
