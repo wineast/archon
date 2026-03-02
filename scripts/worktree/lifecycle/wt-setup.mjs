@@ -157,4 +157,6 @@ console.log(`  Created web/.env.development.local → local DB (${dbName})`);
 // ── deps ────────────────────────────────────────────────────
 
 console.log("📥 [deps] 安装依赖...");
-execSync("npm install", { stdio: "inherit", cwd: join(targetDir, "web") });
+const installEnv = { ...process.env };
+delete installEnv.NODE_ENV; // 确保安装 devDependencies（tsx、drizzle-kit 等）
+execSync("npm install", { stdio: "inherit", cwd: join(targetDir, "web"), env: installEnv });

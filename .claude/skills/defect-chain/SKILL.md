@@ -1,7 +1,7 @@
 ---
 name: defect-chain
 description: 缺陷链路编排。自动执行完整缺陷链路：诊断→修复→验证→守护。当调度器自动派发 issue 任务或用户说"跑链路"、"defect-chain"时调用。
-allowed-tools: Read, Glob, Skill
+allowed-tools: AskUserQuestion, Read, Glob, Skill
 ---
 
 自动编排缺陷链路四步骤，从断点处继续执行直到完成。

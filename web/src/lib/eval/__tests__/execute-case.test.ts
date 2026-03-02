@@ -147,6 +147,48 @@ describe("executeCase", () => {
     expect(judgeUsage.inputTokens).toBe(300);
   });
 
+  it("preserves tool call results in chatMessages (single mode)", async () => {
+    mockGenerateText.mockResolvedValueOnce({
+      text: "Here is the result",
+      usage: { inputTokens: 100, outputTokens: 50 },
+      steps: [{
+        toolCalls: [
+          { toolCallId: "tc1", toolName: "search", input: { q: "hello" } },
+          { toolCallId: "tc2", toolName: "lookup", input: { id: "42" } },
+        ],
+        toolResults: [
+          { toolCallId: "tc1", output: "search result data" },
+          { toolCallId: "tc2", output: { found: true, name: "item" } },
+        ],
+      }],
+    });
+    mockRunAllAssertions.mockReturnValue([
+      { assertion: { id: "a1", type: "contains", value: "result" }, passed: true, message: "ok" },
+    ]);
+
+    const caseNoExpected = { ...baseCase, expectedOutput: "" };
+    const { result } = await executeCase({
+      run: baseRun,
+      evalCase: caseNoExpected,
+      templateVars: {},
+      toolNames: [],
+      orgId: "org-1",
+    });
+
+    const assistantMsg = result.chatMessages[1];
+    expect(assistantMsg.toolCalls).toHaveLength(2);
+    expect(assistantMsg.toolCalls![0]).toEqual({
+      name: "search",
+      args: { q: "hello" },
+      result: "search result data",
+    });
+    expect(assistantMsg.toolCalls![1]).toEqual({
+      name: "lookup",
+      args: { id: "42" },
+      result: { found: true, name: "item" },
+    });
+  });
+
   it("handles errors gracefully", async () => {
     mockGenerateText.mockRejectedValueOnce(new Error("API timeout"));
 

@@ -6,6 +6,35 @@ import type { EvalResult } from "@/lib/eval/types";
 import { CheckCircle2Icon, XCircleIcon, AlertCircleIcon, WrenchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function ToolCallEntry({ tc }: { tc: { name: string; args: Record<string, unknown>; result?: unknown } }) {
+  const resultStr = tc.result != null
+    ? typeof tc.result === "string" ? tc.result : JSON.stringify(tc.result, null, 2)
+    : null;
+  return (
+    <div className="text-[10px] text-muted-foreground">
+      <div className="flex items-start gap-1">
+        <WrenchIcon className="mt-0.5 size-2.5 shrink-0" />
+        <span>
+          <span className="font-medium">{tc.name}</span>
+          ({Object.keys(tc.args).length > 0
+            ? Object.entries(tc.args)
+                .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+                .join(", ")
+            : ""})
+        </span>
+      </div>
+      {resultStr != null && (
+        <details className="ml-3.5 mt-0.5" data-testid="tool-output">
+          <summary className="cursor-pointer select-none hover:text-foreground">Output</summary>
+          <pre className="mt-0.5 max-h-[200px] overflow-auto rounded bg-background/50 p-1.5 whitespace-pre-wrap break-all">
+            {resultStr}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function scoreColor(score: number, max = 10): string {
   const ratio = max > 0 ? score / max : 0;
   if (ratio >= 0.8) return "text-green-600";
@@ -102,20 +131,7 @@ export function ResultCard({ result, scoreMax = 10 }: ResultCardProps) {
                     {msg.toolCalls && msg.toolCalls.length > 0 && (
                       <div className="mt-1.5 space-y-1 border-t pt-1.5">
                         {msg.toolCalls.map((tc, tcIdx) => (
-                          <div
-                            key={tcIdx}
-                            className="flex items-start gap-1 text-[10px] text-muted-foreground"
-                          >
-                            <WrenchIcon className="mt-0.5 size-2.5 shrink-0" />
-                            <span>
-                              <span className="font-medium">{tc.name}</span>
-                              ({Object.keys(tc.args).length > 0
-                                ? Object.entries(tc.args)
-                                    .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
-                                    .join(", ")
-                                : ""})
-                            </span>
-                          </div>
+                          <ToolCallEntry key={tcIdx} tc={tc} />
                         ))}
                       </div>
                     )}
@@ -169,20 +185,7 @@ export function ResultCard({ result, scoreMax = 10 }: ResultCardProps) {
                   {result.chatMessages[1]?.toolCalls && result.chatMessages[1].toolCalls.length > 0 && (
                     <div className="mt-1.5 space-y-1 border-t pt-1.5">
                       {result.chatMessages[1].toolCalls.map((tc, tcIdx) => (
-                        <div
-                          key={tcIdx}
-                          className="flex items-start gap-1 text-[10px] text-muted-foreground"
-                        >
-                          <WrenchIcon className="mt-0.5 size-2.5 shrink-0" />
-                          <span>
-                            <span className="font-medium">{tc.name}</span>
-                            ({Object.keys(tc.args).length > 0
-                              ? Object.entries(tc.args)
-                                  .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
-                                  .join(", ")
-                              : ""})
-                          </span>
-                        </div>
+                        <ToolCallEntry key={tcIdx} tc={tc} />
                       ))}
                     </div>
                   )}
