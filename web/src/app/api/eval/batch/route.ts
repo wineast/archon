@@ -146,6 +146,7 @@ export async function POST(req: Request) {
         agentId,
         batchId: batch.id,
         runIndex: i,
+        chatVersionId: versionId,
         chatModel: modelConfig.modelId,
         chatSystemPrompt: modelConfig.systemPrompt,
         chatTemperature: modelConfig.temperature,

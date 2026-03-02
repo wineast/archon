@@ -11,6 +11,7 @@ const insertMock = vi.fn(() => ({ values: valuesMock }));
 let selectRunResult: unknown[] = [{
   id: "run-1",
   agentId: "agent-1",
+  chatVersionId: "version-1",
   chatModel: "gpt-4",
   chatSystemPrompt: "You are helpful",
   chatTemperature: 0.7,
@@ -160,6 +161,7 @@ describe("POST /api/eval/run/[runId]/case", () => {
     selectRunResult = [{
       id: "run-1",
       agentId: "agent-1",
+      chatVersionId: "version-1",
       chatModel: "gpt-4",
       chatSystemPrompt: "You are helpful",
       chatTemperature: 0.7,
