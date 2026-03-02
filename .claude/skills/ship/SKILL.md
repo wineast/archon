@@ -69,18 +69,17 @@ allowed-tools: Read, Glob, Skill, AskUserQuestion, Bash
 # 找到 dev→main 的 open PR
 gh pr list --base main --head dev --state open --json number --jq '.[0].number'
 
-# 合并 PR（squash merge）
-gh pr merge {number} --squash
+# 合并 PR（regular merge，保留 commit 历史）
+gh pr merge {number} --merge
 ```
 
-合并后确认状态并**重置 dev 到 main**（squash merge 后历史分叉，必须重置）：
+合并后确认状态并同步 dev：
 
 ```bash
 gh pr view {number} --json state --jq '.state'
 # 预期返回 "MERGED"
 
-git fetch origin main
-git reset --hard origin/main
+git pull origin main
 ```
 
 ### 6. 归档 + 发布内容（步骤 5-6）
@@ -105,13 +104,14 @@ gh pr create --base main --head dev \
   --title "chore: archive release vX.Y.Z" \
   --body "归档 vX.Y.Z 发布内容到 releases/ 目录"
 
-# 合并归档 PR（不需要人工评审，内容已确认）
-gh pr merge --squash
+# 合并归档 PR（regular merge，不需要人工评审，内容已确认）
+gh pr merge --merge
 
-# 打 tag 到 main
-git fetch origin main
-git reset --hard origin/main
+# 同步 dev 并打 tag
+git pull origin main
+
 git tag vX.Y.Z
+
 git push origin vX.Y.Z
 ```
 
@@ -127,4 +127,4 @@ git push origin vX.Y.Z
 - **分支约束**：必须在 `dev` 等集成分支上执行
 - **人工门控**：合并发布 PR 前必须获得用户明确确认
 - **归档走 PR**：归档内容通过独立 PR 合并到 main，不直接 push
-- **Squash 后重置**：每次 squash merge 后必须 `git reset --hard origin/main` 重置 dev
+- **Regular Merge**：dev→main 使用 regular merge（不 squash），保留 commit 历史，dev 和 main 自然同步
