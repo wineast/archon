@@ -1,6 +1,6 @@
 ---
 name: release-notes
-description: 发布内容生成。从 releases/vN/ 提取变更，生成社交媒体文案和演示脚本（PPT+口播合一）。当用户说"发布说明"、"release notes"、"写发布文案"、"做发布 PPT"、"视频稿"等时调用。
+description: 发布内容生成。从 releases/vX.Y.Z/ 提取变更，生成社交媒体文案和演示脚本（PPT+口播合一）。当用户说"发布说明"、"release notes"、"写发布文案"、"做发布 PPT"、"视频稿"等时调用。
 allowed-tools: Read, Glob, Grep, Write, AskUserQuestion
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Grep, Write, AskUserQuestion
 
 ## 输入
 
-读取 `releases/vN/` 目录下的：
+读取 `releases/vX.Y.Z/` 目录下的：
 - `RELEASE_REPORT.md` — Release Notes 部分（新功能、缺陷修复、其他）
 - `INTEGRATE.md` — Scope + Additions（变更详情）
 - `todo/*.md` — 需求任务文件（Context 和 Intent 提供用户视角描述）
@@ -18,7 +18,7 @@ allowed-tools: Read, Glob, Grep, Write, AskUserQuestion
 
 ## 输出
 
-在 `releases/vN/` 下生成两个文件：
+在 `releases/vX.Y.Z/` 下生成两个文件：
 
 ### 1. `SOCIAL.md` — 社交媒体文案
 
@@ -127,11 +127,11 @@ allowed-tools: Read, Glob, Grep, Write, AskUserQuestion
 ## 执行流程
 
 1. 确定版本号（用户指定或自动取最新）
-2. 读取 `releases/vN/` 下的报告和任务文件
+2. 读取 `releases/vX.Y.Z/` 下的报告和任务文件
 3. 提取变更要点，按用户影响程度排序
 4. 生成两个文件，展示给用户
 5. 用 `AskUserQuestion` 确认内容是否需要调整
-6. 确认后写入 `releases/vN/`
+6. 确认后写入 `releases/vX.Y.Z/`
 
 ## 关键约束
 

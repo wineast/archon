@@ -1,6 +1,6 @@
 ---
 name: archive
-description: 发布归档。PR 合并到 main 后调用。将本次发布涉及的任务和报告移入 releases/vN/ 目录，清理已合并的工作区。当用户说"归档"、"archive"、"发布完成"、"PR 已合并"等时调用。
+description: 发布归档。PR 合并到 main 后调用。将本次发布涉及的任务和报告移入 releases/vX.Y.Z/ 目录，清理已合并的工作区。当用户说"归档"、"archive"、"发布完成"、"PR 已合并"等时调用。
 allowed-tools: Read, Glob, Grep, Bash, Edit
 ---
 
@@ -10,13 +10,17 @@ PR 合并后归档：创建版本目录 + 移动任务文件 + 归档工作区�
 
 `/integrate` 扫描 `todo/` 和 `issues/` 中 `status: merged` 的任务。PR 合并到 main 后，这些任务必须从活跃目录中移走，否则下次 `/integrate` 会重复扫描。
 
-归档 = 物理隔离 + 版本封存。每次归档创建一个 `releases/vN/` 目录，将任务文件、工作区报告、集成/发布报告全部移入，形成自包含的版本快照。
+归档 = 物理隔离 + 版本封存。每次归档创建一个 `releases/vX.Y.Z/` 目录，将任务文件、工作区报告、集成/发布报告全部移入，形成自包含的版本快照。
+
+## 版本号
+
+使用语义化版本 `vX.Y.Z`（如 `v0.1.0`、`v0.2.0`、`v1.0.0`）。版本号由 `/ship` 链路确定并传入，`/archive` 不负责推断版本号。
 
 ## 目录结构
 
 ```
 releases/
-  v1/                          ← 第一次发布
+  v0.1.0/                      ← 第一次发布
     todo/                      ← 本次发布的 todo 任务文件
       chat-link-rendering.md
     issues/                    ← 本次发布的 issue 任务文件
@@ -35,7 +39,7 @@ releases/
     INTEGRATE.md               ← 集成报告
     RELEASE_REPORT.md          ← 发布报告
     RELEASE_REPORT.assets/     ← 发布报告截图（如有）
-  v2/                          ← 第二次发布
+  v0.2.0/                      ← 第二次发布
     ...
 ```
 
@@ -53,7 +57,7 @@ gh pr list --base main --head dev --state merged --limit 1 --json number,mergedA
 
 ### 2. 确定版本号
 
-扫描 `releases/` 目录，找到最大的 `vN`，新版本为 `v{N+1}`。如果 `releases/` 不存在则从 `v1` 开始。
+由 `/ship` 链路传入版本号（如 `v0.2.0`），或用户在调用 `/archive` 时指定。如果未指定，读取最新 git tag 并 minor bump。
 
 ### 3. 读取集成报告
 
@@ -64,7 +68,7 @@ gh pr list --base main --head dev --state merged --limit 1 --json number,mergedA
 ### 4. 创建版本目录
 
 ```bash
-mkdir -p releases/vN/todo releases/vN/issues releases/vN/worktrees
+mkdir -p releases/vX.Y.Z/todo releases/vX.Y.Z/issues releases/vX.Y.Z/worktrees
 ```
 
 ### 5. 移动任务文件
@@ -73,10 +77,10 @@ mkdir -p releases/vN/todo releases/vN/issues releases/vN/worktrees
 
 ```bash
 # todo 类型
-mv todo/{id}.md releases/vN/todo/
+mv todo/{id}.md releases/vX.Y.Z/todo/
 
 # issue 类型
-mv issues/{id}.md releases/vN/issues/
+mv issues/{id}.md releases/vX.Y.Z/issues/
 ```
 
 ### 6. 归档工作区报告
@@ -85,17 +89,17 @@ mv issues/{id}.md releases/vN/issues/
 
 ```bash
 # 仅复制 .task/ 报告目录（不含代码）
-mkdir -p releases/vN/worktrees/{name}
-cp -r .worktrees/{name}/.task releases/vN/worktrees/{name}/
+mkdir -p releases/vX.Y.Z/worktrees/{name}
+cp -r .worktrees/{name}/.task releases/vX.Y.Z/worktrees/{name}/
 ```
 
 ### 7. 移动集成/发布报告
 
 ```bash
-mv .release/INTEGRATE.md releases/vN/
-mv .release/RELEASE_REPORT.md releases/vN/
+mv .release/INTEGRATE.md releases/vX.Y.Z/
+mv .release/RELEASE_REPORT.md releases/vX.Y.Z/
 # 如果有截图
-mv .release/RELEASE_REPORT.assets/ releases/vN/ 2>/dev/null || true
+mv .release/RELEASE_REPORT.assets/ releases/vX.Y.Z/ 2>/dev/null || true
 ```
 
 ### 8. 清理已合并的工作区
@@ -106,13 +110,16 @@ mv .release/RELEASE_REPORT.assets/ releases/vN/ 2>/dev/null || true
 rm -rf .worktrees/{name}
 ```
 
-### 9. 提交归档并打 tag
+### 9. 暂存归档变更
+
+归档内容准备好后**不直接 commit**，由 `/ship` 链路的归档 PR 步骤统一提交、推送、创建 PR、打 tag。如果单独调用 `/archive`（非 `/ship` 链路），则直接 commit：
 
 ```bash
-git add releases/vN/ todo/ issues/
-git commit -m "chore: archive release vN"
-git tag vN
+git add releases/vX.Y.Z/ todo/ issues/
+git commit -m "chore: archive release vX.Y.Z"
 ```
+
+**注意**：git tag 由 `/ship` 链路在归档 PR 合并到 main 后打，`/archive` 不打 tag。
 
 ### 10. 输出归档摘要
 
@@ -127,7 +134,7 @@ git tag vN
 
 已归档工作区报告：{N} 个
 已清理工作区：{N} 个
-版本目录：releases/vN/
+版本目录：releases/vX.Y.Z/
 ```
 
 ## 关键约束

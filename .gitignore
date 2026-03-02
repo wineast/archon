@@ -26,6 +26,10 @@ embed-umi-demo/
 todo/
 issues/
 
+# But track archived files under releases/
+!releases/**/todo/
+!releases/**/issues/
+
 # Admin panel
 scripts/admin/.next/
 scripts/admin/dist/
