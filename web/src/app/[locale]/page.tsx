@@ -19,6 +19,7 @@ import { useOrgs, useOrgParam } from "@/lib/orgs/hooks";
 import type { AgentRow } from "@/db/schema";
 import { useCurrentUser, useOrgRole } from "@/lib/auth/hooks";
 import { useOrgStore } from "@/stores/org-store";
+import packageJson from "../../../package.json";
 export default function AgentsPage() {
   return (
     <Suspense fallback={<div className="flex min-h-svh items-center justify-center"><Spinner className="size-6" /></div>}>
@@ -195,6 +196,11 @@ function AgentsPageContent() {
         onOpenChange={setTrashOpen}
         agentsMutate={mutate}
       />
+
+      {/* Footer */}
+      <footer className="shrink-0 border-t px-6 py-3 text-center text-xs text-muted-foreground">
+        Archon v{packageJson.version}
+      </footer>
 
     </div>
   );
