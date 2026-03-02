@@ -124,9 +124,9 @@ mcp__playwright__browser_install
    - 未复现 → 回到 Phase 0 追问用户，确认触发条件
 
 ### 资源管理
-所有诊断产物统一放在 `.worktree/` 下，截图等附件放在 `DEFECT.assets/` 子目录：
+所有诊断产物统一放在 `.task/` 下，截图等附件放在 `DEFECT.assets/` 子目录：
 ```
-.worktree/
+.task/
 ├── DEFECT.md                                    # 缺陷报告
 └── DEFECT.assets/                               # 附件资源
     ├── diagnose-{简述}-step{N}.png              # 各步骤截图
@@ -161,7 +161,7 @@ mcp__playwright__browser_install
 
 ### 输出位置
 
-**固定写入 `.worktree/DEFECT.md`**（`.worktree/` 目录始终存在于项目根目录）。如果目录不存在则先创建。
+**固定写入 `.task/DEFECT.md`**（`.task/` 目录始终存在于项目根目录）。如果目录不存在则先创建。
 
 ### 四不可约元素
 

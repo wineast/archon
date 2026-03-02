@@ -33,7 +33,7 @@ Review 不重复 accept 已做的事（不跑 UI、不跑测试）。它检查�
 
 ### 操作
 
-1. **扫描 `.worktree/` 目录**，读取需求链路报告：
+1. **扫描 `.task/` 目录**，读取需求链路报告：
 
    | 报告 | 文件名 | 角色 | 必需 |
    |------|--------|------|------|
@@ -138,7 +138,7 @@ Review 不重复 accept 已做的事（不跑 UI、不跑测试）。它检查�
 
 对每个维度检查：
 - **有结论吗**：✅/⚠️/❌ 明确标注了吗？
-- **有证据吗**：截图引用存在吗？用 `Glob` 确认 `.worktree/ACCEPT_REPORT.assets/` 下文件实际存在
+- **有证据吗**：截图引用存在吗？用 `Glob` 确认 `.task/ACCEPT_REPORT.assets/` 下文件实际存在
 - **证据支撑结论吗**：声称"通过"的项，有对应截图或测试结果吗？
 
 #### 3.2 IMPL_REPORT.md 声明抽查
@@ -217,7 +217,7 @@ Decision 必须是二元的——**可合并**或**不可合并**。没有"有�
 ### 资源管理
 
 ```
-.worktree/
+.task/
 ├── REQ.md                        # 需求报告（输入）
 ├── IMPL_REPORT.md                # 实现报告（输入）
 ├── IMPL_REPORT.assets/           # 实现截图（输入）
@@ -348,8 +348,8 @@ Decision 必须是二元的——**可合并**或**不可合并**。没有"有�
 
 1. 生成评审意见书内容，展示给用户
 2. 用 `AskUserQuestion` 确认内容是否准确
-3. 确认后创建 `.worktree/REVIEWS/` 目录（如不存在）
-4. 写入 `.worktree/REVIEWS/REVIEW-{YYYYMMDD-HHmmss}.md`
+3. 确认后创建 `.task/REVIEWS/` 目录（如不存在）
+4. 写入 `.task/REVIEWS/REVIEW-{YYYYMMDD-HHmmss}.md`
 
 ## 执行规则
 

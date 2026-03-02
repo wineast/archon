@@ -50,8 +50,8 @@ allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 
 按优先级扫描三层输入：
 
-1. **过程备注**（L1）：`Glob(".worktree/*.md")` → 读取所有报告的「过程备注」节
-2. **JOURNAL.md**（L2）：`Read(".worktree/JOURNAL.md")`，如果存在
+1. **过程备注**（L1）：`Glob(".task/*.md")` → 读取所有报告的「过程备注」节
+2. **JOURNAL.md**（L2）：`Read(".task/JOURNAL.md")`，如果存在
 3. **会话上下文**（L3）：回顾当前对话中的偏差事件
 
 ### 信号类型
@@ -235,7 +235,7 @@ allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 
 ## JOURNAL.md 约定
 
-用户可以在 `.worktree/JOURNAL.md` 中手动记录跨会话的观察。格式约定：
+用户可以在 `.task/JOURNAL.md` 中手动记录跨会话的观察。格式约定：
 
 ```markdown
 # 工作日志
@@ -251,20 +251,22 @@ allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 
 /reflect 会读取此文件作为 L2 输入。如果不存在，跳过此层。
 
+## 资源管理
+
+所有产物放在 `.task/` 下：
+```
+.task/
+├── REFLECT.md              # 经验报告
+├── REFLECT_PATCHES.md      # 补丁提案
+├── JOURNAL.md              # 工作日志（用户手动维护，可选）
+├── .worktree/meta.json     # 工作区元数据（保留）
+├── .worktree/task.json     # 工作区任务配置（保留）
+└── {其他技能报告}.md        # 过程备注的来源
+```
+
 ## 与其他技能的协作
 
 - **输入来源**：所有技能的报告「过程备注」节 → /reflect 的 L1 输入
 - **输出去向**：REFLECT_PATCHES.md 的补丁 → 用户手动应用到 CLAUDE.md / SKILL.md / guide/
 - **触发时机**：建议在一个完整链路（缺陷链或需求链）结束后调用
 - **与 CLAUDE.md 的关系**：/reflect 是 CLAUDE.md 的增量更新通道——不直接写入，而是生成可审阅的补丁提案
-
-## 资源管理
-
-所有产物放在 `.worktree/` 下：
-```
-.worktree/
-├── REFLECT.md              # 经验报告
-├── REFLECT_PATCHES.md      # 补丁提案
-├── JOURNAL.md              # 工作日志（用户手动维护，可选）
-└── {其他技能报告}.md        # 过程备注的来源
-```

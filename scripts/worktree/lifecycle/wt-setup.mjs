@@ -23,6 +23,8 @@ const targetDir = resolve(process.argv[2] || ".");
 console.log("📦 [meta] 创建工作区元数据...");
 const worktreeDir = join(targetDir, ".worktree");
 mkdirSync(worktreeDir, { recursive: true });
+const taskDir = join(targetDir, ".task");
+mkdirSync(taskDir, { recursive: true });
 const metaFile = join(worktreeDir, "meta.json");
 
 const defDev = Number(process.env.WT_DEV_PORT) || 3000;

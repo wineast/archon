@@ -65,16 +65,16 @@ Verdict      ──归档──→ Traceability
 
 ### 操作
 
-1. 读取 `.worktree/DEFECT.md`，提取：
+1. 读取 `.task/DEFECT.md`，提取：
    - **Delta**：期望行为、实际行为（→ Invariant）
    - **Path**：复现步骤（→ Trigger Scenario）
 
-2. 读取 `.worktree/FIX_REPORT.md`，提取：
+2. 读取 `.task/FIX_REPORT.md`，提取：
    - **Root Cause**：故障机制（→ Cause Anchor, Boundary Set）
    - **Change**：修改了什么（→ Cause Anchor）
    - **Blast Radius**：影响范围（→ Blast Shield）
 
-3. 读取 `.worktree/VERIFY_REPORT.md`，提取：
+3. 读取 `.task/VERIFY_REPORT.md`，提取：
    - **Reproduction**：复现验证结果
    - **Boundary Validation**：已验证的边界变体（→ Boundary Set）
    - **Regression Result**：回归验证结果（→ Blast Shield）
@@ -244,9 +244,9 @@ Blast Shield                  → 追加到对应层级的测试文件
    ```typescript
    /**
     * 缺陷守护：{Invariant 一句话}
-    * @see .worktree/DEFECT.md
-    * @see .worktree/FIX_REPORT.md
-    * @see .worktree/VERIFY_REPORT.md
+    * @see .task/DEFECT.md
+    * @see .task/FIX_REPORT.md
+    * @see .task/VERIFY_REPORT.md
     */
    describe("Guard: {Invariant}", () => {
      describe("Cause Anchor: {根因描述}", () => {
@@ -279,9 +279,9 @@ Blast Shield                  → 追加到对应层级的测试文件
     * 守护目标：{一句话}
     * 触发路径：{Given → When → Then 概述}
     *
-    * @see .worktree/DEFECT.md
-    * @see .worktree/FIX_REPORT.md
-    * @see .worktree/VERIFY_REPORT.md
+    * @see .task/DEFECT.md
+    * @see .task/FIX_REPORT.md
+    * @see .task/VERIFY_REPORT.md
     */
    const TAG = "[guard-{简述}]";
    const log = (...args: unknown[]) => console.log(TAG, ...args);
@@ -473,9 +473,9 @@ guarded_by: TEST_GUARD.md + 本报告
 
 ### 资源管理
 
-所有产物统一放在 `.worktree/` 下：
+所有产物统一放在 `.task/` 下：
 ```
-.worktree/
+.task/
 ├── DEFECT.md                           # 缺陷报告（输入）
 ├── DEFECT.assets/                      # 缺陷截图
 ├── FIX_REPORT.md                       # 修复报告（输入）
@@ -483,7 +483,9 @@ guarded_by: TEST_GUARD.md + 本报告
 ├── VERIFY_REPORT.md                    # 验证报告（输入）
 ├── VERIFY_REPORT.assets/               # 验证截图
 ├── TEST_GUARD.md                        # 守护规约（输出）
-└── TEST_GUARD_REPORT.md                 # 守护报告（输出）
+├── TEST_GUARD_REPORT.md                 # 守护报告（输出）
+├── .worktree/meta.json                 # 工作区元数据（保留）
+└── .worktree/task.json                 # 工作区任务配置（保留）
 ```
 
 ### 规约自检清单
@@ -506,10 +508,10 @@ guarded_by: TEST_GUARD.md + 本报告
 
 1. 生成守护规约，展示给用户
 2. 用 `AskUserQuestion` 确认规约是否准确
-3. 确认后写入 `.worktree/TEST_GUARD.md`
+3. 确认后写入 `.task/TEST_GUARD.md`
 4. 编写测试代码
 5. 运行测试
-6. 生成守护报告，写入 `.worktree/TEST_GUARD_REPORT.md`
+6. 生成守护报告，写入 `.task/TEST_GUARD_REPORT.md`
 
 ## 执行规则
 

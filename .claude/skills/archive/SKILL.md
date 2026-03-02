@@ -21,14 +21,14 @@ releases/
       chat-link-rendering.md
     issues/                    ← 本次发布的 issue 任务文件
       cross-agent-wiki-data-leak.md
-    worktrees/                 ← 工作区报告（仅 .worktree/ 目录，不含代码）
+    worktrees/                 ← 工作区报告（仅 .task/ 目录，不含代码）
       chat-link-rendering/
-        .worktree/
+        .task/
           REQ.md
           IMPL_REPORT.md
           ACCEPT_REPORT.md
       cross-agent-wiki-data-leak/
-        .worktree/
+        .task/
           DEFECT.md
           FIX_REPORT.md
           VERIFY_REPORT.md
@@ -57,9 +57,9 @@ gh pr list --base main --head dev --state merged --limit 1 --json number,mergedA
 
 ### 3. 读取集成报告
 
-读取 `.worktree/INTEGRATE.md`，从 Scope 部分提取本次发布涉及的任务列表（任务 ID + 类型 + 工作区名称）。
+读取 `.release/INTEGRATE.md`，从 Scope 部分提取本次发布涉及的任务列表（任务 ID + 类型 + 工作区名称）。
 
-如果 `.worktree/INTEGRATE.md` 不存在，停止并告知用户缺少集成报告。
+如果 `.release/INTEGRATE.md` 不存在，停止并告知用户缺少集成报告。
 
 ### 4. 创建版本目录
 
@@ -84,18 +84,18 @@ mv issues/{id}.md releases/vN/issues/
 对每个涉及的工作区：
 
 ```bash
-# 仅复制 .worktree/ 报告目录（不含代码）
+# 仅复制 .task/ 报告目录（不含代码）
 mkdir -p releases/vN/worktrees/{name}
-cp -r .worktrees/{name}/.worktree releases/vN/worktrees/{name}/
+cp -r .worktrees/{name}/.task releases/vN/worktrees/{name}/
 ```
 
 ### 7. 移动集成/发布报告
 
 ```bash
-mv .worktree/INTEGRATE.md releases/vN/
-mv .worktree/RELEASE_REPORT.md releases/vN/
+mv .release/INTEGRATE.md releases/vN/
+mv .release/RELEASE_REPORT.md releases/vN/
 # 如果有截图
-mv .worktree/RELEASE_REPORT.assets/ releases/vN/ 2>/dev/null || true
+mv .release/RELEASE_REPORT.assets/ releases/vN/ 2>/dev/null || true
 ```
 
 ### 8. 清理已合并的工作区

@@ -9,6 +9,8 @@ node_modules/
 
 # Worktree local config
 .worktree/
+.task/
+.release/
 CLAUDE.local.md
 test-report.md
 .vercel
@@ -17,6 +19,7 @@ screenshots/
 .logs/
 /data/fixtures/
 embed-umi-demo/
+.static-dist/
 
 # Local task data
 todo/

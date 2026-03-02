@@ -10,8 +10,8 @@ allowed-tools: Read, Glob, Skill, AskUserQuestion, Bash
 
 | 步骤 | 技能/操作 | 产出 |
 |------|-----------|------|
-| 1. 集成 | `/integrate` | `.worktree/INTEGRATE.md` |
-| 2. 发布 | `/release` | `.worktree/RELEASE_REPORT.md` + PR |
+| 1. 集成 | `/integrate` | `.release/INTEGRATE.md` |
+| 2. 发布 | `/release` | `.release/RELEASE_REPORT.md` + PR |
 | 3. 评审 | 人工确认 | 用户决定是否合并 |
 | 4. 合并 | `gh pr merge` | PR 合并到 main |
 | 5. 归档 | `/archive` | `releases/vN/` + git tag |
@@ -26,10 +26,10 @@ allowed-tools: Read, Glob, Skill, AskUserQuestion, Bash
 ### 2. 检查链路进度
 
 按文件存在性和 PR 状态判断已完成的步骤：
-- `.worktree/INTEGRATE.md` 存在 → 步骤 1 已完成
-- `.worktree/RELEASE_REPORT.md` 存在 → 步骤 2 已完成
+- `.release/INTEGRATE.md` 存在 → 步骤 1 已完成
+- `.release/RELEASE_REPORT.md` 存在 → 步骤 2 已完成
 - dev→main 的 PR 已 merged → 步骤 3-4 已完成
-- `.worktree/INTEGRATE.md` 不存在且 `releases/` 中有最新版本 → 步骤 5 已完成
+- `.release/INTEGRATE.md` 不存在且 `releases/` 中有最新版本 → 步骤 5 已完成
 
 输出当前进度摘要（哪些步骤已完成，从哪一步开始）。
 

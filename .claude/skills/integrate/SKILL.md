@@ -25,8 +25,8 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 ### 任务与工作区的关系
 
 ```
-todo/*.md  ──(status: merged)──→  .worktrees/{worktree}/.worktree/  ──→  需求链路报告
-issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.worktree/ ──→  缺陷链路报告
+todo/*.md  ──(status: merged)──→  .worktrees/{worktree}/.task/  ──→  需求链路报告
+issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.task/ ──→  缺陷链路报告
                                                                          ↓
                                                           聚合 → INTEGRATE.md
 ```
@@ -62,11 +62,11 @@ issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.worktree/ �
 2. **定位工作区报告**
    对每个 merged 任务，按 `worktree` 字段查找报告目录：
    ```
-   .worktrees/{worktree}/.worktree/
+   .worktrees/{worktree}/.task/
    ```
 
    **两种情况**：
-   - **工作区存在**：读取 `.worktree/` 下的报告文件
+   - **工作区存在**：读取 `.task/` 下的报告文件
    - **工作区已删除**：标记为"工作区已清理"，仅从任务文件和 git log 提取信息
 
 3. **按链路类型分类**
@@ -167,7 +167,7 @@ issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.worktree/ �
 
 ### 输出位置
 
-**固定写入 `.worktree/INTEGRATE.md`**。
+**固定写入 `.release/INTEGRATE.md`**（`.release/` 目录不存在则先创建）。
 
 ### 报告模板
 
@@ -253,7 +253,7 @@ issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.worktree/ �
 1. 执行 Phase 0-2，收集所有信息
 2. 生成报告内容，展示给用户
 3. 用 `AskUserQuestion` 确认报告是否准确、是否需要补充
-4. 确认后写入 `.worktree/INTEGRATE.md`
+4. 确认后写入 `.release/INTEGRATE.md`
 5. 告知用户报告位置，并提示后续操作：`/release`
 
 ## 执行规则
@@ -270,8 +270,11 @@ issues/*.md ──(status: merged)──→  .worktrees/{worktree}/.worktree/ �
 
 ```
 .worktrees/{worktree-name}/.worktree/
-├── TASK.md                          # 任务定义（从主仓库复制的快照）
 ├── meta.json                        # 端口等元数据
+└── task.json                        # 任务关联
+
+.worktrees/{worktree-name}/.task/
+├── TASK.md                          # 任务定义（从主仓库复制的快照）
 │
 ├── ─── 需求链路（todo 类型）───
 ├── REQ.md                           # 需求报告

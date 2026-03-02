@@ -20,7 +20,7 @@ export async function GET(
   const { wt, path } = await params;
   const wtName = decodeURIComponent(wt);
   const { dirs } = await getAdmin();
-  const wtDir = join(dirs.WORKTREES_DIR, wtName, ".worktree");
+  const wtDir = join(dirs.WORKTREES_DIR, wtName, ".task");
   const relPath = path.join("/");
   const filePath = join(wtDir, relPath);
 

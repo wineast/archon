@@ -10,24 +10,24 @@ allowed-tools: Read, Glob, Skill
 
 | 步骤 | 技能 | 产出文件 |
 |------|------|----------|
-| 1. 需求 | `/requirement` | `.worktree/REQ.md` |
-| 2. 实现 | `/implement` | `.worktree/IMPL_REPORT.md` |
-| 3. 验收 | `/accept` | `.worktree/ACCEPT_REPORT.md` |
-| 4. 守护 | `/cap-guard` | `.worktree/CAP_GUARD.md` + `CAP_GUARD_REPORT.md` |
+| 1. 需求 | `/requirement` | `.task/REQ.md` |
+| 2. 实现 | `/implement` | `.task/IMPL_REPORT.md` |
+| 3. 验收 | `/accept` | `.task/ACCEPT_REPORT.md` |
+| 4. 守护 | `/cap-guard` | `.task/CAP_GUARD.md` + `CAP_GUARD_REPORT.md` |
 
 ## 执行流程
 
 ### 1. 读取任务信息
 
-读取 `.worktree/TASK.md` 获取任务描述。如果文件不存在，停止并告知用户缺少任务描述。
+读取 `.task/TASK.md` 获取任务描述。如果文件不存在，停止并告知用户缺少任务描述。
 
 ### 2. 检查链路进度
 
 按文件存在性判断已完成的步骤：
-- `.worktree/REQ.md` 存在 → 步骤 1 已完成
-- `.worktree/IMPL_REPORT.md` 存在 → 步骤 2 已完成
-- `.worktree/ACCEPT_REPORT.md` 存在 → 步骤 3 已完成
-- `.worktree/CAP_GUARD.md` 且 `.worktree/CAP_GUARD_REPORT.md` 都存在 → 步骤 4 已完成
+- `.task/REQ.md` 存在 → 步骤 1 已完成
+- `.task/IMPL_REPORT.md` 存在 → 步骤 2 已完成
+- `.task/ACCEPT_REPORT.md` 存在 → 步骤 3 已完成
+- `.task/CAP_GUARD.md` 且 `.task/CAP_GUARD_REPORT.md` 都存在 → 步骤 4 已完成
 
 输出当前进度摘要（哪些步骤已完成，从哪一步开始）。
 
@@ -49,4 +49,4 @@ allowed-tools: Read, Glob, Skill
 
 - **幂等**：已完成的步骤直接跳过
 - **失败即停**：任何步骤的产出文件缺失则中断链路
-- **入口文件**：`.worktree/TASK.md` 是唯一的任务输入
+- **入口文件**：`.task/TASK.md` 是唯一的任务输入

@@ -55,13 +55,13 @@ Blast Radius (波及)  ──执行──→   Regression (回归验证)
 
 ### 操作
 
-1. 读取 `.worktree/DEFECT.md`，提取：
+1. 读取 `.task/DEFECT.md`，提取：
    - **Delta**：期望行为、实际行为
    - **Path**：复现步骤
    - **Location**：代码定位、根因分析
    - **Impact**：影响范围
 
-2. 读取 `.worktree/FIX_REPORT.md`，提取：
+2. 读取 `.task/FIX_REPORT.md`，提取：
    - **Root Cause**：声称的根因
    - **Change**：修改了什么
    - **Rationale**：为什么这样改
@@ -99,7 +99,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 - **未通过**：修复无效，直接驳回，后续步骤无需继续
 
 ### 截图命名
-- `.worktree/VERIFY_REPORT.assets/verify-{简述}-repro.png`
+- `.task/VERIFY_REPORT.assets/verify-{简述}-repro.png`
 
 ## Phase 2: Cause-Fix Coherence（因果一致性）
 
@@ -152,7 +152,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 - **未通过**：发现修复未覆盖的同类漏洞
 
 ### 截图命名
-- `.worktree/VERIFY_REPORT.assets/verify-{简述}-boundary-{N}.png`
+- `.task/VERIFY_REPORT.assets/verify-{简述}-boundary-{N}.png`
 
 ## Phase 4: Regression Result（回归验证）
 
@@ -178,7 +178,7 @@ make test
 - **未通过**：发现回归问题
 
 ### 截图命名
-- `.worktree/VERIFY_REPORT.assets/verify-{简述}-regression-{N}.png`
+- `.task/VERIFY_REPORT.assets/verify-{简述}-regression-{N}.png`
 
 ## Phase 5: 生成验证报告 + 启动预览
 
@@ -202,9 +202,9 @@ Reproduction  Coherence  Boundary
 
 ### 资源管理
 
-所有验证产物统一放在 `.worktree/` 下：
+所有验证产物统一放在 `.task/` 下：
 ```
-.worktree/
+.task/
 ├── DEFECT.md                           # 缺陷报告（输入）
 ├── DEFECT.assets/                      # 缺陷截图
 ├── FIX_REPORT.md                       # 修复报告（输入）
@@ -318,7 +318,7 @@ Reproduction  Coherence  Boundary
 
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确
-3. 确认后写入 `.worktree/VERIFY_REPORT.md`
+3. 确认后写入 `.task/VERIFY_REPORT.md`
 
 ## 执行规则
 

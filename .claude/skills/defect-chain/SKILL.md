@@ -10,24 +10,24 @@ allowed-tools: Read, Glob, Skill
 
 | 步骤 | 技能 | 产出文件 |
 |------|------|----------|
-| 1. 诊断 | `/diagnose` | `.worktree/DEFECT.md` |
-| 2. 修复 | `/fix` | `.worktree/FIX_REPORT.md` |
-| 3. 验证 | `/verify` | `.worktree/VERIFY_REPORT.md` |
-| 4. 守护 | `/test-guard` | `.worktree/TEST_GUARD.md` + `TEST_GUARD_REPORT.md` |
+| 1. 诊断 | `/diagnose` | `.task/DEFECT.md` |
+| 2. 修复 | `/fix` | `.task/FIX_REPORT.md` |
+| 3. 验证 | `/verify` | `.task/VERIFY_REPORT.md` |
+| 4. 守护 | `/test-guard` | `.task/TEST_GUARD.md` + `TEST_GUARD_REPORT.md` |
 
 ## 执行流程
 
 ### 1. 读取任务信息
 
-读取 `.worktree/TASK.md` 获取任务描述。如果文件不存在，停止并告知用户缺少任务描述。
+读取 `.task/TASK.md` 获取任务描述。如果文件不存在，停止并告知用户缺少任务描述。
 
 ### 2. 检查链路进度
 
 按文件存在性判断已完成的步骤：
-- `.worktree/DEFECT.md` 存在 → 步骤 1 已完成
-- `.worktree/FIX_REPORT.md` 存在 → 步骤 2 已完成
-- `.worktree/VERIFY_REPORT.md` 存在 → 步骤 3 已完成
-- `.worktree/TEST_GUARD.md` 且 `.worktree/TEST_GUARD_REPORT.md` 都存在 → 步骤 4 已完成
+- `.task/DEFECT.md` 存在 → 步骤 1 已完成
+- `.task/FIX_REPORT.md` 存在 → 步骤 2 已完成
+- `.task/VERIFY_REPORT.md` 存在 → 步骤 3 已完成
+- `.task/TEST_GUARD.md` 且 `.task/TEST_GUARD_REPORT.md` 都存在 → 步骤 4 已完成
 
 输出当前进度摘要（哪些步骤已完成，从哪一步开始）。
 
@@ -49,4 +49,4 @@ allowed-tools: Read, Glob, Skill
 
 - **幂等**：已完成的步骤直接跳过
 - **失败即停**：任何步骤的产出文件缺失则中断链路
-- **入口文件**：`.worktree/TASK.md` 是唯一的任务输入
+- **入口文件**：`.task/TASK.md` 是唯一的任务输入

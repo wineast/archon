@@ -59,18 +59,18 @@ Blast Shield (防爆盾)     ←→     Degradation Fence (退化围栏)
 
 ### 操作
 
-1. 读取 `.worktree/REQ.md`，提取：
+1. 读取 `.task/REQ.md`，提取：
    - **Who**：使用者、使用场景
    - **What**：核心能力声明
    - **Acceptance**：验收标准清单
    - **Constraint**：业务约束、技术约束
 
-2. 读取 `.worktree/IMPL_REPORT.md`，提取：
+2. 读取 `.task/IMPL_REPORT.md`，提取：
    - **Solution Design**：用户流程、系统架构
    - **Change Set**：新增/修改的文件
    - **Known Gaps**：已知限制
 
-3. 读取 `.worktree/ACCEPT_REPORT.md`，提取：
+3. 读取 `.task/ACCEPT_REPORT.md`，提取：
    - **Criteria Verdict**：每条标准的验证结果
    - **Experience Validation**：用户旅程、四维度评估
    - **Gap Assessment**：缺口评估结果
@@ -239,7 +239,7 @@ make e2e
 ### 资源管理
 
 ```
-.worktree/
+.task/
 ├── REQ.md                           # 需求报告（输入）
 ├── IMPL_REPORT.md                   # 实现报告（输入）
 ├── ACCEPT_REPORT.md                 # 验收报告（输入）
@@ -378,7 +378,7 @@ make e2e
 3. 确认后编写测试代码
 4. 执行测试
 5. 生成守护报告
-6. 写入 `.worktree/CAP_GUARD.md` 和 `.worktree/CAP_GUARD_REPORT.md`
+6. 写入 `.task/CAP_GUARD.md` 和 `.task/CAP_GUARD_REPORT.md`
 
 ## 执行规则
 

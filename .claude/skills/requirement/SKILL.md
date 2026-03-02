@@ -117,7 +117,7 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 
 ### 输出位置
 
-**固定写入 `.worktree/REQ.md`**（`.worktree/` 目录始终存在于项目根目录）。
+**固定写入 `.task/REQ.md`**（`.task/` 目录始终存在于项目根目录）。
 
 ### 五不可约元素
 
@@ -245,7 +245,7 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确、是否需要补充
-3. 确认后用 `Write` 写入 `.worktree/REQ.md`
+3. 确认后用 `Write` 写入 `.task/REQ.md`
 4. 告知用户报告位置，并提示后续操作
 
 ## 执行规则
@@ -267,4 +267,4 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 - **需求链路**：`/requirement` 生成需求报告 → 实现 → 验收
 - **缺陷链路**：`/diagnose` 生成缺陷报告 → `/fix` 修复 → `/verify` 验证
 - **典型流程**：`/create-wt` 创建工作区 → `/requirement` 定义需求 → 实现 → `/pr-wt` 提交（自动关联需求文档）
-- **PR 报告集成**：`/pr-wt` 生成报告时，如果 `.worktree/REQ.md` 存在，验收评估者会对照五元素逐项核对
+- **PR 报告集成**：`/pr-wt` 生成报告时，如果 `.task/REQ.md` 存在，验收评估者会对照五元素逐项核对

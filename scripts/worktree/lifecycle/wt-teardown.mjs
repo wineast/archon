@@ -27,3 +27,4 @@ try { unlinkSync(join(targetDir, "web", ".env.local")); } catch { /* not exists 
 
 console.log("📦 [wt-teardown] 删除工作区元数据...");
 rmSync(join(targetDir, ".worktree"), { recursive: true, force: true });
+rmSync(join(targetDir, ".task"), { recursive: true, force: true });

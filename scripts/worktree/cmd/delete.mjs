@@ -40,24 +40,23 @@ export async function cmdDelete(target) {
     }
   }
 
-  // Archive report chain
-  const wtConfigDir = join(worktreePath, ".worktree");
-  if (existsSync(wtConfigDir)) {
+  // Archive report chain (from .task/ directory)
+  const wtTaskDir = join(worktreePath, ".task");
+  if (existsSync(wtTaskDir)) {
     const wtName = basename(worktreePath);
     const archiveDir = join(WORKTREE_CONFIG_DIR, "sub-worktrees", wtName);
     info(`归档报告链到 ${archiveDir} ...`);
     mkdirSync(archiveDir, { recursive: true });
-    const skipFiles = new Set(["meta.json", "viewer.json", "cleanup.sh"]);
-    for (const fname of readdirSync(wtConfigDir)) {
-      if (skipFiles.has(fname)) continue;
+    for (const fname of readdirSync(wtTaskDir)) {
       try {
-        cpSync(join(wtConfigDir, fname), join(archiveDir, fname), { recursive: true });
+        cpSync(join(wtTaskDir, fname), join(archiveDir, fname), { recursive: true });
       } catch { /* skip */ }
     }
     success("报告链已归档");
   }
 
   // Run cleanup script
+  const wtConfigDir = join(worktreePath, ".worktree");
   if (existsSync(join(wtConfigDir, "cleanup.sh"))) {
     info("执行清理脚本...");
     try {

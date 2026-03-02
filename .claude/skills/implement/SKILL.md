@@ -62,7 +62,7 @@ Constraint      ──→    Traceability 中的         ──→  约束逐项
 
 ### 操作
 
-1. 读取 `.worktree/REQ.md`，提取五要素：
+1. 读取 `.task/REQ.md`，提取五要素：
    - **Who**：使用者、使用场景
    - **Why**：痛点、价值、不做的代价
    - **What**：核心能力声明、Out of Scope
@@ -158,8 +158,8 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 2. 检查现有行为是否保持不变
 
 #### 3.5 截图命名
-- `.worktree/IMPL_REPORT.assets/impl-{简述}-flow-{N}.png` — 用户流程截图
-- `.worktree/IMPL_REPORT.assets/impl-{简述}-accept-{N}.png` — 验收项验证截图
+- `.task/IMPL_REPORT.assets/impl-{简述}-flow-{N}.png` — 用户流程截图
+- `.task/IMPL_REPORT.assets/impl-{简述}-accept-{N}.png` — 验收项验证截图
 
 ## Phase 4: 生成实现报告
 
@@ -192,9 +192,9 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 
 ### 资源管理
 
-所有实现产物统一放在 `.worktree/` 下：
+所有实现产物统一放在 `.task/` 下：
 ```
-.worktree/
+.task/
 ├── REQ.md                            # 需求报告（输入）
 ├── IMPL_REPORT.md                    # 实现报告（输出）
 └── IMPL_REPORT.assets/               # 实现截图
@@ -324,7 +324,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确
-3. 确认后写入 `.worktree/IMPL_REPORT.md`
+3. 确认后写入 `.task/IMPL_REPORT.md`
 4. 告知用户后续操作（如 `/accept` 验收、`/cap-guard` 守护等）
 
 ## 执行规则

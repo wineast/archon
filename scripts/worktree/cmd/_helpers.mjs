@@ -130,23 +130,8 @@ export function linkAutoMemory(wtPath) {
 }
 
 export function killWorktreeServices(wtPath) {
-  const viewerJson = join(wtPath, ".worktree", "viewer.json");
   const meta = join(wtPath, ".worktree", "meta.json");
   let killed = 0;
-
-  // Kill viewer process
-  if (existsSync(viewerJson)) {
-    try {
-      const { pid } = JSON.parse(readFileSync(viewerJson, "utf-8"));
-      if (pid) {
-        try {
-          process.kill(pid, 0); // check if alive
-          process.kill(pid);
-          killed++;
-        } catch { /* already dead */ }
-      }
-    } catch { /* parse error */ }
-  }
 
   // Kill port-based services
   if (existsSync(meta)) {

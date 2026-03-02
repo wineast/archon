@@ -82,7 +82,7 @@ async function initAdmin(): Promise<AdminSingletons> {
     if (task) {
       const raw = readFileSync(join(root, task.path), "utf-8");
       const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
-      writeFileSync(join(wtPath, ".worktree", "TASK.md"), body);
+      writeFileSync(join(wtPath, ".task", "TASK.md"), body);
     }
 
     // 3. Write worktree field back to task frontmatter

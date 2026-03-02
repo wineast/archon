@@ -37,7 +37,7 @@ Impact (影响)    ──反转──→    Blast Radius (波及)
 
 ### 操作
 
-1. 读取 `.worktree/DEFECT.md`，提取四要素：
+1. 读取 `.task/DEFECT.md`，提取四要素：
    - **Delta**：期望行为、实际行为、偏差描述
    - **Path**：复现步骤、环境、数据依赖
    - **Location**：功能模块、代码定位、根因分析
@@ -103,8 +103,8 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 3. 如果修改影响了数据流：验证上下游数据一致性
 
 #### 2.4 截图命名
-- `.worktree/FIX_REPORT.assets/fix-{简述}-verify.png` — 正向验证截图
-- `.worktree/FIX_REPORT.assets/fix-{简述}-regression-{N}.png` — 回归验证截图
+- `.task/FIX_REPORT.assets/fix-{简述}-verify.png` — 正向验证截图
+- `.task/FIX_REPORT.assets/fix-{简述}-regression-{N}.png` — 回归验证截图
 
 ## Phase 3: 生成修复报告
 
@@ -136,9 +136,9 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 
 ### 资源管理
 
-所有修复产物统一放在 `.worktree/` 下：
+所有修复产物统一放在 `.task/` 下：
 ```
-.worktree/
+.task/
 ├── DEFECT.md                         # 缺陷报告（输入）
 ├── DEFECT.assets/                    # 缺陷截图
 ├── FIX_REPORT.md                     # 修复报告（输出）
@@ -241,7 +241,7 @@ Blast Radius 标记的影响区域走一遍，行为正常：
 
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确
-3. 确认后写入 `.worktree/FIX_REPORT.md`
+3. 确认后写入 `.task/FIX_REPORT.md`
 4. 告知用户后续操作（如 `/verify` 验证、`/test-guard` 守护等）
 
 ## 执行规则

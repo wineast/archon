@@ -219,11 +219,12 @@ export function scanWorktrees(WORKTREES_DIR: string): ScannedWorktree[] {
 
   for (const name of readdirSync(WORKTREES_DIR)) {
     const wtPath = join(WORKTREES_DIR, name);
-    const wtDir = join(wtPath, ".worktree");
-    if (!existsSync(wtDir)) continue;
+    const wtMetaDir = join(wtPath, ".worktree");
+    const wtTaskDir = join(wtPath, ".task");
+    if (!existsSync(wtMetaDir)) continue;
 
     let taskRef: TaskRef | null = null;
-    const taskJsonPath = join(wtDir, "task.json");
+    const taskJsonPath = join(wtMetaDir, "task.json");
     if (existsSync(taskJsonPath)) {
       try {
         taskRef = JSON.parse(readFileSync(taskJsonPath, "utf-8"));
@@ -231,7 +232,7 @@ export function scanWorktrees(WORKTREES_DIR: string): ScannedWorktree[] {
     }
 
     let meta: Record<string, unknown> = {};
-    const metaPath = join(wtDir, "meta.json");
+    const metaPath = join(wtMetaDir, "meta.json");
     if (existsSync(metaPath)) {
       try {
         meta = JSON.parse(readFileSync(metaPath, "utf-8"));
@@ -239,18 +240,18 @@ export function scanWorktrees(WORKTREES_DIR: string): ScannedWorktree[] {
     }
 
     const reqChain: Record<string, boolean> = {
-      "REQ.md": existsSync(join(wtDir, "REQ.md")),
-      "IMPL_REPORT.md": existsSync(join(wtDir, "IMPL_REPORT.md")),
-      "ACCEPT_REPORT.md": existsSync(join(wtDir, "ACCEPT_REPORT.md")),
-      "CAP_GUARD.md": existsSync(join(wtDir, "CAP_GUARD.md")),
-      "CAP_GUARD_REPORT.md": existsSync(join(wtDir, "CAP_GUARD_REPORT.md")),
+      "REQ.md": existsSync(join(wtTaskDir, "REQ.md")),
+      "IMPL_REPORT.md": existsSync(join(wtTaskDir, "IMPL_REPORT.md")),
+      "ACCEPT_REPORT.md": existsSync(join(wtTaskDir, "ACCEPT_REPORT.md")),
+      "CAP_GUARD.md": existsSync(join(wtTaskDir, "CAP_GUARD.md")),
+      "CAP_GUARD_REPORT.md": existsSync(join(wtTaskDir, "CAP_GUARD_REPORT.md")),
     };
     const defectChain: Record<string, boolean> = {
-      "DEFECT.md": existsSync(join(wtDir, "DEFECT.md")),
-      "FIX_REPORT.md": existsSync(join(wtDir, "FIX_REPORT.md")),
-      "VERIFY_REPORT.md": existsSync(join(wtDir, "VERIFY_REPORT.md")),
-      "TEST_GUARD.md": existsSync(join(wtDir, "TEST_GUARD.md")),
-      "TEST_GUARD_REPORT.md": existsSync(join(wtDir, "TEST_GUARD_REPORT.md")),
+      "DEFECT.md": existsSync(join(wtTaskDir, "DEFECT.md")),
+      "FIX_REPORT.md": existsSync(join(wtTaskDir, "FIX_REPORT.md")),
+      "VERIFY_REPORT.md": existsSync(join(wtTaskDir, "VERIFY_REPORT.md")),
+      "TEST_GUARD.md": existsSync(join(wtTaskDir, "TEST_GUARD.md")),
+      "TEST_GUARD_REPORT.md": existsSync(join(wtTaskDir, "TEST_GUARD_REPORT.md")),
     };
 
     const taskType = taskRef?.type;
@@ -267,7 +268,7 @@ export function scanWorktrees(WORKTREES_DIR: string): ScannedWorktree[] {
     }
 
     let remoteUrl = "";
-    const remotePath = join(wtDir, "remote.json");
+    const remotePath = join(wtMetaDir, "remote.json");
     if (existsSync(remotePath)) {
       try {
         const rd = JSON.parse(readFileSync(remotePath, "utf-8"));
@@ -338,14 +339,15 @@ function readReviews(
 
 export function readReportData(wtName: string, WORKTREES_DIR: string) {
   const wtPath = join(WORKTREES_DIR, wtName);
-  const wtDir = join(wtPath, ".worktree");
+  const wtMetaDir = join(wtPath, ".worktree");
+  const wtTaskDir = join(wtPath, ".task");
   if (!existsSync(wtPath)) return null;
 
-  const chainType = detectChainType(wtDir);
-  const { chain, reports, verdictSource } = buildChainStatus(wtDir, chainType ?? "req");
+  const chainType = detectChainType(wtTaskDir);
+  const { chain, reports, verdictSource } = buildChainStatus(wtTaskDir, chainType ?? "req");
 
   const branch = getCurrentBranch(wtPath);
-  const baseBranch = getBaseBranch(wtDir);
+  const baseBranch = getBaseBranch(wtMetaDir);
 
   return {
     worktree: wtName,
@@ -355,7 +357,7 @@ export function readReportData(wtName: string, WORKTREES_DIR: string) {
     verdictSource,
     branch,
     baseBranch,
-    reviews: readReviews(wtDir),
+    reviews: readReviews(wtTaskDir),
   };
 }
 
@@ -365,10 +367,10 @@ export function readStatusData(
   PROJECT_ROOT: string
 ) {
   const wtPath = join(WORKTREES_DIR, wtName);
-  const wtDir = join(wtPath, ".worktree");
+  const wtMetaDir = join(wtPath, ".worktree");
   if (!existsSync(wtPath)) return null;
 
-  const baseBranch = getBaseBranch(wtDir);
+  const baseBranch = getBaseBranch(wtMetaDir);
   const currentBranch = getCurrentBranch(wtPath);
   const upstreamPath = findUpstreamPath(wtPath, baseBranch, PROJECT_ROOT);
 
@@ -403,8 +405,8 @@ export function readMergeCheck(
   }
 
   const wtPath = join(WORKTREES_DIR, wtName);
-  const wtDir = join(wtPath, ".worktree");
-  const baseBranch = getBaseBranch(wtDir);
+  const wtMetaDir = join(wtPath, ".worktree");
+  const baseBranch = getBaseBranch(wtMetaDir);
   const currentBranch = getCurrentBranch(wtPath);
 
   if (!baseBranch || !currentBranch) {
@@ -437,9 +439,9 @@ export function listReportWorktrees(
   const result: Array<{ name: string; chainType: string }> = [];
   if (!existsSync(WORKTREES_DIR)) return result;
   for (const name of readdirSync(WORKTREES_DIR)) {
-    const wtDir = join(WORKTREES_DIR, name, ".worktree");
-    if (!existsSync(wtDir)) continue;
-    const chainType = detectChainType(wtDir);
+    const wtTaskDir = join(WORKTREES_DIR, name, ".task");
+    if (!existsSync(wtTaskDir)) continue;
+    const chainType = detectChainType(wtTaskDir);
     if (!chainType) continue;
     result.push({ name, chainType });
   }
@@ -498,11 +500,11 @@ export function getWorktreeInfo(PROJECT_ROOT: string): WorktreeInfo[] {
       running = pid.length > 0;
     }
 
-    const wtDir = join(wt.path, ".worktree");
+    const wtTaskDir = join(wt.path, ".task");
     let reports: string[] = [];
-    if (existsSync(wtDir)) {
+    if (existsSync(wtTaskDir)) {
       try {
-        reports = readdirSync(wtDir).filter((f) => f.endsWith(".md"));
+        reports = readdirSync(wtTaskDir).filter((f) => f.endsWith(".md"));
       } catch {}
     }
 

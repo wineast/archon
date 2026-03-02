@@ -90,7 +90,7 @@ chain（技能链路）→ review（评审）→ merge（合并）
                                                   → [可选] 守护规约 + 守护报告
 ```
 
-报告文件存放在 `.worktree/` 目录下，Admin 面板可以直接读取并展示。
+报告文件存放在 `.task/` 目录下，元数据（meta.json、task.json）存放在 `.worktree/` 目录下，Admin 面板可以直接读取并展示。
 
 ## 终端管理
 
@@ -185,9 +185,10 @@ todo/*.md  ──┐
               ├─→ task-scanner ─→ tasks[] ──┐
 issues/*.md ─┘                               │
                                               ├─→ /api/tasks/data → 前端表格
-.worktrees/*/.worktree/ ─→ worktree-scanner ─┘
+.worktrees/*/.worktree/ ─→ worktree-scanner ─┘  (元数据)
   ├── task.json          (任务关联 + 阶段)
-  ├── meta.json          (base branch 等)
+  └── meta.json          (base branch 等)
+.worktrees/*/.task/                              (链路报告)
   ├── REQ.md / DEFECT.md (报告文件)
   ├── IMPL_REPORT.md / FIX_REPORT.md
   └── ...

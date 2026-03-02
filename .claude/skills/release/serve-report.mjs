@@ -13,7 +13,7 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync, createReadStream, statSync } from "node:fs";
 import { resolve, join, extname } from "node:path";
 
-const ROOT = resolve(process.cwd(), ".worktree");
+const ROOT = resolve(process.cwd(), ".release");
 const REPORTS = [
   { key: "integrate", path: "INTEGRATE.md", label: "集成报告" },
   { key: "release", path: "RELEASE_REPORT.md", label: "发布检查" },
@@ -210,7 +210,7 @@ function escapeHTML(s) {
 // ── HTTP Server ────────────────────────────────────
 function start() {
   if (!existsSync(join(ROOT, "RELEASE_REPORT.md"))) {
-    console.error("错误：.worktree/RELEASE_REPORT.md 不存在，请先运行 /release 生成报告");
+    console.error("错误：.release/RELEASE_REPORT.md 不存在，请先运行 /release 生成报告");
     process.exit(1);
   }
 

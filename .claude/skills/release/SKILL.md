@@ -46,13 +46,13 @@ Verdict（合不合并）          Verdict（发不发布）
 
 ### 操作
 
-1. 读取 `.worktree/INTEGRATE.md`，提取四要素：
+1. 读取 `.release/INTEGRATE.md`，提取四要素：
    - **Scope**：包含的 merged 任务、commit 范围
    - **Additions**：新功能 + 缺陷修复
    - **Breaking**：Schema/API/行为变更
    - **Risk**：跨功能交互、未闭合缺口
 
-2. 如果 `.worktree/INTEGRATE.md` 不存在，提示用户先运行 `/integrate`
+2. 如果 `.release/INTEGRATE.md` 不存在，提示用户先运行 `/integrate`
 
 3. 向用户简要复述集成报告要点，进入发布检查
 
@@ -113,7 +113,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 - **未通过**：发现功能间冲突
 
 ### 截图命名
-- `.worktree/RELEASE_REPORT.assets/release-cross-{N}.png`
+- `.release/RELEASE_REPORT.assets/release-cross-{N}.png`
 
 ## Phase 3: Migration（迁移安全）
 
@@ -174,16 +174,16 @@ Regression 未通过 / Cross-feature 未通过 / Migration 阻塞
 
 ### 资源管理
 
-所有发布检查产物统一放在 `.worktree/` 下：
+所有发布检查产物统一放在 `.release/` 下：
 ```
-.worktree/
+.release/
 ├── INTEGRATE.md                       # 集成报告（输入，由 /integrate 生成）
 ├── RELEASE_REPORT.md                  # 发布检查报告（输出）
 └── RELEASE_REPORT.assets/             # 发布检查截图
     └── release-cross-{N}.png
 ```
 
-各任务工作区的报告在 `.worktrees/{name}/.worktree/` 下（由集成报告引用，release 不直接读取）。
+各任务工作区的报告在 `.worktrees/{name}/.task/` 下（由集成报告引用，release 不直接读取）。
 
 ### 报告模板
 
@@ -296,7 +296,7 @@ gh pr create --base main --head dev --title "{PR 标题}" --body "$(cat <<'EOF'
 - **Regression**: {一句话}
 - **Cross-feature**: {一句话}
 - **Migration**: {一句话}
-- **Report**: [RELEASE_REPORT.md](.worktree/RELEASE_REPORT.md)
+- **Report**: [RELEASE_REPORT.md](.release/RELEASE_REPORT.md)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -327,7 +327,7 @@ node .claude/skills/release/serve-report.mjs
 2. 执行 Phase 1-3 的检查
 3. 生成报告内容，展示给用户
 4. 用 `AskUserQuestion` 确认报告是否准确
-5. 确认后写入 `.worktree/RELEASE_REPORT.md`
+5. 确认后写入 `.release/RELEASE_REPORT.md`
 6. 如果 Verdict 为 ✅ 或 ⚠️，创建 PR
 7. 启动 HTML 查看器，提示用户在浏览器中查看和操作
 
