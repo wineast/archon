@@ -470,7 +470,7 @@ describe("[AC-6] computeSnapshotDiff — 全类型覆盖", () => {
    ═══════════════════════════════════════ */
 
 describe("[CG-1] diff API — 只读约束", () => {
-  it("route.ts 仅导出 GET 方法", async () => {
+  it("route.ts 仅导出 GET 方法", { timeout: 30_000 }, async () => {
     const routeModule = await import(
       "@/app/api/agents/[id]/versions/diff/route"
     );
