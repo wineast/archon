@@ -3,6 +3,7 @@
 tmp/
 .next/
 node_modules/
+*.tsbuildinfo
 
 # Worktrees directory
 .worktrees/
