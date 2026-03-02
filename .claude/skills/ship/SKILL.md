@@ -61,7 +61,9 @@ git merge origin/main
 3. 如果产出文件缺失，停止链路并报告失败
 4. 继续下一步
 
-### 4. 归档 + 发布内容（步骤 3-4）
+### 4. 更新版本号 + 归档 + 发布内容（步骤 3-4）
+
+更新 `web/package.json` 的 `version` 字段为本次版本号（去掉 `v` 前缀，如 `v0.2.0` → `"version": "0.2.0"`）。主页 footer 会自动读取此字段展示版本号。
 
 调用 `/archive` 技能，在 dev 上生成 `releases/vX.Y.Z/` 目录。
 调用 `/release-notes` 技能，在 `releases/vX.Y.Z/` 中生成 SOCIAL.md + DEMO.md。
