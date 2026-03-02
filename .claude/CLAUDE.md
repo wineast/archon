@@ -70,6 +70,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 完整定义见 `Makefile`，下面是速查：
   - **初始化**：`make setup`（clone 后一次）/ `make teardown`（反向清理）
   - **开发**：`make up`（全部服务）/ `make down` / `make dev`（仅 Next.js）/ `make storybook`
+  - **重要**：前端页面依赖数据库，访问前端前必须先确保 Docker 运行（`open -a Docker`）再 `make up`。仅用 `make dev` 启动 Next.js 不够——缺少数据库会导致 API 报错
   - **构建检查**：`make build` / `make lint` / `make typecheck` / `make test` / `make e2e`
   - **数据库**：`make db-up` / `make db-push`（schema 变更）/ `make db-reset`（破坏性变更）/ `make db-seed` / `make db-studio`
   - **Worktree**：`make wt-list` / `make wt-create NAME=xxx` / `make wt-sync` / `make wt-merge NAME=xxx` / `make wt-delete NAME=xxx`
