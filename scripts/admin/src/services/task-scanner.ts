@@ -23,6 +23,7 @@ export interface Task {
   title: string;
   priority: string;
   status: string;
+  tags: string[];
   worktree: string;
   merged: boolean;
   path: string;
@@ -74,6 +75,20 @@ export function parseTitle(content: string): string {
   return m ? m[1].trim() : "(untitled)";
 }
 
+/** Parse tags from frontmatter value. Supports `[a, b]` and `a, b` formats. */
+function parseTags(raw?: string): string[] {
+  if (!raw) return [];
+  // Strip YAML array brackets: `[a, b]` → `a, b`
+  let val = raw.trim();
+  if (val.startsWith("[") && val.endsWith("]")) {
+    val = val.slice(1, -1);
+  }
+  return val
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
 // ── Scanning ────────────────────────────────────────────────
 
 export function scanTasks(
@@ -96,6 +111,7 @@ export function scanTasks(
         title,
         priority: fm.priority || "P3",
         status: fm.status || "pending",
+        tags: parseTags(fm.tags),
         worktree: fm.worktree || "",
         merged: fm.merged === "true",
         path: relative(PROJECT_ROOT, filePath),
@@ -118,6 +134,7 @@ export function scanTasks(
         title,
         priority: fm.priority || "P3",
         status: fm.status || "open",
+        tags: parseTags(fm.tags),
         worktree: fm.worktree || "",
         merged: fm.merged === "true",
         path: relative(PROJECT_ROOT, filePath),

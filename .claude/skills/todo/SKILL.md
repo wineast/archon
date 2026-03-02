@@ -42,6 +42,7 @@ todo/
 ---
 priority: P2
 status: pending
+tags: []
 worktree:
 ---
 # {一句话祈使句——做什么}
@@ -57,6 +58,7 @@ worktree:
 |------|------|
 | `priority` | P0-P3，见下方定义 |
 | `status` | 唯一状态源：`pending` / `backlog` / `ready` / `merged` / `cancelled` |
+| `tags` | 分类标签数组，如 `[test]`、`[test, e2e]`、`[refactor, performance]`，便于按主题筛选 |
 | `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
 
 ### 三要素详解
@@ -118,6 +120,7 @@ Anchor 是地址，不是文档。告诉未来的你去哪里找更多信息：
 ---
 priority: P2
 status: pending
+tags: [ui]
 worktree:
 ---
 # 给 Dataset 编辑器加行号显示

@@ -6,6 +6,7 @@ export interface Task {
   type: "todo" | "issue";
   status: string;
   priority: string;
+  tags: string[];
   path: string;
   worktree?: string;
   merged?: boolean;
