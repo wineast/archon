@@ -26,6 +26,10 @@ embed-umi-demo/
 todo/
 issues/
 
+# But track everything under releases/
+!releases/
+!releases/**
+
 # Admin panel
 scripts/admin/.next/
 scripts/admin/dist/
