@@ -4,7 +4,7 @@ description: 缺陷守护。当用户说"守护"、"guard"、"写守护测试"�
 allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write, Edit, mcp__playwright__*
 ---
 
-读取三份报告 → 推导守护规约 → 编写测试代码 → 运行验证 → 生成报告 → 启动 HTML 预览。
+读取三份报告 → 推导守护规约 → 编写测试代码 → 运行验证 → 生成守护报告 → 启动 HTML 预览。
 
 ## 核心理念
 
@@ -12,16 +12,17 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write, Edit, mcp__
 
 验证报告是一次性人工判定——此刻缺陷消了、因果对了、边界扛了、回归没了。但明天有人改了相关代码呢？测试守护把一次性的人工判定**固化为可重复执行的自动断言**，使得"此刻证明过的事实"在未来的每次构建中被持续验证。
 
-### 四份文档的司法隐喻
+### 五份文档的司法隐喻
 
 ```
 缺陷报告 → 起诉书（陈述事实）
 修复报告 → 辩护词（解释行为）
 验证报告 → 审判书（质证双方 + 裁定）
 守护规约 → 守卫部署令（永久驻防）
+守护报告 → 驻防验收单（部署结果）
 ```
 
-验证者是法官，宣判后离场。守护者是宪兵，部署后永远驻守。
+验证者是法官，宣判后离场。守护者是宪兵，部署后永远驻守。规约是部署令，报告是验收单。
 
 ### 关键洞察：双层防护
 
@@ -64,16 +65,16 @@ Verdict      ──归档──→ Traceability
 
 ### 操作
 
-1. 读取 `.worktree/DEFECT.md`，提取：
+1. 读取 `.task/DEFECT.md`，提取：
    - **Delta**：期望行为、实际行为（→ Invariant）
    - **Path**：复现步骤（→ Trigger Scenario）
 
-2. 读取 `.worktree/FIX_REPORT.md`，提取：
+2. 读取 `.task/FIX_REPORT.md`，提取：
    - **Root Cause**：故障机制（→ Cause Anchor, Boundary Set）
    - **Change**：修改了什么（→ Cause Anchor）
    - **Blast Radius**：影响范围（→ Blast Shield）
 
-3. 读取 `.worktree/VERIFY_REPORT.md`，提取：
+3. 读取 `.task/VERIFY_REPORT.md`，提取：
    - **Reproduction**：复现验证结果
    - **Boundary Validation**：已验证的边界变体（→ Boundary Set）
    - **Regression Result**：回归验证结果（→ Blast Shield）
@@ -243,9 +244,9 @@ Blast Shield                  → 追加到对应层级的测试文件
    ```typescript
    /**
     * 缺陷守护：{Invariant 一句话}
-    * @see .worktree/DEFECT.md
-    * @see .worktree/FIX_REPORT.md
-    * @see .worktree/VERIFY_REPORT.md
+    * @see .task/DEFECT.md
+    * @see .task/FIX_REPORT.md
+    * @see .task/VERIFY_REPORT.md
     */
    describe("Guard: {Invariant}", () => {
      describe("Cause Anchor: {根因描述}", () => {
@@ -278,9 +279,9 @@ Blast Shield                  → 追加到对应层级的测试文件
     * 守护目标：{一句话}
     * 触发路径：{Given → When → Then 概述}
     *
-    * @see .worktree/DEFECT.md
-    * @see .worktree/FIX_REPORT.md
-    * @see .worktree/VERIFY_REPORT.md
+    * @see .task/DEFECT.md
+    * @see .task/FIX_REPORT.md
+    * @see .task/VERIFY_REPORT.md
     */
    const TAG = "[guard-{简述}]";
    const log = (...args: unknown[]) => console.log(TAG, ...args);
@@ -318,12 +319,14 @@ make test
 - 修复测试代码（不修改业务代码——如果业务代码有问题，应回到 `/fix`）
 - 重新运行直到通过
 
-### 3.2 生成守护报告
+### 3.2 生成守护规约（TEST_GUARD.md）
 
-### 报告模板
+Phase 1 推导完成、用户确认后写入。规约一旦锁定，后续不再修改。
+
+### 规约模板
 
 ```markdown
-# 测试守护报告：{一句话标题}
+# 测试守护规约：{一句话标题}
 
 > 生成时间：{YYYY-MM-DD HH:mm}
 > 关联缺陷：[DEFECT.md](DEFECT.md)
@@ -364,44 +367,104 @@ make test
 
 ## 4. Boundary Set（边界集）
 
-| # | 变体 | 来源 | Level | 状态 |
-|---|------|------|-------|------|
-| 1 | {描述} | {验证报告 / Root Cause 推导} | {E2E/Unit/Integration} | {✅/❌} |
-| 2 | {描述} | {来源} | {Level} | {状态} |
+| # | 变体 | 来源 | Level |
+|---|------|------|-------|
+| 1 | {描述} | {验证报告 / Root Cause 推导} | {E2E/Unit/Integration} |
+| 2 | {描述} | {来源} | {Level} |
 
 ## 5. Blast Shield（防爆盾）
 
-| # | 区域 | 断言 | 来源 | Level | 状态 |
-|---|------|------|------|-------|------|
-| 1 | {区域名} | {回归断言} | {FIX_REPORT Blast Radius} | {Level} | {✅/❌} |
+| # | 区域 | 断言 | 来源 | Level |
+|---|------|------|------|-------|
+| 1 | {区域名} | {回归断言} | {FIX_REPORT Blast Radius} | {Level} |
 
 ## 6. Coverage Matrix（覆盖矩阵）
 
-| 守护元素 | 测试用例 | 文件 | 层级 | 状态 |
-|---------|---------|------|------|------|
-| Trigger Scenario | {test name} | {file path} | E2E | {✅/❌} |
-| Cause Anchor | {test name} | {file path} | Unit | {✅/❌} |
-| Boundary #1 | {test name} | {file path} | {Level} | {✅/❌} |
-| Blast Shield #1 | {test name} | {file path} | {Level} | {✅/❌} |
+| 守护元素 | 测试用例 | 层级 | 状态 |
+|---------|---------|------|------|
+| Trigger Scenario | {test name} | E2E | ⏳ |
+| Cause Anchor | {test name} | Unit | ⏳ |
+| Boundary #1 | {test name} | {Level} | ⏳ |
+| Blast Shield #1 | {test name} | {Level} | ⏳ |
+```
 
-## 7. Test Results（测试结果）
+### 3.3 生成守护报告（TEST_GUARD_REPORT.md）
+
+测试执行完毕后生成。
+
+### 报告模板
+
+```markdown
+# 测试守护报告：{一句话标题}
+
+> 执行时间：{YYYY-MM-DD HH:mm}
+> 关联规约：[TEST_GUARD.md](TEST_GUARD.md)
+> 分支：`{branch}`
+
+## 1. 规约概要
+
+### Invariant
+{一句话不变量}
+
+### 覆盖统计
+| 元素 | 规约数 | 测试数 | 通过 | 失败 |
+|------|--------|--------|------|------|
+| Trigger Scenario | 1 | {N} | {N} | {N} |
+| Cause Anchor | 1 | {N} | {N} | {N} |
+| Boundary Set | {N} | {N} | {N} | {N} |
+| Blast Shield | {N} | {N} | {N} | {N} |
+
+## 2. 测试结果
 
 ### 静态检查
 - `make typecheck`：{通过/失败}
 - `make test`：{通过/失败（N passed / M total）}
 
-### 新增测试文件
-| 文件 | 类型 | 用例数 |
-|------|------|--------|
-| {path} | {Unit/E2E} | {N} |
+### 单元/集成测试
+| 文件 | 用例数 | 通过 | 失败 | 覆盖规约 |
+|------|--------|------|------|----------|
+| {path} | {n} | {n} | {n} | {Cause Anchor, Boundary-1, ...} |
+
+### E2E 测试
+| 文件 | 用例数 | 通过 | 失败 | 覆盖规约 |
+|------|--------|------|------|----------|
+| {path} | {n} | {n} | {n} | {Trigger Scenario, Boundary-2, ...} |
+
+## 3. Coverage Matrix（覆盖矩阵）
+
+| 守护元素 | 测试用例 | 文件 | 层级 | 结果 |
+|---------|---------|------|------|------|
+| Trigger Scenario | {test name} | {file path} | E2E | ✅ |
+| Cause Anchor | {test name} | {file path} | Unit | ✅ |
+| Boundary #1 | {test name} | {file path} | {Level} | ✅ |
+| Blast Shield #1 | {test name} | {file path} | {Level} | ✅ |
+
+## 4. Verdict（裁定）
+
+### 判决
+{✅ 守护就绪 / ⚠️ 部分守护 / ❌ 守护不足}
+
+### 证据摘要
+- **Trigger Scenario**：{通过/失败}
+- **Cause Anchor**：{通过/失败}
+- **Boundary Set**：{N/M 条覆盖}
+- **Blast Shield**：{N/M 条覆盖}
+
+### 未覆盖项
+{列出规约中存在但未能用测试覆盖的项，说明原因。无则写"无"}
 
 ### Traceability（追溯）
 ```
 origin: DEFECT.md
 fixed_by: FIX_REPORT.md
 verified_by: VERIFY_REPORT.md
-guarded_by: 本报告
+guarded_by: TEST_GUARD.md + 本报告
 ```
+
+### 新增测试文件
+| 文件 | 类型 | 用例数 |
+|------|------|--------|
+| {path} | {Unit/E2E} | {N} |
 
 ## 过程备注
 
@@ -410,90 +473,45 @@ guarded_by: 本报告
 
 ### 资源管理
 
-所有产物统一放在 `.worktree/` 下：
+所有产物统一放在 `.task/` 下：
 ```
-.worktree/
+.task/
 ├── DEFECT.md                           # 缺陷报告（输入）
 ├── DEFECT.assets/                      # 缺陷截图
 ├── FIX_REPORT.md                       # 修复报告（输入）
 ├── FIX_REPORT.assets/                  # 修复截图
 ├── VERIFY_REPORT.md                    # 验证报告（输入）
 ├── VERIFY_REPORT.assets/               # 验证截图
-├── TEST_SPEC.md                        # 测试守护报告（输出）
-└── merge.sh                            # 合并脚本
+├── TEST_GUARD.md                        # 守护规约（输出）
+├── TEST_GUARD_REPORT.md                 # 守护报告（输出）
+├── .worktree/meta.json                 # 工作区元数据（保留）
+└── .worktree/task.json                 # 工作区任务配置（保留）
 ```
 
-### 报告自检清单
+### 规约自检清单
 
 - [ ] **Invariant**：来自 Delta 取反？能直接写 `expect()`？
 - [ ] **Trigger Scenario**：Given/When/Then 完整？冗余步骤已剔除？
 - [ ] **Cause Anchor**：在故障机制层面有断言？Level 合理？
 - [ ] **Boundary Set**：经验变体 + 推理变体都有？半径不超过一步？
 - [ ] **Blast Shield**：覆盖 Blast Radius 直接影响区域？
-- [ ] **Coverage Matrix**：每个守护元素都有对应测试？无遗漏？
+- [ ] **Coverage Matrix**：每个守护元素都有对应测试计划？无遗漏？
+
+### 报告自检清单
+
+- [ ] **Coverage Matrix**：每个规约条目都有实际测试结果？
 - [ ] **Test Results**：所有测试通过？
+- [ ] **Verdict**：判决与证据一致？
 - [ ] **Traceability**：测试文件头部注释链接回三份报告？
 
-### 3.3 生成合并脚本
+### 3.3 流程
 
-guard 是完整链的最后一步，负责生成最终的 merge.sh（覆盖 verify 生成的版本）。
-
-如果 `.worktree/meta.json` 存在（工作区模式），生成 `.worktree/merge.sh`：
-
-```bash
-#!/bin/bash
-# 守护通过的合并脚本 — <工作区名称> → <baseBranch>
-# 测试守护: TEST_SPEC.md
-# 生成时间: <时间>
-set -e
-
-MAIN_REPO="<主仓库绝对路径>"
-WT_NAME="<工作区名称>"
-WT_PATH="$MAIN_REPO/.worktrees/$WT_NAME"
-
-echo "🔀 合并 $WT_NAME → <baseBranch>"
-make -C "$MAIN_REPO" wt-merge NAME="$WT_NAME"
-
-# 合并后检测 schema 变更
-if git -C "$MAIN_REPO" diff HEAD~1 --name-only | grep -qE "(drizzle/|db/schema\.ts)"; then
-    echo ""
-    echo "⚠️  检测到 schema 变更，请执行: make db-generate"
-fi
-
-# 归档报告链到上游 .worktree/sub-worktrees/<name>/
-ARCHIVE_DIR="$MAIN_REPO/.worktree/sub-worktrees/$WT_NAME"
-if [ -d "$WT_PATH/.worktree" ]; then
-    mkdir -p "$ARCHIVE_DIR"
-    cp -r "$WT_PATH/.worktree/"* "$ARCHIVE_DIR/"
-    rm -f "$ARCHIVE_DIR/meta.json" "$ARCHIVE_DIR/merge.sh"
-    echo ""
-    echo "📦 报告链已归档到 .worktree/sub-worktrees/$WT_NAME/"
-fi
-
-echo ""
-echo "✅ 合并完成"
-echo "下一步（可选）："
-echo "  make wt-delete NAME=$WT_NAME    # 删除工作区"
-```
-
-生成后设为可执行：`chmod +x .worktree/merge.sh`
-
-### 3.4 流程
-
-1. 运行测试
-2. 生成报告内容，展示给用户
-3. 用 `AskUserQuestion` 确认报告是否准确
-4. 确认后写入 `.worktree/TEST_SPEC.md`
-5. 生成 `merge.sh`（覆盖 verify 版本，含归档逻辑）
-6. 启动 HTML 查看器
-
-### 3.5 启动/更新报告查看器
-
-```bash
-node .claude/skills/shared/serve-defect-chain.mjs
-# 用 Bash(run_in_background=true) 执行
-# 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
-```
+1. 生成守护规约，展示给用户
+2. 用 `AskUserQuestion` 确认规约是否准确
+3. 确认后写入 `.task/TEST_GUARD.md`
+4. 编写测试代码
+5. 运行测试
+6. 生成守护报告，写入 `.task/TEST_GUARD_REPORT.md`
 
 ## 执行规则
 

@@ -38,9 +38,9 @@ export function scanCode(code: string): ScanResult {
       ecmaVersion: "latest",
       sourceType: "module",
     });
-  } catch {
-    // If acorn can't parse it, let it fail at execution time
-    return { ok: true, errors: [] };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, errors: [`代码解析失败: ${msg}`] };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

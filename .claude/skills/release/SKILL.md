@@ -10,7 +10,7 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write, Edit, mcp__
 
 集成报告是"货运清单"，发布检查是"质检报告 + 放行单"。
 
-与 accept/verify 的本质区别：accept/verify 审判单个功能/修复的质量，release 审判整批变更的集成质量——重点不是每个零件合不合格（子工作区已验收/验证），而是装配在一起能不能跑。
+与 accept/verify 的本质区别：accept/verify 审判单个功能/修复的质量，release 审判整批变更的集成质量——重点不是每个零件合不合格（各任务工作区已验收/验证），而是装配在一起能不能跑。
 
 ### 三份文档的角色
 
@@ -46,13 +46,13 @@ Verdict（合不合并）          Verdict（发不发布）
 
 ### 操作
 
-1. 读取 `.worktree/INTEGRATE.md`，提取四要素：
-   - **Scope**：包含的工作区、commit 范围
+1. 读取 `.release/INTEGRATE.md`，提取四要素：
+   - **Scope**：包含的 merged 任务、commit 范围
    - **Additions**：新功能 + 缺陷修复
    - **Breaking**：Schema/API/行为变更
    - **Risk**：跨功能交互、未闭合缺口
 
-2. 如果 `.worktree/INTEGRATE.md` 不存在，提示用户先运行 `/integrate`
+2. 如果 `.release/INTEGRATE.md` 不存在，提示用户先运行 `/integrate`
 
 3. 向用户简要复述集成报告要点，进入发布检查
 
@@ -101,7 +101,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 #### 2.2 从集成报告 Risk 推导验证场景
 - 读取 INTEGRATE.md 的 Risk 部分
 - 识别跨功能交互风险点
-- 设计 2-3 个交叉验证场景（覆盖不同工作区的变更交汇处）
+- 设计 2-3 个交叉验证场景（覆盖不同 merged 任务的变更交汇处）
 
 #### 2.3 用 Playwright 验证
 - 对每个场景端到端走通
@@ -113,7 +113,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 - **未通过**：发现功能间冲突
 
 ### 截图命名
-- `.worktree/RELEASE_REPORT.assets/release-cross-{N}.png`
+- `.release/RELEASE_REPORT.assets/release-cross-{N}.png`
 
 ## Phase 3: Migration（迁移安全）
 
@@ -131,21 +131,32 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:{端口号} 2>/dev/null
 - 如果 schema 有变更但无迁移文件 → 需要 `make db-generate`
 - 如果已有迁移文件 → 检查是否与 schema 一致
 
-#### 3.3 导出格式兼容性
-- 如果集成报告的 Breaking 中有导出格式变更
-- 评估旧格式数据是否仍可导入
+#### 3.3 导出格式迁移
+- 检查 `web/src/lib/versions/migrations/` 是否有新增迁移文件
+- 检查 `CURRENT_EXPORT_VERSION` 是否递增
+- **迁移链完整性验证**：
+  1. 读取 `web/src/lib/versions/migrations/index.ts`，提取所有注册的迁移及 `CURRENT_EXPORT_VERSION`
+  2. 验证迁移链连续性：每个迁移的 `fromVersion` 必须等于前一个迁移的 `toVersion`，最后一个迁移的 `toVersion` 必须等于 `CURRENT_EXPORT_VERSION`
+  3. 如果发现版本号碰撞（如两个迁移都声明 `fromVersion=2→toVersion=3`）→ **阻塞发布**，需在 dev 上修复：
+     - 保留先合并的迁移不变（按 git log 时间顺序判断）
+     - 重排后合并的迁移：重命名文件序号（如 `0003_add_bar.ts` → `0004_add_bar.ts`）、修改 `fromVersion`/`toVersion` 使链连续
+     - 更新 `index.ts` 注册顺序和 `CURRENT_EXPORT_VERSION`
+     - 如果 `types.ts` 两侧都新增了字段，保留双方
+     - 提交修复后重新验证
+- 如果 snapshot 类型定义有变更（`web/src/lib/versions/types.ts`）但无对应迁移文件 → 需要在 dev 上补写
+- 运行导出迁移相关测试：`make test -- --testPathPattern=versions`
 
 #### 3.4 判定
-- **安全**：无 schema 变更 / 迁移文件完整且安全
-- **需注意**：有 schema 变更但影响可控
-- **阻塞**：迁移文件缺失 / 存在危险的 schema 变更
+- **安全**：无 schema 变更 + 无导出格式变更 / 迁移文件完整且安全
+- **需注意**：有变更但影响可控（如新增可选字段）
+- **阻塞**：DB 迁移文件缺失 / 导出迁移文件缺失 / 存在危险的破坏性变更
 
 ## Phase 4: 生成 Release Notes + 报告 + 创建 PR
 
 ### Release Notes
 从集成报告的 Additions 推导面向用户的变更日志：
-- 新功能：从 REQ.md 的 What 翻译为用户语言
-- 缺陷修复：从 DEFECT.md 的 Delta 翻译为用户语言
+- 新功能：从集成报告的 Additions → 新功能提取，翻译为用户语言
+- 缺陷修复：从集成报告的 Additions → 缺陷修复提取，翻译为用户语言
 - 其他：chore/refactor 归类
 
 ### Verdict 裁定规则
@@ -163,15 +174,16 @@ Regression 未通过 / Cross-feature 未通过 / Migration 阻塞
 
 ### 资源管理
 
-所有发布检查产物统一放在 `.worktree/` 下：
+所有发布检查产物统一放在 `.release/` 下：
 ```
-.worktree/
-├── INTEGRATE.md                       # 集成报告（输入）
+.release/
+├── INTEGRATE.md                       # 集成报告（输入，由 /integrate 生成）
 ├── RELEASE_REPORT.md                  # 发布检查报告（输出）
-├── RELEASE_REPORT.assets/             # 发布检查截图
-│   └── release-cross-{N}.png
-└── sub-worktrees/                     # 子工作区归档（输入）
+└── RELEASE_REPORT.assets/             # 发布检查截图
+    └── release-cross-{N}.png
 ```
+
+各任务工作区的报告在 `.worktrees/{name}/.task/` 下（由集成报告引用，release 不直接读取）。
 
 ### 报告模板
 
@@ -284,7 +296,7 @@ gh pr create --base main --head dev --title "{PR 标题}" --body "$(cat <<'EOF'
 - **Regression**: {一句话}
 - **Cross-feature**: {一句话}
 - **Migration**: {一句话}
-- **Report**: [RELEASE_REPORT.md](.worktree/RELEASE_REPORT.md)
+- **Report**: [RELEASE_REPORT.md](.release/RELEASE_REPORT.md)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -315,7 +327,7 @@ node .claude/skills/release/serve-report.mjs
 2. 执行 Phase 1-3 的检查
 3. 生成报告内容，展示给用户
 4. 用 `AskUserQuestion` 确认报告是否准确
-5. 确认后写入 `.worktree/RELEASE_REPORT.md`
+5. 确认后写入 `.release/RELEASE_REPORT.md`
 6. 如果 Verdict 为 ✅ 或 ⚠️，创建 PR
 7. 启动 HTML 查看器，提示用户在浏览器中查看和操作
 
@@ -323,7 +335,7 @@ node .claude/skills/release/serve-report.mjs
 
 1. **集成报告先行**：必须读取 INTEGRATE.md 作为输入，不从零开始分析
 2. **回归必须全量**：`make typecheck` + `make test` 不可跳过
-3. **交叉验证不能省**：即使每个子工作区都通过了验收/验证，组合后仍需验证
+3. **交叉验证不能省**：即使每个任务工作区都通过了验收/验证，组合后仍需验证
 4. **迁移安全是硬约束**：Schema 变更缺少迁移文件 → 阻塞发布
 5. **Release Notes 面向用户**：不是开发者 changelog，是用户能看懂的变更说明
 6. **Verdict 有理有据**：判决必须基于三项检查证据
@@ -335,4 +347,4 @@ node .claude/skills/release/serve-report.mjs
 - **完整链条**：`/integrate` → 集成报告 → `/release` → 发布检查 → PR → 合并
 - **上游依赖**：必须先有 INTEGRATE.md（由 `/integrate` 生成）
 - **PR 创建**：Verdict 为 ✅ 或 ⚠️ 时自动创建 PR
-- **与 `/accept`、`/verify` 的区别**：accept/verify 审判单个功能/修复，release 审判整批集成
+- **与 `/accept`、`/verify` 的区别**：accept/verify 审判单个任务工作区的功能/修复，release 审判整批 merged 任务的集成质量

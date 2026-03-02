@@ -113,17 +113,11 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
    - **技术约束**：从代码调研中提取——"我发现 XX 有 N 处调用，如果改接口都要跟着改"
    - **兼容约束**：现有行为哪些必须保持不变？
 
-4. **预期变更预览**
-   - UX：before → after
-   - DX：接口/API 变化（如有）
-   - Database：schema 变更（如有）
-   - Breaking Changes：不兼容变更穷举
-
 ## Phase 3: 输出需求报告
 
 ### 输出位置
 
-**固定写入 `.worktree/REQ.md`**（`.worktree/` 目录始终存在于项目根目录）。
+**固定写入 `.task/REQ.md`**（`.task/` 目录始终存在于项目根目录）。
 
 ### 五不可约元素
 
@@ -229,28 +223,6 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 ### 不可打破的现有行为
 - {必须保持不变的现有功能/接口}
 
-## 预期变更
-
-### UX
-#### 现状
-{当前用户操作路径 / 界面}
-#### 目标
-{期望的用户操作路径 / 界面}
-
-### DX
-<条件——涉及接口/API 变更时展示>
-#### 现状
-{当前接口/调用方式}
-#### 目标
-{期望的接口/调用方式}
-
-### Database
-<条件——涉及 schema 变更时展示>
-{新增/修改的表和列}
-
-### Breaking Changes
-{不兼容变更穷举。无则写"无"}
-
 ## 参考
 - {相关代码路径、可复用模块、规范文档——从代码调研中提取}
 
@@ -273,14 +245,8 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 
 1. 生成报告内容，展示给用户
 2. 用 `AskUserQuestion` 确认报告是否准确、是否需要补充
-3. 确认后用 `Write` 写入 `.worktree/REQ.md`
-4. 启动/更新报告查看器：
-   ```bash
-   node .claude/skills/shared/serve-req-chain.mjs
-   # 用 Bash(run_in_background=true) 执行
-   # 幂等：已有 viewer 进程运行时自动跳过，文件变化通过 SSE 自动刷新
-   ```
-5. 告知用户报告位置，并提示后续操作
+3. 确认后用 `Write` 写入 `.task/REQ.md`
+4. 告知用户报告位置，并提示后续操作
 
 ## 执行规则
 
@@ -301,4 +267,4 @@ allowed-tools: AskUserQuestion, Read, Grep, Glob, Task, Bash, Write
 - **需求链路**：`/requirement` 生成需求报告 → 实现 → 验收
 - **缺陷链路**：`/diagnose` 生成缺陷报告 → `/fix` 修复 → `/verify` 验证
 - **典型流程**：`/create-wt` 创建工作区 → `/requirement` 定义需求 → 实现 → `/pr-wt` 提交（自动关联需求文档）
-- **PR 报告集成**：`/pr-wt` 生成报告时，如果 `.worktree/REQ.md` 存在，验收评估者会对照五元素逐项核对
+- **PR 报告集成**：`/pr-wt` 生成报告时，如果 `.task/REQ.md` 存在，验收评估者会对照五元素逐项核对

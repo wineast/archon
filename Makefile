@@ -1,4 +1,4 @@
-.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test test-viewer e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip
+.PHONY: setup teardown up down restart restart-dev restart-storybook restart-studio dev build lint typecheck test test-viewer e2e e2e-ui e2e-eval e2e-eval-binary e2e-eval-cancel e2e-report clean storybook deps inngest-dev db-generate db-migrate db-push db-push-force db-reset db-seed db-studio db-up db-down db-destroy db-neon-env db-init wt-list wt-create wt-sync wt-merge wt-delete wt-setup wt-teardown wt-init wt-fini fixture-zip admin admin-setup admin-dev admin-build static-storybook static-demo-umi deploy-storybook deploy-demo-umi
 
 # ============================================================
 # Setup
@@ -140,7 +140,7 @@ test:
 
 ## 链路报告查看器守护测试（Node.js 原生 test runner）
 test-viewer:
-	node --test .claude/skills/shared/__tests__/chain-viewer.test.mjs
+	node --test scripts/__tests__/chain-viewer.test.mjs
 
 e2e:
 	cd web && npx playwright test
@@ -264,44 +264,86 @@ db-init:
 	@$(MAKE) db-seed
 
 # ============================================================
-# Git Worktree
+# Admin Panel
 # ============================================================
+
+## Admin 面板依赖安装
+admin-setup:
+	@cd scripts/admin && npm install
+
+## Admin 面板开发模式（Next.js dev）
+admin-dev:
+	@cd scripts/admin && npm run dev
+
+## Admin 面板构建
+admin-build:
+	@cd scripts/admin && npm run build
+
+## 生产模式（Next.js start）
+admin:
+	@cd scripts/admin && npm run build && npm run start
 
 ## 列出所有 worktree
 wt-list:
-	@./scripts/worktree.sh list
+	@node scripts/worktree/worktree.mjs list
 
 ## 创建 worktree（用法: make wt-create NAME=feature-xxx [BASE=main]）
 wt-create:
-	@./scripts/worktree.sh create $(NAME) $(BASE)
+	@node scripts/worktree/worktree.mjs create $(NAME) $(BASE)
 
 ## 同步上游分支到当前工作区
 wt-sync:
-	@./scripts/worktree.sh sync
+	@node scripts/worktree/worktree.mjs sync
 
 ## 合并工作区回 base 分支（用法: make wt-merge NAME=feature-xxx）
 wt-merge:
-	@./scripts/worktree.sh merge $(NAME)
+	@node scripts/worktree/worktree.mjs merge $(NAME)
 
 ## 删除 worktree（用法: make wt-delete NAME=feature-xxx）
 wt-delete:
-	@./scripts/worktree.sh delete $(NAME)
+	@node scripts/worktree/worktree.mjs delete $(NAME)
 
 ## 工作区静态环境初始化（link-env + db-local-env + npm install）
 wt-setup:
-	@./scripts/wt-setup.sh $(or $(DIR),.)
+	@node scripts/worktree/lifecycle/wt-setup.mjs $(or $(DIR),.)
 
 ## 工作区静态环境清理（wt-setup 的反向）
 wt-teardown:
-	@./scripts/wt-teardown.sh $(or $(DIR),.)
+	@node scripts/worktree/lifecycle/wt-teardown.mjs $(or $(DIR),.)
 
 ## 工作区数据初始化（db-push + seed）
 wt-init:
-	@./scripts/wt-init.sh $(or $(DIR),.)
+	@node scripts/worktree/lifecycle/wt-init.mjs $(or $(DIR),.)
 
 ## 工作区数据清理（wt-init 的反向）
 wt-fini:
-	@./scripts/wt-fini.sh $(or $(DIR),.)
+	@node scripts/worktree/lifecycle/wt-fini.mjs $(or $(DIR),.)
+
+# ============================================================
+# Fixtures
+# ============================================================
+
+# ============================================================
+# Static Assets (Cloudflare Pages)
+# ============================================================
+
+## 构建 Storybook → .static-dist/storybook/
+static-storybook:
+	@node scripts/build-static.mjs storybook
+
+## 构建 Umi Demo → .static-dist/demo-umi/
+static-demo-umi:
+	@node scripts/build-static.mjs demo-umi
+
+## 部署 Storybook → archon-storybook.pages.dev
+deploy-storybook:
+	@if [ ! -d .static-dist/storybook ]; then echo "❌ 请先 make static-storybook"; exit 1; fi
+	@npx wrangler pages deploy .static-dist/storybook --project-name=archon-storybook
+
+## 部署 Umi Demo → archon-demo-umi.pages.dev
+deploy-demo-umi:
+	@if [ ! -d .static-dist/demo-umi ]; then echo "❌ 请先 make static-demo-umi"; exit 1; fi
+	@npx wrangler pages deploy .static-dist/demo-umi --project-name=archon-demo-umi
 
 # ============================================================
 # Fixtures

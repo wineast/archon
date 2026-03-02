@@ -103,8 +103,9 @@ describe("scanCode", () => {
     expect(result.errors.some((e) => e.includes("constructor.constructor"))).toBe(true);
   });
 
-  it("passes code with syntax errors (defers to runtime)", () => {
+  it("rejects code with syntax errors", () => {
     const result = scanCode(`export default function( { return 1; }`);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes("代码解析失败"))).toBe(true);
   });
 });

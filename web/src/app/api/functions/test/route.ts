@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { compileAndExecFn, CompilationError } from "@/lib/functions/exec";
 import { ALL_BASE_DEPS } from "@/lib/functions/compile";
 import { buildInputSchema } from "@/lib/tools/schema-builder";
@@ -6,11 +7,22 @@ import type { JsonSchema7 } from "@/lib/schemas/types";
 
 export async function POST(req: NextRequest) {
   try {
-    const { code, parameters, input } = (await req.json()) as {
+    const { code, parameters, input, agentId } = (await req.json()) as {
       code: string;
       parameters?: JsonSchema7;
       input?: unknown;
+      agentId: string;
     };
+
+    if (!agentId || typeof agentId !== "string") {
+      return NextResponse.json(
+        { success: false, error: "agentId is required" },
+        { status: 400 }
+      );
+    }
+
+    const ctx = await requireAgentRole(agentId, "editor");
+    if (ctx instanceof NextResponse) return ctx;
 
     if (!code || typeof code !== "string") {
       return NextResponse.json(

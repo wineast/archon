@@ -3,16 +3,16 @@
 tmp/
 .next/
 node_modules/
+*.tsbuildinfo
 
 # Worktrees directory
 .worktrees/
 
 # Worktree local config
 .worktree/
+.task/
+.release/
 CLAUDE.local.md
-start.sh
-clarify-req-from-todo.sh
-req.sh
 test-report.md
 .vercel
 .playwright-mcp
@@ -20,3 +20,12 @@ screenshots/
 .logs/
 /data/fixtures/
 embed-umi-demo/
+.static-dist/
+
+# Local task data
+todo/
+issues/
+
+# Admin panel
+scripts/admin/.next/
+scripts/admin/dist/

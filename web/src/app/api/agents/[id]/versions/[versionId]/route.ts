@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
 import { agents, agentVersions, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { buildSnapshot } from "@/lib/versions/snapshot";
 
@@ -29,7 +29,9 @@ export async function GET(
     })
     .from(agentVersions)
     .leftJoin(users, eq(agentVersions.createdBy, users.id))
-    .where(eq(agentVersions.id, versionId))
+    .where(
+      and(eq(agentVersions.id, versionId), eq(agentVersions.agentId, agentId))
+    )
     .limit(1);
 
   if (!row) {
@@ -65,7 +67,11 @@ export async function DELETE(
     );
   }
 
-  await db.delete(agentVersions).where(eq(agentVersions.id, versionId));
+  await db
+    .delete(agentVersions)
+    .where(
+      and(eq(agentVersions.id, versionId), eq(agentVersions.agentId, agentId))
+    );
 
   return NextResponse.json({ ok: true });
 }

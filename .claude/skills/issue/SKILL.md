@@ -4,7 +4,7 @@ description: 问题追踪管理。当用户说"记个 issue"、"这是个 bug"�
 allowed-tools: Read, Write, Edit, Glob, Bash, Grep
 ---
 
-问题追踪技能——在 `issue/` 目录下维护问题列表。
+问题追踪技能——在 `issues/` 目录下维护问题列表。
 
 ## 定位：缺陷链路的种子（急诊初诊单）
 
@@ -29,16 +29,17 @@ Hypothesis 是 issue 最有价值的部分之一。一个错误的假设比没�
 - 不确定就标注"不确定"，但不要留空
 - 多个可能就都列出来
 
-## 目录结构（文件夹即状态）
+## 目录结构（扁平 + frontmatter 状态）
 
 ```
-issue/
-  open/       ← 待修复
-  closed/     ← 已关闭
+issues/
+  {name}.md     ← 所有 issue 直接铺平在根目录
 ```
 
-- 一个问题一个文件，文件通过所在文件夹表示状态
-- 状态变更 = 移动文件到对应文件夹
+- 一个问题一个文件，所有 `.md` 文件直接放在 `issues/` 根目录
+- **frontmatter `status` 字段是唯一状态源**，不再有子文件夹
+- 状态变更 = 修改文件内 frontmatter 的 `status` 值（文件不移动）
+- 有效状态值：`open`（待修复）、`ready`（就绪待派发）、`merged`（已合并，待归档）、`wontfix`（不修）
 
 ## Issue 文件规范
 
@@ -48,6 +49,11 @@ issue/
 ### 模板
 
 ```markdown
+---
+priority: P1
+status: open
+worktree:
+---
 # {一句话症状描述}
 
 ## Symptom（看到了什么）
@@ -63,9 +69,31 @@ issue/
 {基于当时上下文的因果推测——可以猜原因、猜位置、猜修复方向，错了没关系}
 ```
 
+### Frontmatter 字段
+
+| 字段 | 说明 |
+|------|------|
+| `priority` | P0-P3，见下方定义 |
+| `status` | 唯一状态源：`open` / `ready` / `merged` / `wontfix` |
+| `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
+
+### Priority 定义
+
+| 级别 | 含义 | 响应 |
+|------|------|------|
+| **P0** | 阻断核心流程，用户无法正常使用 | 立即修复 |
+| **P1** | 功能异常但有绕行方案，或数据一致性风险 | 本迭代修复 |
+| **P2** | 体验问题、边界 case、代码质量 | 排期修复 |
+| **P3** | 轻微瑕疵、优化建议 | 有空再修 |
+
 ### 示例
 
 ```markdown
+---
+priority: P1
+status: open
+worktree:
+---
 # 数据集预览在模板中渲染为空
 
 ## Symptom（看到了什么）
@@ -88,7 +116,7 @@ Issue 不是终点，而是种子。根据 Symptom 和 Hypothesis 的性质，is
 1. **→ 缺陷报告**：Symptom 是功能错误 + Hypothesis 指向代码缺陷 → `/diagnose` 深度诊断，输出 DEFECT.md
 2. **→ 优化报告**：Symptom 是"太慢"/"太卡" → 可升级为性能优化任务
 3. **→ 降级 Todo**：Symptom 是"不好用"但不是错 → 降级为 todo，走需求/优化链路
-4. **→ 关闭**：调查后发现是预期行为或已修复 → 移入 closed/
+4. **→ 关闭**：调查后发现是预期行为或已修复 → 改为 `wontfix` 或删除文件
 
 **衔接提示**：创建 issue 后，根据性质主动提示用户：
 - "这个看起来是代码缺陷，要不要 `/diagnose` 深入排查？"
@@ -110,21 +138,18 @@ Hypothesis ──迁移──→        Root Cause（直觉 → 确认因果）
 
 ### 创建 Issue
 
-1. 确保 `issue/open/` 目录存在
-2. 按模板创建文件到 `issue/open/`
+1. 确保 `issues/` 目录存在
+2. 按模板创建文件到 `issues/`（frontmatter `status: open`）
 3. 确认：`已创建 issue — {Symptom 标题}`
 4. 根据性质提示可能的演化方向
 
 ### 查看 Issue
 
-列出 `issue/open/` 下所有文件。
+列出 `issues/` 下所有 `.md` 文件，按 frontmatter `status` 筛选。
 
 ### 关闭 Issue
 
-将文件从 `issue/open/` 移动到 `issue/closed/`：
-```bash
-mv issue/open/{name}.md issue/closed/
-```
+编辑文件 frontmatter，将 `status` 改为 `wontfix`（文件不移动）。
 
 ### 删除 Issue
 
@@ -136,4 +161,5 @@ mv issue/open/{name}.md issue/closed/
 - Hypothesis 不要留空——错了比没有强，标注不确定即可
 - 四元素各司其职：Symptom 识别问题、Trigger 划定触发条件、Locale 缩小范围、Hypothesis 指引方向
 - 文件名不带编号
-- 状态完全由文件夹决定
+- 状态完全由 frontmatter `status` 字段决定，文件不移动
+- 创建工作区后，在 frontmatter 中填写 `worktree` 字段关联

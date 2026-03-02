@@ -70,6 +70,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 完整定义见 `Makefile`，下面是速查：
   - **初始化**：`make setup`（clone 后一次）/ `make teardown`（反向清理）
   - **开发**：`make up`（全部服务）/ `make down` / `make dev`（仅 Next.js）/ `make storybook`
+  - **重要**：前端页面依赖数据库，访问前端前必须先确保 Docker 运行（`open -a Docker`）再 `make up`。仅用 `make dev` 启动 Next.js 不够——缺少数据库会导致 API 报错
   - **构建检查**：`make build` / `make lint` / `make typecheck` / `make test` / `make e2e`
   - **数据库**：`make db-up` / `make db-push`（schema 变更）/ `make db-reset`（破坏性变更）/ `make db-seed` / `make db-studio`
   - **Worktree**：`make wt-list` / `make wt-create NAME=xxx` / `make wt-sync` / `make wt-merge NAME=xxx` / `make wt-delete NAME=xxx`
@@ -122,6 +123,11 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 - 详见 `web/guide/production-database.md`
 - **查询版本化资源（tools、functions、components、datasets、wiki、schemas 等）时必须加 `versionId` 过滤**——这些资源按 version 隔离，缺少 `versionId` 条件会导致跨 Agent/跨版本数据混入。标准模式：`eq(table.versionId, versionId)` + 其他条件（如 `eq(table.enabled, true)`, `isNull(table.deletedAt)`）
+
+### 导出格式迁移（Export Migrations）
+- 迁移文件在 `web/src/lib/versions/migrations/`，当前版本 `CURRENT_EXPORT_VERSION`，详见 `web/guide/agent-export-import.md`
+- **与 DB 迁移不同**：导出迁移是手写代码，没有 `db-push` 式的旁路，必须有迁移文件才能测试 import 流程，因此**工作区内正常编写迁移文件 + 递增版本号**
+- **并行工作区可能产生版本号重复**（如两个工作区都写了 v2→v3），合并到 dev 时 git 不一定报冲突，由 `/integrate` 和 `/release` 技能检测并重排序修复
 
 ### 资源共享池
 - **所有资源都必须存在于数据库中**，禁止前端硬编码资源列表（如 `BUILTIN_FUNCTIONS`、`BUILTIN_COMPONENTS` 常量）
@@ -193,4 +199,13 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 | 邮箱 | 密码 |
 |------|------|
 | yarnb@qq.com | archon123456Aa. |
+
+### Worktree 中配置 AI 模型
+
+工作区的数据库独立于主仓库，新建工作区后需要配置 AI Provider API Key 才能使用聊天功能：
+
+1. DeepSeek API Key 存放在 `web/e2e/.env` 的 `E2E_DEEPSEEK_API_KEY` 字段
+2. 通过 UI 配置：组织设置 → API Keys → DeepSeek → 配置 → 填入 key
+3. 配置后还需要创建 Agent 并在构建页的 Model Config 中选择 DeepSeek 模型并激活
+4. E2E 测试中的完整配置流程参考 `web/e2e/eval-flow.spec.ts`
 

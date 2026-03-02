@@ -40,12 +40,12 @@ make setup
 
 1. **vercel-check** — 确保 `web/.vercel` 存在
 2. **db-up** — 启动 Docker PostgreSQL
-3. **wt-setup**（`scripts/wt-setup.sh`）— 静态环境初始化：
+3. **wt-setup**（`scripts/worktree/lifecycle/wt-setup.mjs`）— 静态环境初始化：
    - wt-meta — 创建 `.worktree/meta.json`（主仓库端口 3000）
    - link-env — 创建 `.env.local` symlink
    - db-local-env — 生成 `.env.development.local`（指向独立数据库）
    - npm install
-4. **wt-init**（`scripts/wt-init.sh`）— 数据初始化：
+4. **wt-init**（`scripts/worktree/lifecycle/wt-init.mjs`）— 数据初始化：
    - db-push + seed
 
 ### 创建工作区
@@ -110,19 +110,6 @@ make setup
 
 ---
 
-## 通过 Claude Code 技能使用
-
-除了直接使用 make 命令，也可以在 Claude Code 中通过 `/worktree` 技能操作，技能会额外处理：
-
-- **创建时**：基于 guide/ 文档变更分析需求 → 调研代码 → 生成 `start.sh` 启动脚本
-- **`start.sh`**：进入工作区后执行，自动启动 Claude Code 并注入任务描述
-
-```bash
-cd .worktrees/<name> && ./start.sh
-```
-
----
-
 ## 目录结构
 
 ```
@@ -134,7 +121,6 @@ archon/
 │   │   ├── .worktree/
 │   │   │   └── meta.json  # 工作区元数据
 │   │   ├── CLAUDE.local.md # Claude Code 本地配置
-│   │   ├── start.sh       # 启动脚本
 │   │   └── web/            # 项目代码
 │   └── feature-b/
 │       └── ...
