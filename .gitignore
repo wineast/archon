@@ -29,6 +29,9 @@ issues/
 # But track archived files under releases/
 !releases/**/todo/
 !releases/**/issues/
+!releases/**/worktrees/
+!releases/**/.task/
+!releases/**/.task/**
 
 # Admin panel
 scripts/admin/.next/

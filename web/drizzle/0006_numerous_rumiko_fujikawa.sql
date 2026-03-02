@@ -1,0 +1,1 @@
+ALTER TABLE "eval_runs" ADD COLUMN "chat_version_id" uuid;

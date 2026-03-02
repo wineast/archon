@@ -56,10 +56,6 @@ vi.mock("@/lib/ai/resolve-model", () => ({
   resolveModel: vi.fn().mockImplementation((modelId: string) => Promise.resolve(modelId)),
 }));
 
-vi.mock("@/lib/versions/resolve", () => ({
-  resolveEditingVersionId: vi.fn().mockResolvedValue("version-1"),
-}));
-
 vi.mock("@/lib/eval/judge-dimensions", () => ({
   buildJudgeSchema: vi.fn().mockReturnValue({}),
   toJudgeResult: vi.fn().mockReturnValue({
@@ -78,6 +74,7 @@ const { executeCase, extractToolCalls, turnToMessages } = await import("../execu
 const baseRun = {
   id: "run-1",
   agentId: "agent-1",
+  chatVersionId: "version-1",
   chatModel: "gpt-4",
   chatSystemPrompt: "You are helpful",
   chatTemperature: 0.7,

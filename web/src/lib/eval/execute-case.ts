@@ -13,7 +13,6 @@ import { buildDynamicTools } from "@/app/api/chat/tools/build-dynamic-tools";
 import type { ToolDefinitionPayload } from "@/lib/tools/types";
 import { EMPTY_OBJECT_SCHEMA } from "@/lib/schemas/types";
 import { resolveInlineSchema } from "@/lib/schemas/resolve-inline";
-import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { resolveModel } from "@/lib/ai/resolve-model";
 import type { EvalRunRow } from "@/db/schema";
 import type { AssertionFailConfig } from "@/lib/eval/types";
@@ -133,7 +132,7 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
   const judgeSchema = buildJudgeSchema(dimensions);
 
   const evalAgentId = run.agentId ?? undefined;
-  const evalVersionId = evalAgentId ? await resolveEditingVersionId(evalAgentId) : undefined;
+  const evalVersionId = run.chatVersionId ?? undefined;
   const templateData = await gatherTemplateData(evalAgentId, evalVersionId);
 
   const chatUsage = createUsageData();

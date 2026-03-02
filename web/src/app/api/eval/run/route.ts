@@ -117,6 +117,7 @@ export async function POST(req: Request) {
     .insert(evalRuns)
     .values({
       agentId,
+      chatVersionId: versionId,
       chatModel: modelConfig.modelId,
       chatSystemPrompt: modelConfig.systemPrompt,
       chatTemperature: modelConfig.temperature,

@@ -723,6 +723,7 @@ export const evalRuns = pgTable("eval_runs", {
     onDelete: "cascade",
   }),
   runIndex: integer("run_index").notNull().default(0),
+  chatVersionId: uuid("chat_version_id"),
   chatModel: text("chat_model").notNull(),
   chatSystemPrompt: text("chat_system_prompt").notNull(),
   chatTemperature: real("chat_temperature").notNull().default(0.7),
