@@ -52,6 +52,7 @@ issues/
 ---
 priority: P1
 status: open
+tags: []
 worktree:
 ---
 # {一句话症状描述}
@@ -75,6 +76,7 @@ worktree:
 |------|------|
 | `priority` | P0-P3，见下方定义 |
 | `status` | 唯一状态源：`open` / `ready` / `merged` / `wontfix` |
+| `tags` | 分类标签数组，如 `[auth]`、`[performance, db]`、`[ui, regression]`，便于按主题筛选 |
 | `worktree` | 关联的工作区名称（如 `fix-auth`），未开工时留空 |
 
 ### Priority 定义
@@ -92,6 +94,7 @@ worktree:
 ---
 priority: P1
 status: open
+tags: [template, dataset]
 worktree:
 ---
 # 数据集预览在模板中渲染为空

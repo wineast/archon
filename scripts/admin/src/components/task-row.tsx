@@ -117,7 +117,18 @@ export function TaskRow({
         >
           {task.title}
         </span>
-        <div className="text-[0.75em] text-muted-foreground">{task.id}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[0.75em] text-muted-foreground">{task.id}</span>
+          {task.tags?.length > 0 &&
+            task.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center rounded-sm bg-secondary px-1.5 py-px text-[10px] font-medium text-muted-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+        </div>
       </td>
       <td className="px-3 py-2">
         <span

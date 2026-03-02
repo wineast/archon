@@ -57,6 +57,9 @@ export function TasksPanel() {
   const [statusFilter, setStatusFilter] = useState(
     () => getQuery().get("status") || "all"
   );
+  const [tagFilter, setTagFilter] = useState(
+    () => getQuery().get("tag") || "all"
+  );
   const [page, setPage] = useState(1);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     const raw = getQuery().get("expanded");
@@ -122,6 +125,15 @@ export function TasksPanel() {
     return ALL_STATUSES;
   }, [currentTab]);
 
+  const availableTags = useMemo(() => {
+    if (!data) return [];
+    const tags = new Set<string>();
+    for (const task of data.tasks) {
+      task.tags?.forEach((t) => tags.add(t));
+    }
+    return Array.from(tags).sort();
+  }, [data]);
+
   const allFilteredTasks = useMemo(() => {
     if (!data) return [];
     let tasks = data.tasks.slice();
@@ -140,6 +152,10 @@ export function TasksPanel() {
       tasks = tasks.filter((t) => t.status === statusFilter);
     }
 
+    if (tagFilter !== "all") {
+      tasks = tasks.filter((t) => t.tags?.includes(tagFilter));
+    }
+
     tasks.sort((a, b) => {
       const sa = STATUS_ORDER[a.status] ?? 3;
       const sb = STATUS_ORDER[b.status] ?? 3;
@@ -148,7 +164,7 @@ export function TasksPanel() {
     });
 
     return tasks;
-  }, [data, currentTab, currentFilter, statusFilter]);
+  }, [data, currentTab, currentFilter, statusFilter, tagFilter]);
 
   const totalPages = Math.max(
     1,
@@ -359,6 +375,32 @@ export function TasksPanel() {
           </button>
         ))}
       </div>
+
+      {/* Tag filter */}
+      {availableTags.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-1.5">
+          <label className="mr-1 text-xs font-medium text-muted-foreground">
+            标签:
+          </label>
+          {["all", ...availableTags].map((f) => (
+            <button
+              key={f}
+              className={cn(
+                "cursor-pointer rounded-xl border px-3 py-1 text-xs font-medium text-muted-foreground transition-all hover:text-foreground",
+                tagFilter === f &&
+                  "border-primary bg-accent text-primary"
+              )}
+              onClick={() => {
+                setTagFilter(f);
+                setPage(1);
+                setQuery({ tag: f });
+              }}
+            >
+              {f === "all" ? "全部" : f}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tasks Table */}
       <div>
