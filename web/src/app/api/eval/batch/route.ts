@@ -127,6 +127,8 @@ export async function POST(req: Request) {
       judgeConfigSnapshot: {
         name: judgeConfig.name,
         dimensions: judgeConfig.dimensions,
+        promptTemplate: judgeConfig.promptTemplate,
+        turnPromptTemplate: judgeConfig.turnPromptTemplate,
       },
       totalCasesPerRun: totalCases,
       status: "running",
@@ -159,6 +161,8 @@ export async function POST(req: Request) {
         judgeConfigSnapshot: {
           name: judgeConfig.name,
           dimensions: judgeConfig.dimensions,
+          promptTemplate: judgeConfig.promptTemplate,
+          turnPromptTemplate: judgeConfig.turnPromptTemplate,
         },
         filterTags: filterTags ?? [],
         assertionFailConfig: assertionFailConfig ?? null,
