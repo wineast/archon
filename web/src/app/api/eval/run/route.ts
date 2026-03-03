@@ -122,6 +122,7 @@ export async function POST(req: Request) {
       chatSystemPrompt: modelConfig.systemPrompt,
       chatTemperature: modelConfig.temperature,
       judgeAgentId,
+      judgeVersionId,
       judgeModelConfigSnapshot: {
         modelId: judgeModelConfig.modelId,
         systemPrompt: judgeModelConfig.systemPrompt,

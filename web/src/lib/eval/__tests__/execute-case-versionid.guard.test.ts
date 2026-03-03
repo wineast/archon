@@ -101,6 +101,7 @@ const makeRun = (overrides: Record<string, unknown> = {}) => ({
   },
   assertionFailConfig: null,
   judgeAgentId: "judge-1",
+  judgeVersionId: "judge-version-1",
   filterTags: [],
   templateVars: {},
   toolNames: [],
@@ -178,13 +179,15 @@ describe("Guard: Eval run case 执行使用快照 versionId", () => {
         orgId: "org-1",
       });
 
+      // Each executeCase calls gatherTemplateData twice: eval agent + judge agent
+      // Call 1: eval agent (version-A), Call 2: judge agent, Call 3: eval agent (version-B), Call 4: judge agent
       expect(mockGatherTemplateData).toHaveBeenNthCalledWith(
         1,
         "agent-1",
         "version-A"
       );
       expect(mockGatherTemplateData).toHaveBeenNthCalledWith(
-        2,
+        3,
         "agent-1",
         "version-B"
       );

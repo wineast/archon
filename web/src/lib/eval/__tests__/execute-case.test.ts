@@ -89,6 +89,7 @@ const baseRun = {
   },
   assertionFailConfig: null,
   judgeAgentId: "judge-1",
+  judgeVersionId: "judge-version-1",
   filterTags: [],
   templateVars: {},
   toolNames: [],
