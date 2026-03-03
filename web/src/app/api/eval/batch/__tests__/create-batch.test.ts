@@ -39,12 +39,19 @@ const whereSelectMock = vi.fn(() => {
 const fromMock = vi.fn(() => ({ where: whereSelectMock }));
 const selectMock = vi.fn(() => ({ from: fromMock }));
 
-vi.mock("@/db", () => ({
-  db: {
+vi.mock("@/db", () => {
+  const txProxy = {
     insert: () => insertMock(),
     select: () => selectMock(),
-  },
-}));
+  };
+  return {
+    db: {
+      insert: () => insertMock(),
+      select: () => selectMock(),
+      transaction: async (fn: (tx: typeof txProxy) => Promise<unknown>) => fn(txProxy),
+    },
+  };
+});
 
 vi.mock("@/db/schema", () => ({
   evalBatches: { id: "id", agentId: "agent_id", status: "status" },

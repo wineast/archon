@@ -1,13 +1,27 @@
 import { db } from "@/db";
 import { agents, agentVersions } from "@/db/schema";
 import { and, eq, or } from "drizzle-orm";
+import type { ExtractTablesWithRelations } from "drizzle-orm";
+import type { PgTransaction } from "drizzle-orm/pg-core";
+import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import type * as schema from "@/db/schema";
+
+export type Tx = PgTransaction<
+  PostgresJsQueryResultHKT,
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
+>;
 
 /**
  * Resolve the editing version ID for an agent.
  * Throws if the agent has no editing version set.
+ * Accepts an optional transaction context for use within db.transaction().
  */
-export async function resolveEditingVersionId(agentId: string): Promise<string> {
-  const [agent] = await db
+export async function resolveEditingVersionId(
+  agentId: string,
+  conn: Tx | typeof db = db,
+): Promise<string> {
+  const [agent] = await conn
     .select({ editingVersionId: agents.editingVersionId })
     .from(agents)
     .where(eq(agents.id, agentId))
