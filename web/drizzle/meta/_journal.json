@@ -50,6 +50,13 @@
       "when": 1772447174958,
       "tag": "0006_numerous_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772511005587,
+      "tag": "0007_odd_frank_castle",
+      "breakpoints": true
     }
   ]
 }
