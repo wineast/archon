@@ -3,11 +3,11 @@
  * 命令: delete — 删除 worktree
  */
 
-import { existsSync, mkdirSync, readdirSync, copyFileSync, cpSync } from "node:fs";
-import { join, basename } from "node:path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
   info, success, warn, error, exec, execSafe, execInherit,
-  PROJECT_ROOT, WORKTREES_DIR, WORKTREE_CONFIG_DIR,
+  PROJECT_ROOT, WORKTREES_DIR,
   killWorktreeServices, resolveWorktreePath, confirm,
 } from "./_helpers.mjs";
 
@@ -40,21 +40,6 @@ export async function cmdDelete(target) {
     }
   }
 
-  // Archive report chain (from .task/ directory)
-  const wtTaskDir = join(worktreePath, ".task");
-  if (existsSync(wtTaskDir)) {
-    const wtName = basename(worktreePath);
-    const archiveDir = join(WORKTREE_CONFIG_DIR, "sub-worktrees", wtName);
-    info(`归档报告链到 ${archiveDir} ...`);
-    mkdirSync(archiveDir, { recursive: true });
-    for (const fname of readdirSync(wtTaskDir)) {
-      try {
-        cpSync(join(wtTaskDir, fname), join(archiveDir, fname), { recursive: true });
-      } catch { /* skip */ }
-    }
-    success("报告链已归档");
-  }
-
   // Run cleanup script
   const wtConfigDir = join(worktreePath, ".worktree");
   if (existsSync(join(wtConfigDir, "cleanup.sh"))) {
@@ -71,9 +56,23 @@ export async function cmdDelete(target) {
   execInherit(`node "${join(PROJECT_ROOT, "scripts", "worktree", "lifecycle", "wt-fini.mjs")}" "${worktreePath}"`);
   execInherit(`node "${join(PROJECT_ROOT, "scripts", "worktree", "lifecycle", "wt-teardown.mjs")}" "${worktreePath}"`);
 
+  // Resolve branch name before removing worktree
+  const branchName = execSafe(`git -C "${worktreePath}" rev-parse --abbrev-ref HEAD`);
+
   // Remove worktree
   info(`删除 worktree: ${worktreePath}`);
   execInherit(`git worktree remove "${worktreePath}" --force`);
+
+  // Delete the associated branch
+  if (branchName) {
+    info(`删除分支: ${branchName}`);
+    const result = execSafe(`git branch -D "${branchName}"`);
+    if (result !== null) {
+      success(`分支 ${branchName} 已删除`);
+    } else {
+      warn(`分支 ${branchName} 删除失败（可能已不存在）`);
+    }
+  }
 
   success("Worktree 已删除");
 }

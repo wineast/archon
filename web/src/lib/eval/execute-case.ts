@@ -135,6 +135,10 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
   const evalVersionId = run.chatVersionId ?? undefined;
   const templateData = await gatherTemplateData(evalAgentId, evalVersionId);
 
+  const judgeAgentId = run.judgeAgentId ?? undefined;
+  const judgeVersionId = run.judgeVersionId ?? undefined;
+  const judgeTemplateData = await gatherTemplateData(judgeAgentId, judgeVersionId);
+
   const chatUsage = createUsageData();
   const judgeUsage = createUsageData();
 
@@ -330,7 +334,7 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
                 model: await resolveModel(judgeModel, orgId),
                 system: await renderTemplate(
                   judgeSystemPrompt,
-                  templateData,
+                  judgeTemplateData,
                   { ...templateVars, model: chatModel, caseName: evalCase.name, toolNames }
                 ),
                 prompt: judgePrompt,
@@ -380,7 +384,7 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
           model: await resolveModel(judgeModel, orgId),
           system: await renderTemplate(
             judgeSystemPrompt,
-            templateData,
+            judgeTemplateData,
             { ...templateVars, model: chatModel, caseName: evalCase.name, toolNames }
           ),
           prompt: judgePrompt,
@@ -428,5 +432,6 @@ export async function executeCase(params: ExecuteCaseParams): Promise<ExecuteCas
     return { result, chatUsage, judgeUsage };
   } finally {
     disposeTemplateData(templateData);
+    disposeTemplateData(judgeTemplateData);
   }
 }

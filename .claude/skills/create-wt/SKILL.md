@@ -58,6 +58,6 @@ allowed-tools: Bash, Read, Grep, Glob, Task, AskUserQuestion
 ## 数据库管理
 
 - **工作区内只用 `make db-push`**，不生成迁移文件——多个工作区并行开发时迁移生成顺序不固定，会产生冲突
-- **合并回上游后统一生成迁移**：工作区合并到 dev/main 后，在上游分支执行 `make db-generate` 生成迁移文件并提交
+- **合并回上游后统一生成迁移**：工作区合并到 dev 后，必须在 dev 上执行 `make db-generate` 生成迁移文件并提交——**必须在合并到 main 之前完成**，否则 Vercel 构建时 `db:migrate` 找不到迁移文件
 - 工作区共享同一个 Docker PostgreSQL 容器，各自通过 `db-push` 同步 schema 到本地库即可
 - 详见 `web/guide/production-database.md`

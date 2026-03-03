@@ -118,7 +118,7 @@ Archon 是一个**母 Agent 平台** —— 通过对话式交互创建、配置
 ### Database
 - schema 见 `web/src/db/schema.ts`
 - **工作区（worktree）开发**：只用 `make db-push` 快速迭代，不生成迁移文件——因为工作区并行导致迁移生成顺序不固定
-- **上游分支（dev/main）**：schema 变更从工作区合并后，统一 `make db-generate` 生成迁移文件并提交
+- **上游分支（dev/main）**：schema 变更从工作区合并到 dev 后，必须在 dev 上执行 `make db-generate` 生成迁移文件并提交——**必须在合并到 main 之前完成**，否则 Vercel 构建时 `db:migrate` 找不到迁移文件，生产数据库不会应用 schema 变更
 - **生产部署**：Vercel 构建时自动执行 `db:migrate`（见 `vercel-build` 脚本），无需手动迁移；迁移文件是上线唯一通道，禁止本地连接任何线上生产数据库
 - 如果 `db-push` 遇到交互式确认（如破坏性变更），直接用 `make db-reset` 重建
 - 详见 `web/guide/production-database.md`

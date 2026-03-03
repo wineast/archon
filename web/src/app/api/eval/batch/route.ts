@@ -7,6 +7,8 @@ import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { resolveEditingVersionId } from "@/lib/versions/resolve";
 import { inngest } from "@/inngest/client";
 
+class ConfigError extends Error {}
+
 export async function POST(req: Request) {
   const body: CreateEvalBatchRequest = await req.json();
   const {
@@ -57,124 +59,138 @@ export async function POST(req: Request) {
     );
   }
 
-  // Resolve active model config for the agent
-  const versionId = await resolveEditingVersionId(agentId);
-  const [modelConfig] = await db
-    .select()
-    .from(modelConfigs)
-    .where(
-      and(
-        eq(modelConfigs.versionId, versionId),
-        eq(modelConfigs.isActive, true),
-        isNull(modelConfigs.deletedAt),
-      )
-    );
+  // Snapshot config + create batch + runs in a single transaction for read consistency
+  let result: {
+    batch: typeof evalBatches.$inferSelect;
+    runConfigs: Array<{ runId: string; caseIds: string[] }>;
+  };
+  try {
+  result = await db.transaction(async (tx) => {
+    // Resolve active model config for the agent
+    const versionId = await resolveEditingVersionId(agentId, tx);
+    const [modelConfig] = await tx
+      .select()
+      .from(modelConfigs)
+      .where(
+        and(
+          eq(modelConfigs.versionId, versionId),
+          eq(modelConfigs.isActive, true),
+          isNull(modelConfigs.deletedAt),
+        )
+      );
 
-  if (!modelConfig || !modelConfig.modelId) {
-    return Response.json(
-      { error: "No active model config found for this agent" },
-      { status: 400 }
-    );
-  }
+    if (!modelConfig || !modelConfig.modelId) {
+      throw new ConfigError("No active model config found for this agent");
+    }
 
-  // Resolve active model config for the judge agent
-  const judgeVersionId = await resolveEditingVersionId(judgeAgentId);
-  const [judgeModelConfig] = await db
-    .select()
-    .from(modelConfigs)
-    .where(
-      and(
-        eq(modelConfigs.versionId, judgeVersionId),
-        eq(modelConfigs.isActive, true),
-        isNull(modelConfigs.deletedAt),
-      )
-    );
+    // Resolve active model config for the judge agent
+    const judgeVersionId = await resolveEditingVersionId(judgeAgentId, tx);
+    const [judgeModelConfig] = await tx
+      .select()
+      .from(modelConfigs)
+      .where(
+        and(
+          eq(modelConfigs.versionId, judgeVersionId),
+          eq(modelConfigs.isActive, true),
+          isNull(modelConfigs.deletedAt),
+        )
+      );
 
-  if (!judgeModelConfig || !judgeModelConfig.modelId) {
-    return Response.json(
-      { error: "No active model config found for the judge agent" },
-      { status: 400 }
-    );
-  }
+    if (!judgeModelConfig || !judgeModelConfig.modelId) {
+      throw new ConfigError("No active model config found for the judge agent");
+    }
 
-  // Resolve active judge config
-  const [judgeConfig] = await db
-    .select()
-    .from(judgeConfigs)
-    .where(
-      and(
-        eq(judgeConfigs.versionId, judgeVersionId),
-        eq(judgeConfigs.isActive, true),
-        isNull(judgeConfigs.deletedAt),
-      )
-    );
+    // Resolve active judge config
+    const [judgeConfig] = await tx
+      .select()
+      .from(judgeConfigs)
+      .where(
+        and(
+          eq(judgeConfigs.versionId, judgeVersionId),
+          eq(judgeConfigs.isActive, true),
+          isNull(judgeConfigs.deletedAt),
+        )
+      );
 
-  if (!judgeConfig) {
-    return Response.json(
-      { error: "No active judge config found for the judge agent" },
-      { status: 400 }
-    );
-  }
+    if (!judgeConfig) {
+      throw new ConfigError("No active judge config found for the judge agent");
+    }
 
-  // Create batch record
-  const [batch] = await db
-    .insert(evalBatches)
-    .values({
-      agentId,
-      repeatCount,
-      runConcurrency,
-      chatModel: modelConfig.modelId,
-      judgeConfigSnapshot: {
-        name: judgeConfig.name,
-        dimensions: judgeConfig.dimensions,
-      },
-      totalCasesPerRun: totalCases,
-      status: "running",
-      completedRuns: 0,
-      totalRuns: repeatCount,
-    })
-    .returning();
-
-  // Create N eval run records
-  const runConfigs: Array<{ runId: string; caseIds: string[] }> = [];
-  const caseIds = cases.map((c) => c.id);
-
-  for (let i = 0; i < repeatCount; i++) {
-    const [run] = await db
-      .insert(evalRuns)
+    // Create batch record
+    const [batch] = await tx
+      .insert(evalBatches)
       .values({
         agentId,
-        batchId: batch.id,
-        runIndex: i,
-        chatVersionId: versionId,
+        repeatCount,
+        runConcurrency,
         chatModel: modelConfig.modelId,
-        chatSystemPrompt: modelConfig.systemPrompt,
-        chatTemperature: modelConfig.temperature,
-        judgeAgentId,
-        judgeModelConfigSnapshot: {
-          modelId: judgeModelConfig.modelId,
-          systemPrompt: judgeModelConfig.systemPrompt,
-          temperature: judgeModelConfig.temperature,
-        },
         judgeConfigSnapshot: {
           name: judgeConfig.name,
           dimensions: judgeConfig.dimensions,
+          promptTemplate: judgeConfig.promptTemplate,
+          turnPromptTemplate: judgeConfig.turnPromptTemplate,
         },
-        filterTags: filterTags ?? [],
-        assertionFailConfig: assertionFailConfig ?? null,
-        templateVars,
-        toolNames,
-        concurrency,
-        totalCases,
-        passedAssertions: 0,
-        averageScore: null,
-        status: "pending",
-        completedCases: 0,
+        totalCasesPerRun: totalCases,
+        status: "running",
+        completedRuns: 0,
+        totalRuns: repeatCount,
       })
       .returning();
 
-    runConfigs.push({ runId: run.id, caseIds });
+    // Create N eval run records
+    const configs: Array<{ runId: string; caseIds: string[] }> = [];
+    const cIds = cases.map((c) => c.id);
+
+    for (let i = 0; i < repeatCount; i++) {
+      const [run] = await tx
+        .insert(evalRuns)
+        .values({
+          agentId,
+          batchId: batch.id,
+          runIndex: i,
+          chatVersionId: versionId,
+          chatModel: modelConfig.modelId,
+          chatSystemPrompt: modelConfig.systemPrompt,
+          chatTemperature: modelConfig.temperature,
+          judgeAgentId,
+          judgeVersionId,
+          judgeModelConfigSnapshot: {
+            modelId: judgeModelConfig.modelId,
+            systemPrompt: judgeModelConfig.systemPrompt,
+            temperature: judgeModelConfig.temperature,
+          },
+          judgeConfigSnapshot: {
+            name: judgeConfig.name,
+            dimensions: judgeConfig.dimensions,
+            promptTemplate: judgeConfig.promptTemplate,
+            turnPromptTemplate: judgeConfig.turnPromptTemplate,
+          },
+          filterTags: filterTags ?? [],
+          assertionFailConfig: assertionFailConfig ?? null,
+          templateVars,
+          toolNames,
+          concurrency,
+          totalCases,
+          passedAssertions: 0,
+          averageScore: null,
+          status: "pending",
+          completedCases: 0,
+        })
+        .returning();
+
+      configs.push({ runId: run.id, caseIds: cIds });
+    }
+
+    return { batch, runConfigs: configs };
+  }, { isolationLevel: "repeatable read" });
+  } catch (e) {
+    if (e instanceof ConfigError) {
+      return Response.json({ error: e.message }, { status: 400 });
+    }
+    throw e;
   }
+
+  const { batch, runConfigs } = result;
 
   // Send Inngest event
   await inngest.send({
