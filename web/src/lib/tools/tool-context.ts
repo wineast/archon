@@ -201,7 +201,7 @@ export function createToolContext(agentId?: string, versionId?: string): ToolCon
         const { meta, content: body } = parseWikiContent(row.content);
         const hasMeta = Object.keys(meta).length > 0 ? meta : null;
         if (row.agentId) {
-          const rendered = await renderWikiContent(row.content, row.agentId, row.id);
+          const rendered = await renderWikiContent(row.content, row.agentId, row.id, versionId);
           return { meta: hasMeta, content: rendered };
         }
         return { meta: hasMeta, content: body };
