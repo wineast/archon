@@ -561,7 +561,7 @@ export const modelConfigs = pgTable(
     name: text("name").notNull(),
     modelId: text("model_id").notNull().default(""),
     systemPrompt: text("system_prompt").notNull().default(""),
-    temperature: real("temperature").notNull().default(0.7),
+    temperature: real("temperature").notNull().default(0.3),
     isActive: boolean("is_active").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

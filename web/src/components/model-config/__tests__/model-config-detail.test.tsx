@@ -10,7 +10,7 @@ globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserv
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ModelConfigRow } from "@/db/schema";
 
@@ -65,7 +65,7 @@ const baseConfig: ModelConfigRow = {
   name: "Test Config",
   modelId: "claude-sonnet-4-5-20250929",
   systemPrompt: "You are a helpful assistant.",
-  temperature: 0.7,
+  temperature: 0.3,
   isActive: false,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -161,5 +161,121 @@ describe("Tab switching", () => {
 
     await user.click(screen.getByRole("tab", { name: /edit/i }));
     expect(screen.getByRole("tab", { name: /edit/i })).toHaveAttribute("data-state", "active");
+  });
+});
+
+describe("Temperature control", () => {
+  it("renders slider and number input with default value", () => {
+    renderDetail();
+    expect(screen.getByRole("slider")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton")).toHaveValue(0.3);
+  });
+
+  it("renders hint text", () => {
+    renderDetail();
+    expect(screen.getByText("0 = more precise, 2 = more creative")).toBeInTheDocument();
+  });
+
+  it("changing temperature input enables Save button", async () => {
+    const { user } = renderDetail();
+    const input = screen.getByRole("spinbutton");
+
+    await user.clear(input);
+    await user.type(input, "1.2");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("btn-save")).toBeEnabled();
+    });
+  });
+
+  it("save passes temperature to onSave", async () => {
+    const { user, onSave } = renderDetail();
+    const input = screen.getByRole("spinbutton");
+
+    await user.clear(input);
+    await user.type(input, "1.5");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("btn-save")).toBeEnabled();
+    });
+
+    await user.click(screen.getByTestId("btn-save"));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith("cfg-1", expect.objectContaining({
+        temperature: 1.5,
+      }));
+    });
+  });
+
+  it("clamps value exceeding max to 2", async () => {
+    const { user } = renderDetail();
+    const input = screen.getByRole("spinbutton");
+
+    await user.clear(input);
+    await user.type(input, "5");
+
+    await waitFor(() => {
+      expect(input).toHaveValue(2);
+    });
+  });
+
+  it("clamps negative value to 0", () => {
+    renderDetail();
+    const input = screen.getByRole("spinbutton");
+
+    // Use fireEvent.change to directly set a negative value (userEvent.type
+    // doesn't reliably produce negative numbers in number inputs)
+    fireEvent.change(input, { target: { value: "-1" } });
+
+    expect(input).toHaveValue(0);
+  });
+
+  it("reset restores original temperature", async () => {
+    const { user } = renderDetail();
+    const input = screen.getByRole("spinbutton");
+
+    // Change temperature
+    await user.clear(input);
+    await user.type(input, "1.8");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("btn-save")).toBeEnabled();
+    });
+
+    // Click Reset
+    await user.click(screen.getByRole("button", { name: /reset/i }));
+
+    await waitFor(() => {
+      expect(input).toHaveValue(0.3);
+      expect(screen.getByTestId("btn-save")).toBeDisabled();
+    });
+  });
+
+  it("full temperature adjustment journey", async () => {
+    const { user, onSave } = renderDetail();
+    const input = screen.getByRole("spinbutton");
+
+    // Step 1: initial value
+    expect(input).toHaveValue(0.3);
+    expect(screen.getByTestId("btn-save")).toBeDisabled();
+
+    // Step 2: modify temperature
+    await user.clear(input);
+    await user.type(input, "1.5");
+
+    // Step 3: Save enabled
+    await waitFor(() => {
+      expect(screen.getByTestId("btn-save")).toBeEnabled();
+    });
+
+    // Step 4: Save
+    await user.click(screen.getByTestId("btn-save"));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith("cfg-1", expect.objectContaining({
+        temperature: 1.5,
+      }));
+    });
   });
 });
