@@ -10,7 +10,7 @@ import { TaskExpanded } from "./task-expanded";
 import { MermaidChart } from "./mermaid-chart";
 import type { Task, TasksData } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { RefreshCwIcon, HelpCircleIcon } from "lucide-react";
+import { RefreshCwIcon, HelpCircleIcon, SearchIcon, XIcon } from "lucide-react";
 
 const PAGE_SIZE = 30;
 
@@ -66,6 +66,7 @@ export function TasksPanel() {
     return raw ? new Set(raw.split(",").filter(Boolean)) : new Set();
   });
   const [helpOpen, setHelpOpen] = useState(false);
+  const [search, setSearch] = useState(() => getQuery().get("q") || "");
 
   const refresh = useCallback(async () => {
     try {
@@ -156,6 +157,17 @@ export function TasksPanel() {
       tasks = tasks.filter((t) => t.tags?.includes(tagFilter));
     }
 
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      tasks = tasks.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.id.toLowerCase().includes(q) ||
+          t.tags?.some((tag) => tag.toLowerCase().includes(q)) ||
+          t.worktree?.toLowerCase().includes(q)
+      );
+    }
+
     tasks.sort((a, b) => {
       const sa = STATUS_ORDER[a.status] ?? 3;
       const sb = STATUS_ORDER[b.status] ?? 3;
@@ -164,7 +176,7 @@ export function TasksPanel() {
     });
 
     return tasks;
-  }, [data, currentTab, currentFilter, statusFilter, tagFilter]);
+  }, [data, currentTab, currentFilter, statusFilter, tagFilter, search]);
 
   const totalPages = Math.max(
     1,
@@ -326,6 +338,34 @@ export function TasksPanel() {
             </span>
           </button>
         ))}
+      </div>
+
+      {/* Search */}
+      <div className="mb-4 relative">
+        <SearchIcon className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="搜索标题、ID、标签、工作区..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+            setQuery({ q: e.target.value });
+          }}
+          className="h-8 w-full rounded-md border bg-background pl-9 pr-8 text-[13px] outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+        />
+        {search && (
+          <button
+            className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setSearch("");
+              setPage(1);
+              setQuery({ q: "" });
+            }}
+          >
+            <XIcon className="size-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Priority filter */}
