@@ -130,6 +130,7 @@ gh pr merge {number} --merge
 
 # 同步 dev 并打 tag
 git pull origin main
+git push origin dev
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
