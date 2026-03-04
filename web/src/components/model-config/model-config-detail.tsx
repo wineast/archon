@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { GuideDialog } from "@/components/ui/guide-dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -270,6 +271,14 @@ export function ModelConfigDetail({
           <div>
             <label className="text-xs font-medium text-muted-foreground">Temperature</label>
             <div className="mt-1 flex items-center gap-3">
+              <Slider
+                className="flex-1"
+                value={[temperature]}
+                onValueChange={([v]) => setTemperature(v)}
+                min={0}
+                max={2}
+                step={0.1}
+              />
               <Input
                 className="h-8 w-20 text-sm"
                 type="number"
@@ -283,10 +292,10 @@ export function ModelConfigDetail({
                   )
                 }
               />
-              <span className="text-xs text-muted-foreground">
-                0 = more precise, 2 = more creative
-              </span>
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              0 = more precise, 2 = more creative
+            </p>
           </div>
         </div>
       </ScrollArea>

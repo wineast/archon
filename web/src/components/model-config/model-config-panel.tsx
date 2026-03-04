@@ -54,7 +54,7 @@ export function ModelConfigPanel({ agentId }: { agentId: string }) {
           key,
           name,
           systemPrompt: "",
-          temperature: 0.7,
+          temperature: 0.3,
         },
         listMutate
       );
