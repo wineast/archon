@@ -55,10 +55,13 @@ vi.mock("@/lib/pool/queries", () => ({
   getAgentFunctions: (...args: unknown[]) => mockGetAgentFunctions(...args),
 }));
 
-vi.mock("@/lib/template/render", () => ({
-  renderWikiContent: vi.fn((_content: string, _agentId: string, _docId: string) =>
+const mockRenderWikiContent = vi.fn(
+  (_content: string, _agentId: string, _docId: string, _versionId?: string) =>
     Promise.resolve("rendered-content")
-  ),
+);
+
+vi.mock("@/lib/template/render", () => ({
+  renderWikiContent: (...args: unknown[]) => mockRenderWikiContent(...args as [string, string, string, string?]),
 }));
 
 vi.mock("@/lib/wiki/frontmatter", () => ({
@@ -234,6 +237,26 @@ describe("Guard: Wiki 查询 versionId 隔离", () => {
 
       expect(result).toBeNull();
       expect(mockSelect).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Cause Anchor: renderWikiContent 必须接收 versionId", () => {
+    it("wiki.get() 对私有文档调用 renderWikiContent 时传递 versionId", async () => {
+      // 私有文档 = agentId 非 null
+      mockDbRows([{ id: VALID_UUID, content: "hello {{var}}", agentId: "agent-1" }]);
+      mockRenderWikiContent.mockClear();
+
+      const { createToolContext } = await import("../tool-context");
+      const ctx = createToolContext("agent-1", "version-1");
+
+      await ctx.wiki.get(VALID_UUID);
+
+      expect(mockRenderWikiContent).toHaveBeenCalledWith(
+        "hello {{var}}",
+        "agent-1",
+        VALID_UUID,
+        "version-1", // 修复前这里是 undefined
+      );
     });
   });
 
