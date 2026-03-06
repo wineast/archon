@@ -76,6 +76,16 @@ export function ToolForm({ tool, agentId, onDraftRef, onDirtyChange, readOnly, h
     [componentsList]
   );
 
+  // Sync when tool prop changes (e.g. after SWR revalidation on save)
+  useEffect(() => {
+    if (!deepEqual(tool, originalRef.current)) {
+      originalRef.current = { ...tool };
+      form.reset({ ...tool });
+      setHandlerTab(detectHandlerTab(tool));
+      onDirtyChange?.(false);
+    }
+  }, [tool, form, onDirtyChange]);
+
   useEffect(() => {
     onDraftRef({
       getDraft: () => form.getValues(),
