@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import deepEqual from "fast-deep-equal";
 import { nanoid } from "nanoid";
 import {
   PlusIcon,
   PlayIcon,
+  RefreshCwIcon,
   RotateCcwIcon,
   SaveIcon,
   Trash2Icon,
@@ -79,6 +80,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [runResults, setRunResults] = useState<RunResultEntry[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Hooks for running
   const { templateVars } = useTemplateVars(agentId);
@@ -86,7 +88,13 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   const { isRunning: isGlobalRunning } = useEvalBatch();
   const { mutate: mutateBatches } = useEvalBatches(agentId);
 
-  const busy = saving || deleting || running;
+  const busy = saving || deleting || running || refreshing;
+
+  // Check if any turn has tool calls (for showing Refresh button)
+  const hasToolCalls = useMemo(
+    () => turns.some((t) => t.toolCalls && t.toolCalls.length > 0),
+    [turns]
+  );
 
   const dirty =
     name !== evalCase.name ||
@@ -200,6 +208,33 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
       setDeleting(false);
     }
   }, [evalCase.id, onDelete]);
+
+  const handleRefreshTools = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch(`/api/eval/cases/${evalCase.id}/refresh-tools`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.errors?.length > 0) {
+        toast.error(`Refreshed ${data.refreshedCount} tool calls, ${data.errors.length} errors: ${data.errors[0]}`);
+      } else {
+        toast.success(`Refreshed ${data.refreshedCount} tool call snapshots`);
+      }
+      // Only update local form state — user decides whether to Save
+      if (data.turns) {
+        setTurns(data.turns);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to refresh tools");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [evalCase.id]);
 
   const handleRunConfirm = useCallback(async (params: {
     judgeAgentId: string;
@@ -474,6 +509,21 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
           )}
           {running ? "Running..." : "Run"}
         </Button>
+        {hasToolCalls && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefreshTools}
+            disabled={busy}
+          >
+            {refreshing ? (
+              <Spinner className="mr-1 size-3" />
+            ) : (
+              <RefreshCwIcon className="mr-1 size-3" />
+            )}
+            {refreshing ? "Refreshing..." : "Refresh Tools"}
+          </Button>
+        )}
         <Button
           size="sm"
           onClick={handleSave}

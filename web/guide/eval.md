@@ -157,6 +157,7 @@
 | POST | `/api/eval/cases` | 创建用例 |
 | PATCH | `/api/eval/cases/[id]` | 更新用例 |
 | DELETE | `/api/eval/cases/[id]` | 删除用例 |
+| POST | `/api/eval/cases/[id]/refresh-tools` | 刷新工具快照（重新执行 tool calls） |
 
 ### Run 端点（保留）
 
@@ -260,6 +261,18 @@ interface EvalTurnToolCall {
 ```
 
 注入时，带 `toolCalls` 的 assistant turn 会被转换为 `AssistantModelMessage`（包含 text + tool-call parts）+ `ToolModelMessage`（包含 tool-result parts），确保 LLM 能正确理解历史中的工具调用上下文。
+
+### 工具快照刷新
+
+`EvalTurnToolCall.result` 是**快照**——创建用例时固定的工具返回值，后续 eval run 不会重新执行工具。当工具 handler 更新后，快照可能过时。
+
+Case Detail 底部操作栏的 **Refresh Tools** 按钮（有 tool calls 时显示）调用 `POST /api/eval/cases/[id]/refresh-tools`，系统会：
+1. 读取 case 中所有 turn 的 `toolCalls`
+2. 按 `name` 匹配当前版本的工具定义
+3. 用存储的 `args` 重新执行工具（handler 或 URL）
+4. 返回刷新后的 turns（不自动保存）
+
+刷新结果仅更新表单本地状态（turns 变 dirty），用户可以预览后决定 **Save** 保存或 **Reset** 撤销。工具未找到或执行失败的 tool call 保持原快照不变，并在 toast 中提示错误。
 
 ## 从聊天历史导入 Turns
 
