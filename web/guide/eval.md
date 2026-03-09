@@ -157,7 +157,8 @@
 | POST | `/api/eval/cases` | 创建用例 |
 | PATCH | `/api/eval/cases/[id]` | 更新用例 |
 | DELETE | `/api/eval/cases/[id]` | 删除用例 |
-| POST | `/api/eval/cases/[id]/refresh-tools` | 刷新工具快照（重新执行 tool calls） |
+| POST | `/api/eval/cases/[id]/refresh-tools` | 刷新单个用例的工具快照（不自动保存） |
+| POST | `/api/eval/cases/refresh-tools?agentId=xxx` | 批量刷新所有用例的工具快照（直接保存） |
 
 ### Run 端点（保留）
 
@@ -266,6 +267,8 @@ interface EvalTurnToolCall {
 
 `EvalTurnToolCall.result` 是**快照**——创建用例时固定的工具返回值，后续 eval run 不会重新执行工具。当工具 handler 更新后，快照可能过时。
 
+#### 单用例刷新
+
 Case Detail 底部操作栏的 **Refresh Tools** 按钮（有 tool calls 时显示）调用 `POST /api/eval/cases/[id]/refresh-tools`，系统会：
 1. 读取 case 中所有 turn 的 `toolCalls`
 2. 按 `name` 匹配当前版本的工具定义
@@ -273,6 +276,15 @@ Case Detail 底部操作栏的 **Refresh Tools** 按钮（有 tool calls 时显�
 4. 返回刷新后的 turns（不自动保存）
 
 刷新结果仅更新表单本地状态（turns 变 dirty），用户可以预览后决定 **Save** 保存或 **Reset** 撤销。工具未找到或执行失败的 tool call 保持原快照不变，并在 toast 中提示错误。
+
+#### 批量刷新
+
+Eval 侧边栏 Cases header 区域的 **刷新按钮**（`RefreshCwIcon`，与 `+` 按钮并列）调用 `POST /api/eval/cases/refresh-tools?agentId=xxx`，对当前 Agent 版本下所有含工具调用的用例批量执行刷新。与单用例不同，批量刷新**直接保存到数据库**（逐个预览不现实）。
+
+- 无工具调用的用例自动跳过
+- 工具定义只加载一次（同一版本共享）
+- 单个工具执行失败不阻断其他用例
+- 完成后 toast 显示汇总：成功 N 个用例（M 个工具调用），有错误时额外展示
 
 ## 从聊天历史导入 Turns
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +10,7 @@ import {
   createEvalCase,
   updateEvalCase,
   deleteEvalCase,
+  batchRefreshTools,
 } from "@/lib/eval/hooks";
 import { EvalBatchProvider } from "@/lib/eval/eval-run-context";
 import { EvalSidebar, type ActiveView } from "./eval-sidebar";
@@ -27,6 +29,7 @@ export function EvalPanel({ agentId }: { agentId: string }) {
   );
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
+  const [batchRefreshing, setBatchRefreshing] = useState(false);
 
   const handleToggleTag = useCallback((tag: string) => {
     setSelectedTags((prev) =>
@@ -89,6 +92,26 @@ export function EvalPanel({ agentId }: { agentId: string }) {
     [mutateCases, activeView]
   );
 
+  const handleBatchRefreshTools = useCallback(async () => {
+    setBatchRefreshing(true);
+    try {
+      const result = await batchRefreshTools(agentId, mutateCases);
+      if (result) {
+        if (result.errors.length > 0) {
+          toast.error(
+            `Refreshed ${result.casesRefreshed} cases (${result.totalToolCalls} tool calls), ${result.errors.length} errors: ${result.errors[0]}`
+          );
+        } else {
+          toast.success(
+            `Refreshed ${result.casesRefreshed} cases (${result.totalToolCalls} tool calls)`
+          );
+        }
+      }
+    } finally {
+      setBatchRefreshing(false);
+    }
+  }, [agentId, mutateCases]);
+
   // ── Detail panel content ──
 
   function renderDetail() {
@@ -129,6 +152,8 @@ export function EvalPanel({ agentId }: { agentId: string }) {
             activeView={activeView}
             onSelect={setActiveView}
             onCreateCase={openCaseDialog}
+            onBatchRefreshTools={handleBatchRefreshTools}
+            batchRefreshing={batchRefreshing}
             selectedTags={selectedTags}
             onToggleTag={handleToggleTag}
           />
@@ -143,6 +168,8 @@ export function EvalPanel({ agentId }: { agentId: string }) {
               activeView={activeView}
               onSelect={setActiveView}
               onCreateCase={openCaseDialog}
+              onBatchRefreshTools={handleBatchRefreshTools}
+              batchRefreshing={batchRefreshing}
               selectedTags={selectedTags}
               onToggleTag={handleToggleTag}
             />

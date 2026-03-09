@@ -8,10 +8,12 @@ import { GuideDialog } from "@/components/ui/guide-dialog";
 import evalGuide from "../../../guide/eval.md";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EvalCaseRow } from "@/db/schema";
+import { Spinner } from "@/components/ui/spinner";
 import {
   BarChart3Icon,
   FlaskConicalIcon,
   PlusIcon,
+  RefreshCwIcon,
   TrendingUpIcon,
 } from "lucide-react";
 
@@ -26,6 +28,8 @@ interface EvalSidebarProps {
   activeView: ActiveView;
   onSelect: (view: ActiveView) => void;
   onCreateCase: () => void;
+  onBatchRefreshTools?: () => void;
+  batchRefreshing?: boolean;
   selectedTags: string[];
   onToggleTag: (tag: string) => void;
 }
@@ -35,6 +39,8 @@ export function EvalSidebar({
   activeView,
   onSelect,
   onCreateCase,
+  onBatchRefreshTools,
+  batchRefreshing,
   selectedTags,
   onToggleTag,
 }: EvalSidebarProps) {
@@ -63,15 +69,33 @@ export function EvalSidebar({
               <span className="text-sm font-semibold">{t("evalCases")}</span>
               <GuideDialog title="评测模块" content={evalGuide} />
             </div>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={onCreateCase}
-              title={t("newCase")}
-              data-testid="btn-new-case"
-            >
-              <PlusIcon className="size-4" />
-            </Button>
+            <div className="flex items-center gap-0.5">
+              {onBatchRefreshTools && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={onBatchRefreshTools}
+                  disabled={batchRefreshing}
+                  title="Refresh all tool snapshots"
+                  data-testid="btn-batch-refresh-tools"
+                >
+                  {batchRefreshing ? (
+                    <Spinner className="size-3.5" />
+                  ) : (
+                    <RefreshCwIcon className="size-3.5" />
+                  )}
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={onCreateCase}
+                title={t("newCase")}
+                data-testid="btn-new-case"
+              >
+                <PlusIcon className="size-4" />
+              </Button>
+            </div>
           </div>
           {allTags.length > 0 && (
             <div className="flex flex-wrap gap-1 px-3 pb-2">

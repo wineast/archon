@@ -106,6 +106,32 @@ export async function deleteEvalCase(
   }
 }
 
+// ── Batch refresh tool snapshots ──
+
+export async function batchRefreshTools(
+  agentId: string,
+  mutate: () => void
+): Promise<{ casesRefreshed: number; totalToolCalls: number; errors: string[] } | null> {
+  try {
+    const res = await fetch(
+      `/api/eval/cases/refresh-tools?agentId=${agentId}`,
+      { method: "POST" }
+    );
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+    const result = await res.json();
+    mutate();
+    return result;
+  } catch (e) {
+    toast.error(
+      e instanceof Error ? e.message : "Failed to batch refresh tools"
+    );
+    return null;
+  }
+}
+
 // ── Eval Runs ──
 
 export function useEvalRuns(agentId?: string, shouldFetch?: boolean) {
