@@ -141,7 +141,7 @@
   "chat": {
     "clear": "Clear Chat",
     "export": "Export Chat",
-    "import": "Import Chat",
+    "import": "Import1 Chat",
     "inspect": "Inspect",
     "attachmentTooltip": "添加附件",
     "sessionNotFound": "会话不存在或尚未保存",

@@ -141,7 +141,7 @@
   "chat": {
     "clear": "Clear Chat",
     "export": "Export Chat",
-    "import": "Import Chat",
+    "import": "Import1 Chat",
     "inspect": "Inspect",
     "attachmentTooltip": "Add attachment",
     "sessionNotFound": "Session does not exist or has not been saved",
