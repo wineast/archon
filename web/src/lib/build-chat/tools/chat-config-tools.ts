@@ -40,7 +40,17 @@ export function buildChatConfigTools(agentId: string): Record<string, AnyTool> {
           .array(
             z.object({
               label: z.string(),
-              icon: z.string(),
+              icon: z.enum([
+                "",
+                "sparkles",
+                "bot",
+                "brain",
+                "message-square",
+                "wand",
+                "zap",
+                "lightbulb",
+                "rocket",
+              ]),
               message: z.string(),
             }),
           )
