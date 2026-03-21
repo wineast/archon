@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { agents, agentMembers, agentVersions, orgMembers, orgs } from "@/db/schema";
+import { agents, agentMembers, agentVersions, chatConfigs, orgMembers, orgs } from "@/db/schema";
 import { ensureBuiltinComponentRefs } from "@/lib/pool/builtin-refs";
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -139,6 +139,12 @@ export async function POST(req: Request) {
 
   // Seed builtin component refs
   await ensureBuiltinComponentRefs(db, agent.id, initialVersion.id);
+
+  // Auto-create chat config for the initial version
+  await db.insert(chatConfigs).values({
+    agentId: agent.id,
+    versionId: initialVersion.id,
+  });
 
   const updatedAgent = await db
     .update(agents)
