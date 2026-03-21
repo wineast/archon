@@ -57,6 +57,13 @@
       "when": 1772511005587,
       "tag": "0007_odd_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774064739206,
+      "tag": "0008_add_welcome_subtitle_quick_buttons",
+      "breakpoints": true
     }
   ]
 }

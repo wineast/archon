@@ -28,15 +28,22 @@ const vector = customType<{ data: number[]; driverData: string }>({
   },
   fromDriver(value: string): number[] {
     // Postgres returns vector as "[0.1,0.2,...]"
-    return value
-      .slice(1, -1)
-      .split(",")
-      .map(Number);
+    return value.slice(1, -1).split(",").map(Number);
   },
 });
 
 import type { JsonSchema7 } from "@/lib/schemas/types";
-import type { Assertion, AssertionFailConfig, AssertionResult, Dimension, JudgeResult, EvalCaseMode, EvalTurn, ChatMessage, TurnResult } from "@/lib/eval/types";
+import type {
+  Assertion,
+  AssertionFailConfig,
+  AssertionResult,
+  Dimension,
+  JudgeResult,
+  EvalCaseMode,
+  EvalTurn,
+  ChatMessage,
+  TurnResult,
+} from "@/lib/eval/types";
 
 /* ─────────── Slot Key Constants ─────────── */
 
@@ -57,7 +64,13 @@ export type ResourceOrigin = (typeof RESOURCE_ORIGINS)[number];
 /* ─────────── Resource Type Constants ─────────── */
 
 export const RESOURCE_TYPES = [
-  "tool", "component", "function", "dataset", "wiki", "schema", "mcp-server",
+  "tool",
+  "component",
+  "function",
+  "dataset",
+  "wiki",
+  "schema",
+  "mcp-server",
 ] as const;
 export type ResourceType = (typeof RESOURCE_TYPES)[number];
 
@@ -68,24 +81,32 @@ export type OrgRole = keyof typeof ORG_ROLE_LEVELS;
 
 /* ─────────── Organizations ─────────── */
 
-export const orgs = pgTable("orgs", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull(),
-  isPersonal: boolean("is_personal").notNull().default(false),
-  avatarUrl: text("avatar_url"),
-  creditBalanceUSD: numeric("credit_balance_usd", { mode: "number" }).notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
-}, (t) => [
-  uniqueIndex("orgs_slug_idx").on(t.slug).where(sql`deleted_at IS NULL`),
-]);
+export const orgs = pgTable(
+  "orgs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    isPersonal: boolean("is_personal").notNull().default(false),
+    avatarUrl: text("avatar_url"),
+    creditBalanceUSD: numeric("credit_balance_usd", { mode: "number" })
+      .notNull()
+      .default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("orgs_slug_idx")
+      .on(t.slug)
+      .where(sql`deleted_at IS NULL`),
+  ],
+);
 
 export type OrgRow = typeof orgs.$inferSelect;
 export type NewOrgRow = typeof orgs.$inferInsert;
@@ -114,7 +135,7 @@ export const orgMembers = pgTable(
   (t) => [
     unique("org_members_org_user_idx").on(t.orgId, t.userId),
     index("org_members_user_id_idx").on(t.userId),
-  ]
+  ],
 );
 
 export type OrgMemberRow = typeof orgMembers.$inferSelect;
@@ -122,7 +143,12 @@ export type NewOrgMemberRow = typeof orgMembers.$inferInsert;
 
 /* ─────────── Agent Role Constants ─────────── */
 
-export const AGENT_ROLE_LEVELS = { viewer: 0, editor: 1, admin: 2, owner: 3 } as const;
+export const AGENT_ROLE_LEVELS = {
+  viewer: 0,
+  editor: 1,
+  admin: 2,
+  owner: 3,
+} as const;
 export type AgentRole = keyof typeof AGENT_ROLE_LEVELS;
 
 /* ─────────── Agents ─────────── */
@@ -142,11 +168,11 @@ export const agents = pgTable(
     mcpEnabled: boolean("mcp_enabled").notNull().default(false),
     editingVersionId: uuid("editing_version_id").references(
       (): AnyPgColumn => agentVersions.id,
-      { onDelete: "set null" }
+      { onDelete: "set null" },
     ),
     publishedVersionId: uuid("published_version_id").references(
       (): AnyPgColumn => agentVersions.id,
-      { onDelete: "set null" }
+      { onDelete: "set null" },
     ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -158,12 +184,16 @@ export const agents = pgTable(
     memoryEnabled: boolean("memory_enabled").notNull().default(false),
     skillsEnabled: boolean("skills_enabled").notNull().default(false),
     ragEnabled: boolean("rag_enabled").notNull().default(false),
-    contextCompressionEnabled: boolean("context_compression_enabled").notNull().default(false),
+    contextCompressionEnabled: boolean("context_compression_enabled")
+      .notNull()
+      .default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("agents_org_id_slug_idx").on(t.orgId, t.slug).where(sql`deleted_at IS NULL`),
-  ]
+    uniqueIndex("agents_org_id_slug_idx")
+      .on(t.orgId, t.slug)
+      .where(sql`deleted_at IS NULL`),
+  ],
 );
 
 export type AgentRow = typeof agents.$inferSelect;
@@ -178,7 +208,10 @@ export const users = pgTable("users", {
   nickname: text("nickname"),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
-  platformRole: text("platform_role").notNull().default("user").$type<"user" | "super_admin">(),
+  platformRole: text("platform_role")
+    .notNull()
+    .default("user")
+    .$type<"user" | "super_admin">(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -216,7 +249,7 @@ export const agentMembers = pgTable(
   (t) => [
     unique("agent_members_agent_user_idx").on(t.agentId, t.userId),
     index("agent_members_user_id_idx").on(t.userId),
-  ]
+  ],
 );
 
 export type AgentMemberRow = typeof agentMembers.$inferSelect;
@@ -229,7 +262,9 @@ export const chatSessions = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     title: text("title").notNull(),
     model: text("model").notNull(),
     systemPrompt: text("system_prompt"),
@@ -250,7 +285,7 @@ export const chatSessions = pgTable(
   (table) => [
     index("chat_sessions_agent_id_idx").on(table.agentId),
     index("chat_sessions_user_id_idx").on(table.userId),
-  ]
+  ],
 );
 
 export type ChatSession = typeof chatSessions.$inferSelect;
@@ -265,13 +300,17 @@ export const functions = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
-    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").references(() => agentVersions.id, {
+      onDelete: "cascade",
+    }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     code: text("code").notNull(),
     parametersSchema: jsonb("parameters_schema").$type<JsonSchema7>(),
-    returnParametersSchema: jsonb("return_parameters_schema").$type<JsonSchema7>(),
+    returnParametersSchema: jsonb(
+      "return_parameters_schema",
+    ).$type<JsonSchema7>(),
     origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -283,11 +322,18 @@ export const functions = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("functions_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
-    uniqueIndex("functions_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
+    uniqueIndex("functions_version_id_key_idx")
+      .on(table.versionId, table.key)
+      .where(sql`deleted_at IS NULL`),
+    uniqueIndex("functions_pool_key_idx")
+      .on(table.key)
+      .where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("functions_version_id_idx").on(table.versionId),
-    check("functions_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
-  ]
+    check(
+      "functions_version_check",
+      sql`agent_id IS NULL OR version_id IS NOT NULL`,
+    ),
+  ],
 );
 
 export type FunctionRow = typeof functions.$inferSelect;
@@ -302,7 +348,9 @@ export const datasets = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
-    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").references(() => agentVersions.id, {
+      onDelete: "cascade",
+    }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -318,11 +366,18 @@ export const datasets = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("datasets_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
-    uniqueIndex("datasets_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
+    uniqueIndex("datasets_version_id_key_idx")
+      .on(table.versionId, table.key)
+      .where(sql`deleted_at IS NULL`),
+    uniqueIndex("datasets_pool_key_idx")
+      .on(table.key)
+      .where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("datasets_version_id_idx").on(table.versionId),
-    check("datasets_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
-  ]
+    check(
+      "datasets_version_check",
+      sql`agent_id IS NULL OR version_id IS NOT NULL`,
+    ),
+  ],
 );
 
 export type DatasetRow = typeof datasets.$inferSelect;
@@ -335,10 +390,15 @@ export const wikiDocuments = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
-    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
-    parentId: uuid("parent_id").references((): AnyPgColumn => wikiDocuments.id, {
-      onDelete: "set null",
+    versionId: uuid("version_id").references(() => agentVersions.id, {
+      onDelete: "cascade",
     }),
+    parentId: uuid("parent_id").references(
+      (): AnyPgColumn => wikiDocuments.id,
+      {
+        onDelete: "set null",
+      },
+    ),
     name: text("name").notNull(),
     key: text("key").notNull(),
     content: text("content").notNull().default(""),
@@ -354,12 +414,19 @@ export const wikiDocuments = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("wiki_documents_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
-    uniqueIndex("wiki_documents_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
+    uniqueIndex("wiki_documents_version_id_key_idx")
+      .on(table.versionId, table.key)
+      .where(sql`deleted_at IS NULL`),
+    uniqueIndex("wiki_documents_pool_key_idx")
+      .on(table.key)
+      .where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("wiki_documents_version_id_idx").on(table.versionId),
     index("wiki_documents_parent_id_idx").on(table.parentId),
-    check("wiki_documents_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
-  ]
+    check(
+      "wiki_documents_version_check",
+      sql`agent_id IS NULL OR version_id IS NOT NULL`,
+    ),
+  ],
 );
 
 export type WikiDocumentRow = typeof wikiDocuments.$inferSelect;
@@ -371,9 +438,12 @@ export const schemas = pgTable(
   "schemas",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    agentId: uuid("agent_id")
-      .references(() => agents.id, { onDelete: "set null" }),
-    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "set null",
+    }),
+    versionId: uuid("version_id").references(() => agentVersions.id, {
+      onDelete: "cascade",
+    }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -389,17 +459,22 @@ export const schemas = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("schemas_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
-    uniqueIndex("schemas_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
+    uniqueIndex("schemas_version_id_key_idx")
+      .on(table.versionId, table.key)
+      .where(sql`deleted_at IS NULL`),
+    uniqueIndex("schemas_pool_key_idx")
+      .on(table.key)
+      .where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("schemas_version_id_idx").on(table.versionId),
-    check("schemas_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
-  ]
+    check(
+      "schemas_version_check",
+      sql`agent_id IS NULL OR version_id IS NOT NULL`,
+    ),
+  ],
 );
 
 export type SchemaRow = typeof schemas.$inferSelect;
 export type NewSchemaRow = typeof schemas.$inferInsert;
-
-
 
 /* ─────────── Schema Test Cases ─────────── */
 
@@ -411,9 +486,15 @@ export const schemaTestCases = pgTable(
       .notNull()
       .references(() => schemas.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
+    input: jsonb("input")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     shouldPass: boolean("should_pass").notNull().default(true),
-    expectedErrors: jsonb("expected_errors").$type<Array<{ path: string; message: string }>>(),
+    expectedErrors:
+      jsonb("expected_errors").$type<
+        Array<{ path: string; message: string }>
+      >(),
     tags: text("tags").array().notNull().default([]),
     showAsExample: boolean("show_as_example").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -424,9 +505,7 @@ export const schemaTestCases = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [
-    index("schema_test_cases_schema_id_idx").on(table.schemaId),
-  ]
+  (table) => [index("schema_test_cases_schema_id_idx").on(table.schemaId)],
 );
 
 export type SchemaTestCaseRow = typeof schemaTestCases.$inferSelect;
@@ -463,22 +542,25 @@ export const schemaTestRunResults = pgTable(
     caseName: text("case_name").notNull(),
     input: jsonb("input").$type<Record<string, unknown>>().notNull(),
     shouldPass: boolean("should_pass").notNull(),
-    expectedErrors: jsonb("expected_errors").$type<Array<{ path: string; message: string }>>(),
+    expectedErrors:
+      jsonb("expected_errors").$type<
+        Array<{ path: string; message: string }>
+      >(),
     actualValid: boolean("actual_valid").notNull(),
-    actualErrors: jsonb("actual_errors").$type<Array<{ path: string; message: string }>>(),
+    actualErrors:
+      jsonb("actual_errors").$type<Array<{ path: string; message: string }>>(),
     passed: boolean("passed").notNull(),
     durationMs: integer("duration_ms").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("schema_test_run_results_run_id_idx").on(table.runId),
-  ]
+  (table) => [index("schema_test_run_results_run_id_idx").on(table.runId)],
 );
 
 export type SchemaTestRunResultRow = typeof schemaTestRunResults.$inferSelect;
-export type NewSchemaTestRunResultRow = typeof schemaTestRunResults.$inferInsert;
+export type NewSchemaTestRunResultRow =
+  typeof schemaTestRunResults.$inferInsert;
 
 /* ─────────── Tools ─────────── */
 
@@ -489,19 +571,31 @@ export const tools = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
-    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").references(() => agentVersions.id, {
+      onDelete: "cascade",
+    }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull(),
     parametersSchema: jsonb("parameters_schema").$type<JsonSchema7>(),
-    returnParametersSchema: jsonb("return_parameters_schema").$type<JsonSchema7>(),
+    returnParametersSchema: jsonb(
+      "return_parameters_schema",
+    ).$type<JsonSchema7>(),
     handler: text("handler"),
     url: text("url"),
-    componentId: uuid("component_id").references(() => components.id, { onDelete: "set null" }),
+    componentId: uuid("component_id").references(() => components.id, {
+      onDelete: "set null",
+    }),
     enabled: boolean("enabled").notNull().default(true),
     uiHidden: boolean("ui_hidden").notNull().default(false),
-    executionTarget: text("execution_target").notNull().default("server").$type<"server" | "client" | "host">(),
-    sandboxMode: text("sandbox_mode").notNull().default("light").$type<"light" | "full">(),
+    executionTarget: text("execution_target")
+      .notNull()
+      .default("server")
+      .$type<"server" | "client" | "host">(),
+    sandboxMode: text("sandbox_mode")
+      .notNull()
+      .default("light")
+      .$type<"light" | "full">(),
     origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -513,11 +607,18 @@ export const tools = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("tools_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
-    uniqueIndex("tools_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
+    uniqueIndex("tools_version_id_key_idx")
+      .on(table.versionId, table.key)
+      .where(sql`deleted_at IS NULL`),
+    uniqueIndex("tools_pool_key_idx")
+      .on(table.key)
+      .where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("tools_version_id_idx").on(table.versionId),
-    check("tools_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
-  ]
+    check(
+      "tools_version_check",
+      sql`agent_id IS NULL OR version_id IS NOT NULL`,
+    ),
+  ],
 );
 
 export type ToolRow = typeof tools.$inferSelect;
@@ -541,9 +642,9 @@ export const messages = pgTable(
     index("messages_session_id_idx").on(table.sessionId),
     index("messages_session_id_created_at_idx").on(
       table.sessionId,
-      table.createdAt
+      table.createdAt,
     ),
-  ]
+  ],
 );
 
 export type Message = typeof messages.$inferSelect;
@@ -556,7 +657,9 @@ export const modelConfigs = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     modelId: text("model_id").notNull().default(""),
@@ -573,9 +676,11 @@ export const modelConfigs = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("model_configs_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("model_configs_version_id_key_idx")
+      .on(t.versionId, t.key)
+      .where(sql`deleted_at IS NULL`),
     index("model_configs_version_id_idx").on(t.versionId),
-  ]
+  ],
 );
 
 export type ModelConfigRow = typeof modelConfigs.$inferSelect;
@@ -585,13 +690,24 @@ export const chatConfigs = pgTable(
   "chat_configs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    agentId: uuid("agent_id")
-      .references(() => agents.id, { onDelete: "cascade" }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
     title: text("title").notNull().default(""),
     welcomeTitle: text("welcome_title").notNull().default(""),
+    welcomeSubtitle: text("welcome_subtitle").notNull().default(""),
     welcomeIcon: text("welcome_icon").notNull().default(""),
-    quickActions: jsonb("quick_actions").$type<string[]>().notNull().default([]),
+    quickActions: jsonb("quick_actions")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    quickButtons: jsonb("quick_buttons")
+      .$type<import("@/lib/config/types").QuickButton[]>()
+      .notNull()
+      .default([]),
     placeholder: text("placeholder").notNull().default(""),
     suggestions: jsonb("suggestions").$type<string[]>().notNull().default([]),
     enableVoice: boolean("enable_voice").notNull().default(false),
@@ -607,7 +723,7 @@ export const chatConfigs = pgTable(
   (t) => [
     unique("chat_configs_version_id_idx").on(t.versionId),
     index("chat_configs_agent_id_idx").on(t.agentId),
-  ]
+  ],
 );
 
 export type ChatConfigRow = typeof chatConfigs.$inferSelect;
@@ -620,7 +736,9 @@ export const evalCases = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     mode: text("mode").notNull().default("single").$type<EvalCaseMode>(),
@@ -638,9 +756,11 @@ export const evalCases = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("eval_cases_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("eval_cases_version_id_key_idx")
+      .on(t.versionId, t.key)
+      .where(sql`deleted_at IS NULL`),
     index("eval_cases_version_id_idx").on(t.versionId),
-  ]
+  ],
 );
 
 export type EvalCaseRow = typeof evalCases.$inferSelect;
@@ -653,7 +773,9 @@ export const judgeConfigs = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(false),
@@ -670,15 +792,23 @@ export const judgeConfigs = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("judge_configs_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("judge_configs_version_id_key_idx")
+      .on(t.versionId, t.key)
+      .where(sql`deleted_at IS NULL`),
     index("judge_configs_version_id_idx").on(t.versionId),
-  ]
+  ],
 );
 
 export type JudgeConfigRow = typeof judgeConfigs.$inferSelect;
 export type NewJudgeConfigRow = typeof judgeConfigs.$inferInsert;
 
-export const EVAL_RUN_STATUSES = ["pending", "running", "completed", "cancelled", "failed"] as const;
+export const EVAL_RUN_STATUSES = [
+  "pending",
+  "running",
+  "completed",
+  "cancelled",
+  "failed",
+] as const;
 export type EvalRunStatus = (typeof EVAL_RUN_STATUSES)[number];
 
 /* ─────────── Eval Batches ─────────── */
@@ -732,8 +862,13 @@ export const evalRuns = pgTable("eval_runs", {
   judgeModelConfigSnapshot: jsonb("judge_model_config_snapshot"),
   judgeConfigSnapshot: jsonb("judge_config_snapshot"),
   filterTags: text("filter_tags").array().notNull().default([]),
-  assertionFailConfig: jsonb("assertion_fail_config").$type<AssertionFailConfig>(),
-  templateVars: jsonb("template_vars").$type<Record<string, string>>().notNull().default({}),
+  assertionFailConfig: jsonb(
+    "assertion_fail_config",
+  ).$type<AssertionFailConfig>(),
+  templateVars: jsonb("template_vars")
+    .$type<Record<string, string>>()
+    .notNull()
+    .default({}),
   toolNames: text("tool_names").array().notNull().default([]),
   concurrency: integer("concurrency").notNull().default(3),
   totalCases: integer("total_cases").notNull(),
@@ -762,8 +897,14 @@ export const evalRunResults = pgTable(
     caseName: text("case_name").notNull(),
     mode: text("mode").notNull().default("single").$type<EvalCaseMode>(),
     turns: jsonb("turns").$type<EvalTurn[]>().notNull().default([]),
-    chatMessages: jsonb("chat_messages").$type<ChatMessage[]>().notNull().default([]),
-    turnResults: jsonb("turn_results").$type<TurnResult[]>().notNull().default([]),
+    chatMessages: jsonb("chat_messages")
+      .$type<ChatMessage[]>()
+      .notNull()
+      .default([]),
+    turnResults: jsonb("turn_results")
+      .$type<TurnResult[]>()
+      .notNull()
+      .default([]),
     chatResponse: text("chat_response"),
     assertionResults: jsonb("assertion_results")
       .$type<AssertionResult[]>()
@@ -779,8 +920,11 @@ export const evalRunResults = pgTable(
   },
   (table) => [
     index("eval_run_results_run_id_idx").on(table.runId),
-    uniqueIndex("eval_run_results_run_id_case_id_idx").on(table.runId, table.caseId),
-  ]
+    uniqueIndex("eval_run_results_run_id_case_id_idx").on(
+      table.runId,
+      table.caseId,
+    ),
+  ],
 );
 
 export type EvalRunResultRow = typeof evalRunResults.$inferSelect;
@@ -796,7 +940,10 @@ export const functionTestCases = pgTable(
       .notNull()
       .references(() => functions.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
+    input: jsonb("input")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     expectedOutput: jsonb("expected_output").$type<unknown>(),
     tags: text("tags").array().notNull().default([]),
     showAsExample: boolean("show_as_example").notNull().default(false),
@@ -810,7 +957,7 @@ export const functionTestCases = pgTable(
   },
   (table) => [
     index("function_test_cases_function_id_idx").on(table.functionId),
-  ]
+  ],
 );
 
 export type FunctionTestCaseRow = typeof functionTestCases.$inferSelect;
@@ -853,13 +1000,13 @@ export const functionTestRunResults = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("function_test_run_results_run_id_idx").on(table.runId),
-  ]
+  (table) => [index("function_test_run_results_run_id_idx").on(table.runId)],
 );
 
-export type FunctionTestRunResultRow = typeof functionTestRunResults.$inferSelect;
-export type NewFunctionTestRunResultRow = typeof functionTestRunResults.$inferInsert;
+export type FunctionTestRunResultRow =
+  typeof functionTestRunResults.$inferSelect;
+export type NewFunctionTestRunResultRow =
+  typeof functionTestRunResults.$inferInsert;
 
 /* ─────────── Tool Test Cases ─────────── */
 
@@ -871,7 +1018,10 @@ export const toolTestCases = pgTable(
       .notNull()
       .references(() => tools.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
+    input: jsonb("input")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     expectedOutput: jsonb("expected_output").$type<unknown>(),
     tags: text("tags").array().notNull().default([]),
     assertions: jsonb("assertions").$type<Assertion[]>().notNull().default([]),
@@ -884,9 +1034,7 @@ export const toolTestCases = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [
-    index("tool_test_cases_tool_id_idx").on(table.toolId),
-  ]
+  (table) => [index("tool_test_cases_tool_id_idx").on(table.toolId)],
 );
 
 export type ToolTestCaseRow = typeof toolTestCases.$inferSelect;
@@ -930,9 +1078,7 @@ export const toolTestRunResults = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("tool_test_run_results_run_id_idx").on(table.runId),
-  ]
+  (table) => [index("tool_test_run_results_run_id_idx").on(table.runId)],
 );
 
 export type ToolTestRunResultRow = typeof toolTestRunResults.$inferSelect;
@@ -947,7 +1093,9 @@ export const components = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "set null",
     }),
-    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").references(() => agentVersions.id, {
+      onDelete: "cascade",
+    }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -966,11 +1114,18 @@ export const components = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("components_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
-    uniqueIndex("components_pool_key_idx").on(table.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
+    uniqueIndex("components_version_id_key_idx")
+      .on(table.versionId, table.key)
+      .where(sql`deleted_at IS NULL`),
+    uniqueIndex("components_pool_key_idx")
+      .on(table.key)
+      .where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("components_version_id_idx").on(table.versionId),
-    check("components_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
-  ]
+    check(
+      "components_version_check",
+      sql`agent_id IS NULL OR version_id IS NOT NULL`,
+    ),
+  ],
 );
 
 export type ComponentRow = typeof components.$inferSelect;
@@ -986,12 +1141,12 @@ export const componentTestCases = pgTable(
       .notNull()
       .references(() => components.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    data: jsonb("data")
-      .$type<unknown>()
-      .notNull()
-      .default({}),
+    data: jsonb("data").$type<unknown>().notNull().default({}),
     tags: text("tags").array().notNull().default([]),
-    scenario: text("scenario").$type<"tool" | "component">().notNull().default("tool"),
+    scenario: text("scenario")
+      .$type<"tool" | "component">()
+      .notNull()
+      .default("tool"),
     showAsExample: boolean("show_as_example").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -1003,7 +1158,7 @@ export const componentTestCases = pgTable(
   },
   (table) => [
     index("component_test_cases_component_id_idx").on(table.componentId),
-  ]
+  ],
 );
 
 export type ComponentTestCaseRow = typeof componentTestCases.$inferSelect;
@@ -1038,9 +1193,7 @@ export const componentTestRunResults = pgTable(
       .references(() => componentTestRuns.id, { onDelete: "cascade" }),
     caseId: uuid("case_id").notNull(),
     caseName: text("case_name").notNull(),
-    data: jsonb("data")
-      .$type<unknown>()
-      .notNull(),
+    data: jsonb("data").$type<unknown>().notNull(),
     passed: boolean("passed").notNull(),
     error: text("error"),
     durationMs: integer("duration_ms").notNull(),
@@ -1048,9 +1201,7 @@ export const componentTestRunResults = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("component_test_run_results_run_id_idx").on(table.runId),
-  ]
+  (table) => [index("component_test_run_results_run_id_idx").on(table.runId)],
 );
 
 export type ComponentTestRunResultRow =
@@ -1079,7 +1230,7 @@ export const agentVersions = pgTable(
   (t) => [
     unique("agent_versions_agent_id_version_idx").on(t.agentId, t.version),
     index("agent_versions_agent_id_created_at_idx").on(t.agentId, t.createdAt),
-  ]
+  ],
 );
 
 export type AgentVersionRow = typeof agentVersions.$inferSelect;
@@ -1107,9 +1258,7 @@ export const embedTokens = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [
-    index("embed_tokens_agent_id_idx").on(table.agentId),
-  ]
+  (table) => [index("embed_tokens_agent_id_idx").on(table.agentId)],
 );
 
 export type EmbedTokenRow = typeof embedTokens.$inferSelect;
@@ -1136,9 +1285,7 @@ export const agentFiles = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    unique("agent_files_agent_id_name_idx").on(t.agentId, t.name),
-  ]
+  (t) => [unique("agent_files_agent_id_name_idx").on(t.agentId, t.name)],
 );
 
 export type AgentFileRow = typeof agentFiles.$inferSelect;
@@ -1157,7 +1304,9 @@ export const models = pgTable("models", {
   type: text("type").notNull().default("chat").$type<ModelType>(),
   contextWindow: integer("context_window"),
   isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull()
@@ -1176,7 +1325,9 @@ export const objectTypes = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -1186,7 +1337,10 @@ export const objectTypes = pgTable(
       onDelete: "set null",
     }),
     titleProperty: text("title_property"),
-    source: text("source").notNull().default("internal").$type<"internal" | "external">(),
+    source: text("source")
+      .notNull()
+      .default("internal")
+      .$type<"internal" | "external">(),
     externalConfig: jsonb("external_config").$type<Record<string, unknown>>(),
     order: integer("order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1199,9 +1353,11 @@ export const objectTypes = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("object_types_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("object_types_version_id_key_idx")
+      .on(t.versionId, t.key)
+      .where(sql`deleted_at IS NULL`),
     index("object_types_version_id_idx").on(t.versionId),
-  ]
+  ],
 );
 
 export type ObjectTypeRow = typeof objectTypes.$inferSelect;
@@ -1216,7 +1372,9 @@ export const objectRelations = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -1241,9 +1399,11 @@ export const objectRelations = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("object_relations_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("object_relations_version_id_key_idx")
+      .on(t.versionId, t.key)
+      .where(sql`deleted_at IS NULL`),
     index("object_relations_version_id_idx").on(t.versionId),
-  ]
+  ],
 );
 
 export type ObjectRelationRow = typeof objectRelations.$inferSelect;
@@ -1275,7 +1435,7 @@ export const objectInstances = pgTable(
   (t) => [
     index("object_instances_agent_id_idx").on(t.agentId),
     index("object_instances_object_type_id_idx").on(t.objectTypeId),
-  ]
+  ],
 );
 
 export type ObjectInstanceRow = typeof objectInstances.$inferSelect;
@@ -1305,11 +1465,15 @@ export const objectLinks = pgTable(
       .notNull(),
   },
   (t) => [
-    unique("object_links_relation_source_target_idx").on(t.relationId, t.sourceId, t.targetId),
+    unique("object_links_relation_source_target_idx").on(
+      t.relationId,
+      t.sourceId,
+      t.targetId,
+    ),
     index("object_links_relation_id_idx").on(t.relationId),
     index("object_links_source_id_idx").on(t.sourceId),
     index("object_links_target_id_idx").on(t.targetId),
-  ]
+  ],
 );
 
 export type ObjectLinkRow = typeof objectLinks.$inferSelect;
@@ -1338,8 +1502,24 @@ export const usageRecords = pgTable(
     outputTokens: integer("output_tokens").notNull().default(0),
     cachedInputTokens: integer("cached_input_tokens").notNull().default(0),
     reasoningTokens: integer("reasoning_tokens").notNull().default(0),
-    costUSD: numeric("cost_usd", { precision: 12, scale: 6, mode: "number" }).notNull().default(0),
-    source: text("source").notNull().$type<"chat" | "embed" | "build-chat" | "prompt-assist" | "jsx-assist" | "function-code-assist" | "schema-code-assist" | "tool-code-assist" | "wiki-assist" | "dataset-assist" | "eval">(),
+    costUSD: numeric("cost_usd", { precision: 12, scale: 6, mode: "number" })
+      .notNull()
+      .default(0),
+    source: text("source")
+      .notNull()
+      .$type<
+        | "chat"
+        | "embed"
+        | "build-chat"
+        | "prompt-assist"
+        | "jsx-assist"
+        | "function-code-assist"
+        | "schema-code-assist"
+        | "tool-code-assist"
+        | "wiki-assist"
+        | "dataset-assist"
+        | "eval"
+      >(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -1351,19 +1531,28 @@ export const usageRecords = pgTable(
     index("usage_records_agent_id_created_at_idx").on(t.agentId, t.createdAt),
     index("usage_records_user_id_idx").on(t.userId),
     index("usage_records_source_idx").on(t.source),
-  ]
+  ],
 );
 
 export type UsageRecordRow = typeof usageRecords.$inferSelect;
 export type NewUsageRecordRow = typeof usageRecords.$inferInsert;
 
-
 /* ─────────── Org API Keys (BYOK) ─────────── */
 
 export const BYOK_PROVIDERS = [
-  "anthropic", "openai", "google", "xai", "deepseek",
-  "mistral", "cohere", "perplexity",
-  "alibaba", "moonshot", "zhipu", "minimax", "bytedance",
+  "anthropic",
+  "openai",
+  "google",
+  "xai",
+  "deepseek",
+  "mistral",
+  "cohere",
+  "perplexity",
+  "alibaba",
+  "moonshot",
+  "zhipu",
+  "minimax",
+  "bytedance",
 ] as const;
 export type ByokProvider = (typeof BYOK_PROVIDERS)[number];
 
@@ -1388,7 +1577,7 @@ export const orgApiKeys = pgTable(
   (t) => [
     unique("org_api_keys_org_id_provider_idx").on(t.orgId, t.provider),
     index("org_api_keys_org_id_idx").on(t.orgId),
-  ]
+  ],
 );
 
 export type OrgApiKeyRow = typeof orgApiKeys.$inferSelect;
@@ -1396,7 +1585,13 @@ export type NewOrgApiKeyRow = typeof orgApiKeys.$inferInsert;
 
 /* ─────────── Audit Logs ─────────── */
 
-export const auditLogActions = ["created", "updated", "deleted", "restored", "permanently_deleted"] as const;
+export const auditLogActions = [
+  "created",
+  "updated",
+  "deleted",
+  "restored",
+  "permanently_deleted",
+] as const;
 export type AuditLogAction = (typeof auditLogActions)[number];
 
 /* ─────────── Skills ─────────── */
@@ -1408,7 +1603,9 @@ export const skills = pgTable(
     agentId: uuid("agent_id").references(() => agents.id, {
       onDelete: "cascade",
     }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -1425,19 +1622,33 @@ export const skills = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("skills_version_id_key_idx").on(table.versionId, table.key).where(sql`deleted_at IS NULL`),
+    uniqueIndex("skills_version_id_key_idx")
+      .on(table.versionId, table.key)
+      .where(sql`deleted_at IS NULL`),
     index("skills_version_id_idx").on(table.versionId),
-  ]
+  ],
 );
 
 export type SkillRow = typeof skills.$inferSelect;
 export type NewSkillRow = typeof skills.$inferInsert;
 
 export const auditLogResourceTypes = [
-  "tool", "function", "component", "schema", "dataset", "wiki",
-  "model_config", "eval_case", "judge_config",
-  "object_type", "object_relation", "chat_config",
-  "memory_config", "memory", "mcp_server", "skill",
+  "tool",
+  "function",
+  "component",
+  "schema",
+  "dataset",
+  "wiki",
+  "model_config",
+  "eval_case",
+  "judge_config",
+  "object_type",
+  "object_relation",
+  "chat_config",
+  "memory_config",
+  "memory",
+  "mcp_server",
+  "skill",
 ] as const;
 export type AuditLogResourceType = (typeof auditLogResourceTypes)[number];
 
@@ -1462,8 +1673,11 @@ export const auditLogs = pgTable(
   },
   (t) => [
     index("audit_logs_agent_id_created_at_idx").on(t.agentId, t.createdAt),
-    index("audit_logs_agent_id_resource_type_idx").on(t.agentId, t.resourceType),
-  ]
+    index("audit_logs_agent_id_resource_type_idx").on(
+      t.agentId,
+      t.resourceType,
+    ),
+  ],
 );
 
 export type AuditLogRow = typeof auditLogs.$inferSelect;
@@ -1507,7 +1721,7 @@ export const runtimeEvents = pgTable(
     index("runtime_events_agent_id_created_at_idx").on(t.agentId, t.createdAt),
     index("runtime_events_session_id_idx").on(t.sessionId),
     index("runtime_events_agent_id_event_type_idx").on(t.agentId, t.eventType),
-  ]
+  ],
 );
 
 export type RuntimeEventRow = typeof runtimeEvents.$inferSelect;
@@ -1519,15 +1733,24 @@ export const mcpServers = pgTable(
   "mcp_servers",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    agentId: uuid("agent_id")
-      .references(() => agents.id, { onDelete: "set null" }),
-    versionId: uuid("version_id").references(() => agentVersions.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "set null",
+    }),
+    versionId: uuid("version_id").references(() => agentVersions.id, {
+      onDelete: "cascade",
+    }),
     key: text("key").notNull(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     url: text("url").notNull(),
-    transportType: text("transport_type").notNull().default("sse").$type<"sse" | "http">(),
-    headers: jsonb("headers").$type<Record<string, string>>().notNull().default({}),
+    transportType: text("transport_type")
+      .notNull()
+      .default("sse")
+      .$type<"sse" | "http">(),
+    headers: jsonb("headers")
+      .$type<Record<string, string>>()
+      .notNull()
+      .default({}),
     enabled: boolean("enabled").notNull().default(true),
     origin: text("origin").notNull().default("user").$type<ResourceOrigin>(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1540,11 +1763,18 @@ export const mcpServers = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("mcp_servers_version_id_key_idx").on(t.versionId, t.key).where(sql`deleted_at IS NULL`),
-    uniqueIndex("mcp_servers_pool_key_idx").on(t.key).where(sql`agent_id IS NULL AND deleted_at IS NULL`),
+    uniqueIndex("mcp_servers_version_id_key_idx")
+      .on(t.versionId, t.key)
+      .where(sql`deleted_at IS NULL`),
+    uniqueIndex("mcp_servers_pool_key_idx")
+      .on(t.key)
+      .where(sql`agent_id IS NULL AND deleted_at IS NULL`),
     index("mcp_servers_version_id_idx").on(t.versionId),
-    check("mcp_servers_version_check", sql`agent_id IS NULL OR version_id IS NOT NULL`),
-  ]
+    check(
+      "mcp_servers_version_check",
+      sql`agent_id IS NULL OR version_id IS NOT NULL`,
+    ),
+  ],
 );
 
 export type McpServerRow = typeof mcpServers.$inferSelect;
@@ -1573,10 +1803,15 @@ export const memoryConfigs = pgTable(
   "memory_configs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    agentId: uuid("agent_id")
-      .references(() => agents.id, { onDelete: "cascade" }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
-    embeddingModel: text("embedding_model").notNull().default("openai/text-embedding-3-small"),
+    agentId: uuid("agent_id").references(() => agents.id, {
+      onDelete: "cascade",
+    }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
+    embeddingModel: text("embedding_model")
+      .notNull()
+      .default("openai/text-embedding-3-small"),
     autoExtract: boolean("auto_extract").notNull().default(false),
     extractionPrompt: text("extraction_prompt").notNull().default(""),
     maxMemoriesPerUser: integer("max_memories_per_user").notNull().default(100),
@@ -1588,7 +1823,10 @@ export const memoryConfigs = pgTable(
     maxInjectedMemories: integer("max_injected_memories").notNull().default(10),
     decayEnabled: boolean("decay_enabled").notNull().default(false),
     decayDays: integer("decay_days").notNull().default(90),
-    memoryTypeDefs: jsonb("memory_type_defs").$type<MemoryTypeDef[]>().notNull().default([]),
+    memoryTypeDefs: jsonb("memory_type_defs")
+      .$type<MemoryTypeDef[]>()
+      .notNull()
+      .default([]),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -1600,7 +1838,7 @@ export const memoryConfigs = pgTable(
   (t) => [
     unique("memory_configs_version_id_idx").on(t.versionId),
     index("memory_configs_agent_id_idx").on(t.agentId),
-  ]
+  ],
 );
 
 export type MemoryConfigRow = typeof memoryConfigs.$inferSelect;
@@ -1638,7 +1876,7 @@ export const memories = pgTable(
   (t) => [
     index("memories_agent_id_user_id_idx").on(t.agentId, t.userId),
     index("memories_agent_id_type_idx").on(t.agentId, t.type),
-  ]
+  ],
 );
 
 export type MemoryRow = typeof memories.$inferSelect;
@@ -1665,9 +1903,7 @@ export const agentSlots = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    unique("agent_slots_agent_id_slot_key_idx").on(t.agentId, t.slotKey),
-  ]
+  (t) => [unique("agent_slots_agent_id_slot_key_idx").on(t.agentId, t.slotKey)],
 );
 
 export type AgentSlotRow = typeof agentSlots.$inferSelect;
@@ -1694,9 +1930,7 @@ export const orgSlots = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    unique("org_slots_org_id_slot_key_idx").on(t.orgId, t.slotKey),
-  ]
+  (t) => [unique("org_slots_org_id_slot_key_idx").on(t.orgId, t.slotKey)],
 );
 
 export type OrgSlotRow = typeof orgSlots.$inferSelect;
@@ -1711,7 +1945,9 @@ export const agentResourceRefs = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
-    versionId: uuid("version_id").notNull().references(() => agentVersions.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id")
+      .notNull()
+      .references(() => agentVersions.id, { onDelete: "cascade" }),
     resourceType: text("resource_type").notNull().$type<ResourceType>(),
     resourceId: uuid("resource_id").notNull(),
     enabled: boolean("enabled").notNull().default(true),
@@ -1720,10 +1956,14 @@ export const agentResourceRefs = pgTable(
       .notNull(),
   },
   (t) => [
-    unique("agent_resource_refs_uniq").on(t.versionId, t.resourceType, t.resourceId),
+    unique("agent_resource_refs_uniq").on(
+      t.versionId,
+      t.resourceType,
+      t.resourceId,
+    ),
     index("agent_resource_refs_resource_idx").on(t.resourceId),
     index("agent_resource_refs_version_id_idx").on(t.versionId),
-  ]
+  ],
 );
 
 export type AgentResourceRefRow = typeof agentResourceRefs.$inferSelect;
@@ -1764,22 +2004,26 @@ export const invitationCodeUsages = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    usedAt: timestamp("used_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
     unique("invitation_code_usages_code_user_idx").on(t.codeId, t.userId),
-  ]
+  ],
 );
 
 export type InvitationCodeUsageRow = typeof invitationCodeUsages.$inferSelect;
-export type NewInvitationCodeUsageRow = typeof invitationCodeUsages.$inferInsert;
+export type NewInvitationCodeUsageRow =
+  typeof invitationCodeUsages.$inferInsert;
 
 /* ─────────── Org Credit Transactions ─────────── */
 
-export const orgCreditTransactionTypes = ["topup", "adjustment", "purchase"] as const;
-export type OrgCreditTransactionType = (typeof orgCreditTransactionTypes)[number];
+export const orgCreditTransactionTypes = [
+  "topup",
+  "adjustment",
+  "purchase",
+] as const;
+export type OrgCreditTransactionType =
+  (typeof orgCreditTransactionTypes)[number];
 
 export const orgCreditTransactions = pgTable(
   "org_credit_transactions",
@@ -1791,7 +2035,9 @@ export const orgCreditTransactions = pgTable(
     amount: numeric("amount", { mode: "number" }).notNull(),
     type: text("type").notNull().$type<OrgCreditTransactionType>(),
     description: text("description"),
-    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     balanceAfter: numeric("balance_after", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -1799,12 +2045,16 @@ export const orgCreditTransactions = pgTable(
   },
   (t) => [
     index("org_credit_transactions_org_id_idx").on(t.orgId),
-    index("org_credit_transactions_org_id_created_at_idx").on(t.orgId, t.createdAt),
-  ]
+    index("org_credit_transactions_org_id_created_at_idx").on(
+      t.orgId,
+      t.createdAt,
+    ),
+  ],
 );
 
 export type OrgCreditTransactionRow = typeof orgCreditTransactions.$inferSelect;
-export type NewOrgCreditTransactionRow = typeof orgCreditTransactions.$inferInsert;
+export type NewOrgCreditTransactionRow =
+  typeof orgCreditTransactions.$inferInsert;
 
 /* ─────────── RAG Document Status ─────────── */
 
@@ -1820,7 +2070,9 @@ export const ragConfigs = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
-    embeddingModel: text("embedding_model").notNull().default("openai/text-embedding-3-small"),
+    embeddingModel: text("embedding_model")
+      .notNull()
+      .default("openai/text-embedding-3-small"),
     chunkSize: integer("chunk_size").notNull().default(500),
     chunkOverlap: integer("chunk_overlap").notNull().default(50),
     topK: integer("top_k").notNull().default(5),
@@ -1832,9 +2084,7 @@ export const ragConfigs = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    unique("rag_configs_agent_id_idx").on(t.agentId),
-  ]
+  (t) => [unique("rag_configs_agent_id_idx").on(t.agentId)],
 );
 
 export type RagConfigRow = typeof ragConfigs.$inferSelect;
@@ -1853,7 +2103,10 @@ export const ragDocuments = pgTable(
     url: text("url").notNull(),
     size: integer("size").notNull(),
     contentType: text("content_type").notNull(),
-    status: text("status").notNull().default("processing").$type<RagDocumentStatus>(),
+    status: text("status")
+      .notNull()
+      .default("processing")
+      .$type<RagDocumentStatus>(),
     chunkCount: integer("chunk_count").notNull().default(0),
     error: text("error"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1864,9 +2117,7 @@ export const ragDocuments = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    index("rag_documents_agent_id_idx").on(t.agentId),
-  ]
+  (t) => [index("rag_documents_agent_id_idx").on(t.agentId)],
 );
 
 export type RagDocumentRow = typeof ragDocuments.$inferSelect;
@@ -1883,10 +2134,7 @@ const ragVector = customType<{ data: number[]; driverData: string }>({
     return `[${value.join(",")}]`;
   },
   fromDriver(value: string): number[] {
-    return value
-      .slice(1, -1)
-      .split(",")
-      .map(Number);
+    return value.slice(1, -1).split(",").map(Number);
   },
 });
 
@@ -1911,9 +2159,8 @@ export const ragChunks = pgTable(
   (t) => [
     index("rag_chunks_document_id_idx").on(t.documentId),
     index("rag_chunks_agent_id_idx").on(t.agentId),
-  ]
+  ],
 );
 
 export type RagChunkRow = typeof ragChunks.$inferSelect;
 export type NewRagChunkRow = typeof ragChunks.$inferInsert;
-

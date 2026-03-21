@@ -3,7 +3,14 @@ import { auth } from "@clerk/nextjs/server";
 import { requireEmbedToken } from "@/lib/auth/require-embed-token";
 import { requireAgentRole } from "@/lib/auth/require-agent-role";
 import { db } from "@/db";
-import { agents, chatConfigs, tools, components, modelConfigs, agentResourceRefs } from "@/db/schema";
+import {
+  agents,
+  chatConfigs,
+  tools,
+  components,
+  modelConfigs,
+  agentResourceRefs,
+} from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 
 export async function GET(req: Request) {
@@ -21,7 +28,10 @@ export async function GET(req: Request) {
     if (ctx instanceof NextResponse) return ctx;
     agentId = ctx.agent.id;
     if (!ctx.agent.publishedVersionId) {
-      return NextResponse.json({ error: "Agent has no published version" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Agent has no published version" },
+        { status: 404 },
+      );
     }
     versionId = ctx.agent.publishedVersionId;
     agentRow = { id: ctx.agent.id, name: ctx.agent.name, icon: ctx.agent.icon };
@@ -34,7 +44,10 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const queryAgentId = url.searchParams.get("agentId");
     if (!queryAgentId) {
-      return NextResponse.json({ error: "agentId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "agentId is required" },
+        { status: 400 },
+      );
     }
     // Verify user has viewer access to this agent
     const roleResult = await requireAgentRole(queryAgentId, "viewer");
@@ -43,7 +56,12 @@ export async function GET(req: Request) {
 
     // Load agent name/icon + editingVersionId
     const [agent] = await db
-      .select({ id: agents.id, name: agents.name, icon: agents.icon, editingVersionId: agents.editingVersionId })
+      .select({
+        id: agents.id,
+        name: agents.name,
+        icon: agents.icon,
+        editingVersionId: agents.editingVersionId,
+      })
       .from(agents)
       .where(and(eq(agents.id, agentId), isNull(agents.deletedAt)))
       .limit(1);
@@ -51,7 +69,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
     if (!agent.editingVersionId) {
-      return NextResponse.json({ error: "Agent has no editing version" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Agent has no editing version" },
+        { status: 404 },
+      );
     }
     versionId = agent.editingVersionId;
     agentRow = agent;
@@ -59,7 +80,13 @@ export async function GET(req: Request) {
 
   // Fetch chatConfig, tools, components (agent-owned + pool refs) in parallel
   // All queries scoped to versionId (published for embed, editing for assist)
-  const [chatConfig, activeModelConfig, toolRows, ownComponentRows, poolComponentRows] = await Promise.all([
+  const [
+    chatConfig,
+    activeModelConfig,
+    toolRows,
+    ownComponentRows,
+    poolComponentRows,
+  ] = await Promise.all([
     db
       .select()
       .from(chatConfigs)
@@ -73,7 +100,12 @@ export async function GET(req: Request) {
         temperature: modelConfigs.temperature,
       })
       .from(modelConfigs)
-      .where(and(eq(modelConfigs.versionId, versionId), eq(modelConfigs.isActive, true)))
+      .where(
+        and(
+          eq(modelConfigs.versionId, versionId),
+          eq(modelConfigs.isActive, true),
+        ),
+      )
       .limit(1)
       .then((rows) => rows[0] ?? null),
     db
@@ -86,7 +118,13 @@ export async function GET(req: Request) {
       })
       .from(tools)
       .leftJoin(components, eq(tools.componentId, components.id))
-      .where(and(eq(tools.versionId, versionId), eq(tools.enabled, true), isNull(tools.deletedAt))),
+      .where(
+        and(
+          eq(tools.versionId, versionId),
+          eq(tools.enabled, true),
+          isNull(tools.deletedAt),
+        ),
+      ),
     // Agent-owned components
     db
       .select({
@@ -95,7 +133,9 @@ export async function GET(req: Request) {
         generatedCss: components.generatedCss,
       })
       .from(components)
-      .where(and(eq(components.versionId, versionId), isNull(components.deletedAt))),
+      .where(
+        and(eq(components.versionId, versionId), isNull(components.deletedAt)),
+      ),
     // Pool components via agentResourceRefs
     db
       .select({
@@ -105,12 +145,14 @@ export async function GET(req: Request) {
       })
       .from(agentResourceRefs)
       .innerJoin(components, eq(components.id, agentResourceRefs.resourceId))
-      .where(and(
-        eq(agentResourceRefs.versionId, versionId),
-        eq(agentResourceRefs.resourceType, "component"),
-        isNull(components.agentId),
-        isNull(components.deletedAt),
-      )),
+      .where(
+        and(
+          eq(agentResourceRefs.versionId, versionId),
+          eq(agentResourceRefs.resourceType, "component"),
+          isNull(components.agentId),
+          isNull(components.deletedAt),
+        ),
+      ),
   ]);
 
   // Merge and deduplicate components (agent-owned takes precedence)
@@ -133,8 +175,10 @@ export async function GET(req: Request) {
       ? {
           title: chatConfig.title,
           welcomeTitle: chatConfig.welcomeTitle,
+          welcomeSubtitle: chatConfig.welcomeSubtitle,
           welcomeIcon: chatConfig.welcomeIcon,
           quickActions: chatConfig.quickActions,
+          quickButtons: chatConfig.quickButtons,
           placeholder: chatConfig.placeholder,
           suggestions: chatConfig.suggestions,
           enableVoice: chatConfig.enableVoice,

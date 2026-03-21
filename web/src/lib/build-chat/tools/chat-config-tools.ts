@@ -31,10 +31,20 @@ export function buildChatConfigTools(agentId: string): Record<string, AnyTool> {
       inputSchema: z.object({
         title: z.string().optional(),
         welcomeTitle: z.string().optional(),
+        welcomeSubtitle: z.string().optional(),
         welcomeIcon: z.string().optional(),
         placeholder: z.string().optional(),
         suggestions: z.array(z.string()).optional(),
         quickActions: z.array(z.string()).optional(),
+        quickButtons: z
+          .array(
+            z.object({
+              label: z.string(),
+              icon: z.string(),
+              message: z.string(),
+            }),
+          )
+          .optional(),
       }),
       execute: async (params) => {
         // Upsert: try update first, then insert

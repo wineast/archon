@@ -7,7 +7,7 @@ import { logAudit } from "@/lib/audit/log";
 
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
 
@@ -29,13 +29,25 @@ export async function PUT(
     .update(chatConfigs)
     .set({
       ...(body.title !== undefined && { title: body.title }),
-      ...(body.welcomeTitle !== undefined && { welcomeTitle: body.welcomeTitle }),
+      ...(body.welcomeTitle !== undefined && {
+        welcomeTitle: body.welcomeTitle,
+      }),
+      ...(body.welcomeSubtitle !== undefined && {
+        welcomeSubtitle: body.welcomeSubtitle,
+      }),
       ...(body.welcomeIcon !== undefined && { welcomeIcon: body.welcomeIcon }),
-      ...(body.quickActions !== undefined && { quickActions: body.quickActions }),
+      ...(body.quickActions !== undefined && {
+        quickActions: body.quickActions,
+      }),
+      ...(body.quickButtons !== undefined && {
+        quickButtons: body.quickButtons,
+      }),
       ...(body.placeholder !== undefined && { placeholder: body.placeholder }),
       ...(body.suggestions !== undefined && { suggestions: body.suggestions }),
       ...(body.enableVoice !== undefined && { enableVoice: body.enableVoice }),
-      ...(body.enableAttachment !== undefined && { enableAttachment: body.enableAttachment }),
+      ...(body.enableAttachment !== undefined && {
+        enableAttachment: body.enableAttachment,
+      }),
     })
     .where(eq(chatConfigs.id, id))
     .returning();

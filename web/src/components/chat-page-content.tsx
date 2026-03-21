@@ -1,7 +1,11 @@
 "use client";
 
 import { UserMenu } from "@/components/auth/user-menu";
-import { DefaultChatTransport, isTextUIPart, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import {
+  DefaultChatTransport,
+  isTextUIPart,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import {
@@ -32,6 +36,7 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { MessageParts, UserMessageContent } from "@/components/message-parts";
 import { ShareButton } from "@/components/share-button";
 import { ChatWelcome } from "@/components/chat-welcome";
+import { QuickButtonsBar } from "@/components/quick-buttons-bar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -58,7 +63,11 @@ import {
   type ComponentRecord,
 } from "@/tool-ui";
 import { SessionHistory } from "@/components/session-history";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { useSessions, deleteSession, renameSession } from "@/lib/session/hooks";
 import { useAgentRole } from "@/lib/auth/hooks";
@@ -116,13 +125,22 @@ function AttachmentButton() {
   const { openFileDialog } = usePromptInputAttachments();
   const t = useTranslations("chat");
   return (
-    <PromptInputButton onClick={openFileDialog} tooltip={t("attachmentTooltip")}>
+    <PromptInputButton
+      onClick={openFileDialog}
+      tooltip={t("attachmentTooltip")}
+    >
       <PaperclipIcon className="size-4" />
     </PromptInputButton>
   );
 }
 
-function ChatInputSubmit({ input, isStreaming }: { input: string; isStreaming: boolean }) {
+function ChatInputSubmit({
+  input,
+  isStreaming,
+}: {
+  input: string;
+  isStreaming: boolean;
+}) {
   const { files } = usePromptInputAttachments();
   return (
     <PromptInputSubmit
@@ -171,7 +189,11 @@ export function ChatPageContent({
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
 
-  const { canEdit, canViewAllSessions, isLoading: roleLoading } = useAgentRole(agent.id);
+  const {
+    canEdit,
+    canViewAllSessions,
+    isLoading: roleLoading,
+  } = useAgentRole(agent.id);
   const [showAllSessions, setShowAllSessions] = useState(false);
 
   // Resolve hooks mode: undefined → editing, "published" → published, { versionId } → version
@@ -206,7 +228,8 @@ export function ChatPageContent({
         registerCompiledComponent(t.name, compiledComp);
       } else if (compKey) {
         const comp = componentsList.find((c) => c.key === compKey);
-        if (comp?.componentSource) registerDynamicComponentSource(t.name, comp.componentSource);
+        if (comp?.componentSource)
+          registerDynamicComponentSource(t.name, comp.componentSource);
       } else {
         const defaultComp = compiled.get("tool-call-default");
         if (defaultComp) registerCompiledComponent(t.name, defaultComp);
@@ -227,22 +250,35 @@ export function ChatPageContent({
     // classes (e.g. arbitrary values) still work.
     style.textContent = `@layer components {\n${cssBlocks.join("\n")}\n}`;
     document.head.appendChild(style);
-    return () => { style.remove(); };
+    return () => {
+      style.remove();
+    };
   }, [componentsList]);
 
   const sessionIdRef = useRef<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [shareId, setShareId] = useState<string | null>(null);
-  const { sessions, mutate: mutateSessions } = useSessions(agent.id, showAllSessions, sessionSource);
+  const { sessions, mutate: mutateSessions } = useSessions(
+    agent.id,
+    showAllSessions,
+    sessionSource,
+  );
   const isFirstMessageRef = useRef(true);
-  const { sessionId: urlSessionId, setSessionParam, isInternalNavRef } = useSessionParam();
+  const {
+    sessionId: urlSessionId,
+    setSessionParam,
+    isInternalNavRef,
+  } = useSessionParam();
 
   const { config: chatConfig } = useChatConfig(agent.id, hooksMode);
   const configTitle = chatConfig?.title ?? "";
   const configWelcomeTitle = chatConfig?.welcomeTitle ?? "";
-  const configWelcomeIcon = (chatConfig?.welcomeIcon ?? "") as import("@/lib/config/types").WelcomeIconKey;
+  const configWelcomeSubtitle = chatConfig?.welcomeSubtitle ?? "";
+  const configWelcomeIcon = (chatConfig?.welcomeIcon ??
+    "") as import("@/lib/config/types").WelcomeIconKey;
   const configPlaceholder = chatConfig?.placeholder ?? "";
   const quickActions = chatConfig?.quickActions ?? [];
+  const quickButtons = chatConfig?.quickButtons ?? [];
   const suggestions = chatConfig?.suggestions ?? [];
   const enableVoice = chatConfig?.enableVoice ?? false;
   const enableAttachment = chatConfig?.enableAttachment ?? false;
@@ -267,42 +303,43 @@ export function ChatPageContent({
           };
         },
       }),
-    [agent.id, transportBodyExtras]
+    [agent.id, transportBodyExtras],
   );
 
-  const { messages, setMessages, sendMessage, status, stop, addToolOutput } = useChat({
-    transport,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
-    onToolCall: ({ toolCall }) => {
-      // Only handle client-side tools; server/host tools are already executed server-side
-      const isClientTool = toolsList.some(
-        (t) => t.name === toolCall.toolName && t.executionTarget === "client"
-      );
-      if (isClientTool) {
-        executeClientTool(toolCall, addToolOutput, toolsList);
-      }
-    },
-    onError: (error) => {
-      try {
-        const parsed = JSON.parse(error.message);
-        if (parsed.error === "not_published") {
-          toast.error(t("notPublished"));
-          return;
+  const { messages, setMessages, sendMessage, status, stop, addToolOutput } =
+    useChat({
+      transport,
+      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+      onToolCall: ({ toolCall }) => {
+        // Only handle client-side tools; server/host tools are already executed server-side
+        const isClientTool = toolsList.some(
+          (t) => t.name === toolCall.toolName && t.executionTarget === "client",
+        );
+        if (isClientTool) {
+          executeClientTool(toolCall, addToolOutput, toolsList);
         }
-        if (parsed.error === "no_model_config") {
-          toast.error(t("noModelConfig"));
-          return;
+      },
+      onError: (error) => {
+        try {
+          const parsed = JSON.parse(error.message);
+          if (parsed.error === "not_published") {
+            toast.error(t("notPublished"));
+            return;
+          }
+          if (parsed.error === "no_model_config") {
+            toast.error(t("noModelConfig"));
+            return;
+          }
+          if (parsed.error === "quota_exceeded") {
+            toast.error(parsed.message || t("quotaExceeded"));
+            return;
+          }
+        } catch {
+          // not JSON
         }
-        if (parsed.error === "quota_exceeded") {
-          toast.error(parsed.message || t("quotaExceeded"));
-          return;
-        }
-      } catch {
-        // not JSON
-      }
-      toast.error(error.message || t("chatError"));
-    },
-  });
+        toast.error(error.message || t("chatError"));
+      },
+    });
 
   /* ── Session handlers ── */
 
@@ -328,7 +365,7 @@ export function ChatPageContent({
           id: m.id,
           role: m.role,
           parts: m.parts,
-        })
+        }),
       );
       setMessages(uiMessages);
       sessionIdRef.current = id;
@@ -339,7 +376,7 @@ export function ChatPageContent({
         setShareId(session.shareId ?? null);
       }
     },
-    [setMessages]
+    [setMessages],
   );
 
   const handleLoadSession = useCallback(
@@ -347,7 +384,7 @@ export function ChatPageContent({
       await loadSessionMessages(id);
       setSessionParam(id);
     },
-    [loadSessionMessages, setSessionParam]
+    [loadSessionMessages, setSessionParam],
   );
 
   const handleDeleteSession = useCallback(
@@ -361,14 +398,14 @@ export function ChatPageContent({
         setSessionParam(null, { replace: true });
       }
     },
-    [mutateSessions, activeSessionId, setMessages, setSessionParam]
+    [mutateSessions, activeSessionId, setMessages, setSessionParam],
   );
 
   const handleRenameSession = useCallback(
     async (id: string, title: string) => {
       await renameSession(id, title, mutateSessions);
     },
-    [mutateSessions]
+    [mutateSessions],
   );
 
   /* ── URL ↔ state sync ── */
@@ -428,18 +465,21 @@ export function ChatPageContent({
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInput(event.target.value);
     },
-    []
+    [],
   );
 
-  const onPromptSubmit = useCallback((message: PromptInputMessage) => {
-    if (!message.text.trim() && message.files.length === 0) return;
-    sendMessage(message);
-    setInput("");
-    if (isFirstMessageRef.current) {
-      isFirstMessageRef.current = false;
-      setTimeout(() => mutateSessions(), 500);
-    }
-  }, [sendMessage, mutateSessions]);
+  const onPromptSubmit = useCallback(
+    (message: PromptInputMessage) => {
+      if (!message.text.trim() && message.files.length === 0) return;
+      sendMessage(message);
+      setInput("");
+      if (isFirstMessageRef.current) {
+        isFirstMessageRef.current = false;
+        setTimeout(() => mutateSessions(), 500);
+      }
+    },
+    [sendMessage, mutateSessions],
+  );
 
   const handleTranscription = useCallback((text: string) => {
     setInput((prev) => prev + text);
@@ -448,7 +488,7 @@ export function ChatPageContent({
   const [speechSupported, setSpeechSupported] = useState(false);
   useEffect(() => {
     setSpeechSupported(
-      "SpeechRecognition" in window || "webkitSpeechRecognition" in window
+      "SpeechRecognition" in window || "webkitSpeechRecognition" in window,
     );
   }, []);
 
@@ -460,15 +500,12 @@ export function ChatPageContent({
         setTimeout(() => mutateSessions(), 500);
       }
     },
-    [sendMessage, mutateSessions]
+    [sendMessage, mutateSessions],
   );
 
-  const handleSuggestionFill = useCallback(
-    (suggestion: string) => {
-      setInput(suggestion);
-    },
-    []
-  );
+  const handleSuggestionFill = useCallback((suggestion: string) => {
+    setInput(suggestion);
+  }, []);
 
   /* ── Export / Import handlers ── */
 
@@ -497,12 +534,17 @@ export function ChatPageContent({
           createdAt: session.createdAt,
         },
         messages: msgs.map(
-          (m: { role: string; parts: unknown[]; content: string | null; createdAt: string }) => ({
+          (m: {
+            role: string;
+            parts: unknown[];
+            content: string | null;
+            createdAt: string;
+          }) => ({
             role: m.role,
             parts: m.parts,
             content: m.content,
             createdAt: m.createdAt,
-          })
+          }),
         ),
       };
 
@@ -528,37 +570,44 @@ export function ChatPageContent({
     }
   }, [activeSessionId, t]);
 
-  const handleImportChat = useCallback(async (file: File) => {
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
+  const handleImportChat = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
 
-      if (data.version !== 1 || !data.session || !Array.isArray(data.messages)) {
-        toast.error(t("importInvalidFormat"));
-        return;
+        if (
+          data.version !== 1 ||
+          !data.session ||
+          !Array.isArray(data.messages)
+        ) {
+          toast.error(t("importInvalidFormat"));
+          return;
+        }
+
+        const res = await fetch(`/api/sessions/import?agentId=${agent.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: text,
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.error || t("importError"));
+          return;
+        }
+
+        const { sessionId: newId } = await res.json();
+        await loadSessionMessages(newId);
+        mutateSessions();
+        setSessionParam(newId);
+        toast.success(t("importSuccess"));
+      } catch {
+        toast.error(t("importFormatError"));
       }
-
-      const res = await fetch(`/api/sessions/import?agentId=${agent.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: text,
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.error || t("importError"));
-        return;
-      }
-
-      const { sessionId: newId } = await res.json();
-      await loadSessionMessages(newId);
-      mutateSessions();
-      setSessionParam(newId);
-      toast.success(t("importSuccess"));
-    } catch {
-      toast.error(t("importFormatError"));
-    }
-  }, [agent.id, loadSessionMessages, mutateSessions, setSessionParam, t]);
+    },
+    [agent.id, loadSessionMessages, mutateSessions, setSessionParam, t],
+  );
 
   const isStreaming = status === "streaming" || status === "submitted";
   const title = configTitle || agent.name;
@@ -587,186 +636,198 @@ export function ChatPageContent({
 
   return (
     <AgentIdProvider agentId={agent.id}>
-    <SidebarProvider className="h-svh">
-      <SessionHistory
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onLoadSession={handleLoadSession}
-        onDeleteSession={handleDeleteSession}
-        onRenameSession={handleRenameSession}
-        onNewChat={handleNewChat}
-        canViewAllSessions={canViewAllSessions}
-        showAll={showAllSessions}
-        onToggleShowAll={() => setShowAllSessions((prev) => !prev)}
-      />
-      <SidebarInset className="overflow-hidden">
-        {/* ── Controlled modals ── */}
-        <RequestInspectorModal
-          model={activeConfig?.modelId ?? ""}
-          systemPrompt={activeConfig?.systemPrompt ?? ""}
-          messages={messages}
-          temperature={activeConfig?.temperature ?? 0.7}
-          agentId={agent.id}
-          open={inspectorOpen}
-          onOpenChange={setInspectorOpen}
+      <SidebarProvider className="h-svh">
+        <SessionHistory
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onLoadSession={handleLoadSession}
+          onDeleteSession={handleDeleteSession}
+          onRenameSession={handleRenameSession}
+          onNewChat={handleNewChat}
+          canViewAllSessions={canViewAllSessions}
+          showAll={showAllSessions}
+          onToggleShowAll={() => setShowAllSessions((prev) => !prev)}
         />
-        {features.userSettings && (
-          <UserSettingsModal open={userSettingsOpen} onOpenChange={setUserSettingsOpen} />
-        )}
-
-        {/* ── Banner ── */}
-        {banner}
-
-        {/* ── Layout header ── */}
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
+        <SidebarInset className="overflow-hidden">
+          {/* ── Controlled modals ── */}
+          <RequestInspectorModal
+            model={activeConfig?.modelId ?? ""}
+            systemPrompt={activeConfig?.systemPrompt ?? ""}
+            messages={messages}
+            temperature={activeConfig?.temperature ?? 0.7}
+            agentId={agent.id}
+            open={inspectorOpen}
+            onOpenChange={setInspectorOpen}
           />
-          <span className="text-sm font-medium">{title}</span>
-          <div className="ml-auto flex items-center gap-2">
-            {features.share && messages.length > 0 && (
-              <ShareButton
-                sessionId={activeSessionId ?? undefined}
-                shareId={shareId}
-                onShareChange={setShareId}
-              />
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8">
-                  <EllipsisVerticalIcon className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {messages.length > 0 && activeSessionId && (
-                  <>
-                    <DropdownMenuItem onClick={handleNewChat}>
-                      <Trash2Icon className="size-4" />
-                      {t("clear")}
-                    </DropdownMenuItem>
-                    {features.importExport && (
-                      <DropdownMenuItem onClick={handleExportChat}>
-                        <DownloadIcon className="size-4" />
-                        {t("export")}
-                      </DropdownMenuItem>
-                    )}
-                  </>
-                )}
-                {features.importExport && (
-                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                    <UploadIcon className="size-4" />
-                    {t("import")}
-                  </DropdownMenuItem>
-                )}
-                {canEdit && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setInspectorOpen(true)}>
-                      <SearchCodeIcon className="size-4" />
-                      {t("inspect")}
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <UserMenu />
-          </div>
-        </header>
-
-        {features.importExport && (
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImportChat(file);
-              e.target.value = "";
-            }}
-          />
-        )}
-
-        {/* ── Chat interface ── */}
-        <div className="relative flex min-h-0 flex-1 flex-col divide-y overflow-hidden">
-          {messages.length === 0 ? (
-            <ChatWelcome
-              title={configWelcomeTitle}
-              iconKey={configWelcomeIcon}
-              quickActions={quickActions}
-              onQuickAction={handleSuggestionClick}
+          {features.userSettings && (
+            <UserSettingsModal
+              open={userSettingsOpen}
+              onOpenChange={setUserSettingsOpen}
             />
-          ) : (
-            <Conversation>
-              <ConversationContent>
-                {messages.map((message) => (
-                  <Message from={message.role} key={message.id}>
-                    {message.role === "user" ? (
-                      <UserMessageContent message={message} />
-                    ) : (
-                      <MessageParts message={message} />
-                    )}
-                  </Message>
-                ))}
-                {isStreaming &&
-                  (() => {
-                    const last = messages[messages.length - 1];
-                    return (
-                      !last ||
-                      last.role !== "assistant" ||
-                      !last.parts?.some(isTextUIPart)
-                    );
-                  })() && (
-                    <Message from="assistant">
-                      <Spinner className="my-1 text-muted-foreground" />
-                    </Message>
-                  )}
-              </ConversationContent>
-              <ConversationScrollButton />
-            </Conversation>
           )}
-          <div className="grid shrink-0 gap-4 pt-4">
-            {messages.length === 0 && suggestions.length > 0 && (
-              <Suggestions className="px-4">
-                {suggestions.map((suggestion) => (
-                  <SuggestionItem
-                    key={suggestion}
-                    onClick={handleSuggestionFill}
-                    suggestion={suggestion}
-                  />
-                ))}
-              </Suggestions>
-            )}
-            <div className="w-full px-4 pb-4">
-              <PromptInput onSubmit={onPromptSubmit} multiple>
-                <PromptInputBody>
-                  {enableAttachment && <AttachmentPreviewBar />}
-                  <PromptInputTextarea
-                    onChange={handleTextChange}
-                    placeholder={configPlaceholder}
-                    value={input}
-                  />
-                </PromptInputBody>
-                <PromptInputFooter>
-                  {enableAttachment && <AttachmentButton />}
-                  {enableVoice && speechSupported && (
-                    <SpeechInput
-                      size="icon-sm"
-                      onTranscriptionChange={handleTranscription}
-                      lang="zh-CN"
-                    />
+
+          {/* ── Banner ── */}
+          {banner}
+
+          {/* ── Layout header ── */}
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+            <span className="text-sm font-medium">{title}</span>
+            <div className="ml-auto flex items-center gap-2">
+              {features.share && messages.length > 0 && (
+                <ShareButton
+                  sessionId={activeSessionId ?? undefined}
+                  shareId={shareId}
+                  onShareChange={setShareId}
+                />
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="size-8">
+                    <EllipsisVerticalIcon className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {messages.length > 0 && activeSessionId && (
+                    <>
+                      <DropdownMenuItem onClick={handleNewChat}>
+                        <Trash2Icon className="size-4" />
+                        {t("clear")}
+                      </DropdownMenuItem>
+                      {features.importExport && (
+                        <DropdownMenuItem onClick={handleExportChat}>
+                          <DownloadIcon className="size-4" />
+                          {t("export")}
+                        </DropdownMenuItem>
+                      )}
+                    </>
                   )}
-                  <div className="flex-1" />
-                  <ChatInputSubmit input={input} isStreaming={isStreaming} />
-                </PromptInputFooter>
-              </PromptInput>
+                  {features.importExport && (
+                    <DropdownMenuItem
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <UploadIcon className="size-4" />
+                      {t("import")}
+                    </DropdownMenuItem>
+                  )}
+                  {canEdit && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setInspectorOpen(true)}>
+                        <SearchCodeIcon className="size-4" />
+                        {t("inspect")}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <UserMenu />
+            </div>
+          </header>
+
+          {features.importExport && (
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImportChat(file);
+                e.target.value = "";
+              }}
+            />
+          )}
+
+          {/* ── Chat interface ── */}
+          <div className="relative flex min-h-0 flex-1 flex-col divide-y overflow-hidden">
+            {messages.length === 0 ? (
+              <ChatWelcome
+                title={configWelcomeTitle}
+                subtitle={configWelcomeSubtitle}
+                iconKey={configWelcomeIcon}
+                quickActions={quickActions}
+                onQuickAction={handleSuggestionClick}
+              />
+            ) : (
+              <Conversation>
+                <ConversationContent>
+                  {messages.map((message) => (
+                    <Message from={message.role} key={message.id}>
+                      {message.role === "user" ? (
+                        <UserMessageContent message={message} />
+                      ) : (
+                        <MessageParts message={message} />
+                      )}
+                    </Message>
+                  ))}
+                  {isStreaming &&
+                    (() => {
+                      const last = messages[messages.length - 1];
+                      return (
+                        !last ||
+                        last.role !== "assistant" ||
+                        !last.parts?.some(isTextUIPart)
+                      );
+                    })() && (
+                      <Message from="assistant">
+                        <Spinner className="my-1 text-muted-foreground" />
+                      </Message>
+                    )}
+                </ConversationContent>
+                <ConversationScrollButton />
+              </Conversation>
+            )}
+            <div className="grid shrink-0 gap-4 pt-4">
+              {messages.length === 0 && suggestions.length > 0 && (
+                <Suggestions className="px-4">
+                  {suggestions.map((suggestion) => (
+                    <SuggestionItem
+                      key={suggestion}
+                      onClick={handleSuggestionFill}
+                      suggestion={suggestion}
+                    />
+                  ))}
+                </Suggestions>
+              )}
+              <div className="w-full px-4 pb-4">
+                <PromptInput onSubmit={onPromptSubmit} multiple>
+                  <PromptInputBody>
+                    {enableAttachment && <AttachmentPreviewBar />}
+                    <PromptInputTextarea
+                      onChange={handleTextChange}
+                      placeholder={configPlaceholder}
+                      value={input}
+                    />
+                  </PromptInputBody>
+                  <PromptInputFooter>
+                    {quickButtons.length > 0 && (
+                      <QuickButtonsBar
+                        buttons={quickButtons}
+                        onQuickButton={handleSuggestionClick}
+                      />
+                    )}
+                    {enableAttachment && <AttachmentButton />}
+                    {enableVoice && speechSupported && (
+                      <SpeechInput
+                        size="icon-sm"
+                        onTranscriptionChange={handleTranscription}
+                        lang="zh-CN"
+                      />
+                    )}
+                    <div className="flex-1" />
+                    <ChatInputSubmit input={input} isStreaming={isStreaming} />
+                  </PromptInputFooter>
+                </PromptInput>
+              </div>
             </div>
           </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+        </SidebarInset>
+      </SidebarProvider>
     </AgentIdProvider>
   );
 }

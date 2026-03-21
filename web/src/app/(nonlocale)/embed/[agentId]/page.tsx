@@ -1,7 +1,11 @@
 "use client";
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DefaultChatTransport, isTextUIPart, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import {
+  DefaultChatTransport,
+  isTextUIPart,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import {
@@ -31,6 +35,7 @@ import {
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { MessageParts, UserMessageContent } from "@/components/message-parts";
 import { ChatWelcome } from "@/components/chat-welcome";
+import { QuickButtonsBar } from "@/components/quick-buttons-bar";
 import { Spinner } from "@/components/ui/spinner";
 import { executeClientTool } from "@/lib/tools/client-executor";
 import {
@@ -54,8 +59,10 @@ interface EmbedConfig {
   chatConfig: {
     title: string;
     welcomeTitle: string;
+    welcomeSubtitle: string;
     welcomeIcon: string;
     quickActions: string[];
+    quickButtons: import("@/lib/config/types").QuickButton[];
     placeholder: string;
     suggestions: string[];
     enableVoice: boolean;
@@ -144,7 +151,13 @@ function EmbedAttachmentButton() {
   );
 }
 
-function EmbedInputSubmit({ input, isStreaming }: { input: string; isStreaming: boolean }) {
+function EmbedInputSubmit({
+  input,
+  isStreaming,
+}: {
+  input: string;
+  isStreaming: boolean;
+}) {
   const { files } = usePromptInputAttachments();
   return (
     <PromptInputSubmit
@@ -169,7 +182,7 @@ function EmbedChat({
   const [configError, setConfigError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const sessionIdRef = useRef<string | null>(
-    internalMode ? null : getPersistedSessionId(agentId)
+    internalMode ? null : getPersistedSessionId(agentId),
   );
 
   // Host communication state
@@ -270,7 +283,7 @@ function EmbedChat({
     }
 
     const componentMap = new Map(
-      config.components.map((c) => [c.key, c.componentSource])
+      config.components.map((c) => [c.key, c.componentSource]),
     );
 
     for (const t of config.tools) {
@@ -339,7 +352,7 @@ function EmbedChat({
           };
         },
       }),
-    [agentId, token, internalMode]
+    [agentId, token, internalMode],
   );
 
   const { messages, sendMessage, status, addToolOutput } = useChat({
@@ -380,10 +393,16 @@ function EmbedChat({
             const callId = crypto.randomUUID();
             const timeoutId = setTimeout(() => {
               pendingHostCallsRef.current.delete(callId);
-              reject(new Error(`Host tool "${toolCall.toolName}" timed out (30s)`));
+              reject(
+                new Error(`Host tool "${toolCall.toolName}" timed out (30s)`),
+              );
             }, 30000);
 
-            pendingHostCallsRef.current.set(callId, { resolve, reject, timeoutId });
+            pendingHostCallsRef.current.set(callId, {
+              resolve,
+              reject,
+              timeoutId,
+            });
 
             window.parent.postMessage(
               {
@@ -394,7 +413,7 @@ function EmbedChat({
                   args: toolCall.input,
                 },
               },
-              "*"
+              "*",
             );
           });
 
@@ -451,7 +470,7 @@ function EmbedChat({
     if (prevStreamingRef.current !== isStreaming && window.parent !== window) {
       window.parent.postMessage(
         { type: "archon:streaming", payload: isStreaming },
-        "*"
+        "*",
       );
     }
     prevStreamingRef.current = isStreaming;
@@ -461,14 +480,17 @@ function EmbedChat({
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInput(event.target.value);
     },
-    []
+    [],
   );
 
-  const onPromptSubmit = useCallback((message: PromptInputMessage) => {
-    if (!message.text.trim() && message.files.length === 0) return;
-    sendMessage(message);
-    setInput("");
-  }, [sendMessage]);
+  const onPromptSubmit = useCallback(
+    (message: PromptInputMessage) => {
+      if (!message.text.trim() && message.files.length === 0) return;
+      sendMessage(message);
+      setInput("");
+    },
+    [sendMessage],
+  );
 
   const handleTranscription = useCallback((text: string) => {
     setInput((prev) => prev + text);
@@ -477,7 +499,7 @@ function EmbedChat({
   const [speechSupported, setSpeechSupported] = useState(false);
   useEffect(() => {
     setSpeechSupported(
-      "SpeechRecognition" in window || "webkitSpeechRecognition" in window
+      "SpeechRecognition" in window || "webkitSpeechRecognition" in window,
     );
   }, []);
 
@@ -485,7 +507,7 @@ function EmbedChat({
     (suggestion: string) => {
       sendMessage({ text: suggestion });
     },
-    [sendMessage]
+    [sendMessage],
   );
 
   const handleSuggestionFill = useCallback((suggestion: string) => {
@@ -517,117 +539,128 @@ function EmbedChat({
   const showWelcome = !internalMode;
   const title = chatConfig?.title || config.agent.name;
   const welcomeTitle = chatConfig?.welcomeTitle ?? "";
+  const welcomeSubtitle = chatConfig?.welcomeSubtitle ?? "";
   const welcomeIcon = (chatConfig?.welcomeIcon ?? "") as WelcomeIconKey;
   const quickActions = chatConfig?.quickActions ?? [];
+  const quickButtons = chatConfig?.quickButtons ?? [];
   const suggestions = showWelcome ? (chatConfig?.suggestions ?? []) : [];
-  const placeholder = chatConfig?.placeholder ?? (internalMode ? "描述你想要的修改..." : "");
+  const placeholder =
+    chatConfig?.placeholder ?? (internalMode ? "描述你想要的修改..." : "");
   const enableVoice = !internalMode && (chatConfig?.enableVoice ?? false);
-  const enableAttachment = !internalMode && (chatConfig?.enableAttachment ?? false);
+  const enableAttachment =
+    !internalMode && (chatConfig?.enableAttachment ?? false);
   const isDev = process.env.NODE_ENV === "development";
 
   return (
     <AgentIdProvider agentId={agentId}>
-    <div className="flex h-full flex-col overflow-hidden">
-      {/* Header */}
-      {showHeader && (
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-          <span className="text-sm font-medium">{title}</span>
-          {isDev && config.modelConfig && (
-            <div className="ml-auto">
-              <RequestInspectorModal
-                model={config.modelConfig.modelId}
-                systemPrompt={config.modelConfig.systemPrompt}
-                messages={messages}
-                temperature={config.modelConfig.temperature}
-                agentId={agentId}
-                hostContext={hostContextRef.current}
-              />
-            </div>
-          )}
-        </header>
-      )}
-
-      {/* Chat */}
-      <div className="relative flex min-h-0 flex-1 flex-col divide-y overflow-hidden">
-        {messages.length === 0 && showWelcome ? (
-          <ChatWelcome
-            title={welcomeTitle}
-            iconKey={welcomeIcon}
-            quickActions={quickActions}
-            onQuickAction={handleSuggestionClick}
-          />
-        ) : messages.length === 0 && internalMode ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-            描述你想要的修改，AI 会帮你更新左侧内容
-          </div>
-        ) : (
-          <Conversation>
-            <ConversationContent>
-              {messages.map((message) => (
-                <Message from={message.role} key={message.id}>
-                  {message.role === "user" ? (
-                    <UserMessageContent message={message} />
-                  ) : (
-                    <MessageParts message={message} />
-                  )}
-                </Message>
-              ))}
-              {isStreaming &&
-                (() => {
-                  const last = messages[messages.length - 1];
-                  return (
-                    !last ||
-                    last.role !== "assistant" ||
-                    !last.parts?.some(isTextUIPart)
-                  );
-                })() && (
-                  <Message from="assistant">
-                    <Spinner className="my-1 text-muted-foreground" />
-                  </Message>
-                )}
-            </ConversationContent>
-            <ConversationScrollButton />
-          </Conversation>
+      <div className="flex h-full flex-col overflow-hidden">
+        {/* Header */}
+        {showHeader && (
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+            <span className="text-sm font-medium">{title}</span>
+            {isDev && config.modelConfig && (
+              <div className="ml-auto">
+                <RequestInspectorModal
+                  model={config.modelConfig.modelId}
+                  systemPrompt={config.modelConfig.systemPrompt}
+                  messages={messages}
+                  temperature={config.modelConfig.temperature}
+                  agentId={agentId}
+                  hostContext={hostContextRef.current}
+                />
+              </div>
+            )}
+          </header>
         )}
-        <div className="grid shrink-0 gap-4 pt-4">
-          {messages.length === 0 && suggestions.length > 0 && (
-            <Suggestions className="px-4">
-              {suggestions.map((suggestion) => (
-                <SuggestionItem
-                  key={suggestion}
-                  onClick={handleSuggestionFill}
-                  suggestion={suggestion}
-                />
-              ))}
-            </Suggestions>
+
+        {/* Chat */}
+        <div className="relative flex min-h-0 flex-1 flex-col divide-y overflow-hidden">
+          {messages.length === 0 && showWelcome ? (
+            <ChatWelcome
+              title={welcomeTitle}
+              subtitle={welcomeSubtitle}
+              iconKey={welcomeIcon}
+              quickActions={quickActions}
+              onQuickAction={handleSuggestionClick}
+            />
+          ) : messages.length === 0 && internalMode ? (
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+              描述你想要的修改，AI 会帮你更新左侧内容
+            </div>
+          ) : (
+            <Conversation>
+              <ConversationContent>
+                {messages.map((message) => (
+                  <Message from={message.role} key={message.id}>
+                    {message.role === "user" ? (
+                      <UserMessageContent message={message} />
+                    ) : (
+                      <MessageParts message={message} />
+                    )}
+                  </Message>
+                ))}
+                {isStreaming &&
+                  (() => {
+                    const last = messages[messages.length - 1];
+                    return (
+                      !last ||
+                      last.role !== "assistant" ||
+                      !last.parts?.some(isTextUIPart)
+                    );
+                  })() && (
+                    <Message from="assistant">
+                      <Spinner className="my-1 text-muted-foreground" />
+                    </Message>
+                  )}
+              </ConversationContent>
+              <ConversationScrollButton />
+            </Conversation>
           )}
-          <div className="w-full px-4 pb-4">
-            <PromptInput onSubmit={onPromptSubmit} multiple>
-              <PromptInputBody>
-                {enableAttachment && <EmbedAttachmentPreviewBar />}
-                <PromptInputTextarea
-                  onChange={handleTextChange}
-                  placeholder={placeholder}
-                  value={input}
-                />
-              </PromptInputBody>
-              <PromptInputFooter>
-                {enableAttachment && <EmbedAttachmentButton />}
-                {enableVoice && speechSupported && (
-                  <SpeechInput
-                    size="icon-sm"
-                    onTranscriptionChange={handleTranscription}
-                    lang="zh-CN"
+          <div className="grid shrink-0 gap-4 pt-4">
+            {messages.length === 0 && suggestions.length > 0 && (
+              <Suggestions className="px-4">
+                {suggestions.map((suggestion) => (
+                  <SuggestionItem
+                    key={suggestion}
+                    onClick={handleSuggestionFill}
+                    suggestion={suggestion}
                   />
-                )}
-                <div className="flex-1" />
-                <EmbedInputSubmit input={input} isStreaming={isStreaming} />
-              </PromptInputFooter>
-            </PromptInput>
+                ))}
+              </Suggestions>
+            )}
+            <div className="w-full px-4 pb-4">
+              <PromptInput onSubmit={onPromptSubmit} multiple>
+                <PromptInputBody>
+                  {enableAttachment && <EmbedAttachmentPreviewBar />}
+                  <PromptInputTextarea
+                    onChange={handleTextChange}
+                    placeholder={placeholder}
+                    value={input}
+                  />
+                </PromptInputBody>
+                <PromptInputFooter>
+                  {quickButtons.length > 0 && (
+                    <QuickButtonsBar
+                      buttons={quickButtons}
+                      onQuickButton={handleSuggestionClick}
+                    />
+                  )}
+                  {enableAttachment && <EmbedAttachmentButton />}
+                  {enableVoice && speechSupported && (
+                    <SpeechInput
+                      size="icon-sm"
+                      onTranscriptionChange={handleTranscription}
+                      lang="zh-CN"
+                    />
+                  )}
+                  <div className="flex-1" />
+                  <EmbedInputSubmit input={input} isStreaming={isStreaming} />
+                </PromptInputFooter>
+              </PromptInput>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </AgentIdProvider>
   );
 }

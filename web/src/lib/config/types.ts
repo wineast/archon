@@ -1,10 +1,27 @@
-export type WelcomeIconKey = "" | "sparkles" | "bot" | "brain" | "message-square" | "wand" | "zap" | "lightbulb" | "rocket";
+export type WelcomeIconKey =
+  | ""
+  | "sparkles"
+  | "bot"
+  | "brain"
+  | "message-square"
+  | "wand"
+  | "zap"
+  | "lightbulb"
+  | "rocket";
+
+export interface QuickButton {
+  label: string;
+  icon: WelcomeIconKey;
+  message: string;
+}
 
 export interface ChatConfig {
   title: string;
   welcomeTitle: string;
+  welcomeSubtitle: string;
   welcomeIcon: WelcomeIconKey;
   quickActions: string[];
+  quickButtons: QuickButton[];
   placeholder: string;
   suggestions: string[];
   enableVoice: boolean;
@@ -13,8 +30,10 @@ export interface ChatConfig {
 
 export const DEFAULT_TITLE = "";
 export const DEFAULT_WELCOME_TITLE = "";
+export const DEFAULT_WELCOME_SUBTITLE = "";
 export const DEFAULT_WELCOME_ICON: WelcomeIconKey = "";
 export const DEFAULT_QUICK_ACTIONS: string[] = [];
+export const DEFAULT_QUICK_BUTTONS: QuickButton[] = [];
 export const DEFAULT_PLACEHOLDER = "";
 export const DEFAULT_SUGGESTIONS: string[] = [];
 export const DEFAULT_ENABLE_VOICE = false;
