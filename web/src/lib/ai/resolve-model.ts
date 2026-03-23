@@ -64,19 +64,30 @@ const PROVIDER_FACTORIES: Record<ByokProvider, ProviderFactory> = {
   mistral: (apiKey, model) => createMistral({ apiKey })(model),
   cohere: (apiKey, model) => createCohere({ apiKey })(model),
   perplexity: (apiKey, model) => createPerplexity({ apiKey })(model),
-  // OpenAI 兼容
+  // OpenAI 兼容 — 必须用 .chat() 强制走 /chat/completions，
+  // 因为 @ai-sdk/openai v3 默认使用 /responses 端点，第三方 API 不支持。
   alibaba: (apiKey, model) =>
-    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.alibaba })(model),
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.alibaba }).chat(
+      model,
+    ),
   moonshot: (apiKey, model) =>
-    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.moonshot })(model),
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.moonshot }).chat(
+      model,
+    ),
   zhipu: (apiKey, model) =>
-    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.zhipu })(model),
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.zhipu }).chat(
+      model,
+    ),
   minimax: (apiKey, model) =>
-    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.minimax })(model),
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.minimax }).chat(
+      model,
+    ),
   bytedance: (apiKey, model) =>
-    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.bytedance })(model),
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.bytedance }).chat(
+      model,
+    ),
   shubiaobiao: (apiKey, model) =>
-    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.shubiaobiao })(
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.shubiaobiao }).chat(
       model,
     ),
 };
