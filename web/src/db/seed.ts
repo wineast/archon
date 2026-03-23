@@ -24,7 +24,7 @@ export async function seed(db?: SeedDb): Promise<void> {
 const isDirectRun =
   typeof process !== "undefined" &&
   process.argv[1] &&
-  (process.argv[1].endsWith("/seed.ts") || process.argv[1].endsWith("/seed.js"));
+  /[/\\]seed\.[tj]s$/.test(process.argv[1]);
 
 if (isDirectRun) {
   seed().catch((err) => {

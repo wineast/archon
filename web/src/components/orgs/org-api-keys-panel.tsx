@@ -29,6 +29,7 @@ const PROVIDER_LABELS: Record<ByokProvider, string> = {
   zhipu: "智谱 AI",
   minimax: "MiniMax",
   bytedance: "火山引擎",
+  shubiaobiao: "数标标",
 };
 
 interface OrgApiKeysPanelProps {
@@ -50,7 +51,8 @@ export function OrgApiKeysPanel({ orgId }: OrgApiKeysPanelProps) {
     <ScrollArea className="h-full min-h-0">
       <div className="mx-auto max-w-lg space-y-1 p-6">
         <p className="text-xs text-muted-foreground mb-4">
-          配置各 AI Provider 的 API Key。已配置的 Provider 将优先使用你的 Key，未配置的将使用平台额度。
+          配置各 AI Provider 的 API Key。已配置的 Provider 将优先使用你的
+          Key，未配置的将使用平台额度。
         </p>
         {BYOK_PROVIDERS.map((provider) => {
           const existing = keys.find((k) => k.provider === provider);
@@ -78,7 +80,13 @@ interface ProviderRowProps {
   mutate: ReturnType<typeof useOrgApiKeys>["mutate"];
 }
 
-function ProviderRow({ orgId, provider, label, existingKey, mutate }: ProviderRowProps) {
+function ProviderRow({
+  orgId,
+  provider,
+  label,
+  existingKey,
+  mutate,
+}: ProviderRowProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -103,7 +111,10 @@ function ProviderRow({ orgId, provider, label, existingKey, mutate }: ProviderRo
   }, [orgId, existingKey, mutate]);
 
   return (
-    <div className="flex items-center gap-3 rounded-md border px-3 py-2.5" data-testid={`api-key-row-${provider}`}>
+    <div
+      className="flex items-center gap-3 rounded-md border px-3 py-2.5"
+      data-testid={`api-key-row-${provider}`}
+    >
       <KeyIcon className="size-4 shrink-0 text-muted-foreground" />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium">{label}</div>
@@ -125,13 +136,20 @@ function ProviderRow({ orgId, provider, label, existingKey, mutate }: ProviderRo
               onClick={handleSave}
               data-testid="btn-save-api-key"
             >
-              {busy ? <Spinner className="size-3" /> : <CheckIcon className="size-3" />}
+              {busy ? (
+                <Spinner className="size-3" />
+              ) : (
+                <CheckIcon className="size-3" />
+              )}
             </Button>
             <Button
               size="sm"
               variant="ghost"
               className="h-7 shrink-0"
-              onClick={() => { setEditing(false); setValue(""); }}
+              onClick={() => {
+                setEditing(false);
+                setValue("");
+              }}
               disabled={busy}
             >
               取消
@@ -152,7 +170,14 @@ function ProviderRow({ orgId, provider, label, existingKey, mutate }: ProviderRo
             onClick={() => setEditing(true)}
             data-testid={`btn-configure-${provider}`}
           >
-            {existingKey ? "更换" : <><PlusIcon className="size-3 mr-1" />配置</>}
+            {existingKey ? (
+              "更换"
+            ) : (
+              <>
+                <PlusIcon className="size-3 mr-1" />
+                配置
+              </>
+            )}
           </Button>
           {existingKey && (
             <>
@@ -163,7 +188,11 @@ function ProviderRow({ orgId, provider, label, existingKey, mutate }: ProviderRo
                 onClick={() => setConfirmOpen(true)}
                 disabled={busy}
               >
-                {busy ? <Spinner className="size-3" /> : <Trash2Icon className="size-3" />}
+                {busy ? (
+                  <Spinner className="size-3" />
+                ) : (
+                  <Trash2Icon className="size-3" />
+                )}
               </Button>
               <ConfirmDialog
                 open={confirmOpen}

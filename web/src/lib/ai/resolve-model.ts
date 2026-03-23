@@ -21,6 +21,7 @@ const OPENAI_COMPAT_BASE_URLS: Partial<Record<ByokProvider, string>> = {
   zhipu: "https://open.bigmodel.cn/api/paas/v4",
   minimax: "https://api.minimax.chat/v1",
   bytedance: "https://ark.cn-beijing.volces.com/api/v3",
+  shubiaobiao: "https://api.shubiaobiao.cn/v1",
 };
 
 /* ─────────── BYOK Model Name Mapping ─────────── */
@@ -30,7 +31,9 @@ const OPENAI_COMPAT_BASE_URLS: Partial<Record<ByokProvider, string>> = {
  * Only needed for providers where gateway IDs differ from API IDs.
  * e.g. Vercel AI Gateway uses "deepseek-v3.2" but DeepSeek API expects "deepseek-chat".
  */
-const BYOK_MODEL_NAME_MAPPING: Partial<Record<ByokProvider, Record<string, string>>> = {
+const BYOK_MODEL_NAME_MAPPING: Partial<
+  Record<ByokProvider, Record<string, string>>
+> = {
   deepseek: {
     "deepseek-v3.2": "deepseek-chat",
     "deepseek-v3.2-thinking": "deepseek-reasoner",
@@ -40,7 +43,10 @@ const BYOK_MODEL_NAME_MAPPING: Partial<Record<ByokProvider, Record<string, strin
   },
 };
 
-export function mapModelName(provider: ByokProvider, modelName: string): string {
+export function mapModelName(
+  provider: ByokProvider,
+  modelName: string,
+): string {
   return BYOK_MODEL_NAME_MAPPING[provider]?.[modelName] ?? modelName;
 }
 
@@ -59,11 +65,20 @@ const PROVIDER_FACTORIES: Record<ByokProvider, ProviderFactory> = {
   cohere: (apiKey, model) => createCohere({ apiKey })(model),
   perplexity: (apiKey, model) => createPerplexity({ apiKey })(model),
   // OpenAI 兼容
-  alibaba: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.alibaba })(model),
-  moonshot: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.moonshot })(model),
-  zhipu: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.zhipu })(model),
-  minimax: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.minimax })(model),
-  bytedance: (apiKey, model) => createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.bytedance })(model),
+  alibaba: (apiKey, model) =>
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.alibaba })(model),
+  moonshot: (apiKey, model) =>
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.moonshot })(model),
+  zhipu: (apiKey, model) =>
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.zhipu })(model),
+  minimax: (apiKey, model) =>
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.minimax })(model),
+  bytedance: (apiKey, model) =>
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.bytedance })(model),
+  shubiaobiao: (apiKey, model) =>
+    createOpenAI({ apiKey, baseURL: OPENAI_COMPAT_BASE_URLS.shubiaobiao })(
+      model,
+    ),
 };
 
 /* ─────────── Helpers ─────────── */
@@ -72,7 +87,9 @@ const PROVIDER_FACTORIES: Record<ByokProvider, ProviderFactory> = {
  * Extract provider and model name from a modelId like "anthropic/claude-sonnet-4".
  * Supports both "/" and ":" as separators.
  */
-export function parseModelId(modelId: string): { provider: string; modelName: string } | null {
+export function parseModelId(
+  modelId: string,
+): { provider: string; modelName: string } | null {
   const sep = modelId.includes("/") ? "/" : modelId.includes(":") ? ":" : null;
   if (!sep) return null;
   const idx = modelId.indexOf(sep);
@@ -93,7 +110,7 @@ export function parseModelId(modelId: string): { provider: string; modelName: st
  */
 export async function resolveModel(
   modelId: string,
-  orgId?: string | null
+  orgId?: string | null,
 ): Promise<LanguageModel> {
   // No orgId → always gateway (no credit check — e.g. internal/admin calls)
   if (!orgId) return gateway(modelId);

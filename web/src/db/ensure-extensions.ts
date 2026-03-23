@@ -31,15 +31,16 @@ export async function ensureExtensions(sql: Sql) {
   // rag_chunks 使用无固定维度的 vector（随 embedding 模型变化），
   // HNSW 索引要求固定维度，因此跳过，运行时用精确余弦距离搜索。
   // 大数据量场景可手动创建指定维度的 HNSW 索引。
-  console.log("⏭ rag_chunks uses dimensionless vector, skipping HNSW index (exact search used)");
+  console.log(
+    "⏭ rag_chunks uses dimensionless vector, skipping HNSW index (exact search used)",
+  );
 }
 
 // 独立 CLI 入口
 const isDirectRun =
   typeof process !== "undefined" &&
   process.argv[1] &&
-  (process.argv[1].endsWith("/ensure-extensions.ts") ||
-    process.argv[1].endsWith("/ensure-extensions.js"));
+  /[/\\]ensure-extensions\.[tj]s$/.test(process.argv[1]);
 
 if (isDirectRun) {
   (async () => {

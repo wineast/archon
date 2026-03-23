@@ -1553,6 +1553,7 @@ export const BYOK_PROVIDERS = [
   "zhipu",
   "minimax",
   "bytedance",
+  "shubiaobiao",
 ] as const;
 export type ByokProvider = (typeof BYOK_PROVIDERS)[number];
 
