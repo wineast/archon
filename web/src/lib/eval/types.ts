@@ -23,9 +23,9 @@ export interface AssertionResult {
 }
 
 export interface AssertionFailConfig {
-  judgeOnFail?: boolean;      // 案例级断言失败时仍执行 Judge（默认 false）
-  judgeTurnOnFail?: boolean;   // 多轮单轮断言失败时仍执行该轮 Judge（默认 false）
-  stopOnTurnFail?: boolean;   // 多轮单轮断言失败时停止后续轮（默认 false）
+  judgeOnFail?: boolean; // 案例级断言失败时仍执行 Judge（默认 false）
+  judgeTurnOnFail?: boolean; // 多轮单轮断言失败时仍执行该轮 Judge（默认 false）
+  stopOnTurnFail?: boolean; // 多轮单轮断言失败时停止后续轮（默认 false）
 }
 
 export type EvalCaseMode = "single" | "injected" | "sequential";
@@ -58,7 +58,11 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   injected?: boolean;
-  toolCalls?: Array<{ name: string; args: Record<string, unknown>; result?: unknown }>;
+  toolCalls?: Array<{
+    name: string;
+    args: Record<string, unknown>;
+    result?: unknown;
+  }>;
 }
 
 export interface TurnResult {
@@ -135,7 +139,12 @@ export interface EvalRunSummary {
 
 // ── DB row → runtime type converters ──
 
-import type { EvalCaseRow, EvalRunRow, EvalRunResultRow, EvalBatchRow } from "@/db/schema";
+import type {
+  EvalCaseRow,
+  EvalRunRow,
+  EvalRunResultRow,
+  EvalBatchRow,
+} from "@/db/schema";
 export type { EvalRunStatus, EvalBatchRow } from "@/db/schema";
 
 export function toEvalCase(row: EvalCaseRow): EvalCase {
@@ -172,7 +181,8 @@ export interface EvalRunResponse {
 /** POST /api/eval/run — create a run and start server-side execution */
 export interface CreateEvalRunRequest {
   agentId: string;
-  judgeAgentId: string;
+  /** Optional: when absent, eval runs assertions only (skips judge scoring). */
+  judgeAgentId?: string;
   filterTags?: string[];
   assertionFailConfig?: AssertionFailConfig;
   concurrency?: number;

@@ -85,7 +85,7 @@ describe("RunEvalDialog", () => {
         mode="all"
         caseCount={5}
         onConfirm={vi.fn()}
-      />
+      />,
     );
 
     // Dialog title
@@ -97,7 +97,9 @@ describe("RunEvalDialog", () => {
     expect(screen.getByText("单轮断言失败停止后续轮")).toBeInTheDocument();
 
     // Confirm button with count
-    expect(screen.getByRole("button", { name: /Run All \(5\)/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Run All \(5\)/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows 'Run' button in single mode", () => {
@@ -109,14 +111,16 @@ describe("RunEvalDialog", () => {
         mode="single"
         caseCount={1}
         onConfirm={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.getByRole("button", { name: /^Run$/i })).toBeInTheDocument();
   });
 
-  it("disables confirm when no judge agent", () => {
+  it("shows hint and allows confirm when no judge agent", async () => {
     mockJudgeAgentId = null;
+    const onConfirm = vi.fn();
+    const user = userEvent.setup();
 
     render(
       <RunEvalDialog
@@ -125,12 +129,24 @@ describe("RunEvalDialog", () => {
         agentId="agent-1"
         mode="all"
         caseCount={5}
-        onConfirm={vi.fn()}
-      />
+        onConfirm={onConfirm}
+      />,
     );
 
-    expect(screen.getByRole("button", { name: /Run All/i })).toBeDisabled();
-    expect(screen.getByText("请选择一个 Judge Agent")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "未配置 Judge Agent：本次将跳过 Judge 评分，仅运行断言。",
+      ),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Run All/i }));
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      judgeAgentId: undefined,
+      assertionFailConfig: {},
+      concurrency: 3,
+      repeatCount: 1,
+      runConcurrency: 1,
+    });
   });
 
   it("calls onConfirm with params when confirm is clicked", async () => {
@@ -145,7 +161,7 @@ describe("RunEvalDialog", () => {
         mode="all"
         caseCount={5}
         onConfirm={onConfirm}
-      />
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: /Run All/i }));
@@ -168,7 +184,7 @@ describe("RunEvalDialog", () => {
         mode="all"
         caseCount={5}
         onConfirm={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.queryByText("运行评估")).not.toBeInTheDocument();

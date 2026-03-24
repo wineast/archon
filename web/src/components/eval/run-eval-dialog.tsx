@@ -26,7 +26,7 @@ interface RunEvalDialogProps {
   mode: "all" | "single";
   caseCount: number;
   onConfirm: (params: {
-    judgeAgentId: string;
+    judgeAgentId?: string;
     assertionFailConfig: AssertionFailConfig;
     concurrency: number;
     repeatCount: number;
@@ -48,15 +48,15 @@ export function RunEvalDialog({
   const judgeAgentId = evaluator?.judgeAgentId ?? undefined;
   const orgId = useAgentOrgId(agentId);
 
-  const [assertionFailConfig, setAssertionFailConfig] = useState<AssertionFailConfig>({});
+  const [assertionFailConfig, setAssertionFailConfig] =
+    useState<AssertionFailConfig>({});
   const [concurrency, setConcurrency] = useState(3);
   const [repeatCount, setRepeatCount] = useState(1);
   const [runConcurrency, setRunConcurrency] = useState(1);
 
-  const canConfirm = !!judgeAgentId && !confirming;
+  const canConfirm = !confirming;
 
   const handleConfirm = () => {
-    if (!judgeAgentId) return;
     onConfirm({
       judgeAgentId,
       assertionFailConfig: Object.values(assertionFailConfig).some(Boolean)
@@ -106,8 +106,8 @@ export function RunEvalDialog({
               </div>
             )}
             {!judgeAgentId && (
-              <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
-                请选择一个 Judge Agent
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                未配置 Judge Agent：本次将跳过 Judge 评分，仅运行断言。
               </p>
             )}
           </div>
@@ -122,7 +122,11 @@ export function RunEvalDialog({
               min={1}
               max={5}
               value={concurrency}
-              onChange={(e) => setConcurrency(Math.max(1, Math.min(5, Number(e.target.value) || 3)))}
+              onChange={(e) =>
+                setConcurrency(
+                  Math.max(1, Math.min(5, Number(e.target.value) || 3)),
+                )
+              }
               className="mt-1 w-20"
               data-testid="input-concurrency"
             />
@@ -141,7 +145,11 @@ export function RunEvalDialog({
               min={1}
               max={10}
               value={repeatCount}
-              onChange={(e) => setRepeatCount(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+              onChange={(e) =>
+                setRepeatCount(
+                  Math.max(1, Math.min(10, Number(e.target.value) || 1)),
+                )
+              }
               className="mt-1 w-20"
               data-testid="input-repeat-count"
             />
@@ -161,7 +169,11 @@ export function RunEvalDialog({
                 min={1}
                 max={5}
                 value={runConcurrency}
-                onChange={(e) => setRunConcurrency(Math.max(1, Math.min(5, Number(e.target.value) || 1)))}
+                onChange={(e) =>
+                  setRunConcurrency(
+                    Math.max(1, Math.min(5, Number(e.target.value) || 1)),
+                  )
+                }
                 className="mt-1 w-20"
                 data-testid="input-run-concurrency"
               />
@@ -181,8 +193,12 @@ export function RunEvalDialog({
                 id="dialog-judgeOnFail"
                 checked={!!assertionFailConfig.judgeOnFail}
                 onCheckedChange={(v) =>
-                  setAssertionFailConfig((prev) => ({ ...prev, judgeOnFail: v }))
+                  setAssertionFailConfig((prev) => ({
+                    ...prev,
+                    judgeOnFail: v,
+                  }))
                 }
+                disabled={!judgeAgentId}
               />
               <Label htmlFor="dialog-judgeOnFail" className="text-xs">
                 断言失败仍执行评估
@@ -193,8 +209,12 @@ export function RunEvalDialog({
                 id="dialog-judgeTurnOnFail"
                 checked={!!assertionFailConfig.judgeTurnOnFail}
                 onCheckedChange={(v) =>
-                  setAssertionFailConfig((prev) => ({ ...prev, judgeTurnOnFail: v }))
+                  setAssertionFailConfig((prev) => ({
+                    ...prev,
+                    judgeTurnOnFail: v,
+                  }))
                 }
+                disabled={!judgeAgentId}
               />
               <Label htmlFor="dialog-judgeTurnOnFail" className="text-xs">
                 单轮断言失败仍评估该轮
@@ -205,7 +225,10 @@ export function RunEvalDialog({
                 id="dialog-stopOnTurnFail"
                 checked={!!assertionFailConfig.stopOnTurnFail}
                 onCheckedChange={(v) =>
-                  setAssertionFailConfig((prev) => ({ ...prev, stopOnTurnFail: v }))
+                  setAssertionFailConfig((prev) => ({
+                    ...prev,
+                    stopOnTurnFail: v,
+                  }))
                 }
               />
               <Label htmlFor="dialog-stopOnTurnFail" className="text-xs">
@@ -223,7 +246,11 @@ export function RunEvalDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!canConfirm} data-testid="btn-confirm-run">
+          <Button
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+            data-testid="btn-confirm-run"
+          >
             {confirming && <Spinner className="mr-1.5 size-3" />}
             {buttonLabel}
           </Button>

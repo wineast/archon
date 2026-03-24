@@ -31,7 +31,11 @@ import { AssertionRow } from "./assertion-row";
 import { TurnsList } from "./turns-list";
 import { ResultCard } from "./result-card";
 import { RunEvalDialog } from "./run-eval-dialog";
-import { useEvalBatches, fetchEvalBatchDetail, fetchEvalRunDetail } from "@/lib/eval/hooks";
+import {
+  useEvalBatches,
+  fetchEvalBatchDetail,
+  fetchEvalRunDetail,
+} from "@/lib/eval/hooks";
 import { useTemplateVars } from "@/lib/eval/template-vars-hooks";
 import { useTools } from "@/lib/tools/hooks";
 import { useEvalBatch } from "@/lib/eval/eval-run-context";
@@ -62,15 +66,20 @@ interface CaseDetailProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailProps) {
+export function CaseDetail({
+  evalCase,
+  agentId,
+  onSave,
+  onDelete,
+}: CaseDetailProps) {
   const [name, setName] = useState(evalCase.name);
   const [mode, setMode] = useState<EvalCaseMode>(evalCase.mode);
   const [turns, setTurns] = useState<EvalTurn[]>(evalCase.turns);
   const [expectedOutput, setExpectedOutput] = useState(
-    evalCase.expectedOutput ?? ""
+    evalCase.expectedOutput ?? "",
   );
   const [assertions, setAssertions] = useState<Assertion[]>(
-    evalCase.assertions
+    evalCase.assertions,
   );
   const [tags, setTags] = useState<string[]>(evalCase.tags ?? []);
   const [tagInput, setTagInput] = useState("");
@@ -93,7 +102,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
   // Check if any turn has tool calls (for showing Refresh button)
   const hasToolCalls = useMemo(
     () => turns.some((t) => t.toolCalls && t.toolCalls.length > 0),
-    [turns]
+    [turns],
   );
 
   const dirty =
@@ -106,11 +115,9 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
 
   const handleAssertionChange = useCallback(
     (idx: number, updated: Assertion) => {
-      setAssertions((prev) =>
-        prev.map((a, i) => (i === idx ? updated : a))
-      );
+      setAssertions((prev) => prev.map((a, i) => (i === idx ? updated : a)));
     },
-    []
+    [],
   );
 
   const handleAssertionDelete = useCallback((idx: number) => {
@@ -132,7 +139,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
       }
       setTagInput("");
     },
-    [tags]
+    [tags],
   );
 
   const handleRemoveTag = useCallback((tag: string) => {
@@ -146,19 +153,24 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         handleAddTag(tagInput);
       }
     },
-    [tagInput, handleAddTag]
+    [tagInput, handleAddTag],
   );
 
   const handleModeChange = useCallback(
     (newMode: EvalCaseMode) => {
       setMode(newMode);
       // When switching to single, ensure at least one user turn exists
-      if (newMode === "single" && (turns.length === 0 || turns[0]?.role !== "user")) {
-        setTurns([{ id: nanoid(), role: "user", content: turns[0]?.content ?? "" }]);
+      if (
+        newMode === "single" &&
+        (turns.length === 0 || turns[0]?.role !== "user")
+      ) {
+        setTurns([
+          { id: nanoid(), role: "user", content: turns[0]?.content ?? "" },
+        ]);
       }
       // When switching from single, keep existing turns
     },
-    [turns]
+    [turns],
   );
 
   // For single mode: map single textarea to turns[0].content
@@ -171,7 +183,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         setTurns(turns.map((t, i) => (i === 0 ? { ...t, content } : t)));
       }
     },
-    [turns]
+    [turns],
   );
 
   const handleReset = useCallback(() => {
@@ -198,7 +210,16 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
     } finally {
       setSaving(false);
     }
-  }, [evalCase.id, name, mode, turns, expectedOutput, assertions, tags, onSave]);
+  }, [
+    evalCase.id,
+    name,
+    mode,
+    turns,
+    expectedOutput,
+    assertions,
+    tags,
+    onSave,
+  ]);
 
   const handleDelete = useCallback(async () => {
     setDeleting(true);
@@ -221,7 +242,9 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
       }
       const data = await res.json();
       if (data.errors?.length > 0) {
-        toast.error(`Refreshed ${data.refreshedCount} tool calls, ${data.errors.length} errors: ${data.errors[0]}`);
+        toast.error(
+          `Refreshed ${data.refreshedCount} tool calls, ${data.errors.length} errors: ${data.errors[0]}`,
+        );
       } else {
         toast.success(`Refreshed ${data.refreshedCount} tool call snapshots`);
       }
@@ -230,116 +253,142 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
         setTurns(data.turns);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to refresh tools");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to refresh tools",
+      );
     } finally {
       setRefreshing(false);
     }
   }, [evalCase.id]);
 
-  const handleRunConfirm = useCallback(async (params: {
-    judgeAgentId: string;
-    assertionFailConfig: AssertionFailConfig;
-    repeatCount: number;
-    runConcurrency: number;
-  }) => {
-    if (!agentId) return;
-    const { judgeAgentId, assertionFailConfig, repeatCount, runConcurrency } = params;
+  const handleRunConfirm = useCallback(
+    async (params: {
+      judgeAgentId?: string;
+      assertionFailConfig: AssertionFailConfig;
+      repeatCount: number;
+      runConcurrency: number;
+    }) => {
+      if (!agentId) return;
+      const { judgeAgentId, assertionFailConfig, repeatCount, runConcurrency } =
+        params;
 
-    const currentCase: EvalCase = {
-      id: evalCase.id,
-      key: evalCase.key,
+      const currentCase: EvalCase = {
+        id: evalCase.id,
+        key: evalCase.key,
+        name,
+        mode,
+        turns,
+        assertions,
+        expectedOutput,
+        tags,
+      };
+      const enabledToolNames = allDbTools
+        .filter((t) => t.enabled)
+        .map((t) => t.name);
+
+      setRunDialogOpen(false);
+      setRunning(true);
+
+      // Create batch via server
+      try {
+        const createRes = await fetch("/api/eval/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agentId,
+            judgeAgentId,
+            assertionFailConfig:
+              Object.keys(assertionFailConfig).length > 0
+                ? assertionFailConfig
+                : undefined,
+            totalCases: 1,
+            cases: [currentCase],
+            templateVars,
+            toolNames: enabledToolNames,
+            repeatCount,
+            runConcurrency,
+          }),
+        });
+        if (!createRes.ok) {
+          const errData = await createRes.json().catch(() => null);
+          const errMsg = errData?.error || `HTTP ${createRes.status}`;
+          throw new Error(errMsg);
+        }
+        const data: CreateEvalBatchResponse = await createRes.json();
+        mutateBatches();
+
+        // Poll for batch completion
+        const chatModel = data.chatModel;
+        const modelName = chatModel.split("/").pop() ?? chatModel;
+        const batchId = data.batchId;
+
+        const pollResult = async (): Promise<
+          Array<{ result: EvalResult; scoreMax: number }>
+        > => {
+          for (let i = 0; i < 120; i++) {
+            await new Promise((r) => setTimeout(r, 2000));
+            const batchDetail = await fetchEvalBatchDetail(batchId);
+            if (!batchDetail) continue;
+            const { batch: batchRow, runs } = batchDetail;
+            if (
+              batchRow.status === "completed" ||
+              batchRow.status === "failed" ||
+              batchRow.status === "cancelled"
+            ) {
+              mutateBatches();
+              const results: Array<{ result: EvalResult; scoreMax: number }> =
+                [];
+              for (const run of runs) {
+                const runDetail = await fetchEvalRunDetail(run.id);
+                if (runDetail && runDetail.results.length > 0) {
+                  const sm = getScoreMax(
+                    (
+                      run.judgeConfigSnapshot as {
+                        dimensions?: Dimension[];
+                      } | null
+                    )?.dimensions,
+                  );
+                  results.push({
+                    result: toEvalResult(runDetail.results[0]),
+                    scoreMax: sm,
+                  });
+                }
+              }
+              return results;
+            }
+          }
+          return [];
+        };
+
+        const pollData = await pollResult();
+        for (const entry of pollData) {
+          setRunResults((prev) => [
+            { result: entry.result, modelName, scoreMax: entry.scoreMax },
+            ...prev,
+          ]);
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        toast.error(errorMsg);
+      } finally {
+        setRunning(false);
+      }
+    },
+    [
+      evalCase.id,
+      evalCase.key,
+      agentId,
       name,
       mode,
       turns,
       assertions,
       expectedOutput,
       tags,
-    };
-    const enabledToolNames = allDbTools
-      .filter((t) => t.enabled)
-      .map((t) => t.name);
-
-    setRunDialogOpen(false);
-    setRunning(true);
-
-    // Create batch via server
-    try {
-      const createRes = await fetch("/api/eval/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentId,
-          judgeAgentId,
-          assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
-          totalCases: 1,
-          cases: [currentCase],
-          templateVars,
-          toolNames: enabledToolNames,
-          repeatCount,
-          runConcurrency,
-        }),
-      });
-      if (!createRes.ok) {
-        const errData = await createRes.json().catch(() => null);
-        const errMsg = errData?.error || `HTTP ${createRes.status}`;
-        throw new Error(errMsg);
-      }
-      const data: CreateEvalBatchResponse = await createRes.json();
-      mutateBatches();
-
-      // Poll for batch completion
-      const chatModel = data.chatModel;
-      const modelName = chatModel.split("/").pop() ?? chatModel;
-      const batchId = data.batchId;
-
-      const pollResult = async (): Promise<Array<{ result: EvalResult; scoreMax: number }>> => {
-        for (let i = 0; i < 120; i++) {
-          await new Promise((r) => setTimeout(r, 2000));
-          const batchDetail = await fetchEvalBatchDetail(batchId);
-          if (!batchDetail) continue;
-          const { batch: batchRow, runs } = batchDetail;
-          if (batchRow.status === "completed" || batchRow.status === "failed" || batchRow.status === "cancelled") {
-            mutateBatches();
-            const results: Array<{ result: EvalResult; scoreMax: number }> = [];
-            for (const run of runs) {
-              const runDetail = await fetchEvalRunDetail(run.id);
-              if (runDetail && runDetail.results.length > 0) {
-                const sm = getScoreMax(
-                  (run.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)?.dimensions
-                );
-                results.push({ result: toEvalResult(runDetail.results[0]), scoreMax: sm });
-              }
-            }
-            return results;
-          }
-        }
-        return [];
-      };
-
-      const pollData = await pollResult();
-      for (const entry of pollData) {
-        setRunResults((prev) => [{ result: entry.result, modelName, scoreMax: entry.scoreMax }, ...prev]);
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      toast.error(errorMsg);
-    } finally {
-      setRunning(false);
-    }
-  }, [
-    evalCase.id,
-    evalCase.key,
-    agentId,
-    name,
-    mode,
-    turns,
-    assertions,
-    expectedOutput,
-    tags,
-    templateVars,
-    allDbTools,
-    mutateBatches,
-  ]);
+      templateVars,
+      allDbTools,
+      mutateBatches,
+    ],
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -372,11 +421,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
             </label>
             <div className="mt-1 flex flex-wrap items-center gap-1">
               {tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="gap-1 text-xs"
-                >
+                <Badge key={tag} variant="secondary" className="gap-1 text-xs">
                   {tag}
                   <button
                     type="button"
@@ -401,8 +446,14 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
             <label className="text-xs font-medium text-muted-foreground">
               Mode
             </label>
-            <Select value={mode} onValueChange={(v) => handleModeChange(v as EvalCaseMode)}>
-              <SelectTrigger className="mt-1 h-8 text-sm" data-testid="select-case-mode">
+            <Select
+              value={mode}
+              onValueChange={(v) => handleModeChange(v as EvalCaseMode)}
+            >
+              <SelectTrigger
+                className="mt-1 h-8 text-sm"
+                data-testid="select-case-mode"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -438,11 +489,7 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
                 Turns
               </label>
               <div className="mt-1">
-                <TurnsList
-                  turns={turns}
-                  mode={mode}
-                  onTurnsChange={setTurns}
-                />
+                <TurnsList turns={turns} mode={mode} onTurnsChange={setTurns} />
               </div>
             </div>
           )}
@@ -592,7 +639,9 @@ export function CaseDetail({ evalCase, agentId, onSave, onDelete }: CaseDetailPr
             {runResults.map((entry, i) => (
               <div key={`${entry.result.timestamp}-${i}`}>
                 <div className="mb-1 flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span>{new Date(entry.result.timestamp).toLocaleTimeString()}</span>
+                  <span>
+                    {new Date(entry.result.timestamp).toLocaleTimeString()}
+                  </span>
                   <span>{entry.modelName}</span>
                 </div>
                 <ResultCard result={entry.result} scoreMax={entry.scoreMax} />

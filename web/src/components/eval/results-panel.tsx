@@ -53,10 +53,7 @@ interface ResultsPanelProps {
   selectedTags: string[];
 }
 
-export function ResultsPanel({
-  agentId,
-  selectedTags,
-}: ResultsPanelProps) {
+export function ResultsPanel({ agentId, selectedTags }: ResultsPanelProps) {
   const { cases: caseRows } = useEvalCases(agentId);
   const { templateVars } = useTemplateVars(agentId);
   const { tools: allDbTools } = useTools(agentId);
@@ -64,12 +61,7 @@ export function ResultsPanel({
     allDbTools.filter((t) => t.enabled).map((t) => t.name);
 
   const { batches, mutate: mutateBatches } = useEvalBatches(agentId);
-  const {
-    isRunning,
-    activeBatch,
-    progress,
-    cancelBatch,
-  } = useEvalBatch();
+  const { isRunning, activeBatch, progress, cancelBatch } = useEvalBatch();
 
   const pathname = usePathname();
   const reportBaseUrl = pathname.replace(/\/build.*$/, "/eval");
@@ -118,54 +110,60 @@ export function ResultsPanel({
     return () => clearInterval(interval);
   }, [expandedBatchId, batches]);
 
-  const handleRunAllConfirm = useCallback(async (params: {
-    judgeAgentId: string;
-    assertionFailConfig: AssertionFailConfig;
-    concurrency: number;
-    repeatCount: number;
-    runConcurrency: number;
-  }) => {
-    if (!agentId) return;
-    const { judgeAgentId, assertionFailConfig, concurrency, repeatCount, runConcurrency } = params;
+  const handleRunAllConfirm = useCallback(
+    async (params: {
+      judgeAgentId?: string;
+      assertionFailConfig: AssertionFailConfig;
+      concurrency: number;
+      repeatCount: number;
+      runConcurrency: number;
+    }) => {
+      if (!agentId) return;
+      const {
+        judgeAgentId,
+        assertionFailConfig,
+        concurrency,
+        repeatCount,
+        runConcurrency,
+      } = params;
 
-    setRunDialogOpen(false);
+      setRunDialogOpen(false);
 
-    try {
-      const createRes = await fetch("/api/eval/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentId,
-          judgeAgentId,
-          filterTags: selectedTags.length > 0 ? selectedTags : undefined,
-          assertionFailConfig: Object.keys(assertionFailConfig).length > 0 ? assertionFailConfig : undefined,
-          concurrency,
-          totalCases: cases.length,
-          cases,
-          templateVars,
-          toolNames: getEnabledToolNames(),
-          repeatCount,
-          runConcurrency,
-        }),
-      });
-      if (!createRes.ok) {
-        const errData = await createRes.json().catch(() => null);
-        const errMsg = errData?.error || `HTTP ${createRes.status}`;
-        throw new Error(errMsg);
+      try {
+        const createRes = await fetch("/api/eval/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agentId,
+            judgeAgentId,
+            filterTags: selectedTags.length > 0 ? selectedTags : undefined,
+            assertionFailConfig:
+              Object.keys(assertionFailConfig).length > 0
+                ? assertionFailConfig
+                : undefined,
+            concurrency,
+            totalCases: cases.length,
+            cases,
+            templateVars,
+            toolNames: getEnabledToolNames(),
+            repeatCount,
+            runConcurrency,
+          }),
+        });
+        if (!createRes.ok) {
+          const errData = await createRes.json().catch(() => null);
+          const errMsg = errData?.error || `HTTP ${createRes.status}`;
+          throw new Error(errMsg);
+        }
+        const { batchId }: CreateEvalBatchResponse = await createRes.json();
+        mutateBatches();
+        setExpandedBatchId(batchId);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
       }
-      const { batchId }: CreateEvalBatchResponse = await createRes.json();
-      mutateBatches();
-      setExpandedBatchId(batchId);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    }
-  }, [
-    agentId,
-    cases,
-    templateVars,
-    selectedTags,
-    mutateBatches,
-  ]);
+    },
+    [agentId, cases, templateVars, selectedTags, mutateBatches],
+  );
 
   const handleToggleBatchDetail = useCallback(
     async (batchId: string) => {
@@ -183,7 +181,7 @@ export function ResultsPanel({
         setLoadingDetail(null);
       }
     },
-    [expandedBatchId, batchDetailCache]
+    [expandedBatchId, batchDetailCache],
   );
 
   const handleDeleteBatch = useCallback(
@@ -197,18 +195,15 @@ export function ResultsPanel({
       });
       setDeletingBatchId(null);
     },
-    [mutateBatches, expandedBatchId]
+    [mutateBatches, expandedBatchId],
   );
 
-  const loadRunDetail = useCallback(
-    async (runId: string) => {
-      const detail = await fetchEvalRunDetail(runId);
-      if (detail) {
-        setRunDetailCache((prev) => ({ ...prev, [runId]: detail }));
-      }
-    },
-    []
-  );
+  const loadRunDetail = useCallback(async (runId: string) => {
+    const detail = await fetchEvalRunDetail(runId);
+    if (detail) {
+      setRunDetailCache((prev) => ({ ...prev, [runId]: detail }));
+    }
+  }, []);
 
   return (
     <div className="flex h-full flex-col">
@@ -216,11 +211,7 @@ export function ResultsPanel({
         {/* Run action */}
         <div className="flex items-center gap-2">
           {isRunning ? (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={cancelBatch}
-            >
+            <Button size="sm" variant="destructive" onClick={cancelBatch}>
               <SquareIcon className="mr-1 size-3" />
               Stop
             </Button>
@@ -247,7 +238,8 @@ export function ResultsPanel({
             <Progress value={progress} />
             <p className="text-xs text-muted-foreground">
               Running {activeBatch.completedRuns}/{activeBatch.totalRuns}
-              {activeBatch.repeatCount > 1 && ` runs (x${activeBatch.repeatCount})`}
+              {activeBatch.repeatCount > 1 &&
+                ` runs (x${activeBatch.repeatCount})`}
             </p>
           </div>
         )}
@@ -340,7 +332,8 @@ function BatchHistoryItem({
   const isMultiRun = batch.repeatCount > 1;
 
   const scoreMax = getScoreMax(
-    (batch.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)?.dimensions
+    (batch.judgeConfigSnapshot as { dimensions?: Dimension[] } | null)
+      ?.dimensions,
   );
 
   const passRate =
@@ -377,7 +370,10 @@ function BatchHistoryItem({
         );
       case "cancelled":
         return (
-          <Badge variant="outline" className="border-amber-500 text-amber-600 text-[10px] dark:text-amber-400">
+          <Badge
+            variant="outline"
+            className="border-amber-500 text-amber-600 text-[10px] dark:text-amber-400"
+          >
             Cancelled
           </Badge>
         );
@@ -416,9 +412,12 @@ function BatchHistoryItem({
           {new Date(batch.createdAt).toLocaleString()}
         </span>
         {isMultiRun && (
-          <Badge variant="outline" className="text-[10px] gap-0.5" data-testid="batch-repeat-badge">
-            <RepeatIcon className="size-2.5" />
-            x{batch.repeatCount}
+          <Badge
+            variant="outline"
+            className="text-[10px] gap-0.5"
+            data-testid="batch-repeat-badge"
+          >
+            <RepeatIcon className="size-2.5" />x{batch.repeatCount}
           </Badge>
         )}
         {renderStatusBadge()}
@@ -427,9 +426,14 @@ function BatchHistoryItem({
         </span>
         {!isRunning && (
           <>
-            <span className="shrink-0 font-medium" data-testid="run-pass-rate">{passRate}</span>
+            <span className="shrink-0 font-medium" data-testid="run-pass-rate">
+              {passRate}
+            </span>
             {batch.averageScore != null && (
-              <span className="shrink-0 text-muted-foreground" data-testid="run-score">
+              <span
+                className="shrink-0 text-muted-foreground"
+                data-testid="run-score"
+              >
                 {batch.averageScore}/{scoreMax}
                 {batch.scoreStdDev != null && isMultiRun && (
                   <span className="ml-0.5 text-[9px]">
@@ -566,18 +570,44 @@ function BatchExpandedContent({
     <div className="space-y-3">
       {/* Aggregated stats */}
       {batch.status !== "running" && (
-        <div className="rounded-md bg-muted/50 p-3 text-xs space-y-1" data-testid="batch-aggregate-stats">
-          <div className="font-medium text-muted-foreground">聚合统计 ({batch.repeatCount} 次)</div>
+        <div
+          className="rounded-md bg-muted/50 p-3 text-xs space-y-1"
+          data-testid="batch-aggregate-stats"
+        >
+          <div className="font-medium text-muted-foreground">
+            聚合统计 ({batch.repeatCount} 次)
+          </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <div>Avg Pass Rate: <span className="font-medium" data-testid="batch-avg-pass-rate">{batch.passedAssertions}/{batch.totalCasesPerRun * batch.repeatCount}</span></div>
+            <div>
+              Avg Pass Rate:{" "}
+              <span className="font-medium" data-testid="batch-avg-pass-rate">
+                {batch.passedAssertions}/
+                {batch.totalCasesPerRun * batch.repeatCount}
+              </span>
+            </div>
             {batch.averageScore != null && (
-              <div>Avg Score: <span className="font-medium" data-testid="batch-avg-score">{batch.averageScore}/{scoreMax}</span></div>
+              <div>
+                Avg Score:{" "}
+                <span className="font-medium" data-testid="batch-avg-score">
+                  {batch.averageScore}/{scoreMax}
+                </span>
+              </div>
             )}
             {batch.scoreStdDev != null && (
-              <div>Std Dev: <span className="font-medium" data-testid="batch-std-dev">{batch.scoreStdDev}</span></div>
+              <div>
+                Std Dev:{" "}
+                <span className="font-medium" data-testid="batch-std-dev">
+                  {batch.scoreStdDev}
+                </span>
+              </div>
             )}
             {batch.minScore != null && batch.maxScore != null && (
-              <div>Range: <span className="font-medium" data-testid="batch-score-range">{batch.minScore} ~ {batch.maxScore}</span></div>
+              <div>
+                Range:{" "}
+                <span className="font-medium" data-testid="batch-score-range">
+                  {batch.minScore} ~ {batch.maxScore}
+                </span>
+              </div>
             )}
           </div>
         </div>
@@ -694,9 +724,7 @@ function RunInBatchItem({
   const isRunning = run.status === "running";
 
   const passRate =
-    run.totalCases > 0
-      ? `${run.passedAssertions}/${run.totalCases}`
-      : "0/0";
+    run.totalCases > 0 ? `${run.passedAssertions}/${run.totalCases}` : "0/0";
 
   const handleToggle = () => {
     const next = !expanded;
@@ -723,7 +751,10 @@ function RunInBatchItem({
         );
       case "cancelled":
         return (
-          <Badge variant="outline" className="border-amber-500 text-amber-600 text-[10px] dark:text-amber-400">
+          <Badge
+            variant="outline"
+            className="border-amber-500 text-amber-600 text-[10px] dark:text-amber-400"
+          >
             Cancelled
           </Badge>
         );
@@ -780,7 +811,10 @@ function RunInBatchItem({
           variant="ghost"
           size="icon-xs"
           data-testid="btn-eval-report"
-          onClick={(e) => { e.stopPropagation(); window.open(reportUrl, "_blank"); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(reportUrl, "_blank");
+          }}
           title="Open report"
         >
           <ExternalLinkIcon className="size-2.5" />
@@ -796,7 +830,11 @@ function RunInBatchItem({
           ) : (
             <div className="space-y-3">
               {runDetail.results.map((r) => (
-                <ResultCard key={r.id} result={toEvalResult(r)} scoreMax={scoreMax} />
+                <ResultCard
+                  key={r.id}
+                  result={toEvalResult(r)}
+                  scoreMax={scoreMax}
+                />
               ))}
               {runDetail.results.length === 0 && isRunning && (
                 <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">

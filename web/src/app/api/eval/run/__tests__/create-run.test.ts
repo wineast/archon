@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ── Mock DB ──
 
 const insertedValues: Record<string, unknown>[] = [];
-const returningMock = vi.fn(() => [{ id: "run-1", chatModel: "gpt-4", status: "running" }]);
+const returningMock = vi.fn(() => [
+  { id: "run-1", chatModel: "gpt-4", status: "running" },
+]);
 const valuesMock = vi.fn((v: Record<string, unknown>) => {
   insertedValues.push(v);
   return { returning: returningMock };
@@ -16,11 +18,35 @@ const selectResults: unknown[][] = [
   // concurrency check: no running runs
   [],
   // modelConfig
-  [{ id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null }],
+  [
+    {
+      id: "mc-1",
+      modelId: "gpt-4",
+      systemPrompt: "You are helpful",
+      temperature: 0.7,
+      agentId: null,
+    },
+  ],
   // judgeModelConfig
-  [{ id: "jmc-1", modelId: "gpt-4-judge", systemPrompt: "Judge this", temperature: 0.1, agentId: null }],
+  [
+    {
+      id: "jmc-1",
+      modelId: "gpt-4-judge",
+      systemPrompt: "Judge this",
+      temperature: 0.1,
+      agentId: null,
+    },
+  ],
   // judgeConfig
-  [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }], promptTemplate: "Custom prompt", turnPromptTemplate: null }],
+  [
+    {
+      id: "jc-1",
+      name: "Default",
+      dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
+      promptTemplate: "Custom prompt",
+      turnPromptTemplate: null,
+    },
+  ],
 ];
 
 const limitMock = vi.fn(() => selectResults[selectCallIndex++]);
@@ -44,7 +70,8 @@ vi.mock("@/db", () => {
     db: {
       insert: () => insertMock(),
       select: () => selectMock(),
-      transaction: async (fn: (tx: typeof txProxy) => Promise<unknown>) => fn(txProxy),
+      transaction: async (fn: (tx: typeof txProxy) => Promise<unknown>) =>
+        fn(txProxy),
     },
   };
 });
@@ -63,13 +90,17 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 vi.mock("@/lib/auth/require-agent-role", () => ({
-  requireAgentRole: vi.fn().mockResolvedValue({ agentId: "agent-1", user: { id: "user-1" } }),
+  requireAgentRole: vi
+    .fn()
+    .mockResolvedValue({ agentId: "agent-1", user: { id: "user-1" } }),
 }));
 
 vi.mock("@/lib/versions/resolve", () => ({
-  resolveEditingVersionId: vi.fn().mockImplementation((agentId: string) =>
-    Promise.resolve(agentId === "agent-1" ? "version-1" : "judge-version-1")
-  ),
+  resolveEditingVersionId: vi
+    .fn()
+    .mockImplementation((agentId: string) =>
+      Promise.resolve(agentId === "agent-1" ? "version-1" : "judge-version-1"),
+    ),
 }));
 
 // Mock inngest client
@@ -88,7 +119,17 @@ function makeRequest(body: Record<string, unknown>) {
   });
 }
 
-const baseCases = [{ id: "c1", key: "test", name: "Test", mode: "single", turns: [], assertions: [], expectedOutput: "" }];
+const baseCases = [
+  {
+    id: "c1",
+    key: "test",
+    name: "Test",
+    mode: "single",
+    turns: [],
+    assertions: [],
+    expectedOutput: "",
+  },
+];
 
 const baseBody = {
   agentId: "agent-1",
@@ -103,9 +144,33 @@ describe("POST /api/eval/run (create run)", () => {
     insertedValues.length = 0;
     selectCallIndex = 0;
     selectResults[0] = []; // concurrency: no running
-    selectResults[1] = [{ id: "mc-1", modelId: "gpt-4", systemPrompt: "You are helpful", temperature: 0.7, agentId: null }];
-    selectResults[2] = [{ id: "jmc-1", modelId: "gpt-4-judge", systemPrompt: "Judge this", temperature: 0.1, agentId: null }];
-    selectResults[3] = [{ id: "jc-1", name: "Default", dimensions: [{ key: "quality", label: "Quality", weight: 1 }], promptTemplate: "Custom prompt", turnPromptTemplate: null }];
+    selectResults[1] = [
+      {
+        id: "mc-1",
+        modelId: "gpt-4",
+        systemPrompt: "You are helpful",
+        temperature: 0.7,
+        agentId: null,
+      },
+    ];
+    selectResults[2] = [
+      {
+        id: "jmc-1",
+        modelId: "gpt-4-judge",
+        systemPrompt: "Judge this",
+        temperature: 0.1,
+        agentId: null,
+      },
+    ];
+    selectResults[3] = [
+      {
+        id: "jc-1",
+        name: "Default",
+        dimensions: [{ key: "quality", label: "Quality", weight: 1 }],
+        promptTemplate: "Custom prompt",
+        turnPromptTemplate: null,
+      },
+    ];
   });
 
   it("creates a run record and returns runId + chatModel + status", async () => {
@@ -113,7 +178,11 @@ describe("POST /api/eval/run (create run)", () => {
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json).toEqual({ runId: "run-1", chatModel: "gpt-4", status: "running" });
+    expect(json).toEqual({
+      runId: "run-1",
+      chatModel: "gpt-4",
+      status: "running",
+    });
   });
 
   it("creates run with status=running and completedCases=0", async () => {
@@ -147,7 +216,7 @@ describe("POST /api/eval/run (create run)", () => {
         ...baseBody,
         templateVars: { key1: "val1" },
         toolNames: ["tool1", "tool2"],
-      })
+      }),
     );
 
     expect(insertedValues[0]).toMatchObject({
@@ -230,6 +299,24 @@ describe("POST /api/eval/run (create run)", () => {
     });
   });
 
+  it("allows creating a run with judge disabled (assertions-only) and stores null judge snapshots", async () => {
+    const res = await POST(
+      makeRequest({
+        agentId: "agent-1",
+        totalCases: 1,
+        cases: baseCases,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(insertedValues[0]).toMatchObject({
+      judgeAgentId: null,
+      judgeVersionId: null,
+      judgeModelConfigSnapshot: null,
+      judgeConfigSnapshot: null,
+    });
+  });
+
   it("defaults filterTags to empty array when not provided", async () => {
     await POST(makeRequest(baseBody));
 
@@ -243,7 +330,7 @@ describe("POST /api/eval/run (create run)", () => {
       makeRequest({
         ...baseBody,
         assertionFailConfig: { judgeOnFail: true, stopOnTurnFail: true },
-      })
+      }),
     );
 
     expect(insertedValues[0]).toMatchObject({
