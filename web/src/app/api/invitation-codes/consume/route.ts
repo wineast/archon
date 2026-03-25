@@ -13,7 +13,10 @@ export async function POST(request: Request) {
   const code = (body.code as string)?.trim().toUpperCase();
 
   if (!code) {
-    return NextResponse.json({ error: "请输入邀请码" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Please enter an invitation code" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -25,22 +28,22 @@ export async function POST(request: Request) {
         .where(
           and(
             eq(invitationCodes.code, code),
-            eq(invitationCodes.isActive, true)
-          )
+            eq(invitationCodes.isActive, true),
+          ),
         )
         .for("update")
         .limit(1);
 
       if (!row) {
-        throw new Error("邀请码无效");
+        throw new Error("Invalid invitation code");
       }
 
       if (row.expiresAt && row.expiresAt < new Date()) {
-        throw new Error("邀请码已过期");
+        throw new Error("This invitation code has expired");
       }
 
       if (row.maxUses !== null && row.usedCount >= row.maxUses) {
-        throw new Error("邀请码已用完");
+        throw new Error("This invitation code has reached its usage limit");
       }
 
       // Insert usage record (unique constraint ensures idempotency)
@@ -59,10 +62,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (e) {
     // Check if it's a known validation error
-    if (e instanceof Error && ["邀请码无效", "邀请码已过期", "邀请码已用完"].includes(e.message)) {
+    if (
+      e instanceof Error &&
+      [
+        "Invalid invitation code",
+        "This invitation code has expired",
+        "This invitation code has reached its usage limit",
+      ].includes(e.message)
+    ) {
       return NextResponse.json({ error: e.message }, { status: 400 });
     }
     console.error("consume invitation code failed:", e);
-    return NextResponse.json({ error: "消费邀请码失败" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to redeem invitation code" },
+      { status: 500 },
+    );
   }
 }

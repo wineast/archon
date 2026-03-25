@@ -22,7 +22,7 @@ vi.mock("@/lib/use-mobile", () => ({
 const sessions: ChatSession[] = [
   {
     id: "s1",
-    title: "会话一",
+    title: "Session A",
     agentId: "a1",
     userId: "u1",
     model: "gpt-4",
@@ -37,7 +37,7 @@ const sessions: ChatSession[] = [
   },
   {
     id: "s2",
-    title: "会话二",
+    title: "Session B",
     agentId: "a1",
     userId: "u1",
     model: "gpt-4",
@@ -52,13 +52,20 @@ const sessions: ChatSession[] = [
   },
 ];
 
-function renderComponent(overrides?: Partial<React.ComponentProps<typeof SessionHistory>>) {
+function renderComponent(
+  overrides?: Partial<React.ComponentProps<typeof SessionHistory>>,
+) {
   const defaults = {
     sessions,
     activeSessionId: null,
     onLoadSession: vi.fn(),
-    onDeleteSession: vi.fn().mockResolvedValue(undefined) as unknown as (id: string) => Promise<void>,
-    onRenameSession: vi.fn().mockResolvedValue(undefined) as unknown as (id: string, title: string) => Promise<void>,
+    onDeleteSession: vi.fn().mockResolvedValue(undefined) as unknown as (
+      id: string,
+    ) => Promise<void>,
+    onRenameSession: vi.fn().mockResolvedValue(undefined) as unknown as (
+      id: string,
+      title: string,
+    ) => Promise<void>,
     onNewChat: vi.fn(),
   };
   const props = { ...defaults, ...overrides };
@@ -66,7 +73,7 @@ function renderComponent(overrides?: Partial<React.ComponentProps<typeof Session
     ...render(
       <SidebarProvider>
         <SessionHistory {...props} />
-      </SidebarProvider>
+      </SidebarProvider>,
     ),
     ...props,
   };
@@ -83,8 +90,8 @@ describe("SessionHistory", () => {
 
   it("renders session list", () => {
     renderComponent();
-    expect(screen.getByText("会话一")).toBeInTheDocument();
-    expect(screen.getByText("会话二")).toBeInTheDocument();
+    expect(screen.getByText("Session A")).toBeInTheDocument();
+    expect(screen.getByText("Session B")).toBeInTheDocument();
   });
 
   it("opens dropdown menu with rename and delete options", async () => {
@@ -95,15 +102,15 @@ describe("SessionHistory", () => {
     const triggers = screen.getAllByRole("button", { hidden: true });
     // The menu action triggers should contain the ellipsis icons
     const menuTriggers = triggers.filter((btn) =>
-      btn.closest("[data-sidebar=menu-action]")
+      btn.closest("[data-sidebar=menu-action]"),
     );
     expect(menuTriggers.length).toBe(2);
 
     await user.click(menuTriggers[0]);
 
     await waitFor(() => {
-      expect(screen.getByText("重命名")).toBeInTheDocument();
-      expect(screen.getByText("删除")).toBeInTheDocument();
+      expect(screen.getByText("Rename")).toBeInTheDocument();
+      expect(screen.getByText("Delete")).toBeInTheDocument();
     });
   });
 
@@ -118,16 +125,18 @@ describe("SessionHistory", () => {
     await user.click(menuTriggers[0]);
 
     // Click delete
-    await user.click(screen.getByText("删除"));
+    await user.click(screen.getByText("Delete"));
 
     // Confirm dialog should appear
     await waitFor(() => {
-      expect(screen.getByText("删除会话")).toBeInTheDocument();
-      expect(screen.getByText("确定要删除这个会话吗？此操作无法撤销。")).toBeInTheDocument();
+      expect(screen.getByText("Delete conversation")).toBeInTheDocument();
+      expect(
+        screen.getByText("Delete this conversation? This cannot be undone."),
+      ).toBeInTheDocument();
     });
 
     // Click confirm
-    const confirmBtn = screen.getByRole("button", { name: "删除" });
+    const confirmBtn = screen.getByRole("button", { name: "Delete" });
     await user.click(confirmBtn);
 
     await waitFor(() => {
@@ -146,25 +155,25 @@ describe("SessionHistory", () => {
     await user.click(menuTriggers[0]);
 
     // Click rename
-    await user.click(screen.getByText("重命名"));
+    await user.click(screen.getByText("Rename"));
 
     // Rename dialog should appear with current title
     await waitFor(() => {
-      expect(screen.getByText("重命名会话")).toBeInTheDocument();
+      expect(screen.getByText("Rename conversation")).toBeInTheDocument();
     });
 
-    const input = screen.getByPlaceholderText("输入新标题");
-    expect(input).toHaveValue("会话一");
+    const input = screen.getByPlaceholderText("New title");
+    expect(input).toHaveValue("Session A");
 
     // Clear and type new title
     await user.clear(input);
-    await user.type(input, "新标题");
+    await user.type(input, "New title");
 
     // Click save
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(onRenameSession).toHaveBeenCalledWith("s1", "新标题");
+      expect(onRenameSession).toHaveBeenCalledWith("s1", "New title");
     });
   });
 
@@ -172,12 +181,12 @@ describe("SessionHistory", () => {
     const user = userEvent.setup();
     const { onNewChat } = renderComponent();
 
-    await user.click(screen.getByText("新对话"));
+    await user.click(screen.getByText("New chat"));
     expect(onNewChat).toHaveBeenCalled();
   });
 
   it("shows empty state when no sessions", () => {
     renderComponent({ sessions: [] });
-    expect(screen.getByText("暂无历史会话")).toBeInTheDocument();
+    expect(screen.getByText("No chat history yet")).toBeInTheDocument();
   });
 });

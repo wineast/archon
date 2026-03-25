@@ -566,7 +566,7 @@ export function ChatPageContent({
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error("导出失败");
+      toast.error(t("exportFailed"));
     }
   }, [activeSessionId, t]);
 

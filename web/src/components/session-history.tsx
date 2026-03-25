@@ -106,9 +106,9 @@ export function SessionHistory({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onNewChat} tooltip="新对话">
+            <SidebarMenuButton onClick={onNewChat} tooltip="New chat">
               <PlusIcon />
-              <span>新对话</span>
+              <span>New chat</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -116,16 +116,20 @@ export function SessionHistory({
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center justify-between">
-            <span>{showAll ? "全部会话" : "我的会话"}</span>
+            <span>{showAll ? "All sessions" : "My sessions"}</span>
             {canViewAllSessions && onToggleShowAll && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="size-5"
                 onClick={onToggleShowAll}
-                title={showAll ? "仅看我的" : "查看全部"}
+                title={showAll ? "Show only mine" : "Show all"}
               >
-                {showAll ? <UsersIcon className="size-3" /> : <UserIcon className="size-3" />}
+                {showAll ? (
+                  <UsersIcon className="size-3" />
+                ) : (
+                  <UserIcon className="size-3" />
+                )}
               </Button>
             )}
           </SidebarGroupLabel>
@@ -133,7 +137,7 @@ export function SessionHistory({
             <SidebarMenu>
               {sessions.length === 0 && (
                 <p className="px-2 py-8 text-center text-sm text-muted-foreground">
-                  暂无历史会话
+                  No chat history yet
                 </p>
               )}
               {sessions.map((session) => (
@@ -154,17 +158,19 @@ export function SessionHistory({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="right" align="start">
                       <DropdownMenuItem
-                        onClick={() => handleRenameClick(session.id, session.title ?? "")}
+                        onClick={() =>
+                          handleRenameClick(session.id, session.title ?? "")
+                        }
                       >
                         <PencilIcon className="size-4" />
-                        重命名
+                        Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
                         onClick={() => handleDeleteClick(session.id)}
                       >
                         <Trash2Icon className="size-4" />
-                        删除
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -180,10 +186,10 @@ export function SessionHistory({
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="删除会话"
-        description="确定要删除这个会话吗？此操作无法撤销。"
-        cancelLabel="取消"
-        confirmLabel="删除"
+        title="Delete conversation"
+        description="Delete this conversation? This cannot be undone."
+        cancelLabel="Cancel"
+        confirmLabel="Delete"
         onConfirm={handleDeleteConfirm}
       />
 
@@ -194,13 +200,13 @@ export function SessionHistory({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>重命名会话</DialogTitle>
-            <DialogDescription>修改会话标题</DialogDescription>
+            <DialogTitle>Rename conversation</DialogTitle>
+            <DialogDescription>Change the conversation title</DialogDescription>
           </DialogHeader>
           <Input
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
-            placeholder="输入新标题"
+            placeholder="New title"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !renameBusy) {
                 e.preventDefault();
@@ -214,14 +220,14 @@ export function SessionHistory({
               onClick={() => setRenameDialogOpen(false)}
               disabled={renameBusy}
             >
-              取消
+              Cancel
             </Button>
             <Button
               onClick={handleRenameConfirm}
               disabled={renameBusy || !renameValue.trim()}
             >
               {renameBusy ? <Spinner className="mr-1 size-4" /> : null}
-              保存
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

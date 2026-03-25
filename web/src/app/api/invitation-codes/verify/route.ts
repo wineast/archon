@@ -9,8 +9,8 @@ export async function POST(request: Request) {
 
   if (!code) {
     return NextResponse.json(
-      { valid: false, error: "请输入邀请码" },
-      { status: 400 }
+      { valid: false, error: "Please enter an invitation code" },
+      { status: 400 },
     );
   }
 
@@ -18,23 +18,29 @@ export async function POST(request: Request) {
     .select()
     .from(invitationCodes)
     .where(
-      and(
-        eq(invitationCodes.code, code),
-        eq(invitationCodes.isActive, true)
-      )
+      and(eq(invitationCodes.code, code), eq(invitationCodes.isActive, true)),
     )
     .limit(1);
 
   if (!row) {
-    return NextResponse.json({ valid: false, error: "邀请码无效" });
+    return NextResponse.json({
+      valid: false,
+      error: "Invalid invitation code",
+    });
   }
 
   if (row.expiresAt && row.expiresAt < new Date()) {
-    return NextResponse.json({ valid: false, error: "邀请码已过期" });
+    return NextResponse.json({
+      valid: false,
+      error: "This invitation code has expired",
+    });
   }
 
   if (row.maxUses !== null && row.usedCount >= row.maxUses) {
-    return NextResponse.json({ valid: false, error: "邀请码已用完" });
+    return NextResponse.json({
+      valid: false,
+      error: "This invitation code has reached its usage limit",
+    });
   }
 
   return NextResponse.json({ valid: true });

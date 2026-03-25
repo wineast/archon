@@ -8,7 +8,13 @@ import { useSignUp } from "@clerk/nextjs";
 import { EyeIcon, EyeOffIcon, TicketIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -46,11 +52,18 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
   const { signUp, setActive, isLoaded } = useSignUp();
   const locale = useLocale();
   const router = useRouter();
-  const { register, handleSubmit: rhfHandleSubmit, getValues, setValue } = useForm<SignUpFormData>({
+  const {
+    register,
+    handleSubmit: rhfHandleSubmit,
+    getValues,
+    setValue,
+  } = useForm<SignUpFormData>({
     defaultValues: { email: "", password: "", code: "", invitationCode: "" },
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [step, setStep] = useState<"invitation" | "form" | "verify">("invitation");
+  const [step, setStep] = useState<"invitation" | "form" | "verify">(
+    "invitation",
+  );
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const handleVerifyInvitation = async (data: SignUpFormData) => {
@@ -71,10 +84,10 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
         sessionStorage.setItem(INVITATION_CODE_KEY, trimmed.toUpperCase());
         setStep("form");
       } else {
-        toast.error(result.error || "邀请码无效");
+        toast.error(result.error || t("invitation.invalidFallback"));
       }
     } catch {
-      toast.error("验证邀请码失败");
+      toast.error(t("invitation.verifyError"));
     } finally {
       setBusyAction(null);
     }
@@ -105,7 +118,9 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
 
     setBusyAction("verify");
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code: data.code });
+      const result = await signUp.attemptEmailAddressVerification({
+        code: data.code,
+      });
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
@@ -160,17 +175,20 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
     return (
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">输入邀请码</CardTitle>
-          <CardDescription>请输入邀请码以继续注册</CardDescription>
+          <CardTitle className="text-xl">{t("invitation.title")}</CardTitle>
+          <CardDescription>{t("invitation.description")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={rhfHandleSubmit(handleVerifyInvitation)} className="grid gap-4">
+          <form
+            onSubmit={rhfHandleSubmit(handleVerifyInvitation)}
+            className="grid gap-4"
+          >
             <div className="grid gap-2">
-              <Label htmlFor="invitation-code">邀请码</Label>
+              <Label htmlFor="invitation-code">{t("invitation.label")}</Label>
               <Input
                 id="invitation-code"
                 type="text"
-                placeholder="请输入 8 位邀请码"
+                placeholder={t("invitation.placeholder")}
                 autoComplete="off"
                 required
                 maxLength={8}
@@ -188,12 +206,12 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
               ) : (
                 <TicketIcon className="size-4" />
               )}
-              验证邀请码
+              {t("invitation.verifyButton")}
             </Button>
             <div className="text-center text-sm">
-              已有账号？{" "}
+              {t("signUp.hasAccount")}{" "}
               <Link href="/sign-in" className="underline underline-offset-4">
-                登录
+                {t("signUp.link")}
               </Link>
             </div>
           </form>
@@ -207,7 +225,9 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">{t("verify.emailTitle")}</CardTitle>
-          <CardDescription>{t("verify.description", { email: getValues("email") })}</CardDescription>
+          <CardDescription>
+            {t("verify.description", { email: getValues("email") })}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={rhfHandleSubmit(onVerify)} className="grid gap-4">
@@ -262,7 +282,11 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
             {busyAction === "google" ? (
               <Spinner className="size-4" />
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="size-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                className="size-4"
+              >
                 <path
                   d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
                   fill="currentColor"
@@ -273,7 +297,9 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
           </Button>
 
           <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-            <span className="relative z-10 bg-card px-2 text-muted-foreground">{tc("or")}</span>
+            <span className="relative z-10 bg-card px-2 text-muted-foreground">
+              {tc("or")}
+            </span>
           </div>
 
           <form onSubmit={rhfHandleSubmit(onSubmit)} className="grid gap-4">
@@ -305,7 +331,11 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
                   onClick={() => setShowPassword((v) => !v)}
                   tabIndex={-1}
                 >
-                  {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+                  {showPassword ? (
+                    <EyeOffIcon className="size-4" />
+                  ) : (
+                    <EyeIcon className="size-4" />
+                  )}
                 </button>
               </div>
             </div>

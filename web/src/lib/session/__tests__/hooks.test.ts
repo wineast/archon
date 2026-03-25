@@ -50,7 +50,7 @@ describe("deleteSession", () => {
     const result = await deleteSession("bad-id", mutate);
 
     expect(mutate).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("删除会话失败");
+    expect(toast.error).toHaveBeenCalledWith("Failed to delete conversation");
     expect(result).toBe(false);
   });
 
@@ -62,7 +62,7 @@ describe("deleteSession", () => {
     const result = await deleteSession("session-1", mutate);
 
     expect(mutate).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("删除会话失败");
+    expect(toast.error).toHaveBeenCalledWith("Failed to delete conversation");
     expect(result).toBe(false);
   });
 });

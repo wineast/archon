@@ -6,7 +6,11 @@ import type { ChatSession } from "@/db/schema";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function sessionsKey(agentId?: string, showAll?: boolean, source?: string) {
+export function sessionsKey(
+  agentId?: string,
+  showAll?: boolean,
+  source?: string,
+) {
   if (!agentId) return "/api/sessions";
   const params = new URLSearchParams({ agentId });
   if (showAll) params.set("all", "true");
@@ -14,10 +18,14 @@ export function sessionsKey(agentId?: string, showAll?: boolean, source?: string
   return `/api/sessions?${params}`;
 }
 
-export function useSessions(agentId?: string, showAll?: boolean, source?: string) {
+export function useSessions(
+  agentId?: string,
+  showAll?: boolean,
+  source?: string,
+) {
   const { data, error, isLoading, mutate } = useSWR<ChatSession[]>(
     sessionsKey(agentId, showAll, source),
-    fetcher
+    fetcher,
   );
 
   return {
@@ -28,7 +36,11 @@ export function useSessions(agentId?: string, showAll?: boolean, source?: string
   };
 }
 
-export async function renameSession(id: string, title: string, mutate: () => void) {
+export async function renameSession(
+  id: string,
+  title: string,
+  mutate: () => void,
+) {
   try {
     const res = await fetch(`/api/sessions/${id}`, {
       method: "PATCH",
@@ -40,12 +52,16 @@ export async function renameSession(id: string, title: string, mutate: () => voi
     return true;
   } catch (e) {
     console.warn("renameSession failed:", e);
-    toast.error("重命名会话失败");
+    toast.error("Failed to rename conversation");
     return false;
   }
 }
 
-export async function deleteSession(id: string, mutate: () => void, t?: (key: string) => string) {
+export async function deleteSession(
+  id: string,
+  mutate: () => void,
+  t?: (key: string) => string,
+) {
   try {
     const res = await fetch(`/api/sessions/${id}`, { method: "DELETE" });
     if (!res.ok) throw new Error(await res.text());
@@ -53,7 +69,7 @@ export async function deleteSession(id: string, mutate: () => void, t?: (key: st
     return true;
   } catch (e) {
     console.warn("deleteSession failed:", e);
-    toast.error(t?.("deleteSessionFailed") ?? "删除会话失败");
+    toast.error(t?.("deleteSessionFailed") ?? "Failed to delete conversation");
     return false;
   }
 }

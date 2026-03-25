@@ -77,7 +77,16 @@
     "password": {
       "label": "Password"
     },
-    "googleError": "Google sign in failed"
+    "googleError": "Google sign in failed",
+    "invitation": {
+      "title": "Enter invitation code",
+      "description": "Enter your invitation code to continue signing up",
+      "label": "Invitation code",
+      "placeholder": "8-character code",
+      "verifyButton": "Verify code",
+      "invalidFallback": "Invalid invitation code",
+      "verifyError": "Failed to verify invitation code"
+    }
   },
   "user": {
     "settings": "Settings",
@@ -141,13 +150,14 @@
   "chat": {
     "clear": "Clear Chat",
     "export": "Export Chat",
-    "import": "Import1 Chat",
+    "import": "Import Chat",
     "inspect": "Inspect",
     "attachmentTooltip": "Add attachment",
     "sessionNotFound": "Session does not exist or has not been saved",
     "sessionAgentMismatch": "Session does not belong to the current Agent",
     "sessionLoadError": "Failed to load session",
     "exportFetchError": "Export failed: unable to fetch session data",
+    "exportFailed": "Export failed",
     "importInvalidFormat": "Invalid chat export file",
     "importError": "Import failed",
     "importSuccess": "Session imported successfully",

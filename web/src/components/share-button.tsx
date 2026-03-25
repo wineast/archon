@@ -24,7 +24,7 @@ export function ShareButton({
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [localShareId, setLocalShareId] = useState<string | null>(
-    externalShareId ?? null
+    externalShareId ?? null,
   );
   const [copied, setCopied] = useState(false);
 
@@ -99,7 +99,7 @@ export function ShareButton({
         <Button
           variant="ghost"
           size="icon"
-          title={shareId ? "已分享" : "分享对话"}
+          title={shareId ? "Shared" : "Share conversation"}
           className={`size-8 ${shareId ? "text-primary" : ""}`}
         >
           <Share2Icon className="size-4" />
@@ -109,7 +109,7 @@ export function ShareButton({
         {shareId ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">分享链接</span>
+              <span className="text-sm font-medium">Share link</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -122,7 +122,7 @@ export function ShareButton({
                 ) : (
                   <XIcon className="mr-1 size-3" />
                 )}
-                取消分享
+                Stop sharing
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export function ShareButton({
                 variant="outline"
                 size="icon"
                 onClick={handleCopy}
-                title="复制链接"
+                title="Copy link"
               >
                 {copied ? (
                   <CheckIcon className="size-4 text-green-500" />
@@ -146,14 +146,15 @@ export function ShareButton({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              任何人都可以通过此链接查看对话内容
+              Anyone with this link can view the conversation.
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="text-sm font-medium">分享对话</div>
+            <div className="text-sm font-medium">Share conversation</div>
             <p className="text-xs text-muted-foreground">
-              创建公开链接，任何人无需登录即可查看对话内容
+              Create a public link so anyone can view this chat without signing
+              in.
             </p>
             <Button
               onClick={handleShare}
@@ -163,12 +164,12 @@ export function ShareButton({
               {isLoading ? (
                 <>
                   <Spinner className="mr-2 size-4" />
-                  创建中...
+                  Creating…
                 </>
               ) : (
                 <>
                   <Share2Icon className="mr-2 size-4" />
-                  创建链接
+                  Create link
                 </>
               )}
             </Button>
