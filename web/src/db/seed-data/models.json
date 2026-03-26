@@ -609,8 +609,8 @@
   },
 
   {
-    "modelId": "shubiaobiao/gemini-3.1-flash-lite-preview",
-    "name": "Gemini 3.1 Flash Lite Preview",
+    "modelId": "shubiaobiao/gpt-5.2",
+    "name": "gpt-5.2",
     "provider": "shubiaobiao",
     "contextWindow": 1048576
   },
