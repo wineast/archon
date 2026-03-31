@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSignUp } from "@clerk/nextjs";
@@ -20,6 +21,10 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 
 const INVITATION_CODE_KEY = "pendingInvitationCode";
+
+/** TEMP: remove ASAP — emergency bypass via `?test=...` (does not consume an invite). */
+const TEMP_INVITE_BYPASS_QUERY_KEY = "test";
+const TEMP_INVITE_BYPASS_QUERY_VALUE = "dsafioudfsuaoiqnrjekkasfiuyqre";
 
 async function consumeInvitationCode(code: string) {
   try {
@@ -47,6 +52,7 @@ interface SignUpFormProps {
 }
 
 export function SignUpForm({ redirectUrl }: SignUpFormProps) {
+  const searchParams = useSearchParams();
   const t = useTranslations("auth");
   const tc = useTranslations("common");
   const { signUp, setActive, isLoaded } = useSignUp();
@@ -65,6 +71,13 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
     "invitation",
   );
   const [busyAction, setBusyAction] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = searchParams.get(TEMP_INVITE_BYPASS_QUERY_KEY);
+    if (q === TEMP_INVITE_BYPASS_QUERY_VALUE) {
+      setStep("form");
+    }
+  }, [searchParams]);
 
   const handleVerifyInvitation = async (data: SignUpFormData) => {
     if (busyAction) return;
@@ -339,6 +352,8 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
                 </button>
               </div>
             </div>
+            {/* Required when Clerk Bot sign-up protection (Smart CAPTCHA) is enabled — see Clerk custom flows */}
+            <div id="clerk-captcha" className="flex min-h-px justify-center" />
             <Button type="submit" className="w-full" disabled={!!busyAction}>
               {busyAction === "submit" && <Spinner className="size-4" />}
               {t("signUp.submit")}
