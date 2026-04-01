@@ -22,7 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 const INVITATION_CODE_KEY = "pendingInvitationCode";
 
-/** TEMP: remove ASAP — emergency bypass via `?test=...` (does not consume an invite). */
+/** TEMP: remove ASAP — emergency bypass via `?test=...` (does not consume an invite).  */
 const TEMP_INVITE_BYPASS_QUERY_KEY = "test";
 const TEMP_INVITE_BYPASS_QUERY_VALUE = "dsafioudfsuaoiqnrjekkasfiuyqre";
 
