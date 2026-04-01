@@ -67,17 +67,19 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
     defaultValues: { email: "", password: "", code: "", invitationCode: "" },
   });
   const [showPassword, setShowPassword] = useState(false);
+  // DISABLED: 邀请码功能已禁用，直接进入注册表单
   const [step, setStep] = useState<"invitation" | "form" | "verify">(
-    "invitation",
+    "form", // 原值: "invitation"
   );
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
-  useEffect(() => {
-    const q = searchParams.get(TEMP_INVITE_BYPASS_QUERY_KEY);
-    if (q === TEMP_INVITE_BYPASS_QUERY_VALUE) {
-      setStep("form");
-    }
-  }, [searchParams]);
+  // DISABLED: 邀请码绕过功能已不需要（默认直接进入表单）
+  // useEffect(() => {
+  //   const q = searchParams.get(TEMP_INVITE_BYPASS_QUERY_KEY);
+  //   if (q === TEMP_INVITE_BYPASS_QUERY_VALUE) {
+  //     setStep("form");
+  //   }
+  // }, [searchParams]);
 
   const handleVerifyInvitation = async (data: SignUpFormData) => {
     if (busyAction) return;
@@ -111,13 +113,29 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
 
     setBusyAction("submit");
     try {
-      await signUp.create({
+      const result = await signUp.create({
         emailAddress: data.email,
         password: data.password,
       });
 
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      setStep("verify");
+      // DISABLED: 跳过邮箱验证，直接激活账号
+      // await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      // setStep("verify");
+
+      // 尝试直接激活 session（如果 Clerk 配置允许）
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        // Consume invitation code after successful activation
+        const pending = sessionStorage.getItem(INVITATION_CODE_KEY);
+        if (pending) {
+          await consumeInvitationCode(pending);
+        }
+        router.push(redirectUrl);
+      } else {
+        // 如果 Clerk 要求验证，回退到验证流程
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        setStep("verify");
+      }
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { longMessage?: string }[] };
       toast.error(clerkErr.errors?.[0]?.longMessage ?? t("signUp.error"));
@@ -184,54 +202,55 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
     }
   };
 
-  if (step === "invitation") {
-    return (
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-xl">{t("invitation.title")}</CardTitle>
-          <CardDescription>{t("invitation.description")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={rhfHandleSubmit(handleVerifyInvitation)}
-            className="grid gap-4"
-          >
-            <div className="grid gap-2">
-              <Label htmlFor="invitation-code">{t("invitation.label")}</Label>
-              <Input
-                id="invitation-code"
-                type="text"
-                placeholder={t("invitation.placeholder")}
-                autoComplete="off"
-                required
-                maxLength={8}
-                {...register("invitationCode", {
-                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                    setValue("invitationCode", e.target.value.toUpperCase());
-                  },
-                })}
-                className="text-center text-lg tracking-widest"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={!!busyAction}>
-              {busyAction === "invitation" ? (
-                <Spinner className="size-4" />
-              ) : (
-                <TicketIcon className="size-4" />
-              )}
-              {t("invitation.verifyButton")}
-            </Button>
-            <div className="text-center text-sm">
-              {t("signUp.hasAccount")}{" "}
-              <Link href="/sign-in" className="underline underline-offset-4">
-                {t("signUp.link")}
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    );
-  }
+  // DISABLED: 邀请码验证页面已禁用
+  // if (step === "invitation") {
+  //   return (
+  //     <Card className="w-full max-w-sm">
+  //       <CardHeader className="text-center">
+  //         <CardTitle className="text-xl">{t("invitation.title")}</CardTitle>
+  //         <CardDescription>{t("invitation.description")}</CardDescription>
+  //       </CardHeader>
+  //       <CardContent>
+  //         <form
+  //           onSubmit={rhfHandleSubmit(handleVerifyInvitation)}
+  //           className="grid gap-4"
+  //         >
+  //           <div className="grid gap-2">
+  //             <Label htmlFor="invitation-code">{t("invitation.label")}</Label>
+  //             <Input
+  //               id="invitation-code"
+  //               type="text"
+  //               placeholder={t("invitation.placeholder")}
+  //               autoComplete="off"
+  //               required
+  //               maxLength={8}
+  //               {...register("invitationCode", {
+  //                 onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+  //                   setValue("invitationCode", e.target.value.toUpperCase());
+  //                 },
+  //               })}
+  //               className="text-center text-lg tracking-widest"
+  //             />
+  //           </div>
+  //           <Button type="submit" className="w-full" disabled={!!busyAction}>
+  //             {busyAction === "invitation" ? (
+  //               <Spinner className="size-4" />
+  //             ) : (
+  //               <TicketIcon className="size-4" />
+  //             )}
+  //             {t("invitation.verifyButton")}
+  //           </Button>
+  //           <div className="text-center text-sm">
+  //             {t("signUp.hasAccount")}{" "}
+  //             <Link href="/sign-in" className="underline underline-offset-4">
+  //               {t("signUp.link")}
+  //             </Link>
+  //           </div>
+  //         </form>
+  //       </CardContent>
+  //     </Card>
+  //   );
+  // }
 
   if (step === "verify") {
     return (
